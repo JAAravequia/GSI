@@ -203,7 +203,7 @@ contains
     factqmin=zero
     factqmax=zero
     clip_supersaturation=.false.
-    clip_hydrometeor=.true.
+    clip_hydrometeor=.false.
     factg=zero
     factv=zero
     factp=zero

@@ -276,7 +276,7 @@ contains
     ssmis_precond = r0_01 ! default preconditioner for ssmis bias terms
     gmi_method = 0        ! 4= default gmi smoothing method
     amsr2_method = 0      ! 5= default amsr2 smoothing method
-    crtm_overlap = 4      ! 4= Average overlap
+    crtm_overlap = 5      ! 4= Average overlap, 5 = overcast
     icloud_f = 0          ! GFDL cloud fraction option
     gfdl_cldefr = .false. ! GFDL cloud effective radius
     rewopt = -99          ! Option to compute cloud water effective radius

@@ -87,6 +87,7 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
   use gsi_nstcouplermod, only: gsi_nstcoupler_skindepth,gsi_nstcoupler_deter
   use mpimod, only: npe
   use radiance_mod, only: rad_obs_type
+  use qcmod, only: pcp_screen
 
   implicit none
 
@@ -657,10 +658,14 @@ subroutine read_atms(mype,val_tovs,ithin,isfcalc,&
               if (isflg == 0 .and. ch1<285.0_r_kind .and. ch2<285.0_r_kind) then
                  cosza = cos(lza)
                  if (radmod%lcloud_fwd) then
-                    qval=-113.2_r_kind+(2.41_r_kind-0.0049_r_kind*ch1)*ch1 +  &
-                               0.454_r_kind*ch2-ch16
-                    if (qval>=9.0_r_kind) then
-                       qval=1000.0_r_kind*qval
+                    if (pcp_screen) then
+                       qval=-113.2_r_kind+(2.41_r_kind-0.0049_r_kind*ch1)*ch1 +  &
+                                  0.454_r_kind*ch2-ch16
+                       if (qval>=9.0_r_kind) then
+                          qval=1000.0_r_kind*qval
+                       else
+                          qval  = zero
+                       end if
                     else
                        qval  = zero
                     end if

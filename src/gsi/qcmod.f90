@@ -173,7 +173,8 @@ module qcmod
   public :: use_poq7,noiqc,vadfile,dfact1,dfact,erradar_inflate
   public :: pboto3,ptopo3,pbotq,ptopq,newvad,tdrerr_inflate
   public :: igood_qc,ifail_crtm_qc,ifail_satinfo_qc,ifail_interchan_qc,&
-            ifail_gross_qc,ifail_cloud_qc,ifail_outside_range,ifail_scanedge_qc
+            ifail_gross_qc,ifail_cloud_qc,ifail_outside_range,ifail_scanedge_qc,&
+            ifail_outside_symnorm
 
   public :: buddycheck_t,buddydiag_save
   public :: vadwnd_l2rw_qc
@@ -230,6 +231,8 @@ module qcmod
   integer(i_kind),parameter:: ifail_range_qc=9
 !  Reject because outside the range of lsingleradob
   integer(i_kind),parameter:: ifail_outside_range=11
+!  Reject because d/t > delta
+  integer(i_kind),parameter:: ifail_outside_symnorm=13
 
 !  Failures specific to qc routine start at 50 and the numbers overlap
 !  QC_SSMI failures 
@@ -2534,8 +2537,9 @@ end subroutine qc_avhrr
 
 subroutine qc_amsua(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
      zsges,cenlat,tb_obsbc1,cosza,clw,tbc,ptau5,emissivity_k,ts, &  
-     pred,predchan,id_qc,aivals,errf,errf0,clwp_amsua,varinv,cldeff_obs,factch6, &
-     cld_rbc_idx,sfc_speed,error0,clw_guess_retrieval,scatp,radmod)                     
+     pred,predchan,id_qc,aivals,errf,errf0,clwp_amsua,varinv, &
+     cldeff_obs,cldeff_fg,factch6, &
+     cld_rbc_idx,sfc_speed,error0,clw_guess_retrieval,scatp,radmod)
 
 !$$$ subprogram documentation block
 !               .      .    .
@@ -2596,6 +2600,7 @@ subroutine qc_amsua(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
 !     errf         - criteria of gross error
 !     varinv       - observation weight (modified obs var error inverse)
 !     cldeff_obs   - observed cloud effect 
+!     cldeff_fg    - first guess cloud effect
 !     factch6      - precipitation screening using channel 6 
 !
 ! attributes:
@@ -2616,7 +2621,7 @@ subroutine qc_amsua(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
   integer(i_kind),                     intent(in   ) :: ndat,nsig,npred,nchanl,is
   integer(i_kind),dimension(nchanl),   intent(inout) :: id_qc
   real(r_kind),                        intent(in   ) :: zsges,cenlat,tb_obsbc1
-  real(r_kind),dimension(nchanl),      intent(in   ) :: cldeff_obs 
+  real(r_kind),dimension(nchanl),      intent(in   ) :: cldeff_obs,cldeff_fg
   real(r_kind),                        intent(in   ) :: cosza,clw,clwp_amsua,clw_guess_retrieval
   real(r_kind),                        intent(in   ) :: sfc_speed,scatp
   real(r_kind),                        intent(inout) :: factch6  
@@ -2825,7 +2830,7 @@ subroutine qc_amsua(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
         else  !QC for data over open water
 !       calcalculate scattering index
 !       screen out channels 1 to 6, and 15 if channel 6 is affected by precipitation
-           if(factch6 >= one)then
+           if(factch6 >= one .and. pcp_screen)then
               efactmc=zero
               vfactmc=zero
               errf(1:ich544)=zero
@@ -2845,7 +2850,7 @@ subroutine qc_amsua(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
               endif
 !          QC3 in statsrad
               if(.not. mixed.and. luse)aivals(10,is) = aivals(10,is) + one
-           else if (cldeff_obs(ich536) < -0.50_r_kind) then
+           else if (cldeff_obs(ich536) < -0.50_r_kind .or. cldeff_fg(ich536) < -0.50_r_kind) then
               efactmc=zero
               vfactmc=zero
               errf(1:ich544)=zero
@@ -3258,7 +3263,8 @@ subroutine qc_mhs(nchanl,ndat,nsig,is,sea,land,ice,snow,mhs,luse,   &
 end subroutine qc_mhs
 subroutine qc_atms(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
                  zsges,cenlat,tb_obsbc1,cosza,clw,tbc,ptau5,emissivity_k,ts, &  
-                 pred,predchan,id_qc,aivals,errf,errf0,clwp_amsua,varinv,cldeff_obs,factch6, &
+                 pred,predchan,id_qc,aivals,errf,errf0,clwp_amsua,varinv, &
+                 cldeff_obs,cldeff_fg,factch6, &
                  cld_rbc_idx,sfc_speed,error0,clw_guess_retrieval,scatp,radmod)                     
 
 !$$$ subprogram documentation block
@@ -3308,6 +3314,7 @@ subroutine qc_atms(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
 !     errf         - criteria of gross error
 !     varinv       - observation weight (modified obs var error inverse)
 !     cldeff_obs   - observed cloud effect 
+!     cldeff_fg    - first guess cloud effect
 !
 ! output argument list:
 !     id_qc        - qc index - see qcmod definition
@@ -3331,7 +3338,7 @@ subroutine qc_atms(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
   integer(i_kind),                     intent(in   ) :: nchanl,is,ndat,nsig,npred
   integer(i_kind),dimension(nchanl),   intent(inout) :: id_qc
   real(r_kind),                        intent(in   ) :: zsges,cenlat,tb_obsbc1
-  real(r_kind),dimension(nchanl),      intent(in   ) :: cldeff_obs
+  real(r_kind),dimension(nchanl),      intent(in   ) :: cldeff_obs,cldeff_fg
   real(r_kind),                        intent(in   ) :: cosza,clw,clwp_amsua,clw_guess_retrieval
   real(r_kind),                        intent(in   ) :: sfc_speed,scatp
   real(r_kind),                        intent(inout) :: factch6 
@@ -3347,7 +3354,8 @@ subroutine qc_atms(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
 ! For now, just pass all channels to qc_amsua
   call qc_amsua (nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
                  zsges,cenlat,tb_obsbc1,cosza,clw,tbc,ptau5,emissivity_k,ts, &   
-                 pred,predchan,id_qc,aivals,errf,errf0,clwp_amsua,varinv,cldeff_obs,factch6, &
+                 pred,predchan,id_qc,aivals,errf,errf0,clwp_amsua,varinv, &
+                 cldeff_obs,cldeff_fg,factch6, &
                  cld_rbc_idx,sfc_speed,error0,clw_guess_retrieval,scatp,radmod)                    
 
   return

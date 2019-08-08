@@ -240,7 +240,7 @@
   use nc_diag_write_mod, only: nc_diag_init, nc_diag_header, nc_diag_metadata, &
        nc_diag_write, nc_diag_data2d, nc_diag_chaninfo_dim_set, nc_diag_chaninfo
   use gsi_4dvar, only: nobs_bins,hr_obsbin,l4dvar
-  use gridmod, only: nsig,regional,get_ij
+  use gridmod, only: nsig,regional,get_ij,msig
   use satthin, only: super_val1
   use constants, only: quarter,half,tiny_r_kind,zero,one,deg2rad,rad2deg,one_tenth, &
       two,three,cg_term,wgtlim,r100,r10,r0_01,r_missing
@@ -256,12 +256,14 @@
   use clw_mod, only: calc_clw, ret_amsua
   use qcmod, only: qc_ssmi,qc_seviri,qc_abi,qc_ssu,qc_avhrr,qc_goesimg,qc_msu,qc_irsnd,qc_amsua,qc_mhs,qc_atms
   use qcmod, only: igood_qc,ifail_gross_qc,ifail_interchan_qc,ifail_crtm_qc,ifail_satinfo_qc,qc_noirjaco3,ifail_cloud_qc
+  use qcmod, only: ifail_outside_symnorm
   use qcmod, only: qc_gmi,qc_saphir,qc_amsr2
   use qcmod, only: setup_tzr_qc,ifail_scanedge_qc,ifail_outside_range
   use state_vectors, only: svars3d, levels, svars2d, ns3d, nsdim
   use oneobmod, only: lsingleradob,obchan,oblat,oblon,oneob_type
   use radinfo, only: radinfo_adjust_jacobian
-  use radiance_mod, only: rad_obs_type,radiance_obstype_search,radiance_ex_obserr,radiance_ex_biascor
+  use radiance_mod, only: rad_obs_type,radiance_obstype_search,radiance_ex_obserr,radiance_ex_biascor, &
+                          n_clouds_jac,cloud_names_jac
   use sparsearr, only: sparr2, new, writearray, size, fullarray
 
   implicit none
@@ -283,7 +285,7 @@
   character(len=*),parameter:: myname="setuprad"
 
 ! Declare local variables
-  character(128) diag_rad_file
+  character(128) diag_rad_file,jac_rad_file,jacm_rad_file
 
   integer(i_kind) iextra,jextra,error_status,istat
   integer(i_kind) ich9,isli,icc,iccm,mm1,ixx
@@ -292,7 +294,7 @@
   integer(i_kind) ii,jj,idiag,inewpc,nchanl_diag
   integer(i_kind) ii_ptr
   integer(i_kind) nadir,kraintype,ierrret
-  integer(i_kind) ioz,ius,ivs,iwrmype
+  integer(i_kind) ioz,ius,ivs,iwrmype,itv,iqv
   integer(i_kind) iversion_radiag, istatus
   integer(i_kind) isfctype
 
@@ -343,6 +345,7 @@
   real(r_kind),dimension(nchanl):: emissivity,ts,emissivity_k
   real(r_kind),dimension(nchanl):: tsim,wavenumber,tsim_bc
   real(r_kind),dimension(nchanl):: tsim_clr,cldeff_obs,cldeff_fg
+  real(r_kind),dimension(nchanl):: tcc
   real(r_kind),dimension(nsig,nchanl):: wmix,temp,ptau5
   real(r_kind),dimension(nsigradjac,nchanl):: jacobian
   real(r_kind),dimension(nreal+nchanl,nobs)::data_s
@@ -355,6 +358,8 @@
   real(r_kind),dimension(nchanl,nchanl):: rsqrtinv
   real(r_kind) :: ptau5deriv, ptau5derivmax
   real(r_kind) :: clw_guess,clw_guess_retrieval
+! liquid/ice water path kg/m**2
+  real(r_kind) :: ciw_guess,crw_guess,csw_guess,cgw_guess
 ! real(r_kind) :: predchan6_save   
 
   integer(i_kind),dimension(nchanl):: ich,id_qc,ich_diag
@@ -376,6 +381,15 @@
   type(radNode),pointer:: my_head,my_headm
   type(obs_diag),pointer:: my_diag
   type(rad_obs_type) :: radmod
+
+  logical :: pcp_mask
+
+  real(r_single),dimension(msig*7,nchanl):: jacobian0
+  real(r_single),dimension(msig,9):: atprofile
+  real(r_single),dimension(nsig):: jactmp
+
+  integer(i_kind) :: icount,indx
+  integer(i_kind),allocatable,dimension(:) :: icw
 
   save_jacobian = rad_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
   if (save_jacobian) then
@@ -533,6 +547,24 @@
      ius=radjacindxs(ius)
      ivs=radjacindxs(ivs)
   endif
+
+  itv =getindex(radjacnames,'tv')
+  if(itv>0) itv=radjacindxs(itv)
+  iqv =getindex(radjacnames,'q' )
+  if(iqv>0) iqv=radjacindxs(iqv)
+
+  if (n_clouds_jac>0) then
+     allocate(icw(max(n_clouds_jac,1)))
+     icw=-1
+     icount=0
+     do ii=1,n_clouds_jac
+        indx=getindex(radjacnames,trim(cloud_names_jac(ii)))
+        if (indx>0) then
+           icount=icount+1
+           icw(icount)=radjacindxs(indx)
+        end if
+     end do
+  end if
 
 ! Initialize ozone jacobian flags to .false. (retain ozone jacobian)
   zero_irjaco3_pole = .false.
@@ -790,12 +822,37 @@
 !       Interpolate model fields to observation location, call crtm and create jacobians
 !       Output both tsim and tsim_clr for allsky
         tsim_clr=zero
+        tcc=one
+        pcp_mask=.false.
+        jacobian0=zero
+        atprofile=zero
+        ciw_guess=zero
+        crw_guess=zero
+        csw_guess=zero
+        cgw_guess=zero 
         if (radmod%lcloud_fwd) then
            call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, &
                 tvp,qvp,clw_guess,prsltmp,prsitmp, &
                 trop5,tzbgr,dtsavg,sfc_speed, &
                 tsim,emissivity,ptau5,ts,emissivity_k, &
-                temp,wmix,jacobian,error_status,tsim_clr=tsim_clr)
+                temp,wmix,jacobian,error_status, &
+                tsim_clr=tsim_clr,tcc=tcc,pcp_mask=pcp_mask, &
+                jacobian0=jacobian0,atprofile=atprofile,ciw_guess=ciw_guess, &
+                crw_guess=crw_guess,csw_guess=csw_guess,cgw_guess=cgw_guess)
+           if (pcp_mask) then
+              write(44)((atprofile(i,j),i=1,msig),j=1,9)
+              write(44)((jacobian0(i,j),i=1,msig*7),j=1,nchanl)
+              do j=1,nchanl
+                 jactmp=jacobian(itv+1:itv+nsig,j)
+                 write(444)jactmp
+                 jactmp=jacobian(iqv+1:iqv+nsig,j)
+                 write(444)jactmp
+                 do ii=1,n_clouds_jac
+                    jactmp=jacobian(icw(ii)+1:icw(ii)+nsig,j)
+                    write(444)jactmp
+                 end do
+             end do
+           end if
         else
            call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, &
                 tvp,qvp,clw_guess,prsltmp,prsitmp, &
@@ -873,7 +930,7 @@
         cldeff_fg=zero 
         if(microwave .and. sea) then 
            if(radmod%lcloud_fwd) then                            
-              call ret_amsua(tb_obs,nchanl,tsavg5,zasat,clwp_amsua,ierrret,scat)
+              call ret_amsua(tb_obs,nchanl,tsavg5,zasat,clwp_amsua,ierrret,atms,scat)
               scatp=scat 
            else
               call calc_clw(nadir,tb_obs,tsim,ich,nchanl,no85GHz,amsua,ssmi,ssmis,amsre,atms, &
@@ -1087,6 +1144,22 @@
 !             call radiance_ex_obserr(radmod,nchanl,cldeff_obs,cldeff_fg,tnoise,tnoise_cld,error0)
         end if
 
+!       screen out observations with normalized (by symmetric error) FG
+!       departure > 2.5
+        if(radmod%lcloud_fwd .and. radmod%ex_obserr=='ex_obserr1' .and. eff_area .and. 1 == 0) then
+           do i=1,nchanl
+              if (abs(tbc(i)) > error0(i)*2.5_r_kind) then
+                 if (amsua .and. (i <= 6 .or. i == 15)) then
+                     varinv(i)=zero
+                     id_qc(i) = ifail_outside_symnorm
+                 else if (atms .and. (i <= 7 .or. i >= 16)) then
+                     varinv(i)=zero
+                     id_qc(i) = ifail_outside_symnorm
+                 end if
+              endif
+           end do
+        endif
+
         do i=1,nchanl
            mm=ich(i)
            channel_passive=iuse_rad(ich(i))==-1 .or. iuse_rad(ich(i))==0
@@ -1156,7 +1229,8 @@
            end if
            call qc_amsua(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse(n),   &
               zsges,cenlat,tb_obsbc1,cosza,clw,tbc,ptau5,emissivity_k,ts, & 
-              pred,predchan,id_qc,aivals,errf,errf0,clwp_amsua,varinv,cldeff_obs,factch6, &
+              pred,predchan,id_qc,aivals,errf,errf0,clwp_amsua,varinv, &
+              cldeff_obs,cldeff_fg,factch6, &
               cld_rbc_idx,sfc_speed,error0,clw_guess_retrieval,scatp,radmod)                    
 
 !  If cloud impacted channels not used turn off predictor
@@ -1189,7 +1263,8 @@
            end if
            call qc_atms(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse(n),    &
               zsges,cenlat,tb_obsbc1,cosza,clw,tbc,ptau5,emissivity_k,ts, & 
-              pred,predchan,id_qc,aivals,errf,errf0,clwp_amsua,varinv,cldeff_obs,factch6, &
+              pred,predchan,id_qc,aivals,errf,errf0,clwp_amsua,varinv, &
+              cldeff_obs,cldeff_fg,factch6, &
               cld_rbc_idx,sfc_speed,error0,clw_guess_retrieval,scatp,radmod)                   
 
 !  ---------- GOES imager --------------
@@ -1893,10 +1968,16 @@
      write(string,1976) jiter
 1976 format('_',i2.2)
      diag_rad_file= trim(dirname) // trim(filex) // '_' // trim(dplat(is)) // trim(string)
+     jac_rad_file= trim(dirname) // trim(filex) // '_' // trim(dplat(is)) // '_jacobian' // trim(string)
+     jacm_rad_file= trim(dirname) // trim(filex) // '_' // trim(dplat(is)) // '_jacobianM' // trim(string)
      if(init_pass) then
         open(4,file=trim(diag_rad_file),form='unformatted',status='unknown',position='rewind')
+        open(44,file=trim(jac_rad_file),form='unformatted',access='stream',status='unknown',position='rewind') 
+        open(444,file=trim(jacm_rad_file),form='unformatted',access='stream',status='unknown',position='rewind')
      else
         open(4,file=trim(diag_rad_file),form='unformatted',status='old',position='append')
+        open(44,file=trim(jac_rad_file),form='unformatted',access='stream',status='old',position='append') 
+        open(444,file=trim(jacm_rad_file),form='unformatted',access='stream',status='old',position='append')
      endif
      if (lextra) allocate(diagbufex(iextra,jextra))
 
@@ -2437,6 +2518,8 @@
 
   subroutine final_binary_diag_
   close(4)
+  close(44)
+  close(444)
   end subroutine final_binary_diag_
  end subroutine setuprad
 

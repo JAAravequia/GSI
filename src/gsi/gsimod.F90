@@ -476,7 +476,6 @@
 !     perturb_fact -  magnitude factor for observation perturbation
 !     crtm_coeffs_path - path of directory w/ CRTM coeffs files
 !     crtm_overlap  - cloud overlap options
-!                     crtm_overlap = 0, No need to calculate overlap (older version (< 2.3.0) of CRTM)
 !                     crtm_overlap = 1, Maximum overlap
 !                     crtm_overlap = 2, Random overlap
 !                     crtm_overlap = 3, Maximum random overlap

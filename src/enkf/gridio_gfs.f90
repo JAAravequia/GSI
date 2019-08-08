@@ -160,14 +160,14 @@
                                      ! old logical massbal_adjust, if non-zero
   sst_ind = getindex(vars2d, 'sst')
 
-  if (nproc == 0) then
+!  if (nproc == 0) then
 !    print *, 'indices: '
 !    print *, 'u: ', u_ind, ', v: ', v_ind, ', tv: ', tv_ind, ', tsen: ', tsen_ind
-     print *, 'q: ', q_ind, ', oz: ', oz_ind, ', cw: ', cw_ind, ', qi: ', qi_ind
-     print *, 'ql: ', ql_ind, ', prse: ', prse_ind
-     print *,' qr: ', qr_ind, 'qs: ', qs_ind, 'qg: ', qg_ind
+!    print *, 'q: ', q_ind, ', oz: ', oz_ind, ', cw: ', cw_ind, ', qi: ', qi_ind
+!    print *, 'ql: ', ql_ind, ', prse: ', prse_ind
+!    print *,' qr: ', qr_ind, 'qs: ', qs_ind, 'qg: ', qg_ind
 !    print *, 'ps: ', ps_ind, ', pst: ', pst_ind, ', sst: ', sst_ind
-  endif
+!  endif
 
   if (.not. isinitialized) call init_spec_vars(nlons,nlats,ntrunc,4)
 
@@ -1146,6 +1146,12 @@
                  write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_readrecv(rwmr), iret=',iret
                  call stop2(23)
               endif
+              ug = 0.
+              if (qr_ind > 0) then
+                 call copyfromgrdin(grdin(:,levels(qr_ind-1)+k,nb,ne),ug)
+              end if
+              nems_wrk2 = nems_wrk2 + ug
+              if (cliptracers)  where (nems_wrk2 < clip) nems_wrk2 = clip
               call nemsio_writerecv(gfileout,'rwmr','mid layer',k,nems_wrk2,iret=iret)
               if (iret/=0) then
                  write(6,*)'gridio/writegriddata: gfs model: problem with nemsio_writerecv(rwmr), iret=',iret

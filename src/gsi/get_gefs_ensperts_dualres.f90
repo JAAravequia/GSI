@@ -260,7 +260,7 @@ subroutine get_gefs_ensperts_dualres
                      trim(cvars3d(ic3)) == 'qs' .or. &
                      trim(cvars3d(ic3)) == 'qg'
 
-          if ( is_cloud .and. clip_hydrometeor) then
+          if ( is_cloud ) then
 !$omp parallel do schedule(dynamic,1) private(i,j,k)
              do k=1,km
                 do j=1,jm

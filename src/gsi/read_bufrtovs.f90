@@ -147,6 +147,7 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   use mpimod, only: npe
   use radiance_mod, only: rad_obs_type
   use gsi_io, only: verbose
+  use qcmod, only: pcp_screen
   implicit none
 
 ! Declare passed variables
@@ -790,25 +791,29 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
                     d0    = 8.24_r_kind - 2.622_r_kind*cosza + 1.846_r_kind*cosza*cosza                                 
                     qval=cosza*(d0+d1*log(285.0_r_kind-ch1)+d2*log(285.0_r_kind-ch2))
                     if (radmod%lcloud_fwd) then
-                       ! no preference in selecting clouds/precipitation
-                       ! qval=zero 
-                       ! favor non-precipitating clouds                                                   
-                       qval=-113.2_r_kind+(2.41_r_kind-0.0049_r_kind*ch1)*ch1 +  &         
-                            0.454_r_kind*ch2-ch15   
-                       if (qval>=9.0_r_kind) then
-                          qval=1000.0_r_kind*qval
+                       if (pcp_screen) then
+                          ! no preference in selecting clouds/precipitation
+                          ! qval=zero 
+                          ! favor non-precipitating clouds                                                   
+                          qval=-113.2_r_kind+(2.41_r_kind-0.0049_r_kind*ch1)*ch1 +  &         
+                               0.454_r_kind*ch2-ch15   
+                          if (qval>=9.0_r_kind) then
+                             qval=1000.0_r_kind*qval
+                          else
+                             qval=zero
+                          end if
+                          ! favor thinner clouds
+                          ! cosza = cos(lza)
+                          ! d0= 8.24_r_kind - 2.622_r_kind*cosza + 1.846_r_kind*cosza*cosza
+                          ! qval=cosza*(d0+d1*log(285.0_r_kind-ch1)+d2*log(285.0_r_kind-ch2))
+                          ! if (qval>0.2_r_kind) then
+                          !    qval=1000.0_r_kind*qval
+                          ! else
+                          !    qval=zero
+                          ! end if
                        else
                           qval=zero
                        end if
-                       ! favor thinner clouds
-                       ! cosza = cos(lza)
-                       ! d0= 8.24_r_kind - 2.622_r_kind*cosza + 1.846_r_kind*cosza*cosza
-                       ! qval=cosza*(d0+d1*log(285.0_r_kind-ch1)+d2*log(285.0_r_kind-ch2))
-                       ! if (qval>0.2_r_kind) then
-                       !    qval=1000.0_r_kind*qval
-                       ! else
-                       !    qval=zero
-                       ! end if
                     end if
                     pred  = max(zero,qval)*100.0_r_kind
                  else

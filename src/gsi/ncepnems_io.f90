@@ -2163,32 +2163,29 @@ contains
     call strip(sub_tv  ,tvsm  ,grd%nsig)
     call strip(sub_q   ,qsm   ,grd%nsig)
     call strip(sub_oz  ,ozsm  ,grd%nsig)
-    if (imp_physics == 99)then
-       if (cw_cv) then
-          allocate(cwsm(grd%lat1*grd%lon1,grd%nsig))
-          call strip(sub_cwmr,cwsm  ,grd%nsig)
-       endif
-    else
-       if (ql_cv .or. cw_cv) then
-          allocate(qlsm(grd%lat1*grd%lon1,grd%nsig))
-          call strip(sub_ql  ,qlsm  ,grd%nsig)
-       endif
-       if (qi_cv .or. cw_cv) then
-          allocate(qism(grd%lat1*grd%lon1,grd%nsig))
-          call strip(sub_qi  ,qism  ,grd%nsig)
-       endif
-       if (qr_cv) then
-          allocate(qrsm(grd%lat1*grd%lon1,grd%nsig))
-          call strip(sub_qr  ,qrsm  ,grd%nsig)
-       endif
-       if (qs_cv) then
-          allocate(qssm(grd%lat1*grd%lon1,grd%nsig))
-          call strip(sub_qs  ,qssm  ,grd%nsig)
-       endif
-       if (qg_cv) then
-          allocate(qgsm(grd%lat1*grd%lon1,grd%nsig))
-          call strip(sub_qg  ,qgsm  ,grd%nsig)
-       endif
+    if (cw_cv) then
+       allocate(cwsm(grd%lat1*grd%lon1,grd%nsig))
+       call strip(sub_cwmr,cwsm  ,grd%nsig)
+    endif
+    if (ql_cv) then
+       allocate(qlsm(grd%lat1*grd%lon1,grd%nsig))
+       call strip(sub_ql  ,qlsm  ,grd%nsig)
+    endif
+    if (qi_cv) then
+       allocate(qism(grd%lat1*grd%lon1,grd%nsig))
+       call strip(sub_qi  ,qism  ,grd%nsig)
+    endif
+    if (qr_cv) then
+       allocate(qrsm(grd%lat1*grd%lon1,grd%nsig))
+       call strip(sub_qr  ,qrsm  ,grd%nsig)
+    endif
+    if (qs_cv) then
+       allocate(qssm(grd%lat1*grd%lon1,grd%nsig))
+       call strip(sub_qs  ,qssm  ,grd%nsig)
+    endif
+    if (qg_cv) then
+       allocate(qgsm(grd%lat1*grd%lon1,grd%nsig))
+       call strip(sub_qg  ,qgsm  ,grd%nsig)
     endif
     call strip(sub_dp  ,dpsm  ,grd%nsig)
     call strip(sub_prsl,prslm ,grd%nsig)
@@ -2383,7 +2380,8 @@ contains
              call g_egrid2agrid(p_high,grid3,grid_c,1,1,vector)
              do j=1,latb
                 do i=1,lonb
-                   grid_b(i,j)=max(grid_b(i,j)+grid_c(latb-j+2,i,1),qmin)
+                   grid_b(i,j)=grid_b(i,j)+grid_c(latb-j+2,i,1)
+                   !grid_b(i,j)=max(grid_b(i,j)+grid_c(latb-j+2,i,1),qmin)
                 end do
              end do
              rwork1d = reshape(grid_b,(/size(rwork1d)/))
@@ -2430,7 +2428,7 @@ contains
        endif
     end do
 
-    do_cw_to_hydro = do_cw_to_hydro .and. imp_physics /= 99 .and. cw_cv .and. (.not. ql_cv)
+    do_cw_to_hydro = cw_cv .and. (.not. ql_cv) .and. (.not. qi_cv)
 
 !   Cloud condensate mixing ratio and hydrometeors
     if (ntracer>2 .or. ncloud>=1) then
@@ -2530,21 +2528,15 @@ contains
           enddo
        else
           do k=1,grd%nsig
-             if(cw_cv .or. ql_cv)then
-                if (imp_physics == 99) then
-                   call mpi_gatherv(cwsm(1,k),grd%ijn(mm1),mpi_rtype,&
-                        work1,grd%ijn,grd%displs_g,mpi_rtype,&
-                        mype_out,mpi_comm_world,ierror)
-                else
-                   call mpi_gatherv(qlsm(1,k),grd%ijn(mm1),mpi_rtype,&
-                        work1,grd%ijn,grd%displs_g,mpi_rtype,&
-                        mype_out,mpi_comm_world,ierror)
-                endif
+             if(ql_cv)then
+                call mpi_gatherv(qlsm(1,k),grd%ijn(mm1),mpi_rtype,&
+                     work1,grd%ijn,grd%displs_g,mpi_rtype,&
+                     mype_out,mpi_comm_world,ierror)
              endif
              if (mype == mype_out) then
                 call nemsio_readrecv(gfile,'clwmr','mid layer',k,rwork1d,iret=iret)
                 if (iret /= 0) call error_msg(trim(my_name),trim(filename),'clwmr','read',istop,iret)
-                if(cw_cv .or. ql_cv)then
+                if(ql_cv)then
                    if(diff_res)then
                       grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
                       vector(1)=.false.
@@ -2571,9 +2563,9 @@ contains
                 if (iret /= 0) call error_msg(trim(my_name),trim(filename),'clwmr','write',istop,iret)
              end if
           end do
-          if (imp_physics /= 99) then
+          if (imp_physics == 11) then
              do k=1,grd%nsig
-                if (cw_cv .or. qi_cv) then
+                if (qi_cv) then
                    call mpi_gatherv(qism(1,k),grd%ijn(mm1),mpi_rtype,&
                         work1,grd%ijn,grd%displs_g,mpi_rtype,&
                         mype_out,mpi_comm_world,ierror)
@@ -2581,7 +2573,7 @@ contains
                 if (mype == mype_out) then
                    call nemsio_readrecv(gfile,'icmr','mid layer',k,rwork1d,iret=iret)
                    if (iret /= 0) call error_msg(trim(my_name),trim(filename),'icmr','read',istop,iret)
-                   if (cw_cv .or. qi_cv) then
+                   if (qi_cv) then
                       if(diff_res)then
                          grid_b=reshape(rwork1d,(/size(grid_b,1),size(grid_b,2)/))
                          vector(1)=.false.
@@ -2716,9 +2708,7 @@ contains
                    if (iret /= 0) call error_msg(trim(my_name),trim(filename),'grle','write',istop,iret)
                 endif
              end do
-          endif ! if (imp_physics /= 99) then
 
-          if (imp_physics == 11) then
              do k=1,grd%nsig
                 if (mype == mype_out) then
                    call nemsio_readrecv(gfile,'cld_amt','mid layer',k,rwork1d,iret=iret)
