@@ -526,6 +526,19 @@ subroutine final_
   use mp_compact_diffs_mod1, only: destroy_mp_compact_diffs1
   use gsi_io, only : verbose
   use mpeu_util, only: tell,die
+  use qcmod,only: njqc,nvqc
+  use converr, only: converr_destroy
+  use converr_ps, only: converr_ps_destroy
+  use converr_q, only: converr_q_destroy
+  use converr_t, only: converr_t_destroy
+  use converr_uv, only: converr_uv_destroy
+  use converr_pw, only: converr_pw_destroy
+  use convb_ps, only: convb_ps_destroy
+  use convb_q, only: convb_q_destroy
+  use convb_t, only: convb_t_destroy
+  use convb_uv, only: convb_uv_destroy
+  use pvqc_tables, only: linitvqc
+  use pvqc, only: wipevqctables
   implicit none
 
 ! Declare passed variables
@@ -556,6 +569,22 @@ _ENTRY_(Iam)
 
 ! Deallocate arrays
   call convinfo_destroy
+!  if(njqc) then
+!     call converr_ps_destroy
+!     call converr_q_destroy
+!     call converr_t_destroy
+!     call converr_uv_destroy
+!     call converr_pw_destroy
+!     call convb_ps_destroy
+!     call convb_q_destroy
+!     call convb_t_destroy
+!     call convb_uv_destroy
+!  else
+!     call converr_destroy
+!  endif  
+
+!  if(nvqc .and. linitvqc) call wipevqctables
+
 
   deallocate(ndata)
   if(mype==0 .and. print_verbose) write(6,*) Iam, ': successfully finalized'

@@ -48,7 +48,7 @@ export gsi_namelist="
  /
  &OBSQC
    dfact=0.75,dfact1=3.0,noiqc=.true.,oberrflg=.false.,c_varqc=0.02,
-   use_poq7=.true.,njqc=.false.,vqc=.false.,nvqc=.true.,hub_norm=.true.,
+   use_poq7=.true.,njqc=.false.,vqc=.true.,nvqc=.false.,hub_norm=.true.,
    $OBSQC
  /
  &OBS_INPUT

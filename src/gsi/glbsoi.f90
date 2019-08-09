@@ -124,7 +124,7 @@ subroutine glbsoi
   use gridmod, only: regional,twodvar_regional
   use guess_grids, only: nfldsig
   use obsmod, only: write_diag,perturb_obs,ditype,iadate
-  use qcmod,only: njqc
+  use qcmod,only: njqc,nvqc
   use turblmod, only: create_turblvars,destroy_turblvars
   use obs_sensitivity, only: lobsensfc, iobsconv, lsensrecompute, &
       init_fc_sens, save_fc_sens, lobsensincr, lobsensjb
@@ -153,6 +153,7 @@ subroutine glbsoi
        hybens_localization_setup,hybens_grid_setup
   use gfs_stratosphere, only: destroy_nmmb_vcoords,use_gfs_stratosphere
   use aircraftinfo, only: aircraftinfo_write,aircraft_t_bc_pof,aircraft_t_bc,mype_airobst
+  
 
   use m_prad, only: prad_updatePredx    ! was -- prad_bias()
   use m_obsdiags, only: obsdiags_write
