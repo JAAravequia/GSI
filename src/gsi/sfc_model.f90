@@ -34,7 +34,7 @@
 
 SUBROUTINE SFC_WTQ_FWD (psfc_in,tg,ps_in,tvs,qs,us,vs, &
                         ps2_in,tvs2,qs2, hs, roughness, iland, &
-                        f10, u10, v10, t2, q2, regime, iqtflg)
+                        f10, u10, v10, t2, q2, regime, iqtflg,h10)
 !$$$ subprogram documentation block
 !               .      .    .                                       .
 ! subprogram:   SFC_WTQ_FWD
@@ -112,7 +112,7 @@ SUBROUTINE SFC_WTQ_FWD (psfc_in,tg,ps_in,tvs,qs,us,vs, &
 ! h2  is the height of 2m where the temperature and 
 !        moisture observed.
 
-      REAL(r_kind), PARAMETER :: h10 = 10.0_r_kind
+!x      REAL(r_kind), PARAMETER :: h10 = 10.0_r_kind
       real(r_kind), parameter :: h2  = two
 !
 ! Default roughness over the land
@@ -125,6 +125,7 @@ SUBROUTINE SFC_WTQ_FWD (psfc_in,tg,ps_in,tvs,qs,us,vs, &
 !
 ! Working variables
 
+      real(r_kind) :: h10
       real(r_kind) :: psfc,ps,ps2
       REAL(r_kind) :: Vc2, Va2, V2 
       REAL(r_kind) :: rib, xx, yy, cc
