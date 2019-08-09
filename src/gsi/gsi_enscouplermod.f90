@@ -23,6 +23,8 @@ private
   public GSI_EnsCoupler_put_gsi_ens
   public GSI_EnsCoupler_registry
   public GSI_EnsCoupler_name
+  public GSI_EnsCoupler_create_sub2grid_info
+  public GSI_EnsCoupler_destroy_sub2grid_info
 
 ! !INTERFACES:
   interface GSI_EnsCoupler_localization_grid;  module procedure non_gaussian_ens_grid_;  end interface
@@ -32,6 +34,8 @@ private
 
   interface GSI_EnsCoupler_registry ; module procedure typedef_ ; end interface
   interface GSI_EnsCoupler_name;      module procedure typename_; end interface
+  interface GSI_EnsCoupler_create_sub2grid_info ; module procedure  create_s2gi; end interface
+  interface GSI_EnsCoupler_destroy_sub2grid_info; module procedure destroy_s2gi; end interface
 
 ! !CLASSES:
 
@@ -178,4 +182,30 @@ end function typename_
 !
 !EOP
 !-------------------------------------------------------------------------
+
+subroutine create_s2gi(s2gi, nsig, npe, s2gi_ref)
+   use kinds, only: i_kind
+   use general_sub2grid_mod, only: sub2grid_info
+   implicit none
+!  Declare passed variables
+   type(sub2grid_info),intent(  out) :: s2gi
+   integer(i_kind),    intent(in   ) :: nsig
+   integer(i_kind),    intent(in   ) :: npe
+   type(sub2grid_info),intent(in   ) :: s2gi_ref
+
+   call ifn_alloc_()            ! to ensure an allocated(this_ensemble_)
+   call this_ensemble_%create_sub2grid_info(s2gi, nsig,npe, s2gi_ref)
+return
+end subroutine create_s2gi
+subroutine destroy_s2gi(s2gi)
+   use general_sub2grid_mod, only: sub2grid_info
+   implicit none
+!  Declare passed variables
+   type(sub2grid_info),intent(inout) :: s2gi
+
+   call ifn_alloc_()            ! to ensure an allocated(this_ensemble_)
+   call this_ensemble_%destroy_sub2grid_info(s2gi)
+return
+end subroutine destroy_s2gi
+
 end module GSI_EnsCouplerMod

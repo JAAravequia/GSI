@@ -34,6 +34,8 @@ module stub_ensmod
       procedure,nopass:: mytype
       procedure :: get_user_ens
       procedure :: get_user_Nens
+      procedure,nopass:: create_sub2grid_info
+      procedure,nopass:: destroy_sub2grid_info
       procedure :: put_user_ens
       procedure :: non_gaussian_ens_grid
     end type ensemble
@@ -101,6 +103,37 @@ contains
      return
  
   end subroutine get_user_Nens
+
+  subroutine create_sub2grid_info(s2gi,nsig,npe,s2gi_ref)
+     use kinds, only: i_kind
+     use general_sub2grid_mod, only: sub2grid_info
+     implicit none
+ 
+     ! Declare passed variables
+     type(sub2grid_info), intent(out  ) :: s2gi
+     integer(i_kind),     intent(in   ) :: nsig
+     integer(i_kind),     intent(in   ) :: npe
+     type(sub2grid_info), intent(in   ) :: s2gi_ref
+
+     ! This is a simple copy
+     s2gi = s2gi_ref
+ 
+     return
+  end subroutine create_sub2grid_info
+
+  subroutine destroy_sub2grid_info(s2gi)
+     use general_sub2grid_mod, only: sub2grid_info
+     implicit none
+ 
+     ! Declare passed variables
+     type(sub2grid_info), intent(inout) :: s2gi
+
+     ! Reset the variable to a different memory location, so any original target
+     ! won't be accessed anymore.
+ 
+     s2gi = sub2grid_info()
+     return
+  end subroutine destroy_sub2grid_info
 
   subroutine put_user_ens(this,grd,member,ntindex,pert,iret)
 

@@ -42,8 +42,10 @@ module satthin
 !                                 determine sno2 with interpolate, accordingly 
 !                                 use the modified 2d interpolation (sfc_interpolate to intrp22)
 !   2018-05-21  j.jin   - add an option for time-thinning. Check time preference (including thin4d) here. 
-
+!
 !   2019-07-09  todling - revisit Li''s shuffling of nst init, read and final routines
+!   2019-08-08  j.jin   - add a comment block for an example of dtype-wise time-thinning
+!                         configuration through an -info file.
 !
 ! Subroutines Included:
 !   sub makegvals      - set up for superob weighting
@@ -93,6 +95,32 @@ module satthin
 !   def zs_full        - model terrain elevation
 !   def score_crit     - "best" quality obs score in thinning grid box
 !   def use_all        - parameter for turning satellite thinning algorithm off
+!
+! With new time-thinning mechanism, one can configure time-thinning to be device
+! specific through an -info. file, in this form,
+!
+! > rad_time_thinning_options::
+! > ! ptime:      Time interval (hour) for thinning radiance and ozone data.
+! > !             It defines the number of time thinning bins (time_window/ptime).
+! > !             0, only one time thinning bin, by default.
+! > ! ithin_time: Time preference is given 
+! > !             1, (default) at the center time when thin4d=false, or 
+! > !                observation time is ignored when thin4d=true. ptime must be 0.0;
+! > !             2, at the center of time intervals (suppressing thin4d);
+! > !             3, at the end of time intervals (suppressing thin4d);
+! > !             4, at the beginning, middle, and end of the 1st, 2nd,and 3rd two-hour 
+! > !                time interval, respectively. ptime must be 2.0 (suppressing thin4d);
+! > !             5, select observations at random time, and ptime must be 0.0
+! > !                (Only applicable to seviri data, May 2018).
+! > ! ptime=0.0 and ithin_time=1 by default if the observation type is not listed here.
+! > !dtype       dplat       dsis                  ptime   ithin_time
+! >  seviri      m08         seviri_m08            2.0     4
+! >  seviri      m09         seviri_m09            2.0     4
+! >  seviri      m10         seviri_m10            2.0     4
+! >  seviri      m11         seviri_m11            2.0     4
+! > ::
+!   
+! details through an info file.  
 !
 ! attributes:
 !   language: f90

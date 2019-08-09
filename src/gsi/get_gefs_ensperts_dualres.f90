@@ -51,7 +51,7 @@ subroutine get_gefs_ensperts_dualres
   use mpeu_util, only: die
   use gridmod, only: idsl5,regional
   use hybrid_ensemble_parameters, only: n_ens,write_ens_sprd,oz_univ_static,ntlevs_ens
-  use hybrid_ensemble_parameters, only: use_gfs_ens,sst_staticB
+  use hybrid_ensemble_parameters, only: sst_staticB
   use hybrid_ensemble_parameters, only: en_perts,ps_bar,nelen
   use constants,only: zero,zero_single,half,fv,rd_over_cp,one,qcmin
   use mpimod, only: mpi_comm_world,mype,npe
@@ -66,6 +66,8 @@ subroutine get_gefs_ensperts_dualres
   use gsi_bundlemod, only: gsi_bundledestroy
   use gsi_bundlemod, only: gsi_gridcreate
   use gsi_enscouplermod, only: gsi_enscoupler_get_user_nens
+  use gsi_enscouplermod, only: gsi_enscoupler_create_sub2grid_info
+  use gsi_enscouplermod, only: gsi_enscoupler_destroy_sub2grid_info
   use general_sub2grid_mod, only: sub2grid_info,general_sub2grid_create_info,general_sub2grid_destroy_info
   implicit none
 
@@ -127,14 +129,7 @@ subroutine get_gefs_ensperts_dualres
   km=en_perts(1,1)%grid%km
 
   ! Create temporary communication information for read ensemble routines
-  if (use_gfs_ens) then
-     inner_vars=1
-     num_fields=min(6*km+1,npe)
-     call general_sub2grid_create_info(grd_tmp,inner_vars,grd_ens%nlat,grd_ens%nlon, &
-          km,num_fields,regional)
-  else
-     grd_tmp = grd_ens
-  endif
+  call gsi_enscoupler_create_sub2grid_info(grd_tmp,km,npe,grd_ens)
 
   ! Allocate bundle to hold mean of ensemble members
   allocate(en_bar(ntlevs_ens))
@@ -344,9 +339,7 @@ subroutine get_gefs_ensperts_dualres
   end do
   deallocate(en_read)
 
-  if (use_gfs_ens) then
-     call general_sub2grid_destroy_info(grd_tmp)
-  endif
+  call gsi_enscoupler_destroy_sub2grid_info(grd_tmp)
 
 ! Copy pbar to module array.  ps_bar may be needed for vertical localization
 ! in terms of scale heights/normalized p/p

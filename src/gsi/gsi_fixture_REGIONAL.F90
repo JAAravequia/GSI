@@ -41,7 +41,11 @@ contains
 subroutine fixture_config()
 !> In a REGIONAL fixture as it is,
 !>      - use GSI stub_timer
-!>      - use GSI stub_ensmod, instead of get_gfs_ensmod_mod from cplr_gfs_ensmod.f90.
+!>      - if (use_gfs_ens) then
+!>          use GSI get_gfs_ensmod_mod from cplr_gfs_ensmod.f90
+!>        else
+!>          use GSI stub_ensmod from stub_ensmod.f90
+!>        endif
 
 !> singleton timermod and gsi_enscouplemod, which manage the actual timer and
 !> gfs_ensenble extentions.
@@ -50,16 +54,22 @@ subroutine fixture_config()
   use gsi_enscouplermod, only: ensemble_typedef => gsi_enscoupler_registry
 
 !> Define the actual extensions (timermod and gfs_ensemble) to be used.
-
-  use m_stubTimer, only: my_timer_mold    => timer_typemold
-  use stub_ensmod, only: my_ensemble_mold => ensemble_typemold
+  use hybrid_ensemble_parameters, only: use_gfs_ens
+  use m_stubTimer       , only:      my_timer_mold =>    timer_typemold
+  use stub_ensmod       , only: stub_ensemble_mold => ensemble_typemold
+  use get_gfs_ensmod_mod, only:  gfs_ensemble_mold => ensemble_typemold
 
   implicit none
 
 !> Fix up the extensions used by corresponding GSI singleton modules.
 
   call    timer_typedef(my_timer_mold())
-  call ensemble_typedef(my_ensemble_mold())
+
+  if(use_gfs_ens) then
+    call ensemble_typedef( gfs_ensemble_mold())
+  else
+    call ensemble_typedef(stub_ensemble_mold())
+  endif
 
 end subroutine fixture_config
 end module gsi_fixture
