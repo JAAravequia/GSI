@@ -281,9 +281,11 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) :: msges
   integer(i_kind) :: iza
   logical iqtflg
+  real(r_kind) :: h10
   real(r_kind) :: tgges,roges,regime
   real(r_kind) :: tv1,tv2,psit2,psit
   real(r_kind) :: u10ges,v10ges,t2ges,q2ges,psges2,f10ges
+  real(r_kind) :: u_elev_ges,v_elev_ges
   real(r_kind) :: pres1,pres2,tmp1,tmp2,qq1,qq2,uu1,vv1,hgt1
   real(r_kind),allocatable,dimension(:,:,:  )::ges_presgrid1
   real(r_kind),allocatable,dimension(:,:,:  )::ges_presgrid2
@@ -705,18 +707,30 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
                     !unit change: originally m --> cm
                     roges=roges*r100
 
-                    psges2  = psges          ! keep in cb
+                    psges2  = psges          ! keep in cb 
 
+                    h10 = 10.0_r_kind
                     call SFC_WTQ_FWD (psges2, tgges,&
                          pres1, tmp1, qq1, uu1, vv1, &
                          !x pres1, tmp1, qq1, ugesin, vgesin, &
                          pres2, tmp2, qq2, hgt1, roges, msges, &
                          !output variables
-                         f10ges,u10ges,v10ges, t2ges, q2ges, regime, iqtflg)
+                         f10ges,u10ges,v10ges, t2ges, q2ges, regime, iqtflg,h10)
                     print *, 'xyz---ugesin,uu1, u10ges =', ugesin,uu1,u10ges
                     print *, 'xyz---vgesin,vv1, v10ges =', vgesin,vv1,v10ges
+                         
+                    !calculate the actual elevation u&v
+                    h10 = data(ielev,i)
+                    call SFC_WTQ_FWD (psges2, tgges,&
+                         pres1, tmp1, qq1, uu1, vv1, &
+                         !x pres1, tmp1, qq1, ugesin, vgesin, &
+                         pres2, tmp2, qq2, hgt1, roges, msges, &
+                         !output variables
+                         f10ges,u_elev_ges,v_elev_ges, t2ges, q2ges, regime, iqtflg,h10)
+                    print *, 'xyz---ugesin,uu1, u_elev_ges =', ugesin,uu1,u_elev_ges
+                    print *, 'xyz---vgesin,vv1, v_elev_ges =', vgesin,vv1,v_elev_ges
 
-                    factw=one
+                    factw=sqrt(u_elev_ges**2+v_elev_ges**2)/sqrt(u10ges**2+v10ges**2)
                  end if 
 
               end if
@@ -725,13 +739,12 @@ subroutine setupw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
               factw = one-term+factw*term
            end if
  
-           if (.not.twodvar_regional) then
+              print*,'xyz---111 ugesin=',ugesin
+              print*,'xyz---111 vgesin=',vgesin
               ugesin=factw*ugesin
               vgesin=factw*vgesin
-           else
-              ugesin=u10ges
-              vgesin=v10ges
-           end if
+              print*,'xyz---222 ugesin=',ugesin
+              print*,'xyz---222 vgesin=',vgesin
 
            if (save_jacobian) then
               dhx_dx_u%val = factw * dhx_dx_u%val
