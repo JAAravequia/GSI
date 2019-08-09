@@ -90,6 +90,7 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! Declare external calls for code analysis
   external:: tintrp2a1,tintrp2a11
   external:: stop2
+  external:: SFC_WTQ_FWD
 
 ! Declare local parameters
   real(r_kind),parameter:: r0_7=0.7_r_kind
@@ -172,9 +173,11 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
   integer(i_kind) :: msges
   integer(i_kind) :: iza
   logical iqtflg
+  real(r_kind) :: h10
   real(r_kind) :: tgges,roges,regime
   real(r_kind) :: tv1,tv2,psit2,psit
   real(r_kind) :: u10ges,v10ges,t2ges,q2ges,psges2,f10ges
+  real(r_kind) :: u_elev_ges,v_elev_ges
   real(r_kind) :: pres1,pres2,tmp1,tmp2,qq1,qq2,uu1,vv1,hgt1
   real(r_kind),allocatable,dimension(:,:,:  )::ges_presgrid1
   real(r_kind),allocatable,dimension(:,:,:  )::ges_presgrid2
@@ -587,20 +590,26 @@ subroutine setupwspd10m(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 
                     psges2  = psges          ! keep in cb
                    
+                    h10 = 10.0_r_kind
                     call SFC_WTQ_FWD (psges2, tgges,&
                          pres1, tmp1, qq1, uu1, vv1, &
                          !x pres1, tmp1, qq1, ugesin, vgesin, &
                          pres2, tmp2, qq2, hgt1, roges, msges, &
                          !output variables
-                         f10ges,u10ges,v10ges, t2ges, q2ges, regime, iqtflg)
+                         f10ges,u10ges,v10ges, t2ges, q2ges, regime, iqtflg,h10)
                     print *, 'wspd10m ---uu1, u10ges =', uu1,u10ges
                     print *, 'wspd10m ---vv1, v10ges =', vv1,v10ges
 
-                    print *, 'wspd10m ---ges spdges =', spdges
-                    spdges=sqrt(u10ges**2+v10ges**2) !New 10m Wind Spd from Similarity
-                    print *, 'wspd10m ---similarity spdges =', spdges
+                    !calculate the actual elevation u&v
+                    h10 = data(ielev,i)
+                    call SFC_WTQ_FWD (psges2, tgges,&
+                         pres1, tmp1, qq1, uu1, vv1, &
+                         !x pres1, tmp1, qq1, ugesin, vgesin, &
+                         pres2, tmp2, qq2, hgt1, roges, msges, &
+                         !output variables
+                         f10ges,u_elev_ges,v_elev_ges, t2ges, q2ges, regime, iqtflg,h10)
 
-                    factw=one
+                    factw=sqrt(u_elev_ges**2+v_elev_ges**2)/sqrt(u10ges**2+v10ges**2)
               end if
            else
               if (.not. twodvar_regional) then
