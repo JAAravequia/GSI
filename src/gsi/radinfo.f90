@@ -53,6 +53,7 @@ module radinfo
 !   2016-09-20  Guo     - added SAVE attributes to module variables *_method, to
 !                         improve standard conformance of the code.
 !   2016-11-29  shlyaeva - make nvarjac public
+!   2018-07-24  W. Gu   - the routines to handle correlated R-covariance moved out
 !   2019-06-19  Hu      - add option reset_bad_radbc for reset radiance bias correction coefficient if it is bad.
 !
 ! subroutines included:
@@ -111,8 +112,6 @@ module radinfo
 
   public :: radedge1, radedge2
   public :: ssmis_precond
-  public :: radinfo_adjust_jacobian
-  interface radinfo_adjust_jacobian; module procedure adjust_jac_; end interface
   public :: icloud4crtm,iaerosol4crtm
 
   public :: iland_det, isnow_det, imix_det, iice_det, iwater_det
@@ -523,10 +522,8 @@ contains
 !
 !$$$ end documentation block
 
-    use correlated_obsmod, only: corr_ob_finalize
     implicit none
 
-    call corr_ob_finalize
     if(allocated(radjacindxs)) deallocate(radjacindxs)
     if(allocated(radjacnames)) deallocate(radjacnames)
 
@@ -583,11 +580,8 @@ contains
 !   2013-02-13  eliu    - change write-out format for iout_rad (for two
 !                         additional SSMIS bias correction coefficients)
 !   2013-05-14  guo     - add read error messages to alarm user a format change.
-!   2014-04-13  todling - add initialization of correlated R-covariance
 !   2014-07-28  sienkiewicz - revert to allocate cbias, cbiasx after maxscan 
 !                             reset in non adp_anglebc case
-!   2014-12-19  W. Gu   - update the obs error in satinfo for instruments accounted for the correlated R-covariance
-!   2015-04-01  W. Gu   - add the hook to scale the bias correction term for inter-channel correlated obs errors.
 !   2015-07-10  zhu     - read in and determine icloud4crtm & iaerosol4crtm for all channels
 !                         for generalized all-sky radiance assimilation, as all-sky
 !                         may be enabled for part of the channels for certain instruments
@@ -606,7 +600,6 @@ contains
 
 ! !USES:
 
-    use correlated_obsmod, only: corr_ob_initialize,corr_oberr_qc
     use obsmod, only: iout_rad
     use constants, only: zero,one,zero_quad
     use mpimod, only: mype
@@ -1199,11 +1192,16 @@ contains
     varch_ice=zero
     varch_snow=zero
     varch_mixed=zero
-    if (present(miter)) then 
-       call corr_ob_initialize(miter)
-       if (miter>0) call corr_oberr_qc(jpch_rad,iuse_rad,nusis,varch_sea, &
-                         varch_land,varch_ice,varch_snow,varch_mixed)
-    endif
+
+! Circular USE dependency is present in between correlated_obsmod and radinfo.  Such
+! that one has to disable this call to correlated_obsmod routines, until a resolution
+! has reached.  
+!
+!    if (present(miter)) then 
+!       call corr_ob_initialize(miter)
+!       if (miter>0) call corr_oberr_qc(jpch_rad,iuse_rad,nusis,varch_sea, &
+!                         varch_land,varch_ice,varch_snow,varch_mixed)
+!    endif
 
 !   Close unit for runtime output.  Return to calling routine
     if(mype==mype_rad)close(iout_rad)
@@ -2206,81 +2204,4 @@ subroutine dec2bin(dec,bin,ndim)
     RETURN
 END subroutine dec2bin
 
- logical function adjust_jac_ (iinstr,isis,isfctype,nchanl,nsigradjac,ich,varinv,&
-                               depart,obvarinv,wgtjo,jacobian,Rinv,rsqrtinv)
-!$$$  subprogram documentation block
-!                .      .    .
-! subprogram:    adjust_jac_
-!
-!   prgrmmr:     todling  org: gmao                date: 2014-04-15
-!
-! abstract:  provide hook to module handling inter-channel ob correlated errors
-!
-! program history log:
-!   2014-04-15  todling - initial code
-!   2014-08-06  todling - change obtype to isis for more flexibity
-!   2014-10-01  todling - add wgtjo to arg list
-!   2015-04-01  W. Gu - revisit bias handling
-!
-! attributes:
-!   language: f90
-!   machine:  ibm rs/6000 sp; SGI Origin 2000; Compaq/HP
-!
-!$$$ end documentation block
-   use constants, only: zero,one
-   use correlated_obsmod, only: idnames
-   use correlated_obsmod, only: corr_ob_amiset
-   use correlated_obsmod, only: corr_ob_scale_jac
-   use correlated_obsmod, only: GSI_BundleErrorCov 
-   use mpeu_util, only: getindex
-   use mpeu_util, only: die
-   implicit none
-
-   character(len=*),intent(in) :: isis
-   integer(i_kind), intent(in) :: isfctype
-   integer(i_kind), intent(in) :: nchanl
-   integer(i_kind), intent(in) :: nsigradjac
-   integer(i_kind), intent(in) :: ich(nchanl)
-   real(r_kind), intent(inout) :: varinv(nchanl)
-   real(r_kind), intent(inout) :: depart(nchanl)
-   real(r_kind), intent(inout) :: obvarinv(nchanl)
-   real(r_kind), intent(inout) :: wgtjo(nchanl)
-   real(r_kind), intent(inout) :: jacobian(nsigradjac,nchanl)
-   real(r_kind), intent(inout) :: Rinv(nchanl)
-   real(r_kind), intent(inout) :: rsqrtinv(nchanl,nchanl)
-   integer(i_kind), intent(out) :: iinstr
-   character(len=*),parameter::myname_ = myname//'*adjust_jac_'
-   character(len=80) covtype
-
-   adjust_jac_=.false.
-
-   if(.not.allocated(idnames)) then
-     return
-   endif
-
-   iinstr=-1
-   if(isfctype==0)then
-      covtype = trim(isis)//':sea'
-   else if(isfctype==1)then
-      covtype = trim(isis)//':land'
-   else if(isfctype==2)then
-      covtype = trim(isis)//':ice'
-   else if(isfctype==3)then
-      covtype = trim(isis)//':snow'
-   else if(isfctype==4)then
-      covtype = trim(isis)//':mixed'
-   endif
-   iinstr=getindex(idnames,trim(covtype))
-
-   if(iinstr<0) return  ! do not use the correlated errors
-
-   if(.not.corr_ob_amiset(GSI_BundleErrorCov(iinstr))) then
-      call die(myname_,' improperly set GSI_BundleErrorCov')
-   endif
-
-   if( GSI_BundleErrorCov(iinstr)%nch_active < 0) return
-
-   adjust_jac_ = corr_ob_scale_jac(depart,obvarinv,jacobian,nchanl,jpch_rad,varinv,wgtjo, &
-                                    iuse_rad,ich,GSI_BundleErrorCov(iinstr),Rinv,rsqrtinv)
-end function adjust_jac_
 end module radinfo

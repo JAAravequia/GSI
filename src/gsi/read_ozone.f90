@@ -237,14 +237,14 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
         version6 = .true.
         nloz     = nloz_v6
         version  = 'v6'
-     elseif (subset == subset8 .or. subset == subset8_ompsnp) then
+     elseif (subset == subset8 .or. subset == subset8_ompsnp) then ! OMPS-NP processed with V8 algorithm
         version8 = .true. 
         nloz     = nloz_v8
         version  = 'v8'
      else
-        write(6,*)'READ_OZONE:  *** WARNING: unknown sbuv version type, subset=',subset
+        write(6,*)'READ_OZONE:  *** WARNING: unknown layer ozone version type, subset=',subset
         write(6,*)' infile=',trim(infile), ', lunin=',lunin, ', obstype=',obstype,', jsatid=',jsatid
-        write(6,*)' SKIP PROCESSING OF THIS SBUV FILE'
+        write(6,*)' SKIP PROCESSING OF THIS OZONE LAYER FILE'
         call closbf(lunin)
         close(lunin)
         return
@@ -579,8 +579,8 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 !    End of GOME bufr block
 
 
-! Process OMI data
-  else if ( obstype == 'omi' .or. obstype == 'ompstc8') then
+! Process OMI/OMPS data without efficiency factors
+  else if ( obstype == 'omi' .or. obstype == 'ompsnm' .or. obstype == 'ompstc8') then
 
 
      call radthin_time_info(obstype, jsatid, sis, ptime, ithin_time)
@@ -600,7 +600,7 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
      case('NC008013')
         write(6,*)'READ_OZONE:  OMI data type, subset=',subset
      case('NC008018')
-        write(6,*)'READ_OZONE:  OMPS tc8 data type, subset=',subset
+        write(6,*)'READ_OZONE:  OMPS Nadir Mapper data type, subset=',subset
      case default
         write(6,*)'READ_OZONE:  *** WARNING: unknown ozone data type, subset=',subset
         write(6,*)' infile=',trim(infile), ', lunin=',lunin, ', obstype=',obstype,', jsatid=',jsatid
@@ -709,10 +709,15 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
         toq=hdrozo2(5)
         if (toq/=0 .and. toq/=1) cycle read_loop2
    
-!       remove the data in which the C-pair algorithm ((331 and 360 nm) is used. 
-        if (hdrozo2(8) == 3_r_double .or. hdrozo2(8) == 13_r_double) cycle read_loop2
+        if (obstype == 'omi') then
+!          For OMI remove the bad scan position data: fovn beyond 25
+           if (hdrozo2(7) >=25.0_r_double) cycle read_loop2
 
-!    thin OMI and OMPSTC8 data
+!          remove the data in which the C-pair algorithm ((331 and 360 nm) is used. 
+           if (hdrozo2(8) == 3_r_double .or. hdrozo2(8) == 13_r_double) cycle read_loop2
+        endif
+
+!       thin OMI/OMPS-NM(or TC8) data
 
         crit0 = 0.01_r_kind 
         timeinflat=r6
@@ -1054,8 +1059,8 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   endif
 
   if(nmrecs > 0)then
-!    If gome or omi data, compress ozout array to thinned data
-  if (obstype=='omi' .or. obstype=='gome' .or. obstype == 'ompstc8') then
+!    If gome, omps-nm/tc8 or omi data, compress ozout array to thinned data
+     if (obstype=='omi' .or. obstype=='gome' .or. obstype=='ompsnm' .or. obstype == 'ompstc8') then
         kk=0
         do k=1,itxmax
            if (ozout(1,k)>zero) then
@@ -1093,7 +1098,7 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   close(lunin)
 
 ! Deallocate satthin arrays
-  if (obstype == 'omi' .or. obstype == 'gome' .or. obstype == 'ompstc8')call destroygrids
+  if (obstype == 'omi' .or. obstype == 'gome' .or. obstype=='ompsnm' .or. obstype == 'ompstc8' )call destroygrids
 
   return
   

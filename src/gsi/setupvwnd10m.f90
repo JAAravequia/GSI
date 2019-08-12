@@ -59,8 +59,8 @@ subroutine setupvwnd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
   use m_obsdiagNode, only: obsdiagNode_get
   use m_obsdiagNode, only: obsdiagNode_assert
 
-  use obsmod, only: rmiss_single, bmiss, &
-                    lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset
+  use obsmod, only: rmiss_single,&
+                    lobsdiagsave,nobskeep,lobsdiag_allocated,time_offset,bmiss
   use m_obsNode    , only: obsNode
   use m_vwnd10mNode, only: vwnd10mNode
   use m_vwnd10mNode, only: vwnd10mNode_appendto
@@ -324,7 +324,7 @@ subroutine setupvwnd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
                   luse = luse(i)        ,&
                  miter = miter          )
 
-        if(.not.associated(my_diag)) call die(myname, &
+        if(.not.associated(my_diag)) call die(myname,   &
                 'obsdiagLList_nextNode(), create =',.not.lobsdiag_allocated)
      end if
 
@@ -635,7 +635,7 @@ subroutine setupvwnd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
         my_head%luse    = luse(i)
 
         if(luse_obsdiag)then
-          call obsdiagNode_assert(my_diag, my_head%idv,my_head%iob,1,myname,'my_diag:my_head')
+          call obsdiagNode_assert(my_diag, my_head%idv,my_head%iob,1, myname,'my_diag:my_head')
           my_head%diags => my_diag
         end if
         my_head => null ()
@@ -676,14 +676,14 @@ subroutine setupvwnd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
   if(conv_diagsave .and. ii>0)then
      if(netcdf_diag) call nc_diag_write
      if(binary_diag) then
-        write(7)'uwn',nchar,nreal,ii,mype,ioff0
-        write(7)cdiagbuf(1:ii),rdiagbuf(:,1:ii)
-        deallocate(cdiagbuf,rdiagbuf)
-   
-        if (twodvar_regional) then
-           write(7)cprvstg(1:ii),csprvstg(1:ii)
-           deallocate(cprvstg,csprvstg)
-        endif
+       write(7)'uwn',nchar,nreal,ii,mype,ioff0
+       write(7)cdiagbuf(1:ii),rdiagbuf(:,1:ii)
+       deallocate(cdiagbuf,rdiagbuf)
+
+       if (twodvar_regional) then
+          write(7)cprvstg(1:ii),csprvstg(1:ii)
+          deallocate(cprvstg,csprvstg)
+       endif
      endif
   end if
 
@@ -1038,7 +1038,6 @@ subroutine setupvwnd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
            call nc_diag_data2d("ObsDiagSave_nldepart", odiag%nldepart )
            call nc_diag_data2d("ObsDiagSave_tldepart", odiag%tldepart )
            call nc_diag_data2d("ObsDiagSave_obssen",   odiag%obssen   )
-
         endif
 
         if (twodvar_regional) then

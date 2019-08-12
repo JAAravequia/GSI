@@ -27,6 +27,8 @@ module abstract_ensmod
     private
     contains
       procedure(mytype               ), nopass, deferred :: mytype
+      procedure(create_sub2grid_info ), nopass, deferred :: create_sub2grid_info
+      procedure(destroy_sub2grid_info), nopass, deferred :: destroy_sub2grid_info
       procedure(get_user_ens         ),         deferred :: get_user_ens
       procedure(get_user_Nens        ),         deferred :: get_user_Nens
       procedure(put_user_ens         ),         deferred :: put_user_ens
@@ -38,6 +40,28 @@ module abstract_ensmod
       implicit none
       character(:),allocatable:: type_
     end function mytype
+  end interface
+
+  abstract interface
+    subroutine create_sub2grid_info(s2gi,nsig,npe,s2gi_ref)
+      use kinds, only: i_kind
+      use general_sub2grid_mod, only: sub2grid_info
+      import abstractEnsemble
+      implicit none
+      type(sub2grid_info), intent(out  ) :: s2gi
+      integer(i_kind    ), intent(in   ) :: nsig
+      integer(i_kind    ), intent(in   ) :: npe
+      type(sub2grid_info), intent(in   ) :: s2gi_ref
+    end subroutine create_sub2grid_info
+  end interface
+
+  abstract interface
+    subroutine destroy_sub2grid_info(s2gi)
+      use general_sub2grid_mod, only: sub2grid_info
+      import abstractEnsemble
+      implicit none
+      type(sub2grid_info), intent(inout) :: s2gi
+    end subroutine destroy_sub2grid_info
   end interface
 
   abstract interface

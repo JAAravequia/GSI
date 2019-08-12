@@ -71,7 +71,7 @@ use mpeu_util, only: die
 use crtm_aod_module, only: crtm_aod_k
 use radiance_mod, only: n_actual_clouds,cloud_names,n_clouds_fwd,cloud_names_fwd, &
     n_clouds_jac,cloud_names_jac,n_actual_aerosols,aerosol_names,n_aerosols_fwd,aerosol_names_fwd, &
-    n_aerosols_jac,aerosol_names_jac,rad_obs_type,cw_cv
+    n_aerosols_jac,aerosol_names_jac,rad_obs_type,cw_cv,ql_cv
 use control_vectors, only: lcalc_gfdl_cfrac
 use ncepnems_io, only: imp_physics
 
@@ -123,7 +123,16 @@ public itref                ! = 34/36 index of Tr
 public idtw                 ! = 35/37 index of d(Tw)
 public idtc                 ! = 36/38 index of d(Tc)
 public itz_tr               ! = 37/39 index of d(Tz)/d(Tr)
- 
+
+! For TMI and GMI
+public iedge_log            ! = 32  ! index, if obs is to be obleted beause of locating near scan edges.
+! For  GMI 1CR (obstype=='gmi') data channel 10-13.
+public ilzen_ang2           ! = 33 index of local (satellite) zenith angle (radians)
+public ilazi_ang2           ! = 34 index of local (satellite) azimuth angle (radians)
+public iscan_ang2           ! = 35 index of scan (look) angle (radians)
+public iszen_ang2           ! = 36 index of solar zenith angle (degrees)
+public isazi_ang2           ! = 37 index of solar azimuth angle (degrees)
+
 !  Note other module variables are only used within this routine
 
   character(len=*), parameter :: myname='crtm_interface'
@@ -192,6 +201,9 @@ public itz_tr               ! = 37/39 index of d(Tz)/d(Tr)
   logical        ,save :: lprecip_wk 
   logical        ,save :: mixed_use
   integer(i_kind), parameter :: min_n_absorbers = 2
+
+  integer(i_kind),save :: iedge_log
+  integer(i_kind),save :: ilzen_ang2,ilazi_ang2,iscan_ang2,iszen_ang2,isazi_ang2
 
   type(crtm_atmosphere_type),save,dimension(1)   :: atmosphere
   type(crtm_surface_type),save,dimension(1)      :: surface
@@ -315,7 +327,8 @@ subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,nreal,isis,obstype,radmo
   use guess_grids, only: ges_tsen,ges_prsl,nfldsig
   use gridmod, only: fv3_full_hydro
   use mpeu_util, only: getindex
-  use constants, only: zero,max_varname_length
+  use constants, only: zero,tiny_r_kind,max_varname_length
+  use obsmod, only: dval_use
   use gsi_io, only: verbose
 
   implicit none
@@ -487,6 +500,25 @@ subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,nreal,isis,obstype,radmo
  iff10     = 29 ! index of ten meter wind factor
  ilone     = 30 ! index of earth relative longitude (degrees)
  ilate     = 31 ! index of earth relative latitude (degrees)
+ icount=ilate
+ if(dval_use) icount=icount+2
+ if ( obstype == 'avhrr_navy' .or. obstype == 'avhrr' ) then
+    icount=icount+2 ! when an independent SST analysis is read in
+ else if ( obstype == 'tmi' ) then
+   iedge_log = 32  ! index, if obs is to be obleted beause of locating near scan edges.
+   icount = iedge_log+2
+ else if  ( obstype == 'gmi' ) then
+   iedge_log = 32  ! index, if obs is to be obleted beause of locating near scan edges.
+   ilzen_ang2= 33  ! index of local (satellite) zenith angle (radians)
+   ilazi_ang2= 34  ! index of local (satellite) azimuth angle (radians)
+   iscan_ang2= 35  ! index of scan (look) angle (radians)
+   iszen_ang2= 36  ! index of solar zenith angle (degrees)
+   isazi_ang2= 37  ! index of solar azimuth angle (degrees)
+   icount = isazi_ang2
+   if(dval_use) icount=icount+2
+ else if  ( obstype == 'amsr2' ) then
+   icount=ilate+2
+ endif
 
  itref     = nreal-3  ! index of foundation temperature: Tr
  idtw      = nreal-2  ! index of diurnal warming: d(Tw) at depth zob
@@ -934,8 +966,8 @@ subroutine destroy_crtm
 
   return
 end subroutine destroy_crtm
- subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &   
-                   h,q,clw_guess,prsl,prsi, &                                          
+subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
+                   h,q,clw_guess,ciw_guess,rain_guess,snow_guess,prsl,prsi, &
                    trop5,tzbgr,dtsavg,sfc_speed,&
                    tsim,emissivity,ptau5,ts, &
                    emissivity_k,temp,wmix,jacobian,error_status,tsim_clr,tcc, & 
@@ -1052,7 +1084,7 @@ end subroutine destroy_crtm
   integer(i_kind)                       ,intent(  out) :: error_status
   real(r_kind),dimension(nsig,nchanl)   ,intent(  out) :: temp,ptau5,wmix
   real(r_kind),dimension(nsigradjac,nchanl),intent(out):: jacobian
-  real(r_kind)                          ,intent(  out) :: clw_guess
+  real(r_kind)                          ,intent(  out) :: clw_guess,ciw_guess,rain_guess,snow_guess
   real(r_kind),dimension(nchanl)        ,intent(  out), optional  :: tsim_clr      
   real(r_kind),dimension(nchanl)        ,intent(  out), optional  :: tcc       
   real(r_kind)                          ,intent(  out), optional  :: tcwv              
@@ -1140,7 +1172,6 @@ end subroutine destroy_crtm
   integer(i_kind),parameter,dimension(12):: mday=(/0,31,59,90,&
        120,151,181,212,243,273,304,334/)
   real(r_kind) ::   lai
-
 
   m1=mype+1
 
@@ -1515,8 +1546,15 @@ end subroutine destroy_crtm
         if ( trim(obstype) /= 'modis_aod' ) then
            panglr = data_s(iscan_ang)
            if(obstype == 'goes_img' .or. obstype == 'seviri' .or. obstype == 'abi')panglr = zero
+!=================================
+!!!!!NCEP's Vlab Version
            geometryinfo(1)%sensor_zenith_angle = abs(data_s(ilzen_ang)*rad2deg) ! local zenith angle
-           geometryinfo(1)%source_zenith_angle = abs(data_s(iszen_ang))        ! solar zenith angle
+           geometryinfo(1)%source_zenith_angle = abs(data_s(iszen_ang))         ! solar zenith angle
+!=================================
+!!!! GMAO's current FP ==> Switch to NCEP's Vlab version will result in non-zero(but very small) diff in most of all satellite radiance DA
+!           geometryinfo(1)%sensor_zenith_angle = data_s(ilzen_ang)*rad2deg      ! local zenith angle
+!           geometryinfo(1)%source_zenith_angle = data_s(iszen_ang)              ! solar zenith angle
+!=================================
            geometryinfo(1)%sensor_azimuth_angle = data_s(ilazi_ang)            ! local azimuth angle
            geometryinfo(1)%source_azimuth_angle = data_s(isazi_ang)            ! solar azimuth angle
            geometryinfo(1)%sensor_scan_angle   = panglr*rad2deg                ! scan angle
@@ -1855,6 +1893,9 @@ end subroutine destroy_crtm
   atmosphere(1)%level_pressure(0) = TOA_PRESSURE 
 
   clw_guess = zero
+  ciw_guess = zero
+  rain_guess = zero
+  snow_guess = zero
 
   if (n_actual_aerosols_wk>0) then
      do k = 1, nsig
@@ -1900,7 +1941,7 @@ end subroutine destroy_crtm
 
      if (n_clouds_fwd_wk>0) then
         kgkg_kgm2=(atmosphere(1)%level_pressure(k)-atmosphere(1)%level_pressure(k-1))*r100/grav
-        if (cw_cv) then
+        if (cw_cv.or.ql_cv) then
           if (icmask) then 
               c6(k) = kgkg_kgm2
               auxdp(k)=abs(prsi_rtm(kk+1)-prsi_rtm(kk))*r10
@@ -1918,6 +1959,10 @@ end subroutine destroy_crtm
               end if
 
               clw_guess = clw_guess +  cloud_cont(k,1)
+              ciw_guess = ciw_guess +  cloud_cont(k,2)
+              if(n_clouds_fwd_wk > 2) rain_guess = rain_guess +  cloud_cont(k,3)
+              if(n_clouds_fwd_wk > 3) snow_guess = snow_guess +  cloud_cont(k,4)
+
               do ii=1,n_clouds_fwd_wk
                  if (ii==1 .and. atmosphere(1)%temperature(k)-t0c>-20.0_r_kind) &
                     cloud_cont(k,1)=max(1.001_r_kind*1.0E-6_r_kind, cloud_cont(k,1))

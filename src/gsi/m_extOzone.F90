@@ -386,7 +386,7 @@ subroutine read_(dfile,dtype,dplat,dsis, &      ! intent(in), keys for type mana
 
         allocate(p_out(nreal+nchan,maxobs))
         p_out(:,:)=RMISS
-
+ 
         call ozlev_ncRead_(dfile,dtype, p_out,nread,npuse,nouse, gstime,twind)
  
      end select
@@ -489,7 +489,7 @@ subroutine oztot_ncread_(dfile,dtype,dsis, ozout,nmrecs,ndata,nodata, &
   use gsi_4dvar, only: l4dvar,iwinbgn,winlen,l4densvar
   use obsmod, only: nloz_omi
 
-  use constants, only: deg2rad,zero,rad2deg,r60inv
+  use constants, only: deg2rad,zero,r60inv
 !  use mpeu_util, only: mprefix,stdout
 
   implicit none
@@ -1045,8 +1045,6 @@ subroutine ozlev_ncread_(dfile,dtype,ozout,nmrecs,ndata,nodata, gstime,twind)
               dlon = dlon_earth
               call grdcrd1(dlat,rlats,nlat,1)
               call grdcrd1(dlon,rlons,nlon,1)
-              ! call grdcrd(dlat,1,rlats,nlat,1)
-              ! call grdcrd(dlon,1,rlons,nlon,1)
            endif
 
            idate5(1) = iya(iprof) !year
