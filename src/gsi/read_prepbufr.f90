@@ -411,8 +411,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 
   real(r_double),dimension(3,1500):: fcstdat
   logical print_verbose
-
-  logical,parameter:: GMAO_READ = .false.
   
   print_verbose=.false.
   if(verbose) print_verbose=.true.
@@ -422,7 +420,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 ! Initialize variables
 
   vdisterrmax=zero
-!  pflag=0                  !  dparrish debug compile run flags pflag as not defined ???????????
   zflag=0
   nreal=0
   satqc=zero
@@ -2402,7 +2399,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                    if ((kx==280).or.(kx==180)) oelev=r20+selev
                    if ((kx==299).or.(kx==199)) oelev=r20+selev
                    if ((kx==282).or.(kx==182)) oelev=r20+selev
-                   if (GMAO_READ.and.kx==198 ) oelev=r20+selev
+                   if  (kx==198)               oelev=r20+selev
                    if ((kx==285).or.(kx==185)) then
                       oelev=selev
                       selev=zero

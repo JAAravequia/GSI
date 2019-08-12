@@ -21,7 +21,6 @@ subroutine setupcldch(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_dia
 !
 ! program history log:
 !   2015-07-10  pondeca
-!   2016-05-06  yang - add closest_obs to select only one obs. among the multi-reports.
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i)
 !                       . removed (%dlat,%dlon) debris.
