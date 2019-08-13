@@ -336,167 +336,167 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins)
                 pbcjo(1,i_rad_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for temperature
-       case(i_t_ob_type)
-          if (.not. (aircraft_t_bc_pof .or. aircraft_t_bc)) then
-             call stpt(yobs(ib)%t,dval(ib),xval(ib),pbcjo(1,i_t_ob_type,ib),sges,nstep) 
-          else
-             call stpt(yobs(ib)%t,dval(ib),xval(ib),pbcjo(1,i_t_ob_type,ib),sges,nstep, &
-                 dbias%predt,xbias%predt) 
-          end if
+!KAB       case(i_t_ob_type)
+!          if (.not. (aircraft_t_bc_pof .or. aircraft_t_bc)) then
+!             call stpt(yobs(ib)%t,dval(ib),xval(ib),pbcjo(1,i_t_ob_type,ib),sges,nstep) 
+!          else
+!             call stpt(yobs(ib)%t,dval(ib),xval(ib),pbcjo(1,i_t_ob_type,ib),sges,nstep, &
+!                 dbias%predt,xbias%predt) 
+!          end if
 
 !   penalty, b, and c for winds
-       case(i_w_ob_type)
-          call stpw(yobs(ib)%w,dval(ib),xval(ib),pbcjo(1,i_w_ob_type,ib),sges,nstep)
+!KAB       case(i_w_ob_type)
+!          call stpw(yobs(ib)%w,dval(ib),xval(ib),pbcjo(1,i_w_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for precipitable water
-       case(i_pw_ob_type)
-          call stppw(yobs(ib)%pw,dval(ib),xval(ib),pbcjo(1,i_pw_ob_type,ib),sges,nstep)
+!KAB       case(i_pw_ob_type)
+!          call stppw(yobs(ib)%pw,dval(ib),xval(ib),pbcjo(1,i_pw_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for ozone
-       case(i_colvk_ob_type)
-          call stpco(yobs(ib)%colvk,dval(ib),xval(ib),pbcjo(1,i_colvk_ob_type,ib),sges,nstep)
+!KAB       case(i_colvk_ob_type)
+!          call stpco(yobs(ib)%colvk,dval(ib),xval(ib),pbcjo(1,i_colvk_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for ozone
-       case(i_pm2_5_ob_type)
-          call stppm2_5(yobs(ib)%pm2_5,dval(ib),xval(ib),pbcjo(1,i_pm2_5_ob_type,ib),sges,nstep)
+!KAB       case(i_pm2_5_ob_type)
+!          call stppm2_5(yobs(ib)%pm2_5,dval(ib),xval(ib),pbcjo(1,i_pm2_5_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for wind lidar
-       case(i_dw_ob_type)
-          call stpdw(yobs(ib)%dw,dval(ib),xval(ib),pbcjo(1,i_dw_ob_type,ib),sges,nstep) 
+!KAB       case(i_dw_ob_type)
+!          call stpdw(yobs(ib)%dw,dval(ib),xval(ib),pbcjo(1,i_dw_ob_type,ib),sges,nstep) 
 
 !   penalty, b, and c for radar
-       case(i_rw_ob_type)
-          call stprw(yobs(ib)%rw,dval(ib),xval(ib),pbcjo(1,i_rw_ob_type,ib),sges,nstep) 
+!KAB       case(i_rw_ob_type)
+!          call stprw(yobs(ib)%rw,dval(ib),xval(ib),pbcjo(1,i_rw_ob_type,ib),sges,nstep) 
 
 !   penalty, b, and c for radar reflectivity
-       case(i_dbz_ob_type)
-          call stpdbz(yobs(ib)%dbz,dval(ib),xval(ib),pbcjo(1,i_dbz_ob_type,ib),sges,nstep)
+!KAB       case(i_dbz_ob_type)
+!          call stpdbz(yobs(ib)%dbz,dval(ib),xval(ib),pbcjo(1,i_dbz_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for moisture
-       case(i_q_ob_type)
-          call stpq(yobs(ib)%q,dval(ib),xval(ib),pbcjo(1,i_q_ob_type,ib),sges,nstep)
+!KAB       case(i_q_ob_type)
+!          call stpq(yobs(ib)%q,dval(ib),xval(ib),pbcjo(1,i_q_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for ozone:oz
-       case(i_oz_ob_type)
-          call stpozlay(yobs(ib)%oz ,dval(ib),xval(ib),pbcjo(1, i_oz_ob_type,ib),sges,nstep)
+!KAB       case(i_oz_ob_type)
+!          call stpozlay(yobs(ib)%oz ,dval(ib),xval(ib),pbcjo(1, i_oz_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for ozone:o3l
-       case(i_o3l_ob_type)
-          call stpozlev(yobs(ib)%o3l,dval(ib),xval(ib),pbcjo(1,i_o3l_ob_type,ib),sges,nstep)
+!KAB       case(i_o3l_ob_type)
+!          call stpozlev(yobs(ib)%o3l,dval(ib),xval(ib),pbcjo(1,i_o3l_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for lightning:light
-       case(i_light_ob_type)
-          call stplight(yobs(ib)%light,dval(ib),xval(ib),pbcjo(1,i_light_ob_type,ib),sges,nstep)
+!KAB       case(i_light_ob_type)
+!          call stplight(yobs(ib)%light,dval(ib),xval(ib),pbcjo(1,i_light_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for GPS local observation
-       case(i_gps_ob_type)
-          call stpgps(yobs(ib)%gps,dval(ib),xval(ib),pbcjo(1,i_gps_ob_type,ib),sges,nstep) 
+!KAB       case(i_gps_ob_type)
+!          call stpgps(yobs(ib)%gps,dval(ib),xval(ib),pbcjo(1,i_gps_ob_type,ib),sges,nstep) 
 
 !   penalty, b, and c for conventional sst
-       case(i_sst_ob_type)
-          call stpsst(yobs(ib)%sst,dval(ib),xval(ib),pbcjo(1,i_sst_ob_type,ib),sges,nstep)
+!KAB       case(i_sst_ob_type)
+!          call stpsst(yobs(ib)%sst,dval(ib),xval(ib),pbcjo(1,i_sst_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for wind speed
-       case(i_spd_ob_type)
-          call stpspd(yobs(ib)%spd,dval(ib),xval(ib),pbcjo(1,i_spd_ob_type,ib),sges,nstep) 
+!KAB       case(i_spd_ob_type)
+!          call stpspd(yobs(ib)%spd,dval(ib),xval(ib),pbcjo(1,i_spd_ob_type,ib),sges,nstep) 
 
 !   penalty, b, and c for precipitation
-       case(i_pcp_ob_type)
-          call stppcp(yobs(ib)%pcp,dval(ib),xval(ib),pbcjo(1,i_pcp_ob_type,ib),sges,nstep)
+!KAB       case(i_pcp_ob_type)
+!          call stppcp(yobs(ib)%pcp,dval(ib),xval(ib),pbcjo(1,i_pcp_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for surface pressure
-       case(i_ps_ob_type)
-          call stpps(yobs(ib)%ps,dval(ib),xval(ib),pbcjo(1,i_ps_ob_type,ib),sges,nstep)
+!KAB       case(i_ps_ob_type)
+!          call stpps(yobs(ib)%ps,dval(ib),xval(ib),pbcjo(1,i_ps_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for MSLP TC obs
-       case(i_tcp_ob_type)
-          call stptcp(yobs(ib)%tcp,dval(ib),xval(ib),pbcjo(1,i_tcp_ob_type,ib),sges,nstep)
+!KAB       case(i_tcp_ob_type)
+!          call stptcp(yobs(ib)%tcp,dval(ib),xval(ib),pbcjo(1,i_tcp_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for conventional gust
-       case(i_gust_ob_type)
-          if (getindex(cvars2d,'gust')>0) &
-          call stpgust(yobs(ib)%gust,dval(ib),xval(ib),pbcjo(1,i_gust_ob_type,ib),sges,nstep)
+!KAB       case(i_gust_ob_type)
+!          if (getindex(cvars2d,'gust')>0) &
+!          call stpgust(yobs(ib)%gust,dval(ib),xval(ib),pbcjo(1,i_gust_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for conventional vis
-       case(i_vis_ob_type)
-          if (getindex(cvars2d,'vis')>0) &
-          call stpvis(yobs(ib)%vis,dval(ib),xval(ib),pbcjo(1,i_vis_ob_type,ib),sges,nstep)
+!KAB       case(i_vis_ob_type)
+!          if (getindex(cvars2d,'vis')>0) &
+!          call stpvis(yobs(ib)%vis,dval(ib),xval(ib),pbcjo(1,i_vis_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for conventional pblh
-       case(i_pblh_ob_type)
-          if (getindex(cvars2d,'pblh')>0) &
-          call stppblh(yobs(ib)%pblh,dval(ib),xval(ib),pbcjo(1,i_pblh_ob_type,ib),sges,nstep)
+!KAB       case(i_pblh_ob_type)
+!          if (getindex(cvars2d,'pblh')>0) &
+!          call stppblh(yobs(ib)%pblh,dval(ib),xval(ib),pbcjo(1,i_pblh_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for conventional wspd10m
-       case(i_wspd10m_ob_type)
-          if (getindex(cvars2d,'wspd10m')>0) &
-          call stpwspd10m(yobs(ib)%wspd10m,dval(ib),xval(ib),pbcjo(1,i_wspd10m_ob_type,ib),sges,nstep)
+!KAB       case(i_wspd10m_ob_type)
+!          if (getindex(cvars2d,'wspd10m')>0) &
+!          call stpwspd10m(yobs(ib)%wspd10m,dval(ib),xval(ib),pbcjo(1,i_wspd10m_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for conventional td2m
-       case(i_td2m_ob_type)
-          if (getindex(cvars2d,'td2m')>0) &
-          call stptd2m(yobs(ib)%td2m,dval(ib),xval(ib),pbcjo(1,i_td2m_ob_type,ib),sges,nstep)
+!KAB       case(i_td2m_ob_type)
+!          if (getindex(cvars2d,'td2m')>0) &
+!          call stptd2m(yobs(ib)%td2m,dval(ib),xval(ib),pbcjo(1,i_td2m_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for conventional mxtm
-       case(i_mxtm_ob_type)
-          if (getindex(cvars2d,'mxtm')>0) &
-          call stpmxtm(yobs(ib)%mxtm,dval(ib),xval(ib),pbcjo(1,i_mxtm_ob_type,ib),sges,nstep)
+!KAB       case(i_mxtm_ob_type)
+!          if (getindex(cvars2d,'mxtm')>0) &
+!          call stpmxtm(yobs(ib)%mxtm,dval(ib),xval(ib),pbcjo(1,i_mxtm_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for conventional mitm
-       case(i_mitm_ob_type)
-          if (getindex(cvars2d,'mitm')>0) &
-          call stpmitm(yobs(ib)%mitm,dval(ib),xval(ib),pbcjo(1,i_mitm_ob_type,ib),sges,nstep)
+!KAB       case(i_mitm_ob_type)
+!          if (getindex(cvars2d,'mitm')>0) &
+!          call stpmitm(yobs(ib)%mitm,dval(ib),xval(ib),pbcjo(1,i_mitm_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for conventional pmsl
-       case(i_pmsl_ob_type)
-          if (getindex(cvars2d,'pmsl')>0) &
-          call stppmsl(yobs(ib)%pmsl,dval(ib),xval(ib),pbcjo(1,i_pmsl_ob_type,ib),sges,nstep)
+!KAB       case(i_pmsl_ob_type)
+!          if (getindex(cvars2d,'pmsl')>0) &
+!          call stppmsl(yobs(ib)%pmsl,dval(ib),xval(ib),pbcjo(1,i_pmsl_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for conventional howv
-       case(i_howv_ob_type)
-          if (getindex(cvars2d,'howv')>0) &
-          call stphowv(yobs(ib)%howv,dval(ib),xval(ib),pbcjo(1,i_howv_ob_type,ib),sges,nstep)
+!KAB       case(i_howv_ob_type)
+!          if (getindex(cvars2d,'howv')>0) &
+!          call stphowv(yobs(ib)%howv,dval(ib),xval(ib),pbcjo(1,i_howv_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for total cloud amount
-       case(i_tcamt_ob_type)
-          if (getindex(cvars2d,'tcamt')>0) &
-          call stptcamt(yobs(ib)%tcamt,dval(ib),xval(ib),pbcjo(1,i_tcamt_ob_type,ib),sges,nstep)
+!KAB       case(i_tcamt_ob_type)
+!          if (getindex(cvars2d,'tcamt')>0) &
+!          call stptcamt(yobs(ib)%tcamt,dval(ib),xval(ib),pbcjo(1,i_tcamt_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for cloud base of lowest cloud
-       case(i_lcbas_ob_type)
-          if (getindex(cvars2d,'lcbas')>0) &
-          call stplcbas(yobs(ib)%lcbas,dval(ib),xval(ib),pbcjo(1,i_lcbas_ob_type,ib),sges,nstep)
+!KAB       case(i_lcbas_ob_type)
+!          if (getindex(cvars2d,'lcbas')>0) &
+!          call stplcbas(yobs(ib)%lcbas,dval(ib),xval(ib),pbcjo(1,i_lcbas_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for aod
-       case(i_aero_ob_type)
-          call stpaod(yobs(ib)%aero,dval(ib),xval(ib),pbcjo(1,i_aero_ob_type,ib),sges,nstep)
+!KAB       case(i_aero_ob_type)
+!          call stpaod(yobs(ib)%aero,dval(ib),xval(ib),pbcjo(1,i_aero_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for pm10
-       case(i_pm10_ob_type)
-          call stppm10(yobs(ib)%pm10,dval(ib),xval(ib),pbcjo(1,i_pm10_ob_type,ib),sges,nstep)
+!KAB       case(i_pm10_ob_type)
+!          call stppm10(yobs(ib)%pm10,dval(ib),xval(ib),pbcjo(1,i_pm10_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for conventional cldch
-       case(i_cldch_ob_type)
-          if (getindex(cvars2d,'cldch')>0) &
-          call stpcldch(yobs(ib)%cldch,dval(ib),xval(ib),pbcjo(1,i_cldch_ob_type,ib),sges,nstep)
+!KAB       case(i_cldch_ob_type)
+!          if (getindex(cvars2d,'cldch')>0) &
+!          call stpcldch(yobs(ib)%cldch,dval(ib),xval(ib),pbcjo(1,i_cldch_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for conventional uwnd10m
-       case(i_uwnd10m_ob_type)
-          if (getindex(cvars2d,'uwnd10m')>0) &
-          call stpuwnd10m(yobs(ib)%uwnd10m,dval(ib),xval(ib),pbcjo(1,i_uwnd10m_ob_type,ib),sges,nstep)
+!KAB       case(i_uwnd10m_ob_type)
+!          if (getindex(cvars2d,'uwnd10m')>0) &
+!          call stpuwnd10m(yobs(ib)%uwnd10m,dval(ib),xval(ib),pbcjo(1,i_uwnd10m_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for conventional vwnd10m
-       case(i_vwnd10m_ob_type)
-          if (getindex(cvars2d,'vwnd10m')>0) &
-          call stpvwnd10m(yobs(ib)%vwnd10m,dval(ib),xval(ib),pbcjo(1,i_vwnd10m_ob_type,ib),sges,nstep)
+!KAB       case(i_vwnd10m_ob_type)
+!          if (getindex(cvars2d,'vwnd10m')>0) &
+!          call stpvwnd10m(yobs(ib)%vwnd10m,dval(ib),xval(ib),pbcjo(1,i_vwnd10m_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for solid-water content path
-       case(i_swcp_ob_type)
-          call stpswcp(yobs(ib)%swcp,dval(ib),xval(ib),pbcjo(1,i_swcp_ob_type,ib),sges,nstep)
+!KAB       case(i_swcp_ob_type)
+!          call stpswcp(yobs(ib)%swcp,dval(ib),xval(ib),pbcjo(1,i_swcp_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for liquid-water content path
-       case(i_lwcp_ob_type)
-          call stplwcp(yobs(ib)%lwcp,dval(ib),xval(ib),pbcjo(1,i_lwcp_ob_type,ib),sges,nstep)
+!KAB       case(i_lwcp_ob_type)
+!          call stplwcp(yobs(ib)%lwcp,dval(ib),xval(ib),pbcjo(1,i_lwcp_ob_type,ib),sges,nstep)
 
        case default
           call perr('stpjo','unexpected thread, ll_jo(mm) =',ll)

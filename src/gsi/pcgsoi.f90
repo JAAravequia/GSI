@@ -131,7 +131,7 @@ subroutine pcgsoi()
   use gsi_4dvar, only: nobs_bins, nsubwin, l4dvar, iwrtinc, ladtest, &
                        iorthomax
   use gridmod, only: twodvar_regional
-  use constants, only: zero,one,five,tiny_r_kind
+  use constants, only: zero,zero_quad,one,five,tiny_r_kind
   use anberror, only: anisotropic
   use mpimod, only: mype
   use mpl_allreducemod, only: mpl_allreduce
@@ -158,7 +158,6 @@ subroutine pcgsoi()
   use rapidrefresh_cldsurf_mod, only: i_gsdcldanal_type
   use gsi_io, only: verbose
   use berror, only: vprecond
-
   use stpjomod, only: stpjo_setup
   use m_obsHeadBundle, only: obsHeadBundle
   use m_obsHeadBundle, only: obsHeadBundle_create
@@ -221,7 +220,6 @@ subroutine pcgsoi()
   end_iter=.false.
   llouter=.false.
   gsave=zero
-  
 
 ! Convergence criterion needs to be relaxed a bit for anisotropic mode,
 ! because the anisotropic recursive filter, for reasons of computational
@@ -310,7 +308,7 @@ subroutine pcgsoi()
      end if
 
 !    Compare obs to solution and transpose back to grid
-     call intall(sval,sbias,rval,rbias)
+     call intall(sval,sbias,rval,rbias,stpval)
 
      if (iter<=1 .and. print_diag_pcg) then
         do ii=1,nobs_bins
@@ -529,7 +527,7 @@ subroutine pcgsoi()
 
 !    Calculate stepsize
      call stpcalc(stp,sval,sbias,xhat,dirx,rval,rbias, &
-                  diry,penalty,penaltynew,fjcost,fjcostnew,end_iter)
+                  diry,penalty,penaltynew,fjcost,fjcostnew,end_iter) 
 
      if (lanlerr) call writeout_gradients(gradx,grady,niter(jiter),stp,b,mype)
 

@@ -32,8 +32,8 @@ PUBLIC stprad
 
 
 contains
-
-subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
+!KAB only need to call this if nstep>0?
+subroutine stprad_state(radhead,dval,xval,rpred,out,sges,nstep)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    stprad compute contribution to penalty and stepsize
@@ -86,7 +86,6 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
 !     sv       - input v correction field
 !     sst      - input skin temp. vector 
 !     rpred    - search direction for predictors
-!     spred    - input predictor values
 !     sges     - step size estimates(nstep)
 !     nstep    - number of stepsizes (==0 means use outer iteration value)
 !
@@ -121,7 +120,7 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
   class(obsNode), pointer                ,intent(in   ) :: radhead
   integer(i_kind)                        ,intent(in   ) :: nstep
   real(r_quad),dimension(max(1,nstep))   ,intent(inout) :: out
-  real(r_kind),dimension(npred,jpch_rad) ,intent(in   ) :: rpred,spred
+  real(r_kind),dimension(npred,jpch_rad) ,intent(in   ) :: rpred
   real(r_kind),dimension(max(1,nstep))   ,intent(in   ) :: sges
   type(gsi_bundle),intent(in) :: dval
   type(gsi_bundle),intent(in) :: xval
@@ -129,15 +128,13 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
 ! Declare local variables
   integer(i_kind) istatus
   integer(i_kind) nn,n,ic,k,nx,j1,j2,j3,j4,kk, mm, ic1
-  real(r_kind) val2,val,w1,w2,w3,w4
-  real(r_kind),dimension(nsigradjac):: tdir,rdir
+  real(r_kind) w1,w2,w3,w4
+  real(r_kind),dimension(nsigradjac):: rdir
   real(r_kind) cg_rad,wgross,wnotgross
   integer(i_kind),dimension(nsig) :: j1n,j2n,j3n,j4n
   real(r_kind),dimension(max(1,nstep)) :: term,rad
   type(radNode), pointer :: radptr
-  real(r_kind),pointer,dimension(:) :: rt,rq,rcw,roz,ru,rv,rqg,rqh,rqi,rql,rqr,rqs
-  real(r_kind),pointer,dimension(:) :: st,sq,scw,soz,su,sv,sqg,sqh,sqi,sql,sqr,sqs
-  real(r_kind),pointer,dimension(:) :: rst,sst
+  real(r_kind),pointer,dimension(:) :: rt,rq,rcw,roz,ru,rv,rqg,rqh,rqi,rql,rqr,rqs,rst
 
   out=zero_quad
 
@@ -147,20 +144,6 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
   if(lgoback)return
 
 ! Retrieve pointers
-  call gsi_bundlegetpointer(xval,'u',  su, istatus)
-  call gsi_bundlegetpointer(xval,'v',  sv, istatus)
-  call gsi_bundlegetpointer(xval,'tv' ,st, istatus)
-  call gsi_bundlegetpointer(xval,'q',  sq, istatus)
-  call gsi_bundlegetpointer(xval,'cw' ,scw,istatus)
-  call gsi_bundlegetpointer(xval,'oz' ,soz,istatus)
-  call gsi_bundlegetpointer(xval,'sst',sst,istatus)
-  call gsi_bundlegetpointer(xval,'qg' ,sqg,istatus)
-  call gsi_bundlegetpointer(xval,'qh' ,sqh,istatus)
-  call gsi_bundlegetpointer(xval,'qi' ,sqi,istatus)
-  call gsi_bundlegetpointer(xval,'ql' ,sql,istatus)
-  call gsi_bundlegetpointer(xval,'qr' ,sqr,istatus)
-  call gsi_bundlegetpointer(xval,'qs' ,sqs,istatus)
-
   call gsi_bundlegetpointer(dval,'u',  ru, istatus)
   call gsi_bundlegetpointer(dval,'v',  rv, istatus)
   call gsi_bundlegetpointer(dval,'tv' ,rt, istatus)
@@ -174,134 +157,85 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
   call gsi_bundlegetpointer(dval,'ql' ,rql,istatus)
   call gsi_bundlegetpointer(dval,'qr' ,rqr,istatus)
   call gsi_bundlegetpointer(dval,'qs' ,rqs,istatus)
-
-
-  tdir=zero
   rdir=zero
 
   radptr=> radNode_typecast(radhead)
   do while(associated(radptr))
      if(radptr%luse)then
-        if(nstep > 0)then
-           j1=radptr%ij(1)
-           j2=radptr%ij(2)
-           j3=radptr%ij(3)
-           j4=radptr%ij(4)
-           w1=radptr%wij(1)
-           w2=radptr%wij(2)
-           w3=radptr%wij(3)
-           w4=radptr%wij(4)
-           if(luseu)then
-              tdir(ius+1)=w1* su(j1) + w2* su(j2) + w3* su(j3) + w4* su(j4)
-              rdir(ius+1)=w1* ru(j1) + w2* ru(j2) + w3* ru(j3) + w4* ru(j4)
-           endif
-           if(lusev)then
-              tdir(ivs+1)=w1* sv(j1) + w2* sv(j2) + w3* sv(j3) + w4* sv(j4)
-              rdir(ivs+1)=w1* rv(j1) + w2* rv(j2) + w3* rv(j3) + w4* rv(j4)
-           endif
-           if (isst>=0) then
-              tdir(isst+1)=w1*sst(j1) + w2*sst(j2) + w3*sst(j3) + w4*sst(j4)   
-              rdir(isst+1)=w1*rst(j1) + w2*rst(j2) + w3*rst(j3) + w4*rst(j4)   
-           end if
-
-           j1n(1) = j1
-           j2n(1) = j2
-           j3n(1) = j3
-           j4n(1) = j4
-           do n=2,nsig
-              j1n(n) = j1n(n-1)+latlon11
-              j2n(n) = j2n(n-1)+latlon11
-              j3n(n) = j3n(n-1)+latlon11
-              j4n(n) = j4n(n-1)+latlon11
-           enddo
-           do n=1,nsig
-              j1 = j1n(n)
-              j2 = j2n(n)
-              j3 = j3n(n)
-              j4 = j4n(n)
-  
-!             Input state vector
-!             Input search direction vector
-              if(luset)then
-                 tdir(itv+n)=w1* st(j1) +w2* st(j2) + w3* st(j3) +w4*  st(j4)
-                 rdir(itv+n)=w1* rt(j1) +w2* rt(j2) + w3* rt(j3) +w4*  rt(j4)
-              endif
-              if(luseq)then
-                 tdir(iqv+n)=w1* sq(j1) +w2* sq(j2) + w3* sq(j3) +w4*  sq(j4)
-                 rdir(iqv+n)=w1* rq(j1) +w2* rq(j2) + w3* rq(j3) +w4*  rq(j4)
-              endif
-              if (luseoz) then
-                 tdir(ioz+n)=w1*soz(j1)+w2*soz(j2)+ w3*soz(j3)+w4*soz(j4)
-                 rdir(ioz+n)=w1*roz(j1)+w2*roz(j2)+ w3*roz(j3)+w4*roz(j4)
-              end if
-              if (lusecw) then
-                 tdir(icw+n)=w1*scw(j1)+w2*scw(j2)+ w3*scw(j3)+w4*scw(j4)
-                 rdir(icw+n)=w1*rcw(j1)+w2*rcw(j2)+ w3*rcw(j3)+w4*rcw(j4)
-              end if
-              if (luseqg) then
-                 tdir(iqg+n)=w1*sqg(j1)+w2*sqg(j2)+ w3*sqg(j3)+w4*sqg(j4)
-                 rdir(iqg+n)=w1*rqg(j1)+w2*rqg(j2)+ w3*rqg(j3)+w4*rqg(j4)
-              end if
-              if (luseqh) then
-                 tdir(iqh+n)=w1*sqh(j1)+w2*sqh(j2)+ w3*sqh(j3)+w4*sqh(j4)
-                 rdir(iqh+n)=w1*rqh(j1)+w2*rqh(j2)+ w3*rqh(j3)+w4*rqh(j4)
-              end if
-              if (luseqi) then
-                 tdir(iqi+n)=w1*sqi(j1)+w2*sqi(j2)+ w3*sqi(j3)+w4*sqi(j4)
-                 rdir(iqi+n)=w1*rqi(j1)+w2*rqi(j2)+ w3*rqi(j3)+w4*rqi(j4)
-              end if
-              if (luseql) then
-                 tdir(iql+n)=w1*sql(j1)+w2*sql(j2)+ w3*sql(j3)+w4*sql(j4)
-                 rdir(iql+n)=w1*rql(j1)+w2*rql(j2)+ w3*rql(j3)+w4*rql(j4)
-              end if
-              if (luseqr) then
-                 tdir(iqr+n)=w1*sqr(j1)+w2*sqr(j2)+ w3*sqr(j3)+w4*sqr(j4)
-                 rdir(iqr+n)=w1*rqr(j1)+w2*rqr(j2)+ w3*rqr(j3)+w4*rqr(j4)
-              end if
-              if (luseqs) then
-                 tdir(iqs+n)=w1*sqs(j1)+w2*sqs(j2)+ w3*sqs(j3)+w4*sqs(j4)
-                 rdir(iqs+n)=w1*rqs(j1)+w2*rqs(j2)+ w3*rqs(j3)+w4*rqs(j4)
-              end if
-
-
-           end do
-        end if
-        do nn=1,radptr%nchan
-
-           val2=-radptr%res(nn)
-
-           if(nstep > 0)then
-              val = zero
-!             contribution from bias corection
-              ic=radptr%icx(nn)
-              if (radptr%use_corr_obs) then  
-                 do mm=1,radptr%nchan 
-                    do nx=1,npred
-                       ic1=radptr%icx(mm)
-                       val2=val2+spred(nx,ic1)*radptr%rsqrtinv(mm,nn)*radptr%pred(nx,mm)
-                       val=val+rpred(nx,ic1)*radptr%rsqrtinv(mm,nn)*radptr%pred(nx,mm)
-                    end do
-                 end do
-              else
+        j1=radptr%ij(1)
+        j2=radptr%ij(2)
+        j3=radptr%ij(3)
+        j4=radptr%ij(4)
+        w1=radptr%wij(1)
+        w2=radptr%wij(2)
+        w3=radptr%wij(3)
+        w4=radptr%wij(4)
+        if(luseu) rdir(ius+1)=w1*ru(j1)+w2*ru(j2)+w3*ru(j3)+w4*ru(j4)
+        if(lusev) rdir(ivs+1)=w1*rv(j1)+w2*rv(j2)+w3*rv(j3)+w4* rv(j4)
+        if (isst>=0) rdir(isst+1)=w1*rst(j1)+w2*rst(j2)+w3*rst(j3)+w4*rst(j4)   
+        j1n(1) = j1
+        j2n(1) = j2
+        j3n(1) = j3
+        j4n(1) = j4
+        do n=2,nsig
+           j1n(n) = j1n(n-1)+latlon11
+           j2n(n) = j2n(n-1)+latlon11
+           j3n(n) = j3n(n-1)+latlon11
+           j4n(n) = j4n(n-1)+latlon11
+        enddo
+        do n=1,nsig
+           j1 = j1n(n)
+           j2 = j2n(n)
+           j3 = j3n(n)
+           j4 = j4n(n)
+!          Input state vector
+!          Input search direction vector
+           if (luset ) rdir(itv+n)=w1*rt(j1)+w2*rt(j2)+w3*rt(j3)+w4*rt(j4)
+           if (luseq ) rdir(iqv+n)=w1*rq(j1)+w2*rq(j2)+w3*rq(j3)+w4*rq(j4)
+           if (luseoz) rdir(ioz+n)=w1*roz(j1)+w2*roz(j2)+ w3*roz(j3)+w4*roz(j4)
+           if (lusecw) rdir(icw+n)=w1*rcw(j1)+w2*rcw(j2)+ w3*rcw(j3)+w4*rcw(j4)
+           if (luseqg) rdir(iqg+n)=w1*rqg(j1)+w2*rqg(j2)+ w3*rqg(j3)+w4*rqg(j4)
+           if (luseqh) rdir(iqh+n)=w1*rqh(j1)+w2*rqh(j2)+ w3*rqh(j3)+w4*rqh(j4)
+           if (luseqi) rdir(iqi+n)=w1*rqi(j1)+w2*rqi(j2)+ w3*rqi(j3)+w4*rqi(j4)
+           if (luseql) rdir(iql+n)=w1*rql(j1)+w2*rql(j2)+ w3*rql(j3)+w4*rql(j4)
+           if (luseqr) rdir(iqr+n)=w1*rqr(j1)+w2*rqr(j2)+ w3*rqr(j3)+w4*rqr(j4)
+           if (luseqs) rdir(iqs+n)=w1*rqs(j1)+w2*rqs(j2)+ w3*rqs(j3)+w4*rqs(j4)
+        end do
+        do nn=1,radptr%nchan 
+           radptr%val(nn) = zero
+!          contribution from bias corection
+           ic=radptr%icx(nn)
+           if (radptr%use_corr_obs) then  
+              do mm=1,radptr%nchan 
                  do nx=1,npred
-                    val2=val2+spred(nx,ic)*radptr%pred(nx,nn)
-                    val =val +rpred(nx,ic)*radptr%pred(nx,nn)
+                    ic1=radptr%icx(mm)
+                    radptr%val(nn)=radptr%val(nn)+rpred(nx,ic1)*radptr%rsqrtinv(mm,nn)*radptr%pred(nx,mm)
                  end do
-              end if
-!              end do
- 
-!             contribution from atmosphere
-              do k=1,nsigradjac
-                 val2=val2+tdir(k)*radptr%dtb_dvar(k,nn)
-                 val =val +rdir(k)*radptr%dtb_dvar(k,nn)
-              end do
-
-!             calculate radiances for each stepsize
-              do kk=1,nstep
-                 rad(kk)=val2+sges(kk)*val
               end do
            else
-              rad(kk)= val2
+              do nx=1,npred
+                 radptr%val(nn)=radptr%val(nn)+rpred(nx,ic)*radptr%pred(nx,nn)
+              end do
+           end if
+!          contribution from atmosphere
+           do k=1,nsigradjac
+              radptr%val(nn) =radptr%val(nn) +rdir(k)*radptr%dtb_dvar(k,nn)
+           end do
+        enddo
+     endif !luse
+     radptr => radNode_nextcast(radptr)
+  enddo !while associated(radptr)
+  return
+end subroutine stprad_state
+
+subroutine stprad
+           if(nstep > 0)then
+!             calculate radiances for each stepsize
+              do kk=1,nstep
+                 rad(kk)=radptr%val2(nn)+sges(kk)*radptr%val(nn)
+              end do
+           else
+              rad(kk)= radptr%val2(nn)
            end if
         
 !          calculate contribution to J

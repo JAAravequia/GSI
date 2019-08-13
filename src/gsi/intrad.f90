@@ -201,7 +201,7 @@ subroutine setrad(sval)
   return
 end subroutine setrad
 
-subroutine intrad_(radhead,rval,sval,rpred,spred)
+subroutine intrad_(radhead,rval,sval,rpred,spred) 
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    intrad      sat radiance nonlin qc obs operator
@@ -318,7 +318,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
   real(r_kind),pointer,dimension(:) :: sst
   real(r_kind),pointer,dimension(:) :: rt,rq,rcw,roz,ru,rv,rqg,rqh,rqi,rql,rqr,rqs
   real(r_kind),pointer,dimension(:) :: rst
-
+  
 !  If no rad observations return
   if(.not.associated(radhead)) return
 ! Set required parameters
@@ -497,7 +497,8 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
               end do
            endif
         end if
-
+!KAB can initialize this with res in setuprad?
+        radptr%val2(nn)=radptr%val2(nn)+val(nn)
 
         if(luse_obsdiag)then
            if (lsaveobsens) then

@@ -26,7 +26,7 @@ module m_radNode
 ! module interface:
   use obsmod, only: obs_diag,aofp_obs_diag
   use obsmod, only: obs_diags
-  use kinds , only: i_kind,r_kind
+  use kinds , only: i_kind,r_kind,r_quad !KAB
   use mpeu_util, only: assert_,die,perr,warn,tell
   use m_obsNode, only: obsNode
   implicit none
@@ -58,6 +58,8 @@ module m_radNode
      integer(i_kind) :: nchan         !  number of channels for this profile
      integer(i_kind) :: ij(4)         !  horizontal locations
      logical         :: use_corr_obs  !  logical to indicate if using correlated obs
+     real(r_quad),dimension(:),pointer :: val  ! solution at current iteration
+     real(r_quad),dimension(:),pointer :: val2 ! searh direction
      !logical         :: luse          !  flag indicating if ob is used in pen.
 
      !integer(i_kind) :: idv,iob              ! device id and obs index for sorting
@@ -228,6 +230,8 @@ _ENTRY_(myname_)
         if(associated(aNode%pred    )) deallocate(aNode%pred    )
         if(associated(aNode%dtb_dvar)) deallocate(aNode%dtb_dvar)
         if(associated(aNode%rsqrtinv)) deallocate(aNode%rsqrtinv)
+        if(associated(aNode%val     )) deallocate(aNode%val     )!KAB
+        if(associated(aNode%val2    )) deallocate(aNode%val2    )
         if(associated(aNode%icx     )) deallocate(aNode%icx     )
 
         nchan=aNode%nchan
@@ -238,7 +242,9 @@ _ENTRY_(myname_)
                   aNode%pred         (npred,nchan), &
                   aNode%dtb_dvar(nsigradjac,nchan), &
                   aNode%ich  (nchan), &
-                  aNode%icx  (nchan)  )
+                  aNode%icx  (nchan), &
+                  aNode%val  (nchan), &
+                  aNode%val2 (nchan)  ) !KAB
 
         if (aNode%use_corr_obs) then
             deallocate(aNode%rsqrtinv, stat=istat)
@@ -253,7 +259,9 @@ _ENTRY_(myname_)
                                     aNode%icx     , &
                                     aNode%dtb_dvar, &
                                     aNode%wij     , &
-                                    aNode%ij
+                                    aNode%ij      , & !KAB
+                                    aNode%val     , &
+                                    aNode%val2
                 if (istat/=0) then
                   call perr(myname_,'read(%(res,err2,...)), iostat =',istat)
                   _EXIT_(myname_)
@@ -310,7 +318,9 @@ _ENTRY_(myname_)
                                 aNode%icx     , &
                                 aNode%dtb_dvar, &
                                 aNode%wij     , &
-                                aNode%ij
+                                aNode%ij      , &!KAB
+                                aNode%val     , &
+                                aNode%val2
                 if (jstat/=0) then
                   call perr(myname_,'write(%(ich,res,err2,...)), iostat =',jstat)
                   _EXIT_(myname_)

@@ -36,7 +36,7 @@ end interface
 
 contains
 
-subroutine intjo_(yobs,rval,qpred,sval,sbias,ibin)
+subroutine intjo_(yobs,rval,qpred,sval,sbias,ibin,stpval) !KAB
 
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -236,7 +236,7 @@ use intswcpmod, only: intswcp
 use intlwcpmod, only: intlwcp
 use gsi_bundlemod, only: gsi_bundle
 use gsi_bundlemod, only: gsi_bundlegetpointer
-
+use radinfo, only; jpch_rad !KAB
 use m_obsHeadBundle, only: obsHeadBundle
 implicit none
 
@@ -246,6 +246,7 @@ type(obsHeadBundle), intent(in) :: yobs
 type(gsi_bundle), intent(in   ) :: sval
 type(predictors), intent(in   ) :: sbias
 type(gsi_bundle), intent(inout) :: rval
+real(r_quad),dimension(jpch_rad), intent(inout):: stpval
 real(r_quad),dimension(max(1,nrclen)), intent(inout) :: qpred
 
 ! Declare local variables
@@ -254,117 +255,117 @@ real(r_quad),dimension(max(1,nrclen)), intent(inout) :: qpred
 !******************************************************************************
 
 ! RHS for conventional temperatures
-  if (ntclen>0) then
-     call intt(yobs%t,rval,sval,qpred(nsclen+npclen+1:nrclen),sbias%predt)
-  else
-     call intt(yobs%t,rval,sval)
-  end if
+!KAB  if (ntclen>0) then
+!     call intt(yobs%t,rval,sval,qpred(nsclen+npclen+1:nrclen),sbias%predt)
+!  else
+!     call intt(yobs%t,rval,sval)
+!  end if
 
 ! RHS for precipitable water
-  call intpw(yobs%pw,rval,sval)
+!  call intpw(yobs%pw,rval,sval)
 
 ! RHS for conventional moisture
-  call intq(yobs%q,rval,sval)
+!  call intq(yobs%q,rval,sval)
 
 ! RHS for conventional winds
-  call intw(yobs%w,rval,sval)
+!  call intw(yobs%w,rval,sval)
 
 ! RHS for lidar winds
-  call intdw(yobs%dw,rval,sval)
+!  call intdw(yobs%dw,rval,sval)
 
 ! RHS for radar winds
-  call intrw(yobs%rw,rval,sval)
+!  call intrw(yobs%rw,rval,sval)
 
 ! RHS for radar reflectivity
-  call intdbz(yobs%dbz,rval,sval)
+!  call intdbz(yobs%dbz,rval,sval)
 
 ! RHS for wind speed observations
-  call intspd(yobs%spd,rval,sval)
+!  call intspd(yobs%spd,rval,sval)
 
 ! RHS for ozone observations
-  call intozlay(yobs%oz ,rval,sval)
-  call intozlev(yobs%o3l,rval,sval)
+!  call intozlay(yobs%oz ,rval,sval)
+!  call intozlev(yobs%o3l,rval,sval)
 
 ! RHS for carbon monoxide
-  call intco(yobs%colvk,rval,sval)
+!  call intco(yobs%colvk,rval,sval)
 
 ! RHS for pm2_5
-  call intpm2_5(yobs%pm2_5,rval,sval)
+!  call intpm2_5(yobs%pm2_5,rval,sval)
 
 ! RHS for pm10
-  call intpm10(yobs%pm10,rval,sval)
+!  call intpm10(yobs%pm10,rval,sval)
 
 ! RHS for surface pressure observations
-  call intps(yobs%ps,rval,sval)
+!  call intps(yobs%ps,rval,sval)
 
 ! RHS for MSLP obs for TCs
-  call inttcp(yobs%tcp,rval,sval)
+!  call inttcp(yobs%tcp,rval,sval)
 
 ! RHS for conventional sst observations
-  call intsst(yobs%sst,rval,sval)
+!  call intsst(yobs%sst,rval,sval)
 
 ! RHS for GPS local observations
-  call intgps(yobs%gps,rval,sval)
+!  call intgps(yobs%gps,rval,sval)
 
 ! RHS for conventional lag observations
-  call intlag(yobs%lag,rval,sval,ibin)
+!  call intlag(yobs%lag,rval,sval,ibin)
 
 ! RHS calculation for radiances
-  call intrad(yobs%rad,rval,sval,qpred(1:nsclen),sbias%predr)
+  call intrad(yobs%rad,rval,sval,qpred(1:nsclen),sbias%predr,stpval) !KAB
 
 ! RHS calculation for precipitation
-  call intpcp(yobs%pcp,rval,sval)
+!  call intpcp(yobs%pcp,rval,sval)
 
 ! RHS calculation for AOD
-  call intaod(yobs%aero,rval,sval)
+!  call intaod(yobs%aero,rval,sval)
 
 ! RHS for conventional gust observations
-  call intgust(yobs%gust,rval,sval)
+!  call intgust(yobs%gust,rval,sval)
 
 ! RHS for conventional vis observations
-  call intvis(yobs%vis,rval,sval)
+!  call intvis(yobs%vis,rval,sval)
 
 ! RHS for conventional pblh observations
-  call intpblh(yobs%pblh,rval,sval)
+!  call intpblh(yobs%pblh,rval,sval)
 
 ! RHS for conventional wspd10m observations
-  call intwspd10m(yobs%wspd10m,rval,sval)
+!  call intwspd10m(yobs%wspd10m,rval,sval)
 
 ! RHS for conventional td2m observations
-  call inttd2m(yobs%td2m,rval,sval)
+!  call inttd2m(yobs%td2m,rval,sval)
 
 ! RHS for conventional mxtm observations
-  call intmxtm(yobs%mxtm,rval,sval)
+!  call intmxtm(yobs%mxtm,rval,sval)
 
 ! RHS for conventional mitm observations
-  call intmitm(yobs%mitm,rval,sval)
+!  call intmitm(yobs%mitm,rval,sval)
 
 ! RHS for conventional pmsl observations
-  call intpmsl(yobs%pmsl,rval,sval)
+!  call intpmsl(yobs%pmsl,rval,sval)
 
 ! RHS for conventional howv observations
-  call inthowv(yobs%howv,rval,sval)
+!  call inthowv(yobs%howv,rval,sval)
 
 ! RHS for tcamt observations
-  call inttcamt(yobs%tcamt,rval,sval)
+!  call inttcamt(yobs%tcamt,rval,sval)
 
 ! RHS for lcbas observations
-  call intlcbas(yobs%lcbas,rval,sval)
+!  call intlcbas(yobs%lcbas,rval,sval)
 
 ! RHS for cldch observations
-  call intcldch(yobs%cldch,rval,sval)
+!  call intcldch(yobs%cldch,rval,sval)
 
 ! RHS for conventional uwnd10m observations
-  call intuwnd10m(yobs%uwnd10m,rval,sval)
+!  call intuwnd10m(yobs%uwnd10m,rval,sval)
 
 ! RHS for conventional vwnd10m observations
-  call intvwnd10m(yobs%vwnd10m,rval,sval)
+!  call intvwnd10m(yobs%vwnd10m,rval,sval)
 
 ! RHS for swcp observations
-  call intswcp(yobs%swcp,rval,sval)
+!  call intswcp(yobs%swcp,rval,sval)
 
 ! RHS for lwcp observations
-  call intlwcp(yobs%lwcp,rval,sval)
+!  call intlwcp(yobs%lwcp,rval,sval)
 
 ! Take care of background error for bias correction terms
 

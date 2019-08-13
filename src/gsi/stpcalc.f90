@@ -34,7 +34,8 @@ PUBLIC stpcalc
 contains
 
 subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
-                   diry,penalty,penaltynew,pjcost,pjcostnew,end_iter)
+                   diry,penalty,penaltynew,pjcost,pjcostnew,end_iter,stpval)
+!KAB
 
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -217,6 +218,7 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
   use jfunc, only: iout_iter,nclen,xhatsave,yhatsave,&
        iter
   use jcmod, only: ljcpdry,ljc4tlevs,ljcdfi
+  use radinfo, only: jpch_rad !KAB
   use obsmod, only: nobs_type
   use stpjcmod, only: stplimq,stplimg,stplimv,stplimp,stplimw10m,&
        stplimhowv,stplimcldch,stpjcdfi,stpjcpdry,stpliml
@@ -243,7 +245,7 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
   logical             ,intent(inout) :: end_iter
   real(r_kind)        ,intent(  out) :: penalty,penaltynew
   real(r_kind)        ,intent(  out) :: pjcost(4),pjcostnew(4)
-
+  real(r_quad), dimension(jpch_rad),intent(in):: stpval !KAB
   type(control_vector),intent(inout) :: xhat
   type(control_vector),intent(in   ) :: dirx,diry
   type(gsi_bundle)    ,intent(in   ) :: sval(nobs_bins)

@@ -38,7 +38,7 @@ PUBLIC intall
 
 contains
 
-subroutine intall(sval,sbias,rval,rbias)
+subroutine intall(sval,sbias,rval,rbias,stpval)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    intall      calculate RHS for analysis equation
@@ -201,6 +201,7 @@ subroutine intall(sval,sbias,rval,rbias)
   type(predictors), intent(in   ) :: sbias
   type(gsi_bundle), intent(inout) :: rval(nobs_bins)
   type(predictors), intent(inout) :: rbias
+!stpval should ultimately be a type, with a part for each obs type
   real(r_quad),dimension(max(1,nrclen),nobs_bins) :: qpred_bin
   real(r_quad),dimension(max(1,nrclen)) :: qpred
   real(r_quad),dimension(2*nobs_bins) :: mass
@@ -227,7 +228,7 @@ subroutine intall(sval,sbias,rval,rbias)
 ! RHS for Jo
 !$omp parallel do  schedule(dynamic,1) private(ibin)
   do ibin=1,size(yobs)  ! == nobs_bins
-     call intjo(yobs(ibin),rval(ibin),qpred_bin(:,ibin),sval(ibin),sbias,ibin)
+     call intjo(yobs(ibin),rval(ibin),qpred_bin(:,ibin),sval(ibin),sbias,ibin) 
   end do
   qpred=zero_quad
   do ibin=1,size(yobs)  ! == nobs_bins
