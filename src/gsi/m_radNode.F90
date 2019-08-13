@@ -259,8 +259,7 @@ _ENTRY_(myname_)
                 endif
 
   else
-    read(iunit,iostat=istat)
-    aNode%nchan,aNode%use_corr_obs,aNode%iuse_PredOper_type
+    read(iunit,iostat=istat) aNode%nchan,aNode%use_corr_obs,aNode%iuse_PredOper_type
                 if (istat/=0) then
                   call perr(myname_,'read(%(nchan,use_corr_obs,iuse_PredOper_type)), iostat =',istat)
                   _EXIT_(myname_)
