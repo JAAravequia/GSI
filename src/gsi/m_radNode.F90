@@ -62,7 +62,7 @@ module m_radNode
      integer(i_kind) :: nchan         !  number of channels for this profile
      integer(i_kind) :: ij(4)         !  horizontal locations
      logical         :: use_corr_obs  = .false. !  to indicate if correlated obs is implemented
-     integer(i_kind) :: iuse_corr_obs = 0 !  to indicate which type of correlated obs is implemented
+     integer(i_kind) :: iuse_PredOper_type = 0 !  indicate which type of correlated predictor operator is implemented
                                         ! 0 uses none (diagonal)
                                         ! 1 uses rsqrtinv
                                         ! 2 uses Rpred
@@ -239,7 +239,7 @@ _ENTRY_(myname_)
   if(skip_) then
     read(iunit,iostat=istat)
                 if (istat/=0) then
-                  call perr(myname_,'skipping read(%(nchan,iuse_corr_obs)), iostat =',istat)
+                  call perr(myname_,'skipping read(%(nchan,iuse_PredOper_type)), iostat =',istat)
                   _EXIT_(myname_)
                   return
                 end if
@@ -259,9 +259,9 @@ _ENTRY_(myname_)
                 endif
 
   else
-    read(iunit,iostat=istat) aNode%nchan,aNode%use_corr_obs,aNode%iuse_corr_obs
+    read(iunit,iostat=istat) aNode%nchan,aNode%use_corr_obs,aNode%iuse_PredOper_type
                 if (istat/=0) then
-                  call perr(myname_,'read(%(nchan,use_corr_obs,iuse_corr_obs)), iostat =',istat)
+                  call perr(myname_,'read(%(nchan,use_corr_obs,iuse_PredOper_type)), iostat =',istat)
                   _EXIT_(myname_)
                   return
                 end if
@@ -302,8 +302,8 @@ _ENTRY_(myname_)
                   return
                 end if
 
-        if(.not.aNode%use_corr_obs) aNode%iuse_corr_obs=0
-        select case(aNode%iuse_corr_obs)
+        if(.not.aNode%use_corr_obs) aNode%iuse_PredOper_type=0
+        select case(aNode%iuse_PredOper_type)
         case(1)
             allocate(aNode%rsqrtinv(((nchan+1)*nchan)/2))
             read(iunit,iostat=istat) aNode%rsqrtinv
@@ -349,13 +349,13 @@ subroutine obsNode_xwrite_(aNode,junit,jstat)
 
   character(len=*),parameter:: myname_=MYNAME//'.obsNode_xwrite_'
   integer(i_kind):: k
-  integer(i_kind):: iuse_corr_obs
+  integer(i_kind):: iuse_PredOper_type
 _ENTRY_(myname_)
 
   jstat=0
-  iuse_corr_obs=0
-  if(aNode%use_corr_obs) iuse_corr_obs=aNode%iuse_corr_obs
-  write(junit,iostat=jstat) aNode%nchan,aNode%use_corr_obs,iuse_corr_obs
+  iuse_PredOper_type=0
+  if(aNode%use_corr_obs) iuse_PredOper_type=aNode%iuse_PredOper_type
+  write(junit,iostat=jstat) aNode%nchan,aNode%use_corr_obs,iuse_PredOper_type
                 if (jstat/=0) then
                   call perr(myname_,'write(%(nchan,use_corr_obs, etc.)), iostat =',jstat)
                   _EXIT_(myname_)
@@ -377,7 +377,7 @@ _ENTRY_(myname_)
                   return
                 end if
 
-  select case(iuse_corr_obs)
+  select case(iuse_PredOper_type)
   case(1)
       ASSERT(size(aNode%rsqrtinv)==((aNode%nchan+1)*aNode%nchan)/2)
       write(junit,iostat=jstat) aNode%rsqrtinv

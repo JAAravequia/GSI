@@ -814,6 +814,7 @@ subroutine upd_varch_
    use mpeu_util, only: die
    use mpeu_util, only: getindex
    use radinfo, only: jpch_rad,iuse_rad,nusis,varch
+   use radinfo, only: varch_sea,varch_land,varch_ice,varch_snow,varch_mixed
 implicit none
 ! !INPUT PARAMETERS:
 ! !DESCRIPTION: This routine replaces the prescribed obs errors in satinfo for instruments we account
@@ -897,8 +898,215 @@ implicit none
 
    deallocate(ich1,tblidx)
 
+! Circular USE dependency is present in between correlated_obsmod and radinfo.  Such
+! that one has to disable this call to correlated_obsmod routines, until a resolution
+! has reached.  
+! 
+! Moved here from radinfo
+!
+!!??     if (miter>0) call corr_obserr_qc(jpch_rad,iuse_rad,nusis,varch_sea, &
+
+  call upd_varqc_(jpch_rad,iuse_rad,nusis,varch_sea, &
+                  varch_land,varch_ice,varch_snow,varch_mixed)
+
 end subroutine upd_varch_
 !EOC
+
+!BOP
+!
+! !IROUTINE:  upd_varqc_ ---  replace the obs error prescribed in satinfo for instrument accounted for inter-channel covariance.
+!
+! !INTERFACE:
+!
+subroutine upd_varqc_(jpch_rad,iuse_rad,nusis,varch_sea, &
+                      varch_land,varch_ice,varch_snow,varch_mixed)
+! !USES:
+   use mpeu_util, only: die
+   use mpeu_util, only: getindex
+implicit none
+! !INPUT PARAMETERS:
+   integer(i_kind),intent(in) :: jpch_rad
+   integer(i_kind),dimension(0:jpch_rad),intent(in) :: iuse_rad
+   character(len=*),dimension(jpch_rad),intent(in) :: nusis
+! !INPUT/OUTPUT PARAMETERS:
+   real(r_kind),dimension(jpch_rad),intent(inout) :: varch_sea,varch_land
+   real(r_kind),dimension(jpch_rad),intent(inout) ::varch_ice,varch_snow,varch_mixed
+! !DESCRIPTION: This routine will replace the prescribed obs errors in satinfo for instruments we account 
+!               for inter-channel covariances.
+!
+! !REVISION HISTORY:
+!   2014-11-26  W. Gu     Initial code
+!   2019-02-26  kbathmann Update to use Diag of R in QC, rather than satinfo errors.
+!                         This subroutine is used in methods 0, 2 and 3 only
+!
+! !REMARKS:
+!   language: f90
+!   machine:  discover
+!
+! !AUTHOR:
+!   Wei Gu  org: gmao      date: 2014-11-26
+!
+!EOP
+!-------------------------------------------------------------------------
+!BOC
+
+   character(len=*),parameter :: myname_=myname//'*upd_varqc'
+   character(len=80) covtype
+   integer(i_kind) :: nch_active,ii,jj,iii,jjj,mm,nn,ncp,ifound,jj0,itbl,ntrow
+   integer(i_kind),dimension(6) ::nsatype
+   integer(i_kind)::nsat,isurf,rr
+   integer(i_kind),allocatable,dimension(:)   :: ircv
+   integer(i_kind),allocatable,dimension(:)   :: ijac
+   integer(i_kind),allocatable,dimension(:)   :: IRsubset
+   integer(i_kind),allocatable,dimension(:)   :: IJsubset
+   integer(i_kind) iinstr,indR
+   integer(i_kind),allocatable,dimension(:) :: ich1  ! true channel number
+   integer(i_kind),allocatable,dimension(:,:) :: tblidx
+   integer(i_kind) :: nchanl1,jc   ! total number of channels in instrument
+   if(.not.allocated(idnames)) then
+     return
+   endif
+   ntrow = size(idnames)
+   allocate(ich1(jpch_rad),tblidx(5,ntrow))
+
+   nsatype=0
+   do jj0=1,ntrow
+      if ((GSI_BundleErrorCov(jj0)%method>1).or. &
+         (GSI_BundleErrorCov(jj0)%method==0)) then
+         covtype=trim(idnames(jj0))
+         iinstr=len_trim(covtype)
+         if(covtype(iinstr-3:iinstr)==':sea')then
+            nsatype(1)=nsatype(1)+1
+            nsatype(6)=nsatype(6)+1
+            tblidx(1,nsatype(1))=jj0
+         endif
+         if(covtype(iinstr-4:iinstr)==':land')then
+            nsatype(2)=nsatype(2)+1
+            nsatype(6)=nsatype(6)+1
+            tblidx(2,nsatype(2))=jj0
+         endif
+         if(covtype(iinstr-3:iinstr)==':ice')then
+            nsatype(3)=nsatype(3)+1
+            nsatype(6)=nsatype(6)+1
+            tblidx(3,nsatype(3))=jj0
+         endif
+         if(covtype(iinstr-4:iinstr)==':snow')then
+            nsatype(4)=nsatype(4)+1
+            nsatype(6)=nsatype(6)+1
+            tblidx(4,nsatype(4))=jj0
+         endif
+         if(covtype(iinstr-5:iinstr)==':mixed')then
+            nsatype(5)=nsatype(5)+1
+            nsatype(6)=nsatype(6)+1
+            tblidx(5,nsatype(5))=jj0
+         endif
+      endif
+   enddo
+   if(nsatype(6)==0) return
+   do isurf=1,5
+      nsat=nsatype(isurf)
+      if (nsat>0) then
+         do jj0=1,nsat
+            itbl=tblidx(isurf,jj0) !a row number
+            jc=0
+            covtype = ''
+            ich1=0
+            do ii=1,jpch_rad
+               if (isurf==1) then
+                  covtype = trim(nusis(ii))//':sea'
+               else if (isurf==2) then
+                  covtype = trim(nusis(ii))//':land'
+               else if (isurf==3) then
+                  covtype = trim(nusis(ii))//':ice'
+               else if (isurf==4) then
+                  covtype = trim(nusis(ii))//':snow'
+               else if (isurf==5) then
+                  covtype = trim(nusis(ii))//':mixed'
+               end if
+               if(trim(idnames(itbl))==trim(covtype)) then
+                  jc=jc+1
+                  ich1(jc)=ii
+               endif
+            enddo
+            nchanl1=jc
+            if(nchanl1==0) call die(myname_,' improperly set GSI_BundleErrorCov')
+            if(.not.amiset_(GSI_BundleErrorCov(itbl)))call die(myname_,' improperly set GSI_BundleErrorCov')
+            nch_active=GSI_BundleErrorCov(itbl)%nch_active
+            if(nch_active<0) return
+! get indexes for the internal channels matching those
+! used in estimating the observation error covariance
+            allocate(ircv(nchanl1))
+            allocate(ijac(nchanl1))
+            ircv = -1
+            ijac = -1
+            do jj=1,nchanl1
+               mm=ich1(jj)       ! true channel number (has no bearing here except in iuse)
+               if (iuse_rad(mm)>=1) then
+                  ifound=-1
+                  do ii=1,nch_active
+                     indR=GSI_BundleErrorCov(itbl)%indxR(ii)
+                     if(jj==indR) then
+                        ifound=ii       
+                        exit
+                     endif
+                  enddo
+                  if(ifound/=-1) then
+                     ijac(jj)=jj      ! index value in 1 to nchanl
+                     ircv(jj)=ifound  ! index value in 1 to nch_active 
+                  endif
+               endif
+            enddo
+            ncp=count(ircv>0) ! number of active channels in profile
+            if(ncp/=nch_active) then
+               call die(myname_,'serious inconsistency in handling correlated obs')
+            endif
+            allocate(IRsubset(ncp)) ! these indexes apply to the matrices/vec in ErrorCov
+            allocate(IJsubset(ncp)) ! these indexes in 1 to nchanl
+            iii=0;jjj=0
+            do ii=1,nchanl1
+               if(ircv(ii)>0) then
+                  iii=iii+1
+                  IRsubset(iii)=ircv(ii)  ! subset indexes in R presently in use
+               endif
+               if(ijac(ii)>0) then
+                  jjj=jjj+1
+                  IJsubset(iii)=ijac(ii)  ! subset indexes in channels presently in use
+               endif
+            enddo
+            if (iii/=ncp) then
+               if (iamroot_) then
+                  write(6,*) myname, ' iii,ncp= ',iii,ncp
+               endif
+               call die(myname_,' serious dimensions insconsistency, aborting')
+            endif
+            if (jjj/=ncp) then
+               if (iamroot_) then
+                  write(6,*) myname, ' jjj,ncp= ',jjj,ncp
+               endif
+               call die(myname_,' serious dimensions insconsistency, aborting')
+            endif
+            do ii=1,ncp
+               nn=IJsubset(ii)
+               mm=ich1(nn)
+               rr=IRsubset(ii)
+               if(isurf==1) varch_sea(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
+               if(isurf==2) varch_land(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
+               if(isurf==3) varch_ice(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
+               if(isurf==4) varch_snow(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
+               if(isurf==5) varch_mixed(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
+            enddo
+! clean up
+            deallocate(IJsubset)
+            deallocate(IRsubset)
+            deallocate(ijac)
+            deallocate(ircv)
+         enddo !jj=1,nsat
+      endif !nsat >0
+   enddo !isurf=1,5
+   deallocate(ich1,tblidx)
+end subroutine upd_varqc_
+!EOC
+
 logical function adjust_jac_ (iinstr,nchanl,nsigradjac,ich,varinv,depart, &
                   err2,raterr2,wgtjo,jacobian,method,nchasm,rsqrtinv,rinvdiag)
 !$$$  subprogram documentation block

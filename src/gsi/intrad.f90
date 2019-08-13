@@ -396,7 +396,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
      w2=radptr%wij(2)
      w3=radptr%wij(3)
      w4=radptr%wij(4)
-     if (radptr%use_corr_obs .and. radptr%iuse_corr_obs==1) then
+     if (radptr%use_corr_obs .and. radptr%iuse_PredOper_type==1) then
         allocate(rsqrtinv(radptr%nchan,radptr%nchan))
         chan_count=0
         do ii=1,radptr%nchan
@@ -501,7 +501,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
 !       Include contributions from remaining bias correction terms
         if( .not. ladtest_obs) then
           if(radptr%use_corr_obs)then
-            select case(radptr%iuse_corr_obs)
+            select case(radptr%iuse_PredOper_type)
             case(1)
               val_quad = zero_quad
               do n=1,npred
@@ -533,8 +533,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
 
         if(luse_obsdiag)then
            if (lsaveobsens) then
-              if(.not.(radptr%use_corr_obs.and.radptr%iuse_corr_obs==2)) val(nn)=val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
-!              val(nn) = val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
+              val(nn)=val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
               !-- radptr%diags(nn)%ptr%obssen(jiter) = val(nn)
               call obsdiagNode_set(radptr%diags(nn)%ptr,jiter=jiter,obssen=val(nn))
            else
@@ -557,8 +556,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
                  val(nn) = val(nn)*(one-p0)
               endif
 
-              if((.not.ladtest_obs).and..not.(radptr%use_corr_obs.and.radptr%iuse_corr_obs==2)) val(nn) = val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
-!              if(.not. ladtest_obs )val(nn) = val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
+              if(.not.ladtest_obs) val(nn) = val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
            endif
 
 !          Extract contributions from bias correction terms
@@ -566,7 +564,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
            if( .not. ladtest_obs) then
               if(radptr%luse)then
                 if(radptr%use_corr_obs)then
-                  select case(radptr%iuse_corr_obs)
+                  select case(radptr%iuse_PredOper_type)
                   case(1)
                     do n=1,npred
                       do mm=1,radptr%nchan
@@ -597,7 +595,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
         end if
      end do
 
-     if(radptr%use_corr_obs .and. radptr%iuse_corr_obs==1) deallocate(rsqrtinv)
+     if(radptr%use_corr_obs .and. radptr%iuse_PredOper_type==1) deallocate(rsqrtinv)
 
 !          Begin adjoint
      if (l_do_adjoint) then
