@@ -441,8 +441,11 @@ contains
   type(fptr_obsdiagNode),dimension(nchanl):: odiags
 
   logical:: muse_ii
-  integer(i_kind),parameter:: IUSE_CORR_OBS=1   ! store %rsqrtinv
-!  integer(i_kind),parameter:: IUSE_CORR_OBS=2   ! store %Rpred
+  integer(i_kind),parameter:: GMAO_PredOper_TYPE=1   ! store %rsqrtinv
+  integer(i_kind),parameter:: NCEP_PredOper_TYPE=2   ! store %Rpred
+
+! integer(i_kind),parameter:: IUSE_PredOper_TYPE=GMAO_PredOper_TYPE
+  integer(i_kind),parameter:: IUSE_PredOper_TYPE=NCEP_PredOper_TYPE
 
 ! Notations in use: for a single obs. or a single obs. type
 ! nchanl        : a known channel count of a given type obs stream
@@ -1955,8 +1958,9 @@ contains
               my_head%nchan  = iii         ! profile observation count
 
               my_head%use_corr_obs=.false.
+              my_head%iuse_PredOper_type = 0
               if (account_for_corr_obs .and. (cor_opt ==1 .or. cor_opt ==2) ) then
-                 select case(IUSE_CORR_OBS)
+                 select case(IUSE_PredOper_TYPE)
                  case(1)
                    chan_count=(my_head%nchan*(my_head%nchan+1))/2
                    allocate(my_head%rsqrtinv(chan_count)) 
@@ -1985,7 +1989,7 @@ contains
 
                  end select
                  my_head%use_corr_obs=.true.
-                 my_head%iuse_corr_obs = IUSE_CORR_OBS
+                 my_head%iuse_PredOper_type = IUSE_PredOper_TYPE
               end if
               if(allocated(rinvdiag)) deallocate(rinvdiag)
 

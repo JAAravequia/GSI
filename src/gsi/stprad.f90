@@ -193,7 +193,7 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
            w2=radptr%wij(2)
            w3=radptr%wij(3)
            w4=radptr%wij(4)
-           if (radptr%iuse_corr_obs==1) then
+           if (radptr%use_corr_obs.and.radptr%iuse_PredOper_type==1) then
               allocate(rsqrtinv(radptr%nchan,radptr%nchan))
               chan_count=0
               do ii=1,radptr%nchan
@@ -289,7 +289,7 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
 !             contribution from bias corection
               ic=radptr%icx(nn)
               if(radptr%use_corr_obs) then
-                select case(radptr%iuse_corr_obs)
+                select case(radptr%iuse_PredOper_type)
                 case(1)
                   do nx=1,npred
                     do mm=1,radptr%nchan
@@ -364,7 +364,7 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
            end do
 
         end do
-        if (radptr%use_corr_obs .and. radptr%iuse_corr_obs==1) deallocate(rsqrtinv)
+        if (radptr%use_corr_obs .and. radptr%iuse_PredOper_type==1) deallocate(rsqrtinv)
 
      end if
 
