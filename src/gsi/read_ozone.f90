@@ -237,7 +237,7 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
         version6 = .true.
         nloz     = nloz_v6
         version  = 'v6'
-     elseif (subset == subset8 .or. subset == subset8_ompsnp) then
+     elseif (subset == subset8 .or. subset == subset8_ompsnp) then ! OMPS-NP processed with V8 algorithm
         version8 = .true. 
         nloz     = nloz_v8
         version  = 'v8'

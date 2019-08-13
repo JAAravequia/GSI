@@ -34,7 +34,6 @@ module radiance_mod
   use kinds, only: r_kind,i_kind
   use constants, only: zero,half
   use mpimod, only: mype
-  use mpeu_util, only: perr,die,assert_
   implicit none
   save
 
@@ -111,7 +110,6 @@ module radiance_mod
 
   type(rad_obs_type),save,dimension(:),allocatable :: rad_type_info
 
-#include "myassert.H"
 contains
 
   subroutine radiance_mode_init
@@ -1064,7 +1062,6 @@ contains
 
   end subroutine radiance_ex_biascor_2
 
-!  subroutine radiance_ex_obserr_3(radmod,nchanl,clw_obs,clw_guess_retrieval,tnoise,tnoise_cld,error0)
   subroutine radiance_ex_obserr_gmi(radmod,nchanl,clw_obs,clw_guess_retrieval,tnoise,tnoise_cld,error0)
 !$$$  subprogram documentation block
 !                .      .    .

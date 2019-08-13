@@ -125,8 +125,7 @@ subroutine setupuwnd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
   real(r_kind) presw,factw,dpres,sfcchk,ugesin,vgesin,dpressave
   real(r_kind) qcu,qcv
   real(r_kind) ratio_errors,tfact,wflate,psges,goverrd,spdob
-  real(r_kind) uob,vob
-  real(r_kind) spdb
+  real(r_kind) uob,vob,spdb
   real(r_kind) dudiff_opp, dvdiff_opp, vecdiff, vecdiff_opp
   real(r_kind) ascat_vec
   real(r_kind) errinv_input,errinv_adjst,errinv_final

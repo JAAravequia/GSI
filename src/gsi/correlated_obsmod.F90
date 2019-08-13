@@ -22,23 +22,22 @@ residuals, following the so-called Desroziers approach (e.g., Desroziers et al.
 2005; Q. J. R. Meteorol. Soc., 131, 3385-3396).
 
 At NCEP, the offline estimation of the error covariances can be computed
-and reconditioned by using the cov_calc module, located in util/Correlated_Obs.  
-This module is also based on the Desroziers method.
+by the cov_calc module, located in util/Correlated_Obs.  This module is also
+based on the Desroziers method.
 
 This module defines the so-called Obs\_Error\_Cov.
 
 As Met\_Guess and other like-modules, the idea is for this module to define nearly 
 opaque object. However, so far, we have had no need to add inquire-like functions - that
-is, no code outside this code needs to know what is inside GSI\_Obs\_Error\_Cov. 
+is, no code outside this code needs to what what is inside GSI\_Obs\_Error\_Cov. 
 So far, only very general `methods'' are made public from this module, these
 being, 
 
 \begin{verbatim}
 public :: corr_ob_initialize
 public :: corr_ob_amiset
-public :: corr_ob_scale_jac
+public :: corr_adjust_jacobian
 public :: corr_ob_finalize
-public :: corr_oberr_qc
 \end{verbatim}
 
 and never the variables themselves; the only exception being the GSI\_MetGuess\_Bundle itself 
@@ -55,23 +54,23 @@ have a declared interface procedure.
 usually embedded in the {\it anavinfo} file. An example of such table follows:
 \begin{verbatim}
 correlated_observations::
-! isis       method    type    cov_file
-  airs_aqua     1      ice     airs_rcov.bin
-  airs_aqua     1      land    airs_rcov.bin
-  airs_aqua     1      sea     airs_rcov.bin
-  airs_aqua     1      snow    airs_rcov.bin
-  airs_aqua     1      mixed   airs_rcov.bin
-# cris_npp      1      snow    cris_rcov.bin
-# cris_npp      1      land    cris_rcov.bin
-# cris_npp      1      sea     cris_rcov.bin
-  iasi_metop-a  2      snow    iasi_sea_rcov.bin
-  iasi_metop-a  3      land    iasi_land_rcov.bin
-  iasi_metop-a  2      sea     iasi_sea_rcov.bin
-  iasi_metop-a  3      ice     iasi_sea_rcov.bin
-  iasi_metop-a  3      mixed   iasi_sea_rcov.bin
-# ssmis_f17     1      mixed   ssmis_rcov.bin
-# ssmis_f17     1      land    ssmis_rcov.bin
-# ssmis_f17     1      sea     ssmis_rcov.bin
+! isis       method   kreq   kmut  type    cov_file
+  airs281_aqua  1      60.   1.0   ice     airs_rcov.bin
+  airs281_aqua  1      60.   1.0   land    airs_rcov.bin
+  airs281_aqua  1      60.   1.0   sea     airs_rcov.bin
+  airs281_aqua  1      60.   1.0   snow    airs_rcov.bin
+  airs281_aqua  1      60.   1.0   mixed   airs_rcov.bin
+# cris_npp      1     -99.   1.0   snow    cris_rcov.bin
+# cris_npp      1     -99.   1.0   land    cris_rcov.bin
+# cris_npp      1     -99.   1.0   sea     cris_rcov.bin
+  iasi_metop-a  2      0.12  1.3   snow    iasi_sea_rcov.bin
+  iasi_metop-a  2      0.22  1.3   land    iasi_land_rcov.bin
+  iasi_metop-a  2      0.05  1.3   sea     iasi_sea_rcov.bin
+  iasi_metop-a  2      0.12  1.3   ice     iasi_sea_rcov.bin
+  iasi_metop-a  2      0.12  1.3   mixed   iasi_sea_rcov.bin
+# ssmis_f17     1     -99.   1.0   mixed   ssmis_rcov.bin
+# ssmis_f17     1     -99.   1.0   land    ssmis_rcov.bin
+# ssmis_f17     1     -99.   1.0   sea     ssmis_rcov.bin
 
 ::
 \end{verbatim}
@@ -81,7 +80,8 @@ pointing the different types to the same file. In the example above, only AIRS a
 IASI from Metop-A are being specially handled by this module. In the case of
 AIRS, no distinction is made among the different types of surfaces, whereas 
 in the case of IASI, a distinction is made between land and sea, with everything
-else being treated as sea.
+else being treated as sea.  It is not necessary to specify a covariance file for
+each surface type.
 
 The instrument name is the same as it would be in the satinfo file.
 
@@ -96,13 +96,25 @@ The current {\it correlated\_observations} table has four columns defined as fol
 Column 1: isis   - refers to instrument/platform type (follows, typical GSI nomenclature)
 Column 2: method - specify different possibilities for handling the corresponding 
           cov(R) at present:
-          <0 - reproduces GSI to within roundoff (for testing only)
+          <0 - reproduces GSI running with the default(for testing only)
            0 - diag of estimated R only
-           1 - use full R covariance, but use satinfo errors in quality control
-           2 - use full R covariance, and use the diagonal of R in quality control
-           3 - as (2), but with situational dependent obs error inflation
-Column 3: type - determines whether to apply covariance over ocean, land, ice, snow or mixed FOVs
-Column 4: cov_file - name of file holding estimate of error covariance for the
+           1 - correlations from estimated R with variances as established by GSI
+           2 - as (1), but for full R covariance
+           3 - diag of estimate R used as scaling factor to internally-defined errors
+Column 3: kreq   - level of required condition for the corresponding cov(R)
+          at present:
+          if<0 and method=0, 1 or 3  does not recondition matrix
+          if>0 and method=1          recondition the (correlation) matrix following
+                                     the 2nd method in Weston et al. (2014;
+                                     Q. J. R. Meteorol. Soc., DOI: 10.1002/qj.2306)
+                                     Note that the resulting correlation matrix has
+                                     condition number equal to approximatetly twice kreq.
+          if>0 and method=0 or 3     recondition the (covariance) matrix using Westons 2nd method
+          if method=2                recondition the covariance matrix by inflating the
+                                     diagional so that R_{r,r}=(sqrt{R_{r,r}+kreq)^2
+                                     Note that kreq should be specified as 0<kreq<1
+Column 4: type - determines whether to apply covariance over ocean, land, ice, snow or mixed FOVs
+Column 5: cov_file - name of file holding estimate of error covariance for the
                      instrument specified in column 1
 \end{verbatim}
 
@@ -130,35 +142,34 @@ module correlated_obsmod
 !
 ! !USES:
 
-use kinds, only: i_kind, r_single, r_kind, r_double
-use constants, only: zero,one
+use kinds, only: i_kind, r_single, r_kind, r_double, r_quad
+use constants, only: zero,one,zero_quad
 use mpimod, only: mype
 use timermod, only: timer_ini, timer_fnl
 use mpeu_util, only: gettablesize
 use mpeu_util, only: gettable
 use mpeu_util, only: die
 use mpeu_util, only: luavail
-use gsi_io, only: verbose
 private
 save
 
 ! !PUBLIC MEMBER FUNCTIONS:
 
-public corr_ob_initialize
-public corr_ob_finalize
-public corr_ob_scale_jac
-public corr_ob_amiset
-public corr_oberr_qc
 public idnames
 public ObsErrorCov
 public GSI_BundleErrorCov
+public corr_ob_initialize
+public corr_ob_amiset
+public corr_adjust_jacobian
+public corr_oberr_qc
+public corr_ob_finalize
 
 ! !METHOD OVERLOADING:
 
 interface corr_ob_initialize; module procedure ini_; end interface
-interface corr_ob_amiset; module procedure amIset_; end interface
-interface corr_oberr_qc; module procedure upd_varqc_; end interface
-interface corr_ob_scale_jac; module procedure scale_jac_; end interface
+interface corr_ob_amiset; module procedure amiset_; end interface
+interface corr_adjust_jacobian; module procedure adjust_jac_; end interface
+interface corr_oberr_qc; module procedure adjust_var_; end interface
 interface corr_ob_finalize; module procedure fnl_; end interface
 
 ! !REVISION HISTORY:
@@ -166,8 +177,12 @@ interface corr_ob_finalize; module procedure fnl_; end interface
 !   15Apr2014 Todling  Initial code.
 !   19Dec2014 W. Gu, Add a new interface corr_oberr_qc to update the prescribed obs errors in satinfo for instrments 
 !                    accounted for the correlated R-covariance.
-!   22Apr2019 kbathmann Major update to change methods, replace eigendecomposition
-!                       with Cholesky factorization, and genrally speed up the code
+!   28Oct2016 W. Gu, interface corr_oberr_qc was refered to new subroutine adjust_var_, so that the prescribed obs errors in satinfo
+!                    can be replaced profile by profile with their corresponding correlated errors. subroutine upd_varqc_ was renamed
+!                    to upd_varch_ and refered by update_varch.
+!   02Nov2016 W. Gu  kmut was added to inflate the whole R-covariance matrix.
+!   27Jul2018 W. Gu  code changes to reduce the round-off errors.
+!   10Jul2019 Todling keep upd_varch_ as internal routine called within initialization
 !
 !EOP
 !-------------------------------------------------------------------------
@@ -186,14 +201,14 @@ type ObsErrorCov
      character(len=40) :: name                        ! R covariance name
      character(len=20) :: instrument                  ! instrument
      integer(i_kind)   :: nch_active=-1               ! active channels
-     integer(i_kind)   :: nctot=-1                    ! total number of channels (active+passive)
      integer(i_kind)   :: method    =-1               ! define method of computation
-     character(len=20) :: mask      ='sea'            ! Apply covariance for profiles over sea
-     integer(i_kind),pointer :: indxR(:)   =>NULL()   ! indexes of active channels
+     real(r_kind)      :: kreq      =-99.             ! Weston et al-like spectrum adjustment factor
+     real(r_kind)      :: kmut      =-99.             ! multiplicative inflation factor
+     character(len=20) :: mask      ='global'         ! Apply covariance for profiles over all globe
+     integer(i_kind),pointer :: indxR(:)   =>NULL()   ! indexes of active channels in between 1 and nchanl
      real(r_kind),   pointer :: R(:,:)     =>NULL()   ! nch_active x nch_active
-     real(r_kind),   pointer :: UT(:,:)=>NULL()       ! Upper triangle of R^-1 factorization subset
-     real(r_kind),   pointer :: UTfull(:,:)=>NULL()   ! Upper triangle of R^-1 factorization, R^-1=UT*Transpose(UT)
-
+     real(r_kind),   pointer :: Revals(:)  =>NULL()   ! eigenvalues of R
+     real(r_kind),   pointer :: Revecs(:,:)=>NULL()   ! eigenvectors of R
 end type
 
 ! !PUBLIC TYPES:
@@ -203,11 +218,12 @@ type(ObsErrorCov),pointer :: GSI_BundleErrorCov(:)
 ! strictly internal quantities
 character(len=*),parameter :: myname='correlated_obsmod'
 logical :: initialized_=.false.
+logical, parameter :: VERBOSE_=.true.
 integer(i_kind),parameter :: methods_avail(5)=(/-1, & ! do nothing
-                                                 0, & ! use diagonal of estimate(R)
-                                                 1, & ! use full est(R), satinfo errors in qc
-                                                 2, & ! use full est(R), diag(R) in qc
-                                                 3/)  ! same as 2, but with SDOEI
+                                                 0, & ! use dianonal of estimate(R)
+                                                 1, & ! use full est(R), but decompose once for all
+                                                 2, & ! use full est(R), but re-decomp at each profile
+                                                 3/)  ! use diag est(R), as scaling factor to GSI(R)
 contains
 
 !-------------------------------------------------------------------------
@@ -217,14 +233,12 @@ contains
 !
 ! !INTERFACE:
 !
-subroutine ini_ (miter,iamroot)
+subroutine ini_ (iamroot)
 ! !USES:
 use mpeu_util, only: die
 implicit none
 ! !INPUT PARAMETERS:
-   integer(i_kind), intent(in):: miter
    logical,optional,intent(in) :: iamroot 
-
 ! !DESCRIPTION: Define parameters and setting for handling correlated
 !               observation errors via resouce file reading.
 !
@@ -247,6 +261,10 @@ integer(i_kind) luin,ii,ntot,nrows,method
 character(len=MAXSTR),allocatable,dimension(:):: utable
 character(len=20) instrument, mask
 character(len=30) filename
+real(r_kind) kreq4
+real(r_kind) kmut4
+real(r_kind) kreq
+real(r_kind) kmut
 character(len=*),parameter::myname_=myname//'*ini_'
 
 if(initialized_) return
@@ -282,21 +300,26 @@ allocate(GSI_BundleErrorCov(ninstr))
 ! Count variables first
 if(iamroot_) write(6,*) myname_,': Correlated-Obs for the following instruments'
 do ii=1,ninstr
-   read(utable(ii),*) instrument, method, mask, filename ! if adding col to table leave fname as last
+   read(utable(ii),*) instrument, method, kreq4, kmut4, mask, filename ! if adding col to table leave fname as last
    instruments(ii) = trim(instrument)
    idnames(ii) = trim(instrument)//':'//trim(mask)
+   kreq=kreq4
+   kmut=kmut4
    if(iamroot_) then
-      write(6,'(1x,2(a,1x),i4,1x,a)') trim(instrument), trim(mask), method, trim(filename)
+      write(6,'(1x,2(a,1x),i4,1x,2f20.16,1x,a)') trim(instrument), trim(mask), method, kreq4, kmut4, trim(filename)
    endif
 !  check method validity
    if(ALL(methods_avail/=method)) then
      call die(myname_,' invalid choice of method, aborting')
    endif
-   call set_(trim(instrument),trim(filename),mask,method,GSI_BundleErrorCov(ii),miter)
+   call set_(trim(instrument),trim(filename),mask,method,kreq,kmut,GSI_BundleErrorCov(ii))
 enddo
 
 ! release table
 deallocate(utable)
+
+! initialize 
+  call upd_varch_()
 
 end subroutine ini_
 !EOC
@@ -308,7 +331,7 @@ end subroutine ini_
 !
 ! !INTERFACE:
 !
-subroutine set_(instrument,fname,mask,method,ErrorCov,miter)
+subroutine set_(instrument,fname,mask,method,kreq,kmut,ErrorCov)
 implicit none
 
 ! !INPUT PARAMETERS:
@@ -317,7 +340,8 @@ character(len=*),intent(in) :: instrument  ! name of instrument
 character(len=*),intent(in) :: fname       ! filename holding cov(R)
 character(len=*),intent(in) :: mask        ! land/sea/etc mask
 integer,intent(in):: method                ! method to apply when using this cov(R)
-integer,intent(in):: miter                 ! if =0 then just check for Rcov file, don't read
+real(r_kind),intent(in) :: kreq            ! conditioning factor for cov(R)
+real(r_kind),intent(in) :: kmut            ! multiplicative inflation factor for cov(R)
 type(ObsErrorCov) :: ErrorCov              ! cov(R) for this instrument
 
 ! !DESCRIPTION: Given basic information on the instrument type
@@ -342,27 +366,25 @@ type(ObsErrorCov) :: ErrorCov              ! cov(R) for this instrument
 !BOC
 
 character(len=*),parameter :: myname_=myname//'*set'
-integer(i_kind) nch_active,lu,ii,ioflag,iprec,nctot
+integer(i_kind) nch_active,lu,ii,ioflag,iprec
 
 real(r_single),allocatable, dimension(:,:) :: readR4  ! nch_active x nch_active x ninstruments
 real(r_double),allocatable, dimension(:,:) :: readR8  ! nch_active x nch_active x ninstruments
 real(r_kind),allocatable, dimension(:) :: diag
-   logical print_verbose
 
-   print_verbose=.false.
-   if(verbose .and. iamroot_)print_verbose=.true.
    ErrorCov%instrument = trim(instrument)
    ErrorCov%mask = trim(mask)
    ErrorCov%name = trim(instrument)//':'//trim(mask)
    ErrorCov%method = method
+   ErrorCov%kreq   = kreq
+   ErrorCov%kmut   = kmut
 
    lu = luavail()
    open(lu,file=trim(fname),convert='little_endian',form='unformatted')
-   read(lu,IOSTAT=ioflag) nch_active, nctot, iprec
+   read(lu,IOSTAT=ioflag) nch_active, iprec
    if(ioflag/=0) call die(myname_,' failed to read nch from '//trim(fname))
-   if (miter==0) return
    ErrorCov%nch_active = nch_active
-   ErrorCov%nctot = nctot
+
    call create_(nch_active,ErrorCov)
 
 !  Read GSI-like channel numbers used in estimating R for this instrument
@@ -394,28 +416,33 @@ real(r_kind),allocatable, dimension(:) :: diag
       initialized_=.true.
       return
    endif
-   if (print_verbose) then
+
+   if (VERBOSE_) then
        allocate(diag(nch_active))
        do ii=1,nch_active
           diag(ii)=ErrorCov%R(ii,ii)
        enddo
-       write(6,'(2a)') 'Rcov(stdev) for instrument: ', trim(ErrorCov%name)
-       write(6,'(9(1x,es10.3))') sqrt(diag)
-       write(6,'(3a)') 'Channels used in estimating Rcov(', trim(ErrorCov%name), ')'
-       write(6,'(12(1x,i5))') ErrorCov%indxR
+       if(iamroot_) then
+          write(6,'(2a)') 'Rcov(stdev) for instrument: ', trim(ErrorCov%name)
+          write(6,'(9(es13.6))') sqrt(diag)
+          write(6,'(3a)') 'Channels used in estimating Rcov(', trim(ErrorCov%name), ')'
+          write(6,'(12(1x,i5))') ErrorCov%indxR
+       endif
        deallocate(diag)
    endif
 
 !  Now decompose R
    call solver_(ErrorCov)
 
-   if (print_verbose .and. ErrorCov%method>=0) then
+   if (VERBOSE_ .and. ErrorCov%method>=0) then
        allocate(diag(nch_active))
        do ii=1,nch_active
           diag(ii)=ErrorCov%R(ii,ii)
        enddo
-       write(6,'(3a)') 'Rcov(stdev) for instrument: ', trim(ErrorCov%name), ' recond'
-       write(6,'(9(1x,es10.3))') sqrt(diag)
+       if(iamroot_) then
+          write(6,'(3a)') 'Rcov(stdev) for instrument: ', trim(ErrorCov%name), ' recond'
+          write(6,'(9(es13.6))') sqrt(diag)
+       endif
        deallocate(diag)
    endif
 
@@ -454,7 +481,7 @@ type(ObsErrorCov) :: ErrorCov
 !BOC
    allocate(ErrorCov%R(nch,nch))
    allocate(ErrorCov%indxR(nch))
-   allocate(ErrorCov%UT(nch,nch),ErrorCov%UTfull(nch,nch))
+   allocate(ErrorCov%Revals(nch),ErrorCov%Revecs(nch,nch))
 end subroutine create_
 !EOC
 
@@ -484,7 +511,7 @@ type(ObsErrorCov) :: ErrorCov
 !EOP
 !-------------------------------------------------------------------------
 !BOC
-   deallocate(ErrorCov%UT,ErrorCov%UTfull)
+   deallocate(ErrorCov%Revals,ErrorCov%Revecs)
    deallocate(ErrorCov%indxR)
    deallocate(ErrorCov%R)
 end subroutine destroy_
@@ -504,18 +531,17 @@ implicit none
 ! !INPUT/OUTPUT PARAMETERS:
 type(ObsErrorCov) :: ErrorCov
 
-! !DESCRIPTION: This routine is the entry point to the cholesky factorization
-!               and inversion of the obs error covariance.
+! !DESCRIPTION: This routine is the entry point to the eigen-decomposition
+!               of the obs error covariance. Depending on the method chosen
+!               by the user, it might call the proper routines to recondition
+!               the offline estimate of cov(R).
 !
 ! !REVISION HISTORY:
 !   2014-04-13  todling  initial code
-!   2015-08-18  W. Gu     Switich the reconditioning method from adding a constant value
-!                         to each eigenvalue to adding a constant value in standard deviation to
-!                         each diagnoal element.
-!   2015-08-18  W. Gu     Bring the modifications of obs errors done in QC to correlated obs errors 
-!   2019-04-22  kbathmann Change the options for "method", change from eigendecomposition 
-!                         to cholesky factorization, remove reconditioning
-!
+!   2015-08-18  W. Gu, Switich the reconditioning method from adding a constant value
+!                      to each eigenvalue to adding a constant value in standard deviation to
+!                      each diagnoal element.
+!   2018-07-27  W. Gu, code changes to reduce the round-off errors.
 !
 ! !REMARKS:
 !   language: f90
@@ -528,24 +554,124 @@ type(ObsErrorCov) :: ErrorCov
 !-------------------------------------------------------------------------
 !BOC
 character(len=*), parameter :: myname_=myname//'*solver_'
-integer(i_kind) ii,ndim
+real(r_kind) lambda_max,lambda_min,lambda_inc
+integer(i_kind) ii,jj,ndim
+logical adjspec
+real(r_kind),allocatable,dimension(:):: invstd
 
 ndim = size(ErrorCov%R,1)
  
-! This extracts the diagonal of R (error variances)
+! This extracts the diagonal of R (error variances), setting the 
+! eigenvalues as such and the eigenvectors as the unit vectors
 ! This is to allow using the estimated error variances, but
 ! but still pretend the covariance is diagnoal - no correlations.
 ! This is largely for testing consistency of the implementation.
-if ( ErrorCov%method==0) then
-   ErrorCov%UTfull = zero
+if ( ErrorCov%method==0 .or. ErrorCov%method==3 ) then
+   ErrorCov%Revecs = zero
    do ii=1,ndim
-      ErrorCov%UTfull(ii,ii)    = sqrt(ErrorCov%R(ii,ii) )
+      ErrorCov%Revals(ii)    = ErrorCov%R(ii,ii) 
+      ErrorCov%Revecs(ii,ii) = one
    enddo
-else
-! This does the actual full Cholesky factorization of the matrix
-   ErrorCov%UTfull=ErrorCov%R
-   call decompose_(ErrorCov%UTfull,ndim)
-endif
+   call westonEtAl_spectrum_boost_(adjspec)
+   if (adjspec) then
+      call rebuild_rcov_
+   endif
+endif ! method=0
+
+! This takes only corr(Re) and 
+! any reconditioning is of correlation matrix
+if ( ErrorCov%method==1 ) then
+   ! reduce R to correlation matrix
+   allocate(invstd(ndim))
+   do jj=1,ndim
+      invstd(jj) = ErrorCov%R(jj,jj)
+   enddo
+   do jj=1,ndim
+      do ii=1,ndim
+         ErrorCov%R(ii,jj) = ErrorCov%R(ii,jj)/sqrt(invstd(ii)*invstd(jj))
+      enddo
+   enddo
+   deallocate(invstd)
+   ErrorCov%Revecs=ErrorCov%R
+   call decompose_(trim(ErrorCov%name),ErrorCov%Revals,ErrorCov%Revecs,ndim,.true.)
+   call westonEtAl_spectrum_boost_(adjspec)
+   if (adjspec) then
+      call rebuild_rcov_
+      allocate(invstd(ndim))
+      do jj=1,ndim
+         invstd(jj) = ErrorCov%R(jj,jj)
+      enddo
+      do jj=1,ndim
+         do ii=1,ndim
+            ErrorCov%R(ii,jj) = ErrorCov%R(ii,jj)/sqrt(invstd(ii)*invstd(jj))
+         enddo
+      enddo
+      deallocate(invstd)
+   endif
+endif ! method=1
+
+! This does the actual full eigendecomposition of the R matrix
+! Here, recondioning is of covariance matrix
+if ( ErrorCov%method==2 ) then
+   ErrorCov%Revecs=ErrorCov%R
+   call decompose_(trim(ErrorCov%name),ErrorCov%Revals,ErrorCov%Revecs,ndim,.true.)
+   do jj=1,ndim
+   do ii=1,ndim
+     if(ii==jj)then
+       ErrorCov%R(ii,ii)=ErrorCov%kmut*ErrorCov%kmut*(sqrt(ErrorCov%R(ii,ii))+ErrorCov%kreq)**2  ! inflated by constant standard deviation
+     else
+       ErrorCov%R(ii,jj)=ErrorCov%kmut*ErrorCov%kmut*ErrorCov%R(ii,jj)
+     endif
+   enddo
+   enddo
+   ErrorCov%Revecs=ErrorCov%R
+   call decompose_(trim(ErrorCov%name),ErrorCov%Revals,ErrorCov%Revecs,ndim,.true.)
+!--------------------------------------------------------
+!   call westonEtAl_spectrum_boost_(adjspec)
+!   if (adjspec) then
+!      call rebuild_rcov_
+!   endif
+!---------------------------------------------------------
+   ! In this case, we can wipe out the eigen-decomp since it will be redone for
+   ! each profile at each location at setup time.
+   ErrorCov%Revals=zero
+   ErrorCov%Revecs=zero
+endif ! method=2
+
+  contains
+  subroutine westonEtAl_spectrum_boost_(adjspec)
+    implicit none
+    logical,intent(out) :: adjspec
+    adjspec=.false.
+    if(ErrorCov%kreq < zero) return
+    lambda_max=maxval(ErrorCov%Revals)
+    lambda_min=minval(ErrorCov%Revals)
+    lambda_inc=(lambda_max - (lambda_min * ErrorCov%kreq))/(ErrorCov%kreq-1)
+    if(lambda_inc>zero) then
+       ErrorCov%Revals = ErrorCov%Revals + lambda_inc
+    else
+       if (iamroot_) then
+         write(6,'(2a,1x,es10.3)') myname_, ' Spectrum of cov(R) not changed, poor choice of kreq = ', &
+                         ErrorCov%kreq
+       endif
+    endif
+    adjspec=.true.
+  end subroutine westonEtAl_spectrum_boost_
+  subroutine rebuild_rcov_
+  integer(i_kind) ii,jj,kk
+  real(r_kind), allocatable, dimension(:,:) :: tmp
+  allocate(tmp(ndim,ndim))
+  ! D*U^T
+  do jj=1,ndim
+     tmp(:,jj) = ErrorCov%Revals(:) * ErrorCov%Revecs(jj,:)
+  enddo
+  ! U*(D*U^T)
+  ErrorCov%R = matmul(ErrorCov%Revecs,tmp)
+  ErrorCov%Revecs =ErrorCov%R
+  call decompose_(trim(ErrorCov%name),ErrorCov%Revals,ErrorCov%Revecs,ndim,.true.)
+  ! clean up
+  deallocate(tmp)
+  end subroutine rebuild_rcov_
 end subroutine solver_
 !EOC
 
@@ -553,25 +679,32 @@ end subroutine solver_
 !-------------------------------------------------------------------------
 !BOP
 !
-! !IROUTINE:  decompose_ --- calculates cholesky decomposition of cov(R)
+! !IROUTINE:  decompose_ --- calculates eigen-decomposition of cov(R)
 !
 ! !INTERFACE:
 !
-subroutine decompose_(UT,ndim)
+subroutine decompose_(instrument,Evals,Evecs,ndim,lprt)
+! !USES:
+use constants, only: tiny_r_kind
   implicit none
 ! !INPUT PARAMETERS:
+  character(len=*),intent(in):: instrument
   integer(i_kind),intent(in) :: ndim
+  logical,intent(in)         :: lprt
 ! !INPUT/OUTPUT PARAMETERS:
-  real(r_kind),intent(inout) :: UT(:,:) ! on entry: matrix to decompose
-                                        ! on exit: inv of U, where R=UU^T
+  real(r_kind),intent(inout) :: Evals(:)
+  real(r_kind),intent(inout) :: Evecs(:,:) ! on entry: matrix to decompose
+                                           ! on exit: eigenvectors
 
-! !DESCRIPTION: This routine uses LAPACK to compute the cholesky factorization of R.
-!               R is factored as R=UU^T, and then U is inverted to get a
-!               non-symmetric square root of R^-1.
+! !DESCRIPTION: This routine makes a LAPACK call to eigen-decompose cov(R).
+!               Its initial implementation is the crudest possible; it does
+!               not make use of the fact that only the upper or lower triangles
+!               of the matrix are needed; the problems solver are so small that
+!               at present this does not seem to be an issue; this could be 
+!               easily revisited in the future.
 !
 ! !REVISION HISTORY:
-!   2014-04-13  todling   initial code
-!   2019-04-22  kbathmann change from eigendecomposition to cholesky factorizaiton
+!   2014-04-13  todling  initial code
 !
 ! !REMARKS:
 !   language: f90
@@ -583,284 +716,111 @@ subroutine decompose_(UT,ndim)
 !EOP
 !-------------------------------------------------------------------------
 !BOC
-
   character(len=*),parameter :: myname_=myname//'decompose_'
-  integer(i_kind):: infoc,infoi
+  character*1 jobz
+  integer(i_kind) lwork,info
+  real(r_kind) lambda_max,lambda_min,cond
+  real(r_kind),allocatable, dimension(:) :: work
+  jobz = 'V' ! evals & evecs
+  lwork = max(1,3*ndim-1)
+  allocate(work(lwork))
   if(r_kind==r_single) then ! this trick only works because this uses the f77 lapack interfaces
-     call SPOTRF('U',ndim,UT,ndim,infoc)
-     call STRTRI('U','N',ndim,UT,ndim,infoi)
+     call SSYEV( jobz, 'U', ndim, Evecs, ndim, Evals, WORK, lwork, info )
   else if(r_kind==r_double) then
-     call DPOTRF('U',ndim,UT,ndim,infoc)
-     call DTRTRI('U','N',ndim,UT,ndim,infoi)
+     call DSYEV( jobz, 'U', ndim, Evecs, ndim, Evals, WORK, lwork, info )
   else
-     call die(myname_,'no corresponding LAPACK call for cholesky inversion')
+     call die(myname_,'no corresponding LAPACK call for solving eigenproblem')
   endif
-  if ((abs(infoc)>0).or.(abs(infoi)>0)) call die(myname_,'trouble with lapack routines')
+  if (info==0) then
+     if (lprt) then
+        cond=-999._r_kind
+        lambda_max=maxval(Evals)
+        lambda_min=minval(abs(Evals))
+        if(lambda_min>tiny_r_kind) cond=abs(lambda_max/lambda_min) ! formal definition (lambda>0 for SPD matrix)
+        if (iamroot_) then
+           write(6,'(2a,1x,a,1x,es20.10)') 'Rcov(Evals) for Instrument: ', trim(instrument), ' cond= ', cond
+           write(6,'(9(es13.6))') Evals
+        endif
+     endif
+  else
+     call die(myname_,'trouble solving eigenproblem')
+  endif
+  deallocate(work)
 end subroutine decompose_
 !EOC
 
-!-------------------------------------------------------------------------
-!BOP
+subroutine adjust_var_ (iinstr,nindx,nchanl,ich,tnoise)
+!$$$  subprogram documentation block
+!                .      .    .
+! subprogram:    adjust_var_
 !
-! !IROUTINE:  scale_jac_ ---  scale Jacobian, residuals, and related errors
+!   prgrmmr:     W. Gu  org: gmao                date: 2014-09-15
 !
-! !INTERFACE:
+! abstract:  provide hook to update tnoise 
 !
-logical function scale_jac_(depart,obvarinv,jacobian, nchanl,&
-                            jpch_rad,varinv,wgtjo,iuse,ich,ErrorCov,Rinv,rsqrtinv)
-! !USES:
-use constants, only: tiny_r_kind,five
-use mpeu_util, only: die
-
-implicit none
-! !INPUT PARAMETERS:
-integer(i_kind),intent(in) :: nchanl   ! total number of channels in instrument
-integer(i_kind),intent(in) :: jpch_rad ! total number of channels in GSI
-integer(i_kind),intent(in) :: ich(:)   ! true channel numeber
-integer(i_kind),intent(in) :: iuse(0:jpch_rad) ! flag indicating whether channel used or not
-real(r_kind),   intent(in) :: varinv(:)    ! inverse of specified ob-error-variance 
-! !INPUT/OUTPUT PARAMETERS:
-real(r_kind),intent(inout) :: depart(:)    ! observation-minus-guess departure
-real(r_kind),intent(inout) :: obvarinv(:)  ! inverse of eval(diag(R)) !KAB delete?
-real(r_kind),intent(inout) :: wgtjo(:)     ! weight in Jo-term
-real(r_kind),intent(inout) :: jacobian(:,:)! Jacobian matrix
-real(r_kind),intent(inout) :: Rinv(:)      ! diagonal of the inverse of R, times a scaling factor
-real(r_kind),intent(inout) :: rsqrtinv(:,:)!for R=U^TU, rsqrtinv=U^{-1} is upper-triangular
-type(ObsErrorCov) :: ErrorCov              ! ob error covariance for given instrument
-
-! !DESCRIPTION: This routine is the main entry-point to the outside world. 
-!               It redefines the Jacobian matrix so it embeds the inverse of the square root 
-!               observation error covariance matrix. Only the sub-matrix related
-!               to the active and accepted channels in the given profile is 
-!               taken into account.
+! program history log:
+!   2016-09-15  W. Gu   - initial code
 !
-! !REVISION HISTORY:
-!   2014-04-13  todling    initial code
-!   2014-11-15  W. Gu      bug fix in R-inverse indexation
-!   2014-12-19  W. Gu      use the eigenvalue decomposition to form a square root decomposition, and then
-!                          apply to correlated R-covariance matrix(R= QD^(1/2)Q^T QD^(1/2)Q^T). 
-!   2015-04-01  W. Gu      clean the code
-!   2017-07-27  kbathmann  Merge subroutine rsqrtinv into scale_jac, define Rinv to fix
-!                          diag_precon for correlated error, and reorder several nested loops
-!   2019-04-22  kbathmann  change to cholesky factorization, change "method" options
-!
-! !REMARKS:
+! attributes:
 !   language: f90
-!   machine:  discover
+!   machine:  ibm rs/6000 sp; SGI Origin 2000; Compaq/HP
 !
-! !AUTHOR:
-!   Ricardo Todling  org: gmao      date: 2014-04-13
-!
-!EOP
-!-------------------------------------------------------------------------
-!BOC
+!$$$ end documentation block
+   use constants, only: tiny_r_kind,zero,one
+   use radinfo, only: iuse_rad,jpch_rad
+   use mpeu_util, only: die
+   use mpimod, only: mype
+   implicit none
+   integer(i_kind), intent(in) :: iinstr
+   integer(i_kind), intent(in) :: nindx
+   integer(i_kind), intent(in) :: nchanl
+   integer(i_kind), intent(in) :: ich(nchanl)
+   real(r_kind), intent(inout) :: tnoise(nchanl)
 
-  character(len=*),parameter :: myname_=myname//'*scale_jac'
-  integer(i_kind) :: nch_active,ii,jj,kk,iii,jjj,mm,ncp,ifound,nsigjac,indR
-  integer(i_kind),allocatable,dimension(:)   :: ircv
-  integer(i_kind),allocatable,dimension(:)   :: ijac
-  integer(i_kind),allocatable,dimension(:)   :: IRsubset
-  integer(i_kind),allocatable,dimension(:)   :: IJsubset
-  real(r_kind),   allocatable,dimension(:)   :: col
-  real(r_kind),   allocatable,dimension(:,:) :: row
-  real(r_kind) :: val
-  integer(i_kind) :: method
-  logical subset
-  scale_jac_=.false.
-  nch_active=ErrorCov%nch_active
-  method=ErrorCov%method
-  if(nch_active<0) return
-  call timer_ini('scljac')
+   character(len=*),parameter::myname_ = myname//'*adjust_var_'
 
-  ! get indexes for the internal channels matching those
-  ! used in estimating the observation error covariance
-  allocate(ircv(nchanl))
-  allocate(ijac(nchanl))
-  ircv = -1
-  ijac = -1
-  do jj=1,nchanl
-     mm=ich(jj)       ! true channel number (has no bearing here except in iuse)
-     if (varinv(jj)>tiny_r_kind .and. iuse(mm)>=1) then
-        ifound=-1
-        do ii=1,nch_active
-           if (ErrorCov%nctot>nchanl) then
-              indR=ii
-           else
-              indR=ErrorCov%indxR(ii)
-           end if
-           if(jj==indR) then
-              ifound=ii
-              exit
-           endif
-        enddo
-        if(ifound/=-1) then
-           ijac(jj)=jj      ! index value applies to the jacobian and departure
-           ircv(jj)=ifound  ! index value applies to ErrorCov
-        endif
-     endif
-  enddo
-  ncp=count(ircv>0) ! number of active channels in profile
-  ! following should never happen, but just in case ...
-  if(ncp==0 .or. ncp>ErrorCov%nch_active) then
-     call die(myname_,'serious inconsistency in handling correlated obs')
-  endif
-  ! Get subset indexes; without QC and other on-the-fly analysis choices these
-  !                     two indexes would be the same, but because the analysis
-  !                     remove data here and there, most often there will be fewer
-  !                     channels being processed for a given profile than the set
-  !                     of active channels used to get an offline estimate of R.
-  allocate(IRsubset(ncp)) ! these indexes apply to the matrices/vec in ErrorCov
-  allocate(IJsubset(ncp)) ! these indexes apply to the Jacobian/departure 
-  iii=0;jjj=0
-  do ii=1,nchanl
-     if(ircv(ii)>0) then
-        iii=iii+1
-        IRsubset(iii)=ircv(ii)  ! subset indexes in R presently in use
-     endif
-     if(ijac(ii)>0) then
-        jjj=jjj+1
-        IJsubset(iii)=ijac(ii)  ! subset indexes in Jac/dep presently in use
-     endif
-  enddo
-  if (iii/=ncp) then
-     if (iamroot_) then
-         write(6,*) myname, ' iii,ncp= ',iii,ncp
-     endif
-     call die(myname_,' serious dimensions insconsistency (R), aborting')
-  endif
-  if (jjj/=ncp) then
-     if (iamroot_) then
-         write(6,*) myname, ' jjj,ncp= ',jjj,ncp
-     endif
-     call die(myname_,' serious dimensions insconsistency (J), aborting')
-  endif
+   integer(i_kind) :: nch_active,ii,jj,mm,nn
 
-  ! decompose the sub-matrix - not necessary if all channels pass qc
-  if( method >0 ) then
-     if (ncp<ErrorCov%nch_active) then
-        subset = decompose_subset_ (IRsubset,ErrorCov)
-     else
-        ErrorCov%UT=ErrorCov%UTfull
-        subset=.true.
-     endif
-     if(.not.subset) then
-        call die(myname_,' failed to decompose correlated R')
-     endif
-  endif
-  rsqrtinv=zero
-  Rinv=zero
-  nsigjac=size(jacobian,1)
-  if( method<0 ) then
-  !  Do as GSI would do otherwise
-     do jj=1,ncp
-        mm=IJsubset(jj) 
-        wgtjo(mm)    = varinv(mm)
-        Rinv(jj)=wgtjo(mm)
-        rsqrtinv(jj,jj)=sqrt(wgtjo(mm))
-        depart(mm)=depart(mm)*rsqrtinv(jj,jj)
-        do ii=1,nsigjac
-           jacobian(ii,mm)=jacobian(ii,mm)*rsqrtinv(jj,jj)
-        enddo
+   if(.not.amiset_(GSI_BundleErrorCov(iinstr))) then
+      call die(myname_,' improperly set GSI_BundleErrorCov')
+   endif
+
+   nch_active=GSI_BundleErrorCov(iinstr)%nch_active
+   if( nch_active < 0) return
+
+   if( GSI_BundleErrorCov(iinstr)%method==2 ) then
+!     if(nindx==1)write(6,'(1x,a,a20,1x,i4)')'>>>>> Obserrors in satinfo replaced by diag(R) ',idnames(iinstr),mype
+     do jj=1,nch_active
+       nn=GSI_BundleErrorCov(iinstr)%indxR(jj)
+       mm=ich(nn)
+       if( tnoise(nn)> 1.e4_r_kind .or. iuse_rad(mm)<1 ) then
+         call die(myname_,' active channels used in R do not match those used in GSI, aborting')
+       endif
+       tnoise(nn) = sqrt(GSI_BundleErrorCov(iinstr)%R(jj,jj))
      enddo
-  elseif (method==0) then
-     do jj=1,ncp
-        mm=IJsubset(jj)
-        val = obvarinv(mm)*varinv(mm)
-        wgtjo(mm)    = val/ErrorCov%R(IRsubset(jj),IRsubset(jj))
-        rsqrtinv(jj,jj)=sqrt(wgtjo(mm))
-        Rinv(jj)=wgtjo(mm)
-        depart(mm)=depart(mm)*rsqrtinv(jj,jj)
-        do ii=1,nsigjac
-           jacobian(ii,mm)=jacobian(ii,mm)*rsqrtinv(jj,jj)
-        enddo
-     enddo
-  else
-     do ii=1,ncp
-        mm=IJsubset(ii)
-        obvarinv(mm)=obvarinv(mm)*varinv(mm)
-     enddo
-     allocate(row(nsigjac,ncp))
-     allocate(col(ncp))
-     row=zero 
-     col=zero
-     if (method==3) then
-        do ii=1,ncp
-           iii=IRsubset(ii)
-           do jj=1,ii
-              jjj=IRsubset(jj)
-              mm=IJsubset(jj)
-              val=sqrt(obvarinv(mm))
-              ErrorCov%UT(jjj,iii)=ErrorCov%UT(jjj,iii)*val
-           enddo
-        enddo
-     endif
-     do ii=1,ncp
-        iii=IRsubset(ii)
-        do jj=ii,ncp
-           jjj=IRsubset(jj)
-           Rinv(ii)=Rinv(ii)+ErrorCov%UT(iii,jjj)*ErrorCov%UT(iii,jjj)
-        enddo
-        !Multiplication of Rinv diagonal by a factor
-        !of 5 improves the PCG convergence in this case
-        Rinv(ii)=Rinv(ii)*five
-        do jj=1,ii
-           jjj=IRsubset(jj)
-           do kk=1,nsigjac
-              row(kk,ii)=row(kk,ii)+jacobian(kk,IJsubset(jj))*ErrorCov%UT(jjj,iii)
-           enddo
-           col(ii)=col(ii)+ErrorCov%UT(jjj,iii)*depart(IJsubset(jj))
-        enddo
-     enddo
-  !   Place Jacobian and departure in output arrays
-     do jj=1,ncp
-        mm=IJsubset(jj)
-        depart(mm)=col(jj)
-        wgtjo(mm)    = one
-        do ii=1,nsigjac
-           jacobian(ii,mm)=row(ii,jj)
-        end do
-        do ii=1,jj
-           rsqrtinv(ii,jj)=ErrorCov%UT(IRsubset(ii),IRsubset(jj))
-        enddo
-     enddo
-     deallocate(col)
-     deallocate(row)
-  endif
-  ! clean up
-  deallocate(IJsubset)
-  deallocate(IRsubset)
-  deallocate(ijac,ircv)
-  scale_jac_=.true.
-  call timer_fnl('scljac')
-end function scale_jac_
+   endif
+
+end subroutine adjust_var_
 !EOC
-
+!-------------------------------------------------------------------------
 !BOP
 !
-! !IROUTINE:  upd_varqc_ ---  replace the obs error prescribed in satinfo for instrument accounted for inter-channel covariance.
+! !IROUTINE:  upd_varch_ ---  overwrite prescribed obs error (satinfo) for instrument treated as correlated
 !
 ! !INTERFACE:
 !
-subroutine upd_varqc_(jpch_rad,iuse_rad,nusis,varch_sea, &
-                      varch_land,varch_ice,varch_snow,varch_mixed)
+subroutine upd_varch_
 ! !USES:
    use mpeu_util, only: die
    use mpeu_util, only: getindex
+   use radinfo, only: jpch_rad,iuse_rad,nusis,varch
 implicit none
 ! !INPUT PARAMETERS:
-   integer(i_kind),intent(in) :: jpch_rad
-   integer(i_kind),dimension(0:jpch_rad),intent(in) :: iuse_rad
-   character(len=*),dimension(jpch_rad),intent(in) :: nusis
-! !INPUT/OUTPUT PARAMETERS:
-   real(r_kind),dimension(jpch_rad),intent(inout) :: varch_sea,varch_land
-   real(r_kind),dimension(jpch_rad),intent(inout) ::varch_ice,varch_snow,varch_mixed
-! !DESCRIPTION: This routine will replace the prescribed obs errors in satinfo for instruments we account 
+! !DESCRIPTION: This routine replaces the prescribed obs errors in satinfo for instruments we account
 !               for inter-channel covariances.
 !
 ! !REVISION HISTORY:
-!   2014-11-26  W. Gu     Initial code
-!   2019-02-26  kbathmann Update to use Diag of R in QC, rather than satinfo errors.
-!                         This subroutine is used in methods 0, 2 and 3 only
+!   2014-11-26  W. Gu  initial code
 !
 ! !REMARKS:
 !   language: f90
@@ -873,165 +833,394 @@ implicit none
 !-------------------------------------------------------------------------
 !BOC
 
-   character(len=*),parameter :: myname_=myname//'*upd_varqc'
+   character(len=*),parameter :: myname_=myname//'*upd_varch'
    character(len=80) covtype
-   integer(i_kind) :: nch_active,ii,jj,iii,jjj,mm,nn,ncp,ifound,jj0,itbl,ntrow
-   integer(i_kind),dimension(6) ::nsatype
-   integer(i_kind)::nsat,isurf,rr
+   integer(i_kind) :: nch_active,ii,jj,mm,nn,jj0,itbl,nsatype,ntrow,iinstr
+   integer(i_kind),allocatable,dimension(:) :: ich1,tblidx   ! true channel numeber
+   integer(i_kind) :: nchanl1,jc   ! total number of channels in instrument
+
+   if(.not.allocated(idnames)) then
+     return
+   endif
+
+   ntrow = size(idnames)
+   allocate(ich1(jpch_rad),tblidx(ntrow))
+
+   nsatype=0
+   do jj0=1,ntrow
+      covtype=trim(idnames(jj0))
+      iinstr=len_trim(covtype)
+      if(covtype(iinstr-3:iinstr)==':sea')then
+         nsatype=nsatype+1
+         tblidx(nsatype)=jj0
+      endif
+   enddo
+   if(nsatype==0) return
+
+   do jj0=1,nsatype
+
+     itbl=tblidx(jj0)
+     jc=0
+     do ii=1,jpch_rad
+       covtype = trim(nusis(ii))//':sea'
+       if(trim(idnames(itbl))==trim(covtype)) then
+         jc=jc+1
+         ich1(jc)=ii
+       endif
+     enddo
+     nchanl1=jc
+
+     if(nchanl1==0)then
+        call die(myname_,' nchanl1==0 ')
+     endif
+
+     if(.not.amiset_(GSI_BundleErrorCov(itbl))) then
+        call die(myname_,' improperly set GSI_BundleErrorCov')
+     endif
+
+     nch_active=GSI_BundleErrorCov(itbl)%nch_active
+     if(nch_active<0) return
+
+     if( GSI_BundleErrorCov(itbl)%method==2 ) then
+       do jj=1,nch_active
+         nn=GSI_BundleErrorCov(itbl)%indxR(jj)
+         mm=ich1(nn)
+         if( iuse_rad(mm)<1 ) then
+           call die(myname_,' active channels used in R do not match those used in GSI, aborting')
+         endif
+         if(iamroot_)write(6,'(1x,a6,a20,2i6,2f20.15)')'>>>>',idnames(itbl),jj,nn,varch(mm),sqrt(GSI_BundleErrorCov(itbl)%R(jj,jj))
+         varch(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(jj,jj))
+       enddo
+     endif
+
+   enddo
+
+   deallocate(ich1,tblidx)
+
+end subroutine upd_varch_
+!EOC
+logical function adjust_jac_ (iinstr,nchanl,nsigradjac,ich,varinv,depart, &
+                  err2,raterr2,wgtjo,jacobian,method,nchasm,rsqrtinv,rinvdiag)
+!$$$  subprogram documentation block
+!                .      .    .
+! subprogram:    adjust_jac_
+!
+!   prgrmmr:     todling  org: gmao                date: 2014-04-15
+!
+! abstract:  provide hook to module handling inter-channel ob correlated errors
+!
+! program history log:
+!   2014-04-15  todling - initial code
+!   2014-08-06  todling - change obtype to isis for more flexibity
+!   2014-10-01  todling - add wgtjo to arg list
+!   2015-04-01  W. Gu   - clean the code
+!   2015-08-18  W. Gu   - add the dependence of the correlated obs errors on the surface types.
+!   2016-06-01  W. Gu   - move the function radinfo_adjust_jacobian from radinfo
+!
+! attributes:
+!   language: f90
+!   machine:  ibm rs/6000 sp; SGI Origin 2000; Compaq/HP
+!
+!$$$ end documentation block
+   use constants, only: tiny_r_kind,zero,one
+   use mpeu_util, only: die
+   use mpimod, only: mype
+   implicit none
+   integer(i_kind), intent(in) :: nchasm
+   integer(i_kind), intent(in) :: iinstr
+   integer(i_kind), intent(in) :: nchanl
+   integer(i_kind), intent(in) :: nsigradjac
+   integer(i_kind), intent(in) :: ich(nchanl)
+   integer(i_kind), intent(out) :: method
+   real(r_kind), intent(in)    :: varinv(nchanl)
+   real(r_kind), intent(inout) :: depart(nchanl)
+   real(r_kind), intent(inout) :: err2(nchanl)
+   real(r_kind), intent(inout) :: raterr2(nchanl)
+   real(r_kind), intent(inout) :: wgtjo(nchanl)
+   real(r_kind), intent(inout) :: jacobian(nsigradjac,nchanl)
+   real(r_kind), intent(inout) :: rsqrtinv(nchasm,nchasm)
+   real(r_kind), intent(inout) :: rinvdiag(nchasm)
+
+   character(len=*),parameter::myname_ = myname//'*adjust_jac_'
+
+   adjust_jac_=.false.
+
+   if(.not.amiset_(GSI_BundleErrorCov(iinstr))) then
+      call die(myname_,' improperly set GSI_BundleErrorCov')
+   endif
+
+   if( GSI_BundleErrorCov(iinstr)%nch_active < 0) return
+
+   adjust_jac_ = scale_jac_ (depart,err2,raterr2,jacobian,nchanl,varinv,wgtjo, &
+                             ich,nchasm,rsqrtinv,rinvdiag,GSI_BundleErrorCov(iinstr))
+
+   method = GSI_BundleErrorCov(iinstr)%method
+
+   end function adjust_jac_
+
+!-------------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE:  scale_jac_ ---  scale Jacbian, residuals, and related errors
+!
+! !INTERFACE:
+!
+logical function scale_jac_(depart,err2,raterr2,jacobian,nchanl,varinv,wgtjo, &
+                            ich,nchasm,rsqrtinv,rinvdiag,ErrorCov)
+! !USES:
+   use constants, only: tiny_r_kind
+   use radinfo, only: iuse_rad,jpch_rad
+   use mpeu_util, only: die
+   implicit none
+! !INPUT PARAMETERS:
+   integer(i_kind),intent(in) :: nchasm
+   integer(i_kind),intent(in) :: nchanl   ! total number of channels in instrument
+   integer(i_kind),intent(in) :: ich(:)   ! true channel numeber
+   real(r_kind),   intent(in) :: varinv(:)    ! inverse of specified ob-error-variance 
+! !INPUT/OUTPUT PARAMETERS:
+   real(r_kind),intent(inout) :: depart(:)    ! observation-minus-guess departure
+   real(r_kind),intent(inout) :: err2(:)  ! input: square of inverse of original obs errors
+   real(r_kind),intent(inout) :: raterr2(:)  ! input: square of original obs error/inflated obs errors
+   real(r_kind),intent(inout) :: wgtjo(:)     ! weight in Jo-term
+   real(r_kind),intent(inout) :: jacobian(:,:)! Jacobian matrix
+   real(r_kind),intent(inout) :: rsqrtinv(:,:)
+   real(r_kind),intent(inout) :: rinvdiag(:)
+   type(ObsErrorCov),intent(inout) :: ErrorCov      
+
+! !DESCRIPTION: This routine is the main entry-point to the outside world. 
+!               It redefines the Jacobian matrix so it embeds the inverse of the square root 
+!               observation error covariance matrix. Only the sub-matrix related
+!               to the active and accepted channels in the given profile is 
+!               taken into account.
+!
+! !REVISION HISTORY:
+!   2014-04-13  todling  initial code
+!   2014-11-15  W. Gu    bug fix in R-inverse indexation
+!   2014-12-19  W. Gu    use the eigenvalue decomposition to form a square root decomposition, and then
+!                        apply to correlated R-covariance matrix(R= QD^(1/2)Q^T QD^(1/2)Q^T). 
+!   2015-04-01  W. Gu    clean the code
+!   2016-04-18  W. Gu    combine QC inflation factors into the correlated obs errors(method=2)
+!   2016-10-28  W. Gu    merge the code for method=1 and method=2 together
+!   2016-10-28  W. Gu    remove rsqrtinv_ and do the inverse of sqrt(R) directly here.
+!
+! !REMARKS:
+!   language: f90
+!   machine:  discover
+!
+! !AUTHOR:
+!   Ricardo Todling  org: gmao      date: 2014-04-13
+!
+!EOP
+!-------------------------------------------------------------------------
+!BOC
+
+   character(len=*),parameter :: myname_=myname//'*scale_jac'
+   integer(i_kind) :: nch_active,ii,jj,kk,iii,jjj,mm,nn,ncp,ifound,nsigjac
    integer(i_kind),allocatable,dimension(:)   :: ircv
    integer(i_kind),allocatable,dimension(:)   :: ijac
    integer(i_kind),allocatable,dimension(:)   :: IRsubset
    integer(i_kind),allocatable,dimension(:)   :: IJsubset
-   integer(i_kind) iinstr,indR
-   integer(i_kind),allocatable,dimension(:) :: ich1  ! true channel number
-   integer(i_kind),allocatable,dimension(:,:) :: tblidx
-   integer(i_kind) :: nchanl1,jc   ! total number of channels in instrument
-   if(.not.allocated(idnames)) then
-     return
-   endif
-   ntrow = size(idnames)
-   allocate(ich1(jpch_rad),tblidx(5,ntrow))
+   real(r_quad),   allocatable,dimension(:)   :: col
+   real(r_quad),   allocatable,dimension(:,:) :: row
+   real(r_quad),   allocatable,dimension(:)   :: qcaj
+   real(r_quad) rsqrtinv_quad,rinvdiag_quad
+   real(r_quad) coeff
+   logical subset
 
-   nsatype=0
-   do jj0=1,ntrow
-      if ((GSI_BundleErrorCov(jj0)%method>1).or. &
-         (GSI_BundleErrorCov(jj0)%method==0)) then
-         covtype=trim(idnames(jj0))
-         iinstr=len_trim(covtype)
-         if(covtype(iinstr-3:iinstr)==':sea')then
-            nsatype(1)=nsatype(1)+1
-            nsatype(6)=nsatype(6)+1
-            tblidx(1,nsatype(1))=jj0
-         endif
-         if(covtype(iinstr-4:iinstr)==':land')then
-            nsatype(2)=nsatype(2)+1
-            nsatype(6)=nsatype(6)+1
-            tblidx(2,nsatype(2))=jj0
-         endif
-         if(covtype(iinstr-3:iinstr)==':ice')then
-            nsatype(3)=nsatype(3)+1
-            nsatype(6)=nsatype(6)+1
-            tblidx(3,nsatype(3))=jj0
-         endif
-         if(covtype(iinstr-4:iinstr)==':snow')then
-            nsatype(4)=nsatype(4)+1
-            nsatype(6)=nsatype(6)+1
-            tblidx(4,nsatype(4))=jj0
-         endif
-         if(covtype(iinstr-5:iinstr)==':mixed')then
-            nsatype(5)=nsatype(5)+1
-            nsatype(6)=nsatype(6)+1
-            tblidx(5,nsatype(5))=jj0
-         endif
-      endif
-   enddo
-   if(nsatype(6)==0) return
-   do isurf=1,5
-      nsat=nsatype(isurf)
-      if (nsat>0) then
-         do jj0=1,nsat
-            itbl=tblidx(isurf,jj0) !a row number
-            jc=0
-            covtype = ''
-            ich1=0
-            do ii=1,jpch_rad
-               if (isurf==1) then
-                  covtype = trim(nusis(ii))//':sea'
-               else if (isurf==2) then
-                  covtype = trim(nusis(ii))//':land'
-               else if (isurf==3) then
-                  covtype = trim(nusis(ii))//':ice'
-               else if (isurf==4) then
-                  covtype = trim(nusis(ii))//':snow'
-               else if (isurf==5) then
-                  covtype = trim(nusis(ii))//':mixed'
-               end if
-               if(trim(idnames(itbl))==trim(covtype)) then
-                  jc=jc+1
-                  ich1(jc)=ii
-               endif
-            enddo
-            nchanl1=jc
-            if(nchanl1==0) call die(myname_,' improperly set GSI_BundleErrorCov')
-            if(.not.amiset_(GSI_BundleErrorCov(itbl)))call die(myname_,' improperly set GSI_BundleErrorCov')
-            nch_active=GSI_BundleErrorCov(itbl)%nch_active
-            if(nch_active<0) return
+   scale_jac_=.false.
+   nch_active=ErrorCov%nch_active
+
+   call timer_ini('scljac')
+
 ! get indexes for the internal channels matching those
 ! used in estimating the observation error covariance
-            allocate(ircv(nchanl1))
-            allocate(ijac(nchanl1))
-            ircv = -1
-            ijac = -1
-            do jj=1,nchanl1
-               mm=ich1(jj)       ! true channel number (has no bearing here except in iuse)
-               if (iuse_rad(mm)>=1) then
-                  ifound=-1
-                  do ii=1,nch_active
-                     if (GSI_BundleErrorCov(itbl)%nctot>nchanl1) then
-                        indR=ii
-                     else
-                        indR=GSI_BundleErrorCov(itbl)%indxR(ii)
-                     end if 
-                     if(jj==indR) then
-                        ifound=ii       
-                        exit
-                     endif
-                  enddo
-                  if(ifound/=-1) then
-                     ijac(jj)=jj      ! index value in 1 to nchanl
-                     ircv(jj)=ifound  ! index value in 1 to nch_active 
-                  endif
-               endif
-            enddo
-            ncp=count(ircv>0) ! number of active channels in profile
-            if(ncp/=nch_active) then
-               call die(myname_,'serious inconsistency in handling correlated obs')
-            endif
-            allocate(IRsubset(ncp)) ! these indexes apply to the matrices/vec in ErrorCov
-            allocate(IJsubset(ncp)) ! these indexes in 1 to nchanl
-            iii=0;jjj=0
-            do ii=1,nchanl1
-               if(ircv(ii)>0) then
-                  iii=iii+1
-                  IRsubset(iii)=ircv(ii)  ! subset indexes in R presently in use
-               endif
-               if(ijac(ii)>0) then
-                  jjj=jjj+1
-                  IJsubset(iii)=ijac(ii)  ! subset indexes in channels presently in use
-               endif
-            enddo
-            if (iii/=ncp) then
-               if (iamroot_) then
-                  write(6,*) myname, ' iii,ncp= ',iii,ncp
-               endif
-               call die(myname_,' serious dimensions insconsistency, aborting')
-            endif
-            if (jjj/=ncp) then
-               if (iamroot_) then
-                  write(6,*) myname, ' jjj,ncp= ',jjj,ncp
-               endif
-               call die(myname_,' serious dimensions insconsistency, aborting')
-            endif
-            do ii=1,ncp
-               nn=IJsubset(ii)
-               mm=ich1(nn)
-               rr=IRsubset(ii)
-               if(isurf==1) varch_sea(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
-               if(isurf==2) varch_land(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
-               if(isurf==3) varch_ice(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
-               if(isurf==4) varch_snow(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
-               if(isurf==5) varch_mixed(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
-            enddo
+   allocate(ircv(nchanl))
+   allocate(ijac(nchanl))
+   ircv = -1
+   ijac = -1
+   do jj=1,nchanl
+     mm=ich(jj)       ! true channel number (has no bearing here except in iuse)
+     if (varinv(jj)>tiny_r_kind .and. iuse_rad(mm)>=1) then
+       ifound=-1
+       do ii=1,nch_active
+         if(jj==ErrorCov%indxR(ii)) then
+            ifound=ii       
+            exit
+         endif
+       enddo
+       if(ifound/=-1) then
+         ijac(jj)=jj      ! index value applies to the jacobian and departure
+         ircv(jj)=ifound  ! index value applies to ErrorCov
+       endif
+     endif
+   enddo
+
+! following should never happen, but just in case ...
+   ncp=count(ircv>0) ! number of active channels in profile
+   if(ncp==0 .or. ncp>nch_active) then
+     call die(myname_,'serious inconsitency in handling correlated obs')
+   endif
+   if(ncp .ne. nchasm) then
+     call die(myname_,'serious inconsitency in handling correlated obs: ncp .ne. nchasm')
+   endif
+
+! Get subset indexes; without QC and other on-the-fly analysis choices these
+!                     two indexes would be the same, but because the analysis
+!                     remove data here and there, most often there will be less
+!                     channels being processed for a given profile than the set
+!                     of active channels used to get an offline estimate of R.
+   allocate(IRsubset(ncp)) ! these indexes apply to the matrices/vec in ErrorCov
+   allocate(IJsubset(ncp)) ! these indexes apply to the Jacobian/departure 
+   iii=0;jjj=0
+   do ii=1,nchanl
+     if(ircv(ii)>0) then
+      iii=iii+1
+      IRsubset(iii)=ircv(ii)  ! subset indexes in R presently in use
+     endif
+     if(ijac(ii)>0) then
+      jjj=jjj+1
+      IJsubset(iii)=ijac(ii)  ! subset indexes in Jac/dep presently in use
+     endif
+   enddo
+   if (iii/=ncp) then
+     if (iamroot_) then
+       write(6,'') myname, ' iii,ncp= ',iii,ncp
+     endif
+     call die(myname_,' serious dimensions insconsistency (R), aborting')
+   endif
+   if (jjj/=ncp) then
+     if (iamroot_) then
+       write(6,'') myname, ' jjj,ncp= ',jjj,ncp
+     endif
+     call die(myname_,' serious dimensions insconsistency (J), aborting')
+   endif
+
+   if( ErrorCov%method<0 ) then
+!  Keep departures and Jacobian unchanged
+!  Do as GSI would do otherwise
+     do jj=1,ncp
+      mm=IJsubset(jj)
+      raterr2(mm) = raterr2(mm)
+      err2(mm) = err2(mm)
+      wgtjo(mm)    = varinv(mm)
+     enddo
+   else
+     if( ErrorCov%method== 0 ) then
+
+             ! use diag(Re) replaces GSI specified errors
+             !    inv(Rg) = inv(De)
+
+       do jj=1,ncp
+          mm=IJsubset(jj)
+          err2(mm) = one/ErrorCov%R(IRsubset(jj),IRsubset(jj))
+          raterr2(mm) = raterr2(mm)
+          wgtjo(mm)   = raterr2(mm)/ErrorCov%R(IRsubset(jj),IRsubset(jj))
+       enddo
+
+     else if( ErrorCov%method==1 .or. ErrorCov%method== 2) then
+
+              !  case=1 is default; uses corr(Re) only
+              !    Ce = U E U^T  (U=Evecs; E=Evals hold eigen-pairs of corr(R))
+              !    inv(Rg) = D0^(-1/2) U inv(E) U^T D0^(-1/2)
+              !  case=2: uses full Re;
+              !    Re = U De U^T  (Evals/Evecs eigen-pairs of full Re)
+              !    inv(Rg) = U De^(-1/2) U^T U De^(-1/2) U^T
+
+! decompose the sub-matrix - returning the result in the 
+!                            structure holding the full covariance
+! Multiply Jacobian with matrix of eigenvectors
+! Multiply departure with "right" eigenvectors
+       nsigjac=size(jacobian,1)
+       allocate(row(nsigjac,ncp))
+       allocate(col(ncp))
+       row=zero_quad
+       col=zero_quad
+
+       allocate(qcaj(ncp))
+       qcaj = one
+       if( ErrorCov%method==2 ) then
+         do jj=1,ncp
+           jjj=IJsubset(jj)
+           qcaj(jj) = raterr2(jjj)
+         enddo
+       else if( ErrorCov%method==1 ) then
+         do jj=1,ncp
+           jjj=IJsubset(jj)
+           qcaj(jj) = varinv(jjj)
+         enddo
+       endif
+       subset = decompose_subset_ (IRsubset,ErrorCov)
+       if(.not.subset) then
+         call die(myname_,' failed to decompose correlated R')
+       endif
+
+       do ii=1,ncp
+       do jj=1,ncp
+         rsqrtinv_quad=zero_quad
+         do kk=1,ncp
+           coeff = sqrt(qcaj(jj)/ErrorCov%Revals(IRsubset(kk)))
+           rsqrtinv_quad=rsqrtinv_quad+ErrorCov%Revecs(IRsubset(ii),IRsubset(kk))*coeff*ErrorCov%Revecs(IRsubset(jj),IRsubset(kk))
+         enddo
+         rsqrtinv(ii,jj) = rsqrtinv_quad
+       enddo
+       enddo
+
+       do ii=1,ncp
+         rinvdiag_quad = zero_quad
+         do kk=1,ncp
+           coeff = qcaj(ii)/ErrorCov%Revals(IRsubset(kk))
+           rinvdiag_quad=rinvdiag_quad+ErrorCov%Revecs(IRsubset(ii),IRsubset(kk))*coeff*ErrorCov%Revecs(IRsubset(ii),IRsubset(kk))
+         enddo
+         rinvdiag(ii)=rinvdiag_quad
+       enddo
+
+       do ii=1,ncp
+         do jj=1,ncp
+            nn=IJsubset(jj)
+            col(ii)   = col(ii)   + rsqrtinv(ii,jj) * depart(nn)
+            row(:,ii) = row(:,ii) + rsqrtinv(ii,jj) * jacobian(:,nn)
+         enddo
+       enddo
+
+!     Place Jacobian and departure in output arrays
+       do jj=1,ncp
+         mm=IJsubset(jj)
+         depart(mm)=col(jj)
+         jacobian(:,mm)=row(:,jj)
+         raterr2(mm) = one
+         err2(mm) = one
+         wgtjo(mm)    = one
+       enddo
+
+       deallocate(col)
+       deallocate(row)
+       deallocate(qcaj)
+
+     else if( ErrorCov%method==3 ) then   !use diag(Re) scales GSI specified errors
+                                          !    inv(Rg) = inv(De*Dg)
+       do jj=1,ncp
+          mm=IJsubset(jj)
+          raterr2(mm) = raterr2(mm)/ErrorCov%Revals(IRsubset(jj))
+          err2(mm) = err2(mm)
+          wgtjo(mm)    = varinv(mm)/ErrorCov%Revals(IRsubset(jj))
+       enddo
+       
+       
+     endif
+
+   endif
+
 ! clean up
-            deallocate(IJsubset)
-            deallocate(IRsubset)
-            deallocate(ijac)
-            deallocate(ircv)
-         enddo !jj=1,nsat
-      endif !nsat >0
-   enddo !isurf=1,5
-   deallocate(ich1,tblidx)
-end subroutine upd_varqc_
+   deallocate(IJsubset)
+   deallocate(IRsubset)
+   deallocate(ijac)
+   deallocate(ircv)
+
+   scale_jac_=.true.
+
+   call timer_fnl('scljac')
+
+end function scale_jac_
 !EOC
 
 !-------------------------------------------------------------------------
@@ -1044,15 +1233,14 @@ end subroutine upd_varqc_
 
 ! !DESCRIPTION: Given an index-set of channels really operative in a given
 !               profile, this routine extracts those rows and columns from
-!               the offline estimate of cov(R), creating a subset(cov(R)).
-!               A cholesky factorization is preformed such that
-!               subset(cov(R))=U*U^T. Then the U matrix is inverted
-!               and stored back in the corresponding rows and columns 
-!               of the temporary space in ObErroCov.
+!               the offline estimate of cov(R), creating a subset(cov(R))
+!               that is eigen-decomposed. The resulting partial eigen-
+!               decomposition is stored back in the corresponding 
+!               rows and columns of the temporary space in ObErroCov
+!               responsible for holding the eigen-values/vectors. 
 !
 ! !REVISION HISTORY:
 !   2014-04-13  todling  initial code
-!   2019-04-22  kbathmann change to cholesky factorization
 !
 ! !REMARKS:
 !   language: f90
@@ -1067,38 +1255,41 @@ end subroutine upd_varqc_
 logical function decompose_subset_ (Isubset,ErrorCov)
 implicit none
 ! in this approach, we take only the rows and columns of R related 
-! to the channels used, and factrozing them.
+! to the channels used, and eigendecompose them ... instead of 
+! eigendecomposing once, which I think ends up leading to the wrong
+! mixt of eigenvalues and eigenvectors.
 integer(i_kind),intent(in) :: Isubset(:)
 type(ObsErrorCov) :: ErrorCov
 
 character(len=*), parameter :: myname_=myname//'*subset_'
-real(r_kind),allocatable,dimension(:,:) :: UT
+real(r_kind),allocatable,dimension(:)   :: Evals
+real(r_kind),allocatable,dimension(:,:) :: Evecs
 integer(i_kind) ii,jj,ncp
 
 decompose_subset_=.false. 
 ncp=size(Isubset) ! number of channels actually used in this profile
-allocate(UT(ncp,ncp))
+allocate(Evals(ncp),Evecs(ncp,ncp))
 
 ! extract subcomponent of R
+!Evecs = ErrorCov%R(Isubset,Isubset)
 do jj=1,ncp
    do ii=1,ncp
-      UT(ii,jj) = ErrorCov%R(Isubset(ii),Isubset(jj))
+      Evecs(ii,jj) = ErrorCov%R(Isubset(ii),Isubset(jj))
    enddo
 enddo
 ! decompose subset matrix
-call decompose_(UT,ncp)
-! copy factorization onto ErrorCov
-! Due to the nature of the lapack routines, the 
-! lower-triangular values of UT are nonzero, and should
-! not be referenced anywhere in this code.
-
+call decompose_(ErrorCov%instrument,Evals,Evecs,ncp,.false.)
+! copy decomposition onto ErrorCov
+ErrorCov%Revals = zero
+ErrorCov%Revecs = zero
 do jj=1,ncp
-   do ii=1,jj
-      ErrorCov%UT(Isubset(ii),Isubset(jj)) = UT(ii,jj)
+   do ii=1,ncp
+      ErrorCov%Revecs(Isubset(ii),Isubset(jj)) = Evecs(ii,jj)
    enddo
+   ErrorCov%Revals(Isubset(jj)) = Evals(jj)
 enddo
 ! clean up
-deallocate(UT)
+deallocate(Evals,Evecs)
 
 decompose_subset_=.true.
 end function decompose_subset_
@@ -1107,12 +1298,12 @@ end function decompose_subset_
 !-------------------------------------------------------------------------
 !BOP
 !
-! !IROUTINE:  amIset_ --- checks whether a particular cov(R) has been set or not
+! !IROUTINE:  amiset_ --- checks whether a particular cov(R) has been set or not
 !
 ! !INTERFACE:
 !
 
-logical function amIset_ (ErrorCov)
+logical function amiset_ (ErrorCov)
 implicit none
 ! !INPUT/OUTPUT PARAMETERS:
 type(ObsErrorCov) :: ErrorCov
@@ -1135,13 +1326,14 @@ type(ObsErrorCov) :: ErrorCov
 !BOC
 logical failed
 failed=.false.
-amIset_=.false.
+amiset_=.false.
 if(ErrorCov%nch_active<0) failed=.true.
 if(.not.associated(ErrorCov%indxR)) failed=.true.
 if(.not.associated(ErrorCov%R)) failed=.true.
-if(.not.associated(ErrorCov%UT)) failed=.true.
-if(.not.failed) amIset_=.true.
-end function amIset_
+if(.not.associated(ErrorCov%REvals)) failed=.true.
+if(.not.associated(ErrorCov%REvecs)) failed=.true.
+if(.not.failed) amiset_=.true.
+end function amiset_
 !EOC
 
 !-------------------------------------------------------------------------

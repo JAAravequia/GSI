@@ -27,7 +27,6 @@ subroutine setupvis(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
 !   2014-01-28  todling - write sensitivity slot indicator (ioff) to header of diagfile
 !   2014-12-30  derber - Modify for possibility of not using obsdiag
 !   2015-10-01  guo   - full res obvsr: index to allow redistribution of obsdiags
-!   2016-05-06  yang - add closest_obs to select only one obs. among the multi-reports.
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
 !   2016-06-24  guo     - fixed the default value of obsdiags(:,:)%tail%luse to luse(i)
 !                       . removed (%dlat,%dlon) debris.
