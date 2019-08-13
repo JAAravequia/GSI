@@ -678,8 +678,6 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
    type(egrid2agrid_parm) :: p_high
    logical,dimension(1) :: vector
 
-
-
    !******************************************************************************
    ! Initialize variables used below
    iret_read=0
@@ -840,7 +838,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
    call gsi_bundlegetpointer(gfs_bundle,'q' ,g_q   ,ier);istatus=istatus+ier
    call gsi_bundlegetpointer(gfs_bundle,'oz',g_oz  ,ier);istatus=istatus+ier
    call gsi_bundlegetpointer(gfs_bundle,'cw',g_cwmr,ier);istatus=istatus+ier
-   call gsi_bundlegetpointer(gfs_bundle,'cf',g_cf,  ier)  
+   call gsi_bundlegetpointer(gfs_bundle,'cf',g_cf,  ier);istatus=istatus+ier
 
    if ( istatus /= 0 ) then
       if ( mype == 0 ) then
