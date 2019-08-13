@@ -738,7 +738,6 @@ contains
 
 !            allocate space for entries from table, Obtain table contents
              tablename='obs_'//trim(obsname)
-             call sensor_parameter_table(trim(tablename),lunin,rad_type_info(i)%nchannel,rad_type_info(i)%cclr,rad_type_info(i)%ccld)
              if ( rad_type_info(i)%ex_obserr == 'ex_obserr3' ) then
                 call sensor_parameter_table(trim(tablename),lunin,rad_type_info(i)%nchannel,rad_type_info(i)%cclr,rad_type_info(i)%ccld,rad_type_info(i)%cldval1)
              else

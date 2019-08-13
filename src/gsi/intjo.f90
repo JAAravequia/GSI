@@ -265,7 +265,6 @@ class(obOper),pointer:: it_obOper
     do it=1,obOper_count
       ix=ix_obtype(it)  ! in the same type sequence as it was in the earlier
                         ! implementation, for reprodecibility
-      ix=it     ! a potential non-zero-diff change?
 
       it_obOper => obOper_create(ix)
 

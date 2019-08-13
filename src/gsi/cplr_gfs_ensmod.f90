@@ -33,6 +33,8 @@ module get_gfs_ensmod_mod
       procedure :: put_user_ens => put_gfs_ens
       procedure :: non_gaussian_ens_grid => non_gaussian_ens_grid_gfs
       procedure, nopass:: mytype => typename
+      procedure, nopass:: create_sub2grid_info
+      procedure, nopass:: destroy_sub2grid_info
     end type ensemble
 
     character(len=*),parameter:: myname="gfs_ensmod"
@@ -1341,5 +1343,38 @@ subroutine non_gaussian_ens_grid_gfs(this,elats,elons)
    return
 
 end subroutine non_gaussian_ens_grid_gfs
+
+subroutine create_sub2grid_info(s2gi,nsig,npe,s2gi_ref)
+!> Create temporary communication information object for read ensemble routines
+   use kinds, only: i_kind
+   use gridmod, only: regional
+   use general_sub2grid_mod, only: sub2grid_info
+   use general_sub2grid_mod, only: general_sub2grid_create_info
+   implicit none
+ 
+   ! Declare passed variables
+   type(sub2grid_info), intent(out  ) :: s2gi
+   integer(i_kind),     intent(in   ) :: nsig
+   integer(i_kind),     intent(in   ) :: npe
+   type(sub2grid_info), intent(in   ) :: s2gi_ref
+
+   call general_sub2grid_create_info(s2gi, inner_vars=1, &
+        nlat=s2gi_ref%nlat,nlon=s2gi_ref%nlon,nsig=nsig, &
+        num_fields=min(6*nsig+1,npe),regional=regional)
+return
+end subroutine create_sub2grid_info
+
+subroutine destroy_sub2grid_info(s2gi)
+!> Destroy the object
+   use general_sub2grid_mod, only: sub2grid_info
+   use general_sub2grid_mod, only: general_sub2grid_destroy_info
+   implicit none
+ 
+   ! Declare passed variables
+   type(sub2grid_info), intent(inout) :: s2gi
+
+   call general_sub2grid_destroy_info(s2gi)
+return
+end subroutine destroy_sub2grid_info
 
 end module get_gfs_ensmod_mod
