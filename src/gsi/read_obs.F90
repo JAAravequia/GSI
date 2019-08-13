@@ -171,7 +171,6 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   integer(i_kind) :: ireadsb,ireadmg,kx,nc,said
   real(r_double) :: satid,rtype
   character(8) subset
-  integer(i_kind) :: lun
 
   satid=1      ! debug executable wants default value ???
   idate=0

@@ -179,11 +179,9 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   integer(i_kind) :: k0
   logical :: first,read_success
 
-  integer(i_kind) lun
   real(r_double),allocatable,dimension(:,:):: olpdtsq,lpsdvals
   real(r_double),allocatable,dimension(:):: press,omr,omrstd
   real(r_double),allocatable,dimension(:,:)::rpseq3
-  real(r_kind) lats0,lons0
 
   real(r_double) said, lat, lon, year, month, day, hour, minu
   real(r_double) soza
