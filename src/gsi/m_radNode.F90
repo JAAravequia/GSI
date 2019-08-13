@@ -36,7 +36,6 @@ module m_radNode
   public:: radNode
 
   type,extends(obsNode):: radNode
-     !type(rad_ob_type),pointer :: llpoint => NULL()
      type(aofp_obs_diag), dimension(:), pointer :: diags => NULL()
      real(r_kind),dimension(:),pointer :: res => NULL()
                                       !  obs-guess residual (nchan)
@@ -44,7 +43,6 @@ module m_radNode
                                       !  error variances squared (nchan)
      real(r_kind),dimension(:),pointer :: raterr2 => NULL()
                                       !  ratio of error variances squared (nchan)
-     !real(r_kind)    :: time          !  observation time in sec     
      real(r_kind)    :: wij(4)        !  horizontal interpolation weights
      real(r_kind),dimension(:,:),pointer :: pred => NULL()
                                       !  predictors (npred,nchan)
@@ -55,16 +53,19 @@ module m_radNode
                                       !  square root of inverse of R, multiplied
                                       !  by bias predictor jacobian
                                       !  only used if using correlated obs
+     real(r_kind),dimension(:  ),pointer :: rsqrtinv => NULL()
+                                      !  square root of inverse of R, only used
+                                      !  if using correlated obs
+
      integer(i_kind),dimension(:),pointer :: icx => NULL()
      integer(i_kind),dimension(:),pointer :: ich => NULL()
      integer(i_kind) :: nchan         !  number of channels for this profile
      integer(i_kind) :: ij(4)         !  horizontal locations
-     logical         :: use_corr_obs  !  logical to indicate if using correlated obs
-     !logical         :: luse          !  flag indicating if ob is used in pen.
-
-     !integer(i_kind) :: idv,iob              ! device id and obs index for sorting
-     !real   (r_kind) :: elat, elon      ! earth lat-lon for redistribution
-     !real   (r_kind) :: dlat, dlon      ! earth lat-lon for redistribution
+     logical         :: use_corr_obs  = .false. !  to indicate if correlated obs is implemented
+     integer(i_kind) :: iuse_corr_obs = 0 !  to indicate which type of correlated obs is implemented
+                                        ! 0 uses none (diagonal)
+                                        ! 1 uses rsqrtinv
+                                        ! 2 uses Rpred
 
 !!! Is %isis or %isfctype ever being assigned somewhere in the code?
 !!! They are used in intrad().
@@ -72,8 +73,8 @@ module m_radNode
 !!! Now, they are not written to an obsdiags file, nor read from one.
 
      character(20) :: isis            ! sensor/instrument/satellite id, e.g. amsua_n15
-     integer(i_kind) :: isfctype      ! surf mask: ocean=0,land=1,ice=2,snow=3,mixed=4
-     !integer(i_kind),dimension(:),pointer :: ich => NULL()
+     !integer(i_kind) :: isfctype      ! surf mask: ocean=0,land=1,ice=2,snow=3,mixed=4
+     character(80) :: covtype      ! surf mask: ocean=0,land=1,ice=2,snow=3,mixed=4
   contains
     procedure,nopass::  mytype
     procedure::  setHop => obsNode_setHop_
@@ -211,6 +212,7 @@ _ENTRY_(myname_)
   if(associated(aNode%pred    )) deallocate(aNode%pred    )
   if(associated(aNode%dtb_dvar)) deallocate(aNode%dtb_dvar)
   if(associated(aNode%Rpred   )) deallocate(aNode%Rpred   )
+  if(associated(aNode%rsqrtinv)) deallocate(aNode%rsqrtinv)
   if(associated(aNode%icx     )) deallocate(aNode%icx     )
 _EXIT_(myname_)
 return
@@ -237,7 +239,7 @@ _ENTRY_(myname_)
   if(skip_) then
     read(iunit,iostat=istat)
                 if (istat/=0) then
-                  call perr(myname_,'skipping read(%(nchan,use_corr_obs)), iostat =',istat)
+                  call perr(myname_,'skipping read(%(nchan,iuse_corr_obs)), iostat =',istat)
                   _EXIT_(myname_)
                   return
                 end if
@@ -251,15 +253,15 @@ _ENTRY_(myname_)
 
     read(iunit,iostat=istat)
                 if(istat/=0) then
-                  call perr(myname_,'skipping read(%(Rpred)), iostat =',istat)
+                  call perr(myname_,'skipping read(%(Rpred||rsqrtinv)), iostat =',istat)
                   _EXIT_(myname_)
                   return
                 endif
 
   else
-    read(iunit,iostat=istat) aNode%nchan,aNode%use_corr_obs
+    read(iunit,iostat=istat) aNode%nchan,aNode%use_corr_obs,aNode%iuse_corr_obs
                 if (istat/=0) then
-                  call perr(myname_,'read(%(nchan,use_corr_obs)), iostat =',istat)
+                  call perr(myname_,'read(%(nchan,use_corr_obs,iuse_corr_obs)), iostat =',istat)
                   _EXIT_(myname_)
                   return
                 end if
@@ -271,7 +273,8 @@ _ENTRY_(myname_)
         if(associated(aNode%raterr2 )) deallocate(aNode%raterr2 )
         if(associated(aNode%pred    )) deallocate(aNode%pred    )
         if(associated(aNode%dtb_dvar)) deallocate(aNode%dtb_dvar)
-        if(associated(aNode%Rpred)) deallocate(aNode%Rpred)
+        if(associated(aNode%Rpred   )) deallocate(aNode%Rpred)
+        if(associated(aNode%rsqrtinv)) deallocate(aNode%rsqrtinv)
         if(associated(aNode%icx     )) deallocate(aNode%icx     )
 
         nchan=aNode%nchan
@@ -283,11 +286,6 @@ _ENTRY_(myname_)
                   aNode%dtb_dvar(nsigradjac,nchan), &
                   aNode%ich  (nchan), &
                   aNode%icx  (nchan)  )
-
-        if (aNode%use_corr_obs) then
-            deallocate(aNode%Rpred, stat=istat)
-            if (istat/=0) write(6,*)'DESTROYOBS:  deallocate error for rad Rpred, istatus=',istat
-        endif
 
         read(iunit,iostat=istat)    aNode%ich     , &
                                     aNode%res     , &
@@ -304,15 +302,28 @@ _ENTRY_(myname_)
                   return
                 end if
 
-        if (aNode%use_corr_obs) then
-            allocate(aNode%Rpred(((nchan+1)*nchan)/2,npred))
-            read(iunit,iostat=istat)    aNode%Rpred
+        if(.not.aNode%use_corr_obs) aNode%iuse_corr_obs=0
+        select case(aNode%iuse_corr_obs)
+        case(1)
+            allocate(aNode%rsqrtinv(((nchan+1)*nchan)/2))
+            read(iunit,iostat=istat) aNode%rsqrtinv
                 if (istat/=0) then
-                  call perr(myname_,'read(%(Rpred)), iostat =',istat)
+                  call perr(myname_,'read(%rsqrtinv), iostat =',istat)
                   _EXIT_(myname_)
                   return
                 end if
-        endif
+        case(2)
+            allocate(aNode%Rpred(((nchan+1)*nchan)/2,npred))
+            read(iunit,iostat=istat) aNode%Rpred
+                if (istat/=0) then
+                  call perr(myname_,'read(%Rpred), iostat =',istat)
+                  _EXIT_(myname_)
+                  return
+                end if
+
+        case default
+            read(iunit,iostat=istat)
+        end select
 
     do k=1,nchan
       aNode%diags(k)%ptr => obsdiagLookup_locate(diagLookup,aNode%idv,aNode%iob,aNode%ich(k))
@@ -338,12 +349,15 @@ subroutine obsNode_xwrite_(aNode,junit,jstat)
 
   character(len=*),parameter:: myname_=MYNAME//'.obsNode_xwrite_'
   integer(i_kind):: k
+  integer(i_kind):: iuse_corr_obs
 _ENTRY_(myname_)
 
   jstat=0
-  write(junit,iostat=jstat) aNode%nchan,aNode%use_corr_obs
+  iuse_corr_obs=0
+  if(aNode%use_corr_obs) iuse_corr_obs=aNode%iuse_corr_obs
+  write(junit,iostat=jstat) aNode%nchan,aNode%use_corr_obs,iuse_corr_obs
                 if (jstat/=0) then
-                  call perr(myname_,'write(%(nchan,use_corr_obs)), iostat =',jstat)
+                  call perr(myname_,'write(%(nchan,use_corr_obs, etc.)), iostat =',jstat)
                   _EXIT_(myname_)
                   return
                 end if
@@ -363,16 +377,33 @@ _ENTRY_(myname_)
                   return
                 end if
 
-  if (aNode%use_corr_obs) then
+  select case(iuse_corr_obs)
+  case(1)
+      ASSERT(size(aNode%rsqrtinv)==((aNode%nchan+1)*aNode%nchan)/2)
+      write(junit,iostat=jstat) aNode%rsqrtinv
+           if (jstat/=0) then
+               call perr(myname_,'write(%rsqrtinv), iostat =',jstat)
+               _EXIT_(myname_)
+               return
+           end if
+  case(2)
       ASSERT(size(aNode%Rpred,1)==((aNode%nchan+1)*aNode%nchan)/2)
       ASSERT(size(aNode%Rpred,2)==npred)
       write(junit,iostat=jstat) aNode%Rpred
            if (jstat/=0) then
-               call perr(myname_,'write(%(Rpred)), iostat =',jstat)
+               call perr(myname_,'write(%Rpred), iostat =',jstat)
                _EXIT_(myname_)
                return
            end if
-  endif
+
+  case default
+      write(junit,iostat=jstat)
+           if (jstat/=0) then
+               call perr(myname_,'write as skip record, iostat =',jstat)
+               _EXIT_(myname_)
+               return
+           end if
+  end select
 
 _EXIT_(myname_)
 return

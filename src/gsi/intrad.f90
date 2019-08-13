@@ -289,7 +289,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
   use jfunc, only: jiter
   use gridmod, only: latlon11,nsig
   use qcmod, only: nlnqc_iter,varqc_iter
-  use constants, only: zero,half,one,tiny_r_kind,cg_term,r3600
+  use constants, only: zero,half,one,tiny_r_kind,cg_term,r3600,zero_quad
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_metguess_mod, only: gsi_metguess_get
@@ -314,11 +314,14 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
   real(r_kind),dimension(nsigradjac):: tval,tdir
   real(r_kind) cg_rad,p0,wnotgross,wgross
   type(radNode), pointer :: radptr
+  real(r_kind),allocatable,dimension(:,:) :: rsqrtinv
   integer(i_kind) :: ic1,ix1
+  integer(i_kind) :: chan_count, ii, jj
   real(r_kind),pointer,dimension(:) :: st,sq,scw,soz,su,sv,sqg,sqh,sqi,sql,sqr,sqs
   real(r_kind),pointer,dimension(:) :: sst
   real(r_kind),pointer,dimension(:) :: rt,rq,rcw,roz,ru,rv,rqg,rqh,rqi,rql,rqr,rqs
   real(r_kind),pointer,dimension(:) :: rst
+  real(r_quad) :: val_quad
 
 !  If no rad observations return
   if(.not.associated(radhead)) return
@@ -393,6 +396,17 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
      w2=radptr%wij(2)
      w3=radptr%wij(3)
      w4=radptr%wij(4)
+     if (radptr%use_corr_obs .and. radptr%iuse_corr_obs==1) then
+        allocate(rsqrtinv(radptr%nchan,radptr%nchan))
+        chan_count=0
+        do ii=1,radptr%nchan
+           do jj=ii,radptr%nchan
+              chan_count=chan_count+1
+              rsqrtinv(ii,jj)=radptr%rsqrtinv(chan_count)
+              rsqrtinv(jj,ii)=radptr%rsqrtinv(chan_count)
+           end do
+       end do
+     end if
 !  Begin Forward model
 !  calculate temperature, q, ozone, sst vector at observation location
      i1n(1) = j1
@@ -486,7 +500,19 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
 
 !       Include contributions from remaining bias correction terms
         if( .not. ladtest_obs) then
-           if(radptr%use_corr_obs)then
+          if(radptr%use_corr_obs)then
+            select case(radptr%iuse_corr_obs)
+            case(1)
+              val_quad = zero_quad
+              do n=1,npred
+                 do mm=1,radptr%nchan
+                    ic1=radptr%icx(mm)
+                    ix1=(ic1-1)*npred
+                    val_quad=val_quad+rsqrtinv(nn,mm)*spred(ix1+n)*radptr%pred(n,mm)
+                 enddo
+              enddo
+              val(nn)=val(nn) + val_quad
+            case(2)
               do mm=1,nn
                  ic1=radptr%icx(mm)
                  ix1=(ic1-1)*npred
@@ -495,17 +521,20 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
                     val(nn)=val(nn)+spred(ix1+n)*radptr%Rpred(ncr1,n)
                  enddo
               enddo
-           else
+            end select
+
+          else
               do n=1,npred
                  val(nn)=val(nn)+spred(ix+n)*radptr%pred(n,nn)
               end do
-           endif
+          endif
         end if
 
 
         if(luse_obsdiag)then
            if (lsaveobsens) then
-              if(.not.radptr%use_corr_obs) val(nn)=val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
+              if(.not.(radptr%use_corr_obs.and.radptr%iuse_corr_obs==2)) val(nn)=val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
+!              val(nn) = val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
               !-- radptr%diags(nn)%ptr%obssen(jiter) = val(nn)
               call obsdiagNode_set(radptr%diags(nn)%ptr,jiter=jiter,obssen=val(nn))
            else
@@ -528,14 +557,26 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
                  val(nn) = val(nn)*(one-p0)
               endif
 
-              if((.not.ladtest_obs).and.(.not.radptr%use_corr_obs)) val(nn) = val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
+              if((.not.ladtest_obs).and..not.(radptr%use_corr_obs.and.radptr%iuse_corr_obs==2)) val(nn) = val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
+!              if(.not. ladtest_obs )val(nn) = val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
            endif
 
 !          Extract contributions from bias correction terms
 !          use compensated summation
            if( .not. ladtest_obs) then
               if(radptr%luse)then
-                 if(radptr%use_corr_obs)then
+                if(radptr%use_corr_obs)then
+                  select case(radptr%iuse_corr_obs)
+                  case(1)
+                    do n=1,npred
+                      do mm=1,radptr%nchan
+                         ic1=radptr%icx(mm)
+                         ix1=(ic1-1)*npred
+                         rpred(ix1+n)=rpred(ix1+n)+rsqrtinv(nn,mm)*radptr%pred(n,mm)*val(nn)
+                      enddo
+                    enddo
+
+                  case(2)
                     do mm=1,nn
                        ic1=radptr%icx(mm)
                        ix1=(ic1-1)*npred
@@ -544,15 +585,19 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
                           rpred(ix1+n)=rpred(ix1+n)+radptr%Rpred(ncr2,n)*val(nn)
                        enddo
                     enddo
-                 else
+                  end select
+
+                else
                     do n=1,npred
                        rpred(ix+n)=rpred(ix+n)+radptr%pred(n,nn)*val(nn)
                     end do
-                 end if
+                end if
               end if
            end if ! not ladtest_obs
         end if
      end do
+
+     if(radptr%use_corr_obs .and. radptr%iuse_corr_obs==1) deallocate(rsqrtinv)
 
 !          Begin adjoint
      if (l_do_adjoint) then
