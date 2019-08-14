@@ -498,7 +498,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
            endif
         end if
 !KAB can initialize this with res in setuprad?
-        radptr%val2(nn)=radptr%val2(nn)+val(nn)
+        radptr%val2(nn)=val(nn)-radptr%res(nn)
 
         if(luse_obsdiag)then
            if (lsaveobsens) then

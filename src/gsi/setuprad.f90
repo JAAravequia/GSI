@@ -1608,7 +1608,7 @@
                       my_head%err2(iii)= one/error0(ii)**2         ! 1/(obs error)**2  (original uninflated error)
                       my_head%raterr2(iii)=error0(ii)**2*varinv(ii) ! (original error)/(inflated error)
                     endif
-                    my_head%val2(iii)=-my_head%res(iii)
+!KAB                    my_head%val2(iii)=-my_head%res(iii)
                     my_head%icx(iii)= m                         ! channel index
 
                     do k=1,npred
