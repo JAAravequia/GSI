@@ -34,7 +34,7 @@ PUBLIC stpcalc
 contains
 
 subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
-                   diry,penalty,penaltynew,pjcost,pjcostnew,end_iter,stpval)
+                   diry,penalty,penaltynew,pjcost,pjcostnew,end_iter)
 !KAB
 
 !$$$  subprogram documentation block
@@ -245,7 +245,6 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
   logical             ,intent(inout) :: end_iter
   real(r_kind)        ,intent(  out) :: penalty,penaltynew
   real(r_kind)        ,intent(  out) :: pjcost(4),pjcostnew(4)
-  real(r_quad), dimension(jpch_rad),intent(in):: stpval !KAB
   type(control_vector),intent(inout) :: xhat
   type(control_vector),intent(in   ) :: dirx,diry
   type(gsi_bundle)    ,intent(in   ) :: sval(nobs_bins)
@@ -526,7 +525,7 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
 !    penalties for Jo
      pbcjoi=zero_quad 
      call obsHeadBundle_create(yobs,nobs_bins)
-     call stpjo(yobs,dval,dbias,sval,sbias,sges,pbcjoi,nstep,nobs_bins) 
+     call stpjo(yobs,dval,dbias,sval,sbias,sges,pbcjoi,nstep,nobs_bins,ii) 
      call obsHeadBundle_destroy(yobs)
 
      pbcjo=zero_quad

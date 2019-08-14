@@ -308,7 +308,7 @@ subroutine pcgsoi()
      end if
 
 !    Compare obs to solution and transpose back to grid
-     call intall(sval,sbias,rval,rbias,stpval)
+     call intall(sval,sbias,rval,rbias)
 
      if (iter<=1 .and. print_diag_pcg) then
         do ii=1,nobs_bins

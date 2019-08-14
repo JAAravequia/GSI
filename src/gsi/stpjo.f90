@@ -86,7 +86,7 @@ subroutine final_()
   stpcnt=0
 end subroutine final_
 
-subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins)
+subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins,ii)
 
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -242,6 +242,7 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins)
 !     xbias    -
 !     sges
 !     nstep    - number of steps
+!     ii
 !
 !   output argument list:
 !     pbcjo
@@ -268,7 +269,7 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins)
   use stppsmod, only: stpps
   use stppwmod, only: stppw
   use stpqmod, only: stpq
-  use stpradmod, only: stprad
+  use stpradmod, only: stprad_state,stprad
   use stpgpsmod, only: stpgps
   use stprwmod, only: stprw
   use stpdbzmod, only: stpdbz
@@ -316,7 +317,7 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins)
   type(predictors)                ,intent(in   ) :: dbias
   type(gsi_bundle)   ,dimension(:),intent(in   ) :: xval
   type(predictors)                ,intent(in   ) :: xbias
-  integer(i_kind)                 ,intent(in   ) :: nstep,nobs_bins
+  integer(i_kind)                 ,intent(in   ) :: nstep,nobs_bins,ii
   real(r_kind),dimension(max(1,nstep)) ,intent(in   ) :: sges
   real(r_quad),dimension(4,nobs_type,nobs_bins)  ,intent(inout) :: pbcjo
 
@@ -332,8 +333,8 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins)
        select case(ll)
 !   penalty, b, and c for radiances
        case(i_rad_ob_type)
-          call stprad(yobs(ib)%rad,dval(ib),xval(ib),dbias%predr,xbias%predr,&
-                pbcjo(1,i_rad_ob_type,ib),sges,nstep)
+          if ((ii==1).and.(nstep>0)) call stprad_state(yobs(ib)%rad,dval(ib),dbias%predr)
+          call stprad(yobs(ib)%rad,pbcjo(1,i_rad_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for temperature
 !KAB       case(i_t_ob_type)

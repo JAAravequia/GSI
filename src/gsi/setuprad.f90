@@ -1574,7 +1574,7 @@
                        my_head%dtb_dvar(nsigradjac,icc), &
                        my_head%ich(icc),&
                        my_head%icx(icc),&
-                       my_head%val,my_head%val2) !KAB
+                       my_head%val(icc),my_head%val2(icc)) !KAB
               if(luse_obsdiag)allocate(my_head%diags(icc))
 
               call get_ij(mm1,slats,slons,my_head%ij,my_head%wij)

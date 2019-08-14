@@ -2,10 +2,10 @@ module stpradmod
 
 !$$$ module documentation block
 !           .      .    .                                       .
-! module:   stpradmod    module for stprad and its tangent linear stprad_tl
+! module:   stpradmod    module for stprad_state and stprad
 !  prgmmr:
 !
-! abstract: module for stprad and its tangent linear stprad_tl
+! abstract: module for stprad_state and stprad
 !
 ! program history log:
 !   2005-05-20  Yanqiu zhu - wrap stprad and its tangent linear stprad_tl into one module
@@ -14,6 +14,7 @@ module stpradmod
 !   2009-08-12  lueken - update documentation
 !   2011-05-17  todling - add internal routine set_
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
+!   2019-08-14  kbathmann - split into stprad and stprad_state
 !
 ! subroutines included:
 !   sub stprad
@@ -24,52 +25,33 @@ module stpradmod
 !
 !$$$ end documentation block
 
-use kinds, only: i_kind
+use kinds, only: r_kind,r_quad,i_kind
+use m_obsNode, only: obsNode
+use m_radNode, only: radNode
+use m_radNode, only: radNode_typecast
+use m_radNode, only: radNode_nextcast
+
 implicit none
 
+integer(i_kind) nn,kk,ic
+
 PRIVATE
-PUBLIC stprad
+PUBLIC stprad_state,stprad
 
 
 contains
 !KAB only need to call this if nstep>0?
-subroutine stprad_state(radhead,dval,xval,rpred,out,sges,nstep)
+subroutine stprad_state(radhead,dval,rpred)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:    stprad compute contribution to penalty and stepsize
-!                from rad, using nonlinear qc.
+! subprogram:    stprad_state compute the value of the current state estimate in 
+!                radiance space
 !   prgmmr: parrish          org: np22                date: 1990-10-11
 !
-! abstract: compute contribution to penalty and stepsize from radiances.
+! abstract: compute the current state in radiance space
 !
 ! program history log:
-!   1990-10-11  parrish
-!   1992-07-21
-!   1995-07-17  derber
-!   1997-03-10  wu       
-!   1998-02-02  weiyu yang
-!   1999-08-24  derber, j., treadon, r., yang, w., first frozen mpp version
-!   2004-07-30  treadon - add only to module use, add intent in/out
-!   2004-10-07  parrish - add nonlinear qc option
-!   2005-01-20  okamoto - add wind components
-!   2005-04-11  treadon - merge stprad and stprad_qc into single routine
-!   2005-09-28  derber  - modify var qc and change location and weight arrays
-!   2007-03-19  tremolet - binning of observations
-!   2007-07-28  derber  - modify to use new inner loop obs data structure
-!                       - unify NL qc
-!   2007-06-04  derber  - use quad precision to get reproducability over number of processors
-!   2008-04-09  safford - rm unused vars and uses
-!   2008-12-03  todling - changed handling of ptr%time
-!   2010-01-04  zhang,b - bug fix: accumulate penalty for multiple obs bins
-!   2010-03-25  zhu     - use state_vector in the interface;
-!                       - add handlings of sst,oz cases; add pointer_state
-!   2010-05-13  todling - update to use gsi_bundle
-!                       - on-the-spot handling of non-essential vars
-!   2010-07-10  todling - remove omp directives (per merge w/ r8741; Derber?)
-!   2011-05-04  todling - merge in Min-Jeong Kim's cloud clear assimilation (connect to Metguess)
-!   2011-05-16  todling - generalize entries in radiance jacobian
-!   2011-05-17  augline/todling - add hydrometeors
-!   2016-07-19  kbathmann- adjustment to bias correction when using correlated obs
+!   2019-08-14 kbathmann split the computation of val into its own subroutine
 !
 !   input argument list:
 !     radhead
@@ -86,57 +68,38 @@ subroutine stprad_state(radhead,dval,xval,rpred,out,sges,nstep)
 !     sv       - input v correction field
 !     sst      - input skin temp. vector 
 !     rpred    - search direction for predictors
-!     sges     - step size estimates(nstep)
-!     nstep    - number of stepsizes (==0 means use outer iteration value)
 !
-!   output argument list:
-!     out(1:nstep)   - penalty for radiance data sges(1:nstep)
 !
 ! attributes:
 !   language: f90
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-  use kinds, only: r_kind,i_kind,r_quad
-  use radinfo, only: npred,jpch_rad,b_rad,pg_rad
+  use radinfo, only: npred,jpch_rad
   use radinfo, only: nsigradjac
-  use qcmod, only: nlnqc_iter,varqc_iter
-  use constants, only: zero,half,one,two,tiny_r_kind,cg_term,r3600,zero_quad,one_quad
+  use constants, only: zero
   use gridmod, only: nsig,latlon11
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
-  use gsi_metguess_mod, only: gsi_metguess_get
-  use mpeu_util, only: getindex
   use intradmod, only: luseu,lusev,luset,luseq,lusecw,luseoz,luseqg,luseqh,luseqi,luseql, &
           luseqr,luseqs
   use intradmod, only: itv,iqv,ioz,icw,ius,ivs,isst,iqg,iqh,iqi,iql,iqr,iqs,lgoback
-  use m_obsNode, only: obsNode
-  use m_radNode, only: radNode
-  use m_radNode, only: radNode_typecast
-  use m_radNode, only: radNode_nextcast
   implicit none
   
 ! Declare passed variables
   class(obsNode), pointer                ,intent(in   ) :: radhead
-  integer(i_kind)                        ,intent(in   ) :: nstep
-  real(r_quad),dimension(max(1,nstep))   ,intent(inout) :: out
   real(r_kind),dimension(npred,jpch_rad) ,intent(in   ) :: rpred
-  real(r_kind),dimension(max(1,nstep))   ,intent(in   ) :: sges
   type(gsi_bundle),intent(in) :: dval
-  type(gsi_bundle),intent(in) :: xval
 
 ! Declare local variables
   integer(i_kind) istatus
-  integer(i_kind) nn,n,ic,k,nx,j1,j2,j3,j4,kk, mm, ic1
+  integer(i_kind) n,k,nx,j1,j2,j3,j4,mm, ic1
   real(r_kind) w1,w2,w3,w4
   real(r_kind),dimension(nsigradjac):: rdir
   real(r_kind) cg_rad,wgross,wnotgross
   integer(i_kind),dimension(nsig) :: j1n,j2n,j3n,j4n
-  real(r_kind),dimension(max(1,nstep)) :: term,rad
   type(radNode), pointer :: radptr
   real(r_kind),pointer,dimension(:) :: rt,rq,rcw,roz,ru,rv,rqg,rqh,rqi,rql,rqr,rqs,rst
-
-  out=zero_quad
 
 !  If no rad data return
   if(.not. associated(radhead))return
@@ -228,7 +191,86 @@ subroutine stprad_state(radhead,dval,xval,rpred,out,sges,nstep)
   return
 end subroutine stprad_state
 
-subroutine stprad
+subroutine stprad(radhead,out,sges,nstep)
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:    stprad compute contribution to penalty and stepsize
+!                from rad, using nonlinear qc.
+!   prgmmr: parrish          org: np22                date: 1990-10-11
+!
+! abstract: compute contribution to penalty and stepsize from radiances.
+!
+! program history log:
+!   1990-10-11  parrish
+!   1992-07-21
+!   1995-07-17  derber
+!   1997-03-10  wu
+!   1998-02-02  weiyu yang
+!   1999-08-24  derber, j., treadon, r., yang, w., first frozen mpp version
+!   2004-07-30  treadon - add only to module use, add intent in/out
+!   2004-10-07  parrish - add nonlinear qc option
+!   2005-01-20  okamoto - add wind components
+!   2005-04-11  treadon - merge stprad and stprad_qc into single routine
+!   2005-09-28  derber  - modify var qc and change location and weight arrays
+!   2007-03-19  tremolet - binning of observations
+!   2007-07-28  derber  - modify to use new inner loop obs data structure
+!                       - unify NL qc
+!   2007-06-04  derber  - use quad precision to get reproducability over number
+!   of processors
+!   2008-04-09  safford - rm unused vars and uses
+!   2008-12-03  todling - changed handling of ptr%time
+!   2010-01-04  zhang,b - bug fix: accumulate penalty for multiple obs bins
+!   2010-03-25  zhu     - use state_vector in the interface;
+!                       - add handlings of sst,oz cases; add pointer_state
+!   2010-05-13  todling - update to use gsi_bundle
+!                       - on-the-spot handling of non-essential vars
+!   2010-07-10  todling - remove omp directives (per merge w/ r8741; Derber?)
+!   2011-05-04  todling - merge in Min-Jeong Kim's cloud clear assimilation
+!   (connect to Metguess)
+!   2011-05-16  todling - generalize entries in radiance jacobian
+!   2011-05-17  augline/todling - add hydrometeors
+!   2016-07-19  kbathmann- adjustment to bias correction when using correlated
+!   obs
+!
+!   input argument list:
+!     radhead
+!     sges     - step size estimates(nstep)
+!     nstep    - number of stepsizes (==0 means use outer iteration value)
+!
+!   output argument list:
+!     out(1:nstep)   - penalty for radiance data sges(1:nstep)
+!
+! attributes:
+!   language: f90
+!   machine:  ibm RS/6000 SP
+!
+!$$$
+  use radinfo, only: b_rad,pg_rad
+  use qcmod, only: nlnqc_iter,varqc_iter
+  use constants, only: half,one,two,tiny_r_kind,cg_term,zero_quad
+  use intradmod, only:lgoback !KAB what is this?
+  implicit none
+
+! Declare passed variables
+  class(obsNode), pointer                ,intent(in   ) :: radhead
+  integer(i_kind)                        ,intent(in   ) :: nstep
+  real(r_quad),dimension(max(1,nstep))   ,intent(inout) :: out
+  real(r_kind),dimension(max(1,nstep))   ,intent(in   ) :: sges
+  real(r_kind),dimension(max(1,nstep)) :: term,rad
+! Declare local variables
+  integer(i_kind) istatus
+  real(r_kind) cg_rad,wgross,wnotgross
+  type(radNode), pointer :: radptr
+  out=zero_quad
+
+!  If no rad data return
+  if(.not. associated(radhead))return
+
+  if(lgoback)return
+  radptr=> radNode_typecast(radhead)
+  do while(associated(radptr))
+     if(radptr%luse)then
+        do nn=1,radptr%nchan
            if(nstep > 0)then
 !             calculate radiances for each stepsize
               do kk=1,nstep

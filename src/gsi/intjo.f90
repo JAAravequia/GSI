@@ -36,7 +36,7 @@ end interface
 
 contains
 
-subroutine intjo_(yobs,rval,qpred,sval,sbias,ibin,stpval) !KAB
+subroutine intjo_(yobs,rval,qpred,sval,sbias,ibin) 
 
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -236,7 +236,7 @@ use intswcpmod, only: intswcp
 use intlwcpmod, only: intlwcp
 use gsi_bundlemod, only: gsi_bundle
 use gsi_bundlemod, only: gsi_bundlegetpointer
-use radinfo, only; jpch_rad !KAB
+use radinfo, only: jpch_rad !KAB
 use m_obsHeadBundle, only: obsHeadBundle
 implicit none
 
@@ -246,7 +246,6 @@ type(obsHeadBundle), intent(in) :: yobs
 type(gsi_bundle), intent(in   ) :: sval
 type(predictors), intent(in   ) :: sbias
 type(gsi_bundle), intent(inout) :: rval
-real(r_quad),dimension(jpch_rad), intent(inout):: stpval
 real(r_quad),dimension(max(1,nrclen)), intent(inout) :: qpred
 
 ! Declare local variables
@@ -311,7 +310,7 @@ real(r_quad),dimension(max(1,nrclen)), intent(inout) :: qpred
 !  call intlag(yobs%lag,rval,sval,ibin)
 
 ! RHS calculation for radiances
-  call intrad(yobs%rad,rval,sval,qpred(1:nsclen),sbias%predr,stpval) !KAB
+  call intrad(yobs%rad,rval,sval,qpred(1:nsclen),sbias%predr) 
 
 ! RHS calculation for precipitation
 !  call intpcp(yobs%pcp,rval,sval)
