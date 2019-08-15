@@ -33,8 +33,8 @@
 
 
 SUBROUTINE SFC_WTQ_FWD (psfc_in,tg,ps_in,tvs,qs,us,vs, &
-                        ps2_in,tvs2,qs2, hs, roughness, iland, &
-                        f10, u10, v10, t2, q2, regime, iqtflg,h10)
+                        ps2_in,tvs2,qs2, hs, roughness, iland,h10, &
+                        f10, u10, v10, t2, q2, regime, iqtflg)
 !$$$ subprogram documentation block
 !               .      .    .                                       .
 ! subprogram:   SFC_WTQ_FWD
