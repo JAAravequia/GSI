@@ -1445,7 +1445,11 @@ contains
     end select
 
     crit0_=crit0
-    !crit0_=max(crit0_, 0.01_r_kind)    !! The source of non-zero-diff??
+    crit0_=max(crit0_, 0.01_r_kind)     ! This fixes a problem in some
+                                        ! obs-reader code, where a minimum
+                                        ! crit0 is set to 0, such that obs
+                                        ! thinning is limitted to a first-
+                                        ! come-first-serve situation.
     crit1=crit0_+crit1*timeinflat
   end subroutine tdiff2crit
 

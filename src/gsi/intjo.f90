@@ -263,8 +263,15 @@ class(obOper),pointer:: it_obOper
 !$omp parallel do  schedule(dynamic,1) private(ibin,it,ix,it_obOper)
   do ibin=1,size(sval)
     do it=1,obOper_count
-      ix=ix_obtype(it)  ! in the same type sequence as it was in the earlier
-                        ! implementation, for reprodecibility
+      !ix=ix_obtype(it)  ! Use this line to ensure the same jo summartion
+                         ! sequence as intjo was in its early implementation,
+                         ! for reproducibility.
+
+      ix=it     ! Using this line, jo summation sequence is not the same as
+                ! it used to be, nor the same if someone chooses to change
+                ! enumration sequence of obOpers in gsi_obOperTypeManager.F90.
+                ! But it would make this code more portable to new obOper
+                ! extensions.
 
       it_obOper => obOper_create(ix)
 
