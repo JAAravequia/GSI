@@ -20,6 +20,7 @@ module readozobs
 !   2016-11-29 shlyaeva - updated read routine to calculate linearized H(x)
 !                         added write_ozvobs_data to output ensemble spread
 !   2017-12-13  shlyaeva - added netcdf diag read/write capability
+!   2019-08-15  martin   - added JEDI UFO netcdf read capabillity
 !
 ! attributes:
 !   language: f95
@@ -27,7 +28,7 @@ module readozobs
 !$$$
 
 use kinds, only: r_single,i_kind,r_kind,r_double
-use params, only: nsats_oz,sattypes_oz,npefiles,netcdf_diag
+use params, only: nsats_oz,sattypes_oz,npefiles,netcdf_diag,jedi_ufo
 use constants, only: deg2rad, zero
 implicit none
 
@@ -46,6 +47,8 @@ subroutine get_num_ozobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
 
    if (netcdf_diag) then
       call get_num_ozobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
+   else if (jedi_ufo) then
+      call get_num_ozobs_ufo(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
    else
       call get_num_ozobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
    endif
@@ -231,6 +234,10 @@ subroutine get_num_ozobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     print *,num_obs_totdiag, ' total ozone obs in diag file'
 end subroutine get_num_ozobs_nc
 
+! get number of observations from JEDI UFO netcdf file
+subroutine get_num_ozobs_ufo(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
+end subroutine get_num_ozobs_ufo
+
 ! read ozone observation data
 subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal, nmem)
@@ -256,6 +263,9 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
 
    if (netcdf_diag) then
       call get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
+           x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal, nmem)
+   else if (jedi_ufo) then
+      call get_ozobs_data_ufo(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal, nmem)
    else
       call get_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
@@ -774,6 +784,11 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
 
  end subroutine get_ozobs_data_nc
 
+! read ozone observation data from JEDI UFO netcdf file
+subroutine get_ozobs_data_ufo(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
+           x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal, nmem)
+end subroutine get_ozobs_data_ufo
+
 ! write spread diagnostics
 subroutine write_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
 implicit none
@@ -785,7 +800,7 @@ implicit none
   integer(i_kind), dimension(nobs_maxdiag), intent(in) :: x_used
   character(len=8), intent(in) :: id, id2, gesid2
 
-  if (netcdf_diag) then
+  if (netcdf_diag .or. jedi_ufo) then
     call write_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, gesid2)
   else
     call write_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)

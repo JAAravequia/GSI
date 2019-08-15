@@ -30,6 +30,7 @@ module params
 !                          modulated ensembles), nobsl_max (for ob selection
 !                          in LETKF and dfs_sort
 !                          (for using DFS in LETKF ob selection).
+!   2019-08-15  martin   - add in option for JEDI UFO observer
 !
 ! attributes:
 !   language: f95
@@ -188,6 +189,8 @@ logical,public :: write_spread_diag = .false.
 logical,public :: lobsdiag_forenkf = .false.
 ! if true, use netcdf diag files, otherwise use binary diags
 logical,public :: netcdf_diag = .false.
+! if true, read JEDI UFO innovations and metadata
+logical,public :: jedi_ufo = .false.
 
 namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    covinflatemax,covinflatemin,deterministic,sortinc,&
@@ -210,7 +213,7 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
                    getkf,getkf_inflation,denkf,modelspace_vloc,dfs_sort,write_spread_diag,&
                    covinflatenh,covinflatesh,covinflatetr,lnsigcovinfcutoff,&
-                   fso_cycling,fso_calculate,imp_physics,lupp
+                   fso_cycling,fso_calculate,imp_physics,lupp, jedi_ufo
 namelist /nam_wrf/arw,nmm,nmm_restart
 namelist /satobs_enkf/sattypes_rad,dsis
 namelist /ozobs_enkf/sattypes_oz

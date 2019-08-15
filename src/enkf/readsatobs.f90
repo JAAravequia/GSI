@@ -24,6 +24,7 @@ module readsatobs
 !   2016-11-29 shlyaeva - updated read routine to calculate linearized H(x)
 !                         added write_ozvobs_data to output ensemble spread
 !   2017-12-13  shlyaeva - added netcdf diag read/write capability
+!   2019-08-15  martin   - added JEDI UFO netcdf read capabillity
 !
 ! attributes:
 !   language: f95
@@ -34,7 +35,8 @@ use kinds, only: r_kind,i_kind,r_single,r_double
 use read_diag, only: diag_data_fix_list,diag_header_fix_list,diag_header_chan_list, &
     diag_data_chan_list,diag_data_extra_list,read_radiag_data,read_radiag_header, &
     diag_data_name_list, open_radiag, close_radiag
-use params, only: nsats_rad, dsis, sattypes_rad, npefiles, netcdf_diag, lupd_satbiasc
+use params, only: nsats_rad, dsis, sattypes_rad, npefiles, netcdf_diag, lupd_satbiasc, &
+    jedi_ufo
 
 implicit none
 
@@ -52,6 +54,8 @@ subroutine get_num_satobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
 
     if (netcdf_diag) then
        call get_num_satobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
+    else if (jedi_ufo) then
+       call get_num_satobs_ufo(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     else
        call get_num_satobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     endif
@@ -286,6 +290,10 @@ subroutine get_num_satobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
 
 end subroutine get_num_satobs_nc
 
+! get number of radiance observations from JEDI UFO netcdf file
+subroutine get_num_satobs_ufo(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
+end subroutine get_num_satobs_ufo
+
 ! read radiance data
 subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal, nmem)
@@ -315,6 +323,9 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
 
   if (netcdf_diag) then
     call get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
+           x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal, nmem)
+  else if (jedi_ufo) then
+    call get_satobs_data_ufo(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal, nmem)
   else
     call get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
@@ -1017,6 +1028,11 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
 
  end subroutine get_satobs_data_nc
 
+! read radiance data from JEDI UFO netcdf file
+subroutine get_satobs_data_ufo(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
+           x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal, nmem)
+end subroutine get_satobs_data_ufo
+
 ! write spread diagnostics
 subroutine write_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
   implicit none
@@ -1028,7 +1044,7 @@ subroutine write_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit,
   character(len=10), intent(in) :: id, id2, gesid2
 
 
-  if (netcdf_diag) then
+  if (netcdf_diag .or. jedi_ufo) then
      call write_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, gesid2)
   else
      call write_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)

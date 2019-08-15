@@ -23,6 +23,7 @@ module readconvobs
 !   2017-05-12  Y. Wang and X. Wang - add to read dbz and rw for radar
 !                       reflectivity and radial velocity assimilation. POC: xuguang.wang@ou.edu
 !   2017-12-13  shlyaeva - added netcdf diag read/write capability
+!   2019-08-15  martin   - added JEDI UFO netcdf read capabillity
 !
 ! attributes:
 !   language: f95
@@ -31,7 +32,7 @@ module readconvobs
 
 use kinds, only: r_kind,i_kind,r_single,r_double
 use constants, only: one,zero,deg2rad
-use params, only: npefiles, netcdf_diag
+use params, only: npefiles, netcdf_diag, jedi_ufo
 implicit none
 
 private
@@ -56,6 +57,8 @@ subroutine get_num_convobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
 
    if (netcdf_diag) then
       call get_num_convobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
+   else if (jedi_ufo) then
+      call get_num_convobs_ufo(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
    else
       call get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
    endif
@@ -400,6 +403,10 @@ subroutine get_num_convobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
 
 end subroutine get_num_convobs_nc
 
+! get number of conventional observations from JEDI UFO netcdf file
+subroutine get_num_convobs_ufo(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
+end subroutine get_num_convobs_ufo
+
 ! read conventional observations
 subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err,       &
@@ -430,6 +437,11 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
   if (netcdf_diag) then
     call get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
+                            hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err,       &
+                            x_lon, x_lat, x_press, x_time, x_code,         &
+                            x_errorig, x_type, x_used, id, nanal, nmem)
+  else if (jedi_ufo) then
+    call get_convobs_data_ufo(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err,       &
                             x_lon, x_lat, x_press, x_time, x_code,         &
                             x_errorig, x_type, x_used, id, nanal, nmem)
@@ -892,6 +904,13 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
   endif
 
 end subroutine get_convobs_data_nc
+
+! read conventional observations from JEDI UFO netcdf file
+subroutine get_convobs_data_ufo(obspath, datestring, nobs_max, nobs_maxdiag,   &
+                            hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err,       &
+                            x_lon, x_lat, x_press, x_time, x_code,         &
+                            x_errorig, x_type, x_used, id, nanal, nmem)
+end subroutine get_convobs_data_ufo
 
 ! read conventional observation from binary files
 subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
@@ -1375,7 +1394,7 @@ subroutine write_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, &
 
   character(len=10), intent(in) :: id, id2, gesid2
 
-  if (netcdf_diag) then
+  if (netcdf_diag .or. jedi_ufo) then
     call write_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, &
                               x_fit, x_sprd, x_used, id, gesid2)
   else
