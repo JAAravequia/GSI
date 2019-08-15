@@ -139,6 +139,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
   real(r_kind), POINTER :: dlon_earth,dlat_earth,satazi, lza
 
   integer(i_kind), ALLOCATABLE, TARGET  :: ifov_save(:)
+  integer(i_kind), ALLOCATABLE, TARGET :: it_mesh_save(:)
   real(r_kind), ALLOCATABLE, TARGET :: rsat_save(:)
   real(r_kind), ALLOCATABLE, TARGET :: t4dv_save(:)
   real(r_kind), ALLOCATABLE, TARGET :: dlon_earth_save(:)
@@ -158,7 +159,8 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
 
   real(r_kind)          :: disterr,disterrmax,dlon00,dlat00
   real(r_kind)    :: ptime,timeinflat,crit0
-  integer(i_kind) :: ithin_time,n_tbin,it_mesh
+  integer(i_kind) :: ithin_time,n_tbin
+  integer(i_kind),pointer:: it_mesh => null()
 
 !**************************************************************************
 
@@ -272,6 +274,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
   ALLOCATE(dlon_earth_save(maxobs))
   ALLOCATE(dlat_earth_save(maxobs))
   ALLOCATE(crit1_save(maxobs))
+  ALLOCATE(it_mesh_save(maxobs))
   ALLOCATE(lza_save(maxobs))
   ALLOCATE(satazi_save(maxobs))
   ALLOCATE(solzen_save(maxobs)) 
@@ -300,6 +303,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
         dlon_earth => dlon_earth_save(iob)
         dlat_earth => dlat_earth_save(iob)
         crit1      => crit1_save(iob)
+        it_mesh    => it_mesh_save(iob)
         ifov       => ifov_save(iob)
         lza        => lza_save(iob)
         satazi     => satazi_save(iob)
@@ -340,6 +344,10 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
            if(abs(tdiff) > twind+one_minute) cycle read_loop
         endif
  
+        crit0 = 0.00_r_kind        ! forced to >= 0.01_r_kind in tdiff2crit()
+        timeinflat=two
+        call tdiff2crit(tdiff,ptime,ithin_time,timeinflat,crit0,crit1,it_mesh)
+
         call ufbint(lnbufr,bfr2bhdr,n2bhdr,1,iret,hdr2b)
 
         satazi=bfr2bhdr(3)
@@ -403,6 +411,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
      dlon_earth => dlon_earth_save(iob)
      dlat_earth => dlat_earth_save(iob)
      crit1      => crit1_save(iob)
+     it_mesh    => it_mesh_save(iob)
      ifov       => ifov_save(iob)
      lza        => lza_save(iob)
      satazi     => satazi_save(iob)
@@ -438,17 +447,14 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
      endif
 
 ! Check time window
-     tdiff=t4dv+(iwinbgn-gstime)*r60inv
      if (l4dvar.or.l4densvar) then
         if (t4dv<zero .OR. t4dv>winlen) cycle ObsLoop
      else
+        tdiff=t4dv+(iwinbgn-gstime)*r60inv
         if(abs(tdiff) > twind) cycle ObsLoop
      endif
  
 !    Map obs to thinning grid
-     crit0 = 0.00_r_kind        ! forced to >= 0.01_r_kind in tdiff2crit()
-     timeinflat=two
-     call tdiff2crit(tdiff,ptime,ithin_time,timeinflat,crit0,crit1,it_mesh)
      call map2tgrid(dlat_earth,dlon_earth,dist1,crit1,itx,ithin,itt,iuse,sis,it_mesh=it_mesh)
      if(.not. iuse)cycle ObsLoop
 
@@ -588,6 +594,7 @@ subroutine read_saphir(mype,val_tovs,ithin,isfcalc,&
   DEALLOCATE(dlon_earth_save)
   DEALLOCATE(dlat_earth_save)
   DEALLOCATE(crit1_save)
+  DEALLOCATE(it_mesh_save)
   DEALLOCATE(lza_save)
   DEALLOCATE(satazi_save)
   DEALLOCATE(solzen_save) 

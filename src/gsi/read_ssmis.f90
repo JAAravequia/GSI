@@ -210,6 +210,7 @@ subroutine read_ssmis(mype,val_ssmis,ithin,isfcalc,rmesh,jsatid,gstime,&
   real(r_kind),pointer :: bt_in(:)
   real(r_kind),pointer :: crit1,rsat,t4dv,solzen,solazi,dlon_earth,dlat_earth,satazi,lza
 
+  integer(i_kind),allocatable,target :: it_mesh_save(:)
   real(r_kind),allocatable,target :: rsat_save(:)
   real(r_kind),allocatable,target :: t4dv_save(:)
   real(r_kind),allocatable,target :: dlon_earth_save(:)
@@ -224,7 +225,8 @@ subroutine read_ssmis(mype,val_ssmis,ithin,isfcalc,rmesh,jsatid,gstime,&
   real(r_kind),allocatable        :: data_all(:,:)
 
   real(r_kind)    :: ptime,timeinflat,crit0
-  integer(i_kind) :: ithin_time,n_tbin,it_mesh
+  integer(i_kind) :: ithin_time,n_tbin
+  integer(i_kind),pointer:: it_mesh => null()
 
 ! For solar zenith/azimuth angles calculation
   data  mlen/31,28,31,30,31,30, &
@@ -376,6 +378,7 @@ subroutine read_ssmis(mype,val_ssmis,ithin,isfcalc,rmesh,jsatid,gstime,&
   allocate(dlon_earth_save(maxobs))
   allocate(dlat_earth_save(maxobs))
   allocate(crit1_save(maxobs))
+  allocate(it_mesh_save(maxobs))
   allocate(lza_save(maxobs))
   allocate(satazi_save(maxobs))
   allocate(solzen_save(maxobs))
@@ -404,6 +407,7 @@ subroutine read_ssmis(mype,val_ssmis,ithin,isfcalc,rmesh,jsatid,gstime,&
         dlon_earth  => dlon_earth_save(iobs)
         dlat_earth  => dlat_earth_save(iobs)
         crit1       => crit1_save(iobs)
+        it_mesh     => it_mesh_save(iobs)
         ifov        => ifov_save(iobs)
 !       iscan       => iscan_save(iobs)
 !       iorbn       => iorbn_save(iobs)
@@ -464,6 +468,10 @@ subroutine read_ssmis(mype,val_ssmis,ithin,isfcalc,rmesh,jsatid,gstime,&
         else
            if(abs(tdiff) > twind+one_minute) cycle read_loop
         endif
+
+        crit0 = 0.00_r_kind        ! forced to >= 0.01_r_kind in tdiff2crit()
+        timeinflat=6.0_r_kind
+        call tdiff2crit(tdiff,ptime,ithin_time,timeinflat,crit0,crit1,it_mesh)
 
 !       Extract obs location, TBB, other information
 !       BUFR read 3/3 --- read in observation lat/lon
@@ -538,6 +546,7 @@ subroutine read_ssmis(mype,val_ssmis,ithin,isfcalc,rmesh,jsatid,gstime,&
      dlon_earth_save(1:num_obs)          = dlon_earth_save(sorted_index)
      dlat_earth_save(1:num_obs)          = dlat_earth_save(sorted_index)
      crit1_save(1:num_obs)               = crit1_save(sorted_index)
+     it_mesh_save(1:num_obs)             = it_mesh_save(sorted_index)
      ifov_save(1:num_obs)                = ifov_save(sorted_index)
 !    iscan_save(1:num_obs)               = iscan_save(sorted_index)
 !    iorbn_save(1:num_obs)               = iorbn_save(sorted_index)
@@ -606,6 +615,7 @@ subroutine read_ssmis(mype,val_ssmis,ithin,isfcalc,rmesh,jsatid,gstime,&
      dlon_earth => dlon_earth_save(iobs) 
      dlat_earth => dlat_earth_save(iobs) 
      crit1      => crit1_save(iobs) 
+     it_mesh    => it_mesh_save(iobs) 
      ifov       => ifov_save(iobs) 
      inode      => inode_save(iobs) 
      lza        => lza_save(iobs) 
@@ -656,9 +666,6 @@ subroutine read_ssmis(mype,val_ssmis,ithin,isfcalc,rmesh,jsatid,gstime,&
      endif
 
 !    Map obs to thinning grid
-     crit0 = 0.00_r_kind        ! forced to >= 0.01_r_kind in tdiff2crit()
-     timeinflat=6.0_r_kind
-     call tdiff2crit(tdiff,ptime,ithin_time,timeinflat,crit0,crit1,it_mesh)
      call map2tgrid(dlat_earth,dlon_earth,dist1,crit1,itx,ithin,itt,iuse,sis,it_mesh=it_mesh)
      if(.not. iuse)cycle obsloop
 
@@ -797,6 +804,7 @@ subroutine read_ssmis(mype,val_ssmis,ithin,isfcalc,rmesh,jsatid,gstime,&
   deallocate(dlon_earth_save)
   deallocate(dlat_earth_save)
   deallocate(crit1_save)
+  deallocate(it_mesh_save)
   deallocate(lza_save)
   deallocate(satazi_save)
   deallocate(solzen_save)

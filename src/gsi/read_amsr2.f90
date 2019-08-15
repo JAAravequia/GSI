@@ -155,6 +155,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   integer(i_kind),target,allocatable,dimension(:) :: iscan_save
   integer(i_kind),target,allocatable,dimension(:) :: iorbn_save
   integer(i_kind),target,allocatable,dimension(:) :: inode_save
+  integer(i_kind),target,allocatable,dimension(:) :: it_mesh_save
   real(r_kind),target,allocatable,dimension(:) :: dlon_earth_save
   real(r_kind),target,allocatable,dimension(:) :: dlat_earth_save
   real(r_kind),target,allocatable,dimension(:) :: sat_zen_ang_save,sat_az_ang_save
@@ -189,7 +190,8 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   real(r_kind),parameter:: minus_one_minute=-0.01666667_r_kind
 
   real(r_kind)    :: ptime,timeinflat,crit0
-  integer(i_kind) :: ithin_time,n_tbin,it_mesh
+  integer(i_kind) :: ithin_time,n_tbin
+  integer(i_kind),pointer:: it_mesh => null()
 ! ----------------------------------------------------------------------
 ! Initialize variables
 
@@ -267,6 +269,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
         dlon_earth  => dlon_earth_save(iobs)
         dlat_earth  => dlat_earth_save(iobs)
         crit1       => crit1_save(iobs)
+        it_mesh     => it_mesh_save(iobs)
         ifov        => ifov_save(iobs)
         iscan       => iscan_save(iobs)
         iorbn       => iorbn_save(iobs)
@@ -327,6 +330,9 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
            if (abs(tdiff)>twind) cycle read_loop  
         endif
 
+        crit0 = 0.01_r_kind
+        timeinflat=6.0_r_kind
+        call tdiff2crit(tdiff,ptime,ithin_time,timeinflat,crit0,crit1,it_mesh)
 
 !     --- Check observing position -----
         clath= amsrspot_d(08)
@@ -441,6 +447,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
      dlon_earth_save(1:num_obs)          = dlon_earth_save(sorted_index)
      dlat_earth_save(1:num_obs)          = dlat_earth_save(sorted_index)
      crit1_save(1:num_obs)               = crit1_save(sorted_index)
+     it_mesh_save(1:num_obs)             = it_mesh_save(sorted_index)
      ifov_save(1:num_obs)                = ifov_save(sorted_index)
      iscan_save(1:num_obs)               = iscan_save(sorted_index)
      iorbn_save(1:num_obs)               = iorbn_save(sorted_index)
@@ -488,6 +495,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
      dlon_earth  => dlon_earth_save(iobs)
      dlat_earth  => dlat_earth_save(iobs)
      crit1       => crit1_save(iobs)
+     it_mesh     => it_mesh_save(iobs)
      ifov        => ifov_save(iobs)
      iscan       => iscan_save(iobs)
      iorbn       => iorbn_save(iobs)
@@ -531,9 +539,6 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
     endif
 
 !   Map obs to thinning grid
-    crit0 = 0.01_r_kind
-    timeinflat=6.0_r_kind
-    call tdiff2crit(tdiff,ptime,ithin_time,timeinflat,crit0,crit1,it_mesh)
     call map2tgrid(dlat_earth,dlon_earth,dist1,crit1,itx,ithin,itt,iuse,sis,it_mesh=it_mesh)
     if(.not. iuse) then
       cycle obsloop
@@ -704,6 +709,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   allocate(sun_zen_ang_save(maxobs),sun_az_ang_save(maxobs))
   allocate(t4dv_save(maxobs))
   allocate(crit1_save(maxobs))
+  allocate(it_mesh_save(maxobs))
   allocate(tbob_save(kchanl,maxobs))
 
   end subroutine init_
@@ -712,6 +718,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
 
   deallocate(tbob_save)
   deallocate(crit1_save)
+  deallocate(it_mesh_save)
   deallocate(t4dv_save)
   deallocate(sun_zen_ang_save,sun_az_ang_save)
   deallocate(sat_zen_ang_save,sat_az_ang_save)
