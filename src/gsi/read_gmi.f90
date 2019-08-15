@@ -210,6 +210,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   integer(i_kind),target,allocatable,dimension(:) :: iscan_save
   integer(i_kind),target,allocatable,dimension(:) :: iorbn_save
   integer(i_kind),target,allocatable,dimension(:) :: inode_save
+  integer(i_kind),target,allocatable,dimension(:) :: it_mesh_save
   real(r_kind),target,allocatable,dimension(:)    :: dlon_earth_save
   real(r_kind),target,allocatable,dimension(:)    :: dlat_earth_save
   real(r_kind),target,allocatable,dimension(:)    :: sat_zen_ang_save,sat_azimuth_ang_save,sat_scan_ang_save
@@ -235,7 +236,8 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 ! ---- skip some obs at the beginning and end of a scan ----
   integer(i_kind):: radedge_min,radedge_max,iscan_pos,iedge_log,j2
   real(r_kind)    :: ptime,timeinflat,crit0
-  integer(i_kind) :: ithin_time,n_tbin,it_mesh
+  integer(i_kind) :: ithin_time,n_tbin
+  integer(i_kind),pointer:: it_mesh => null()
 
   logical:: ORIGINAL_GMI_BUFR = .false.
 
@@ -368,6 +370,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
         dlon_earth  => dlon_earth_save(iobs)
         dlat_earth  => dlat_earth_save(iobs)
         crit1       => crit1_save(iobs)
+        it_mesh     => it_mesh_save(iobs)
         ifov        => ifov_save(iobs)
         iscan       => iscan_save(iobs)
         iorbn       => iorbn_save(iobs)
@@ -407,6 +410,9 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
            endif                        
         endif
 
+        crit0=0.01_r_kind
+        timeinflat=6.0_r_kind
+        call tdiff2crit(tdiff,ptime,ithin_time,timeinflat,crit0,crit1,it_mesh)
 
 ! ----- Read header record to extract obs location information  
         if(.not. ORIGINAL_GMI_BUFR) then
@@ -534,6 +540,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
      dlon_earth_save(1:num_obs)          = dlon_earth_save(sorted_index)
      dlat_earth_save(1:num_obs)          = dlat_earth_save(sorted_index)
      crit1_save(1:num_obs)               = crit1_save(sorted_index)
+     it_mesh_save(1:num_obs)             = it_mesh_save(sorted_index)
      ifov_save(1:num_obs)                = ifov_save(sorted_index)
      iscan_save(1:num_obs)               = iscan_save(sorted_index)
      iorbn_save(1:num_obs)               = iorbn_save(sorted_index)
@@ -582,6 +589,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
      dlon_earth  => dlon_earth_save(iobs)
      dlat_earth  => dlat_earth_save(iobs)
      crit1       => crit1_save(iobs)
+     it_mesh     => it_mesh_save(iobs)
      ifov        => ifov_save(iobs)
      iscan       => iscan_save(iobs)
      iorbn       => iorbn_save(iobs)
@@ -636,9 +644,6 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
     endif
 
 !   Map obs to thinning grid
-    crit0=0.01_r_kind
-    timeinflat=6.0_r_kind
-    call tdiff2crit(tdiff,ptime,ithin_time,timeinflat,crit0,crit1,it_mesh)
     call map2tgrid(dlat_earth,dlon_earth,dist1,crit1,itx,ithin,itt,iuse,sis,it_mesh=it_mesh)
 
     if(.not. iuse) then
@@ -896,6 +901,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   allocate(sat_zen_ang2_save(maxobs),sat_azimuth_ang2_save(maxobs),sat_scan_ang2_save(maxobs))
   allocate(t4dv_save(maxobs))
   allocate(crit1_save(maxobs))
+  allocate(it_mesh_save(maxobs))
   allocate(tbob_save(maxchanl,maxobs))
   allocate(sun_zenith_save(maxobs),sun_azimuth_ang_save(maxobs))
  end subroutine init_
@@ -903,6 +909,7 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   deallocate(sun_zenith_save,sun_azimuth_ang_save)
   deallocate(tbob_save)
   deallocate(crit1_save)
+  deallocate(it_mesh_save)
   deallocate(t4dv_save)
   deallocate(sat_zen_ang2_save,sat_azimuth_ang2_save,sat_scan_ang2_save)
   deallocate(sat_zen_ang_save,sat_azimuth_ang_save,sat_scan_ang_save)

@@ -2528,13 +2528,13 @@ subroutine qc_avhrr(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,   &
      sfchgtfact    = (r2000/zsges)**4
   endif
 
-! qc: based on surface height. Over Sea, surface height is strictly = 0.
-  do i=1,nchanl
-    if ( (sea) .and. (id_qc(i) == igood_qc) .and. (abs(zsges) > 0.01_r_kind)) then
-        id_qc (i)  = ifail_sfchgt
-        varinv(i)  = zero
-    end if
-  end do 
+!GMAO_CHANGES! qc: based on surface height. Over Sea, surface height is strictly = 0.
+!GMAO_CHANGES  do i=1,nchanl
+!GMAO_CHANGES    if ( (sea) .and. (id_qc(i) == igood_qc) .and. (abs(zsges) > 0.01_r_kind)) then
+!GMAO_CHANGES        id_qc (i)  = ifail_sfchgt
+!GMAO_CHANGES        varinv(i)  = zero
+!GMAO_CHANGES    end if
+!GMAO_CHANGES  end do 
 
 ! Generate q.c. bounds and modified variances for height change and ptau5
   sum3=zero
