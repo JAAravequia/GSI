@@ -15,7 +15,8 @@ set C_COMP_MP mpcc
 # Known conflicts
 
 # Loading Intel Compiler Suite
-module load intel/15.6.233
+#module load intel/15.6.233
+module load intel/14.0.2
 
 # Loading impi
 #module load impi/5.1.2.150

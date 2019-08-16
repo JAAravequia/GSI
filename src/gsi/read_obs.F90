@@ -156,7 +156,6 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   use convinfo, only: nconvtype,ictype,ioctype,icuse
   use chemmod, only : oneobtest_chem,oneob_type_chem,&
        code_pm25_ncbufr,code_pm25_anowbufr,code_pm10_ncbufr,code_pm10_anowbufr
-  use file_utility, only : get_lun
 
   implicit none
 
@@ -188,9 +187,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   if(lexist .and. trim(dtype) /= 'tcp' )then
       lnbufr = 15
       open(lnbufr,file=trim(filename),form='unformatted',status ='unknown')
-
       call openbf(lnbufr,'IN',lnbufr)
-
       call datelen(10)
       call readmg(lnbufr,subset,idate,iret)
       if(iret == 0)then
