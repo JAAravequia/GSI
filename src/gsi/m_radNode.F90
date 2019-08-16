@@ -26,7 +26,7 @@ module m_radNode
 ! module interface:
   use obsmod, only: obs_diag,aofp_obs_diag
   use obsmod, only: obs_diags
-  use kinds , only: i_kind,r_kind,r_quad !KAB
+  use kinds , only: i_kind,r_kind
   use mpeu_util, only: assert_,die,perr,warn,tell
   use m_obsNode, only: obsNode
   implicit none
@@ -58,8 +58,8 @@ module m_radNode
      integer(i_kind) :: nchan         !  number of channels for this profile
      integer(i_kind) :: ij(4)         !  horizontal locations
      logical         :: use_corr_obs  !  logical to indicate if using correlated obs
-     real(r_quad),dimension(:),pointer :: val  ! solution at current iteration
-     real(r_quad),dimension(:),pointer :: val2 ! searh direction
+     real(r_kind),dimension(:),pointer :: val  ! solution at current iteration
+     real(r_kind),dimension(:),pointer :: val2 ! searh direction
      !logical         :: luse          !  flag indicating if ob is used in pen.
 
      !integer(i_kind) :: idv,iob              ! device id and obs index for sorting

@@ -236,7 +236,6 @@ use intswcpmod, only: intswcp
 use intlwcpmod, only: intlwcp
 use gsi_bundlemod, only: gsi_bundle
 use gsi_bundlemod, only: gsi_bundlegetpointer
-use radinfo, only: jpch_rad !KAB
 use m_obsHeadBundle, only: obsHeadBundle
 implicit none
 

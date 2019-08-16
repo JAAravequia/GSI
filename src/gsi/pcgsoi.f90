@@ -131,7 +131,7 @@ subroutine pcgsoi()
   use gsi_4dvar, only: nobs_bins, nsubwin, l4dvar, iwrtinc, ladtest, &
                        iorthomax
   use gridmod, only: twodvar_regional
-  use constants, only: zero,zero_quad,one,five,tiny_r_kind
+  use constants, only: zero,one,five,tiny_r_kind
   use anberror, only: anisotropic
   use mpimod, only: mype
   use mpl_allreducemod, only: mpl_allreduce

@@ -288,7 +288,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
   use jfunc, only: jiter
   use gridmod, only: latlon11,nsig
   use qcmod, only: nlnqc_iter,varqc_iter
-  use constants, only: zero,half,one,tiny_r_kind,cg_term,r3600
+  use constants, only: zero,half,one,tiny_r_kind,cg_term
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_metguess_mod, only: gsi_metguess_get
@@ -308,8 +308,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
   integer(i_kind) j1,j2,j3,j4,i1,i2,i3,i4,n,k,ic,ix,nn,mm
   integer(i_kind) ier,istatus
   integer(i_kind),dimension(nsig) :: i1n,i2n,i3n,i4n
-  real(r_kind),allocatable,dimension(:):: val
-  real(r_kind) w1,w2,w3,w4
+  real(r_kind) w1,w2,w3,w4,val
   real(r_kind),dimension(nsigradjac):: tval,tdir
   real(r_kind) cg_rad,p0,wnotgross,wgross
   type(radNode), pointer :: radptr
@@ -318,7 +317,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
   real(r_kind),pointer,dimension(:) :: sst
   real(r_kind),pointer,dimension(:) :: rt,rq,rcw,roz,ru,rv,rqg,rqh,rqi,rql,rqr,rqs
   real(r_kind),pointer,dimension(:) :: rst
-  
+  tval=zero
 !  If no rad observations return
   if(.not.associated(radhead)) return
 ! Set required parameters
@@ -381,7 +380,6 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
     call gsi_bundlegetpointer(rval,'qs' ,rqs,istatus)
   end if
 
-  !radptr => radhead
   radptr => radNode_typecast(radhead)
   do while (associated(radptr))
      j1=radptr%ij(1)
@@ -394,91 +392,46 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
      w4=radptr%wij(4)
 !  Begin Forward model
 !  calculate temperature, q, ozone, sst vector at observation location
-     i1n(1) = j1
-     i2n(1) = j2
-     i3n(1) = j3
-     i4n(1) = j4
-     do k=2,nsig
-        i1n(k) = i1n(k-1)+latlon11
-        i2n(k) = i2n(k-1)+latlon11
-        i3n(k) = i3n(k-1)+latlon11
-        i4n(k) = i4n(k-1)+latlon11
-     enddo
-
+     if(luseu)   tdir(ius+1)=w1*su(j1)+w2*su(j2)+w3*su(j3)+w4*su(j4)
+     if(lusev)   tdir(ivs+1)=w1*sv(j1)+w2*sv(j2)+w3*sv(j3)+w4* sv(j4)
+     if(lusesst) tdir(isst+1)=w1*sst(j1)+w2*sst(j2)+w3*sst(j3)+w4*sst(j4)
+     i1=j1
+     i2=j2
+     i3=j3
+     i4=j4
      do k=1,nsig
-        i1 = i1n(k)
-        i2 = i2n(k)
-        i3 = i3n(k)
-        i4 = i4n(k)
-        if(luset)then
-           tdir(itv+k)=  w1*  st(i1)+w2*  st(i2)+ &
-                         w3*  st(i3)+w4*  st(i4)
-        endif
-        if(luseq)then
-           tdir(iqv+k)= w1*  sq(i1)+w2*  sq(i2)+ &
-                        w3*  sq(i3)+w4*  sq(i4)
-        endif
-        if(luseoz)then
-          tdir(ioz+k)=w1* soz(i1)+w2* soz(i2)+ &
-                      w3* soz(i3)+w4* soz(i4)
-        end if
-        if(lusecw)then
-           tdir(icw+k)=w1* scw(i1)+w2* scw(i2)+ &
-                       w3* scw(i3)+w4* scw(i4)
-        end if
-        if(luseql)then
-           tdir(iql+k)=w1* sql(i1)+w2* sql(i2)+ &
-                       w3* sql(i3)+w4* sql(i4)
-        end if
-        if(luseqi)then
-           tdir(iqi+k)=w1* sqi(i1)+w2* sqi(i2)+ &
-                       w3* sqi(i3)+w4* sqi(i4)
-        end if
-        if(luseqh)then
-           tdir(iqh+k)=w1* sqh(i1)+w2* sqh(i2)+ &
-                       w3* sqh(i3)+w4* sqh(i4)
-        end if
-        if(luseqg)then
-           tdir(iqg+k)=w1* sqg(i1)+w2* sqg(i2)+ &
-                       w3* sqg(i3)+w4* sqg(i4)
-        end if
-        if(luseqr)then
-           tdir(iqr+k)=w1* sqr(i1)+w2* sqr(i2)+ &
-                       w3* sqr(i3)+w4* sqr(i4)
-        end if
-        if(luseqs)then
-           tdir(iqs+k)=w1* sqs(i1)+w2* sqs(i2)+ &
-                       w3* sqs(i3)+w4* sqs(i4)
-        end if
+        if(luset)  tdir(itv+k)=w1*st(i1)+w2*st(i2)+w3*st(i3)+w4*st(i4)
+        if(luseq)  tdir(iqv+k)=w1*sq(i1)+w2*sq(i2)+w3*sq(i3)+w4*sq(i4)
+        if(luseoz) tdir(ioz+k)=w1*soz(i1)+w2*soz(i2)+w3*soz(i3)+w4*soz(i4)
+        if(lusecw) tdir(icw+k)=w1*scw(i1)+w2*scw(i2)+w3*scw(i3)+w4*scw(i4)
+        if(luseql) tdir(iql+k)=w1*sql(i1)+w2*sql(i2)+w3*sql(i3)+w4*sql(i4)
+        if(luseqi) tdir(iqi+k)=w1*sqi(i1)+w2*sqi(i2)+w3*sqi(i3)+w4*sqi(i4)
+        if(luseqh) tdir(iqh+k)=w1*sqh(i1)+w2*sqh(i2)+w3*sqh(i3)+w4*sqh(i4)
+        if(luseqg) tdir(iqg+k)=w1*sqg(i1)+w2*sqg(i2)+w3*sqg(i3)+w4*sqg(i4)
+        if(luseqr) tdir(iqr+k)=w1*sqr(i1)+w2*sqr(i2)+w3*sqr(i3)+w4*sqr(i4)
+        if(luseqs) tdir(iqs+k)=w1*sqs(i1)+w2*sqs(i2)+w3*sqs(i3)+w4*sqs(i4)
+        i1n(k) =i1
+        i2n(k) =i2
+        i3n(k) =i3
+        i4n(k) =i4
+        i1=i1+latlon11
+        i2=i2+latlon11
+        i3=i3+latlon11
+        i4=i4+latlon11
      end do
-     if(luseu)then
-        tdir(ius+1)=   w1* su(j1) +w2* su(j2)+ &
-                       w3* su(j3) +w4* su(j4)
-     endif
-     if(lusev)then
-        tdir(ivs+1)=   w1* sv(j1) +w2* sv(j2)+ &
-                       w3* sv(j3) +w4* sv(j4)
-     endif
-     if(lusesst)then
-        tdir(isst+1)=w1*sst(j1) +w2*sst(j2)+ &
-                           w3*sst(j3) +w4*sst(j4)
-     end if
-
-
 
 !  For all other configurations
 !  begin channel specific calculations
-     allocate(val(radptr%nchan))
      do nn=1,radptr%nchan
         ic=radptr%icx(nn)
         ix=(ic-1)*npred
 
 !       include observation increment and lapse rate contributions to bias correction
-        val(nn)=zero
+        val=zero
 
 !       Include contributions from atmospheric jacobian
         do k=1,nsigradjac
-           val(nn)=val(nn)+tdir(k)*radptr%dtb_dvar(k,nn)
+           val=val+tdir(k)*radptr%dtb_dvar(k,nn)
         end do
 
 !       Include contributions from remaining bias correction terms
@@ -488,42 +441,39 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
                  ic1=radptr%icx(mm)
                  ix1=(ic1-1)*npred
                  do n=1,npred
-                    val(nn)=val(nn)+radptr%rsqrtinv(mm,nn)*spred(ix1+n)*radptr%pred(n,mm)
+                    val=val+radptr%rsqrtinv(mm,nn)*spred(ix1+n)*radptr%pred(n,mm)
                  enddo
               enddo
            else
               do n=1,npred
-                 val(nn)=val(nn)+spred(ix+n)*radptr%pred(n,nn)
+                 val=val+spred(ix+n)*radptr%pred(n,nn)
               end do
            endif
         end if
-!KAB can initialize this with res in setuprad?
-        radptr%val2(nn)=val(nn)-radptr%res(nn)
-
+        radptr%val2(nn)=val-radptr%res(nn)
         if(luse_obsdiag)then
            if (lsaveobsens) then
-              val(nn) = val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
-              radptr%diags(nn)%ptr%obssen(jiter) = val(nn)
+              val = val*radptr%err2(nn)*radptr%raterr2(nn)
+              radptr%diags(nn)%ptr%obssen(jiter) = val
            else
-              if (radptr%luse) radptr%diags(nn)%ptr%tldepart(jiter) = val(nn)
+              if (radptr%luse) radptr%diags(nn)%ptr%tldepart(jiter) = val
            endif
         endif
 
         if (l_do_adjoint) then
            if (.not. lsaveobsens) then
-              if( .not. ladtest_obs)   val(nn)=val(nn)-radptr%res(nn)
-
+              if( .not. ladtest_obs) val=val-radptr%res(nn)
 !             Multiply by variance.
               if (nlnqc_iter .and. pg_rad(ic) > tiny_r_kind .and. &
                                    b_rad(ic)  > tiny_r_kind) then
                  cg_rad=cg_term/b_rad(ic)
                  wnotgross= one-pg_rad(ic)*varqc_iter
                  wgross = varqc_iter*pg_rad(ic)*cg_rad/wnotgross
-                 p0   = wgross/(wgross+exp(-half*radptr%err2(nn)*val(nn)*val(nn)))
-                 val(nn) = val(nn)*(one-p0)
+                 p0   = wgross/(wgross+exp(-half*radptr%err2(nn)*val*val))
+                 val = val*(one-p0)
               endif
 
-              if(.not. ladtest_obs )val(nn) = val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
+              if(.not. ladtest_obs )val = val*radptr%err2(nn)*radptr%raterr2(nn)
            endif
 
 !          Extract contributions from bias correction terms
@@ -535,31 +485,25 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
                        ic1=radptr%icx(mm)
                        ix1=(ic1-1)*npred
                        do n=1,npred
-                          rpred(ix1+n)=rpred(ix1+n)+radptr%rsqrtinv(mm,nn)*radptr%pred(n,mm)*val(nn)
+                          rpred(ix1+n)=rpred(ix1+n)+radptr%rsqrtinv(mm,nn)*radptr%pred(n,mm)*val
                        enddo
                     enddo
                  else
                     do n=1,npred
-                       rpred(ix+n)=rpred(ix+n)+radptr%pred(n,nn)*val(nn)
+                       rpred(ix+n)=rpred(ix+n)+radptr%pred(n,nn)*val
                     end do
                  end if
               end if
            end if ! not ladtest_obs
-        end if
-     end do
+           do k=1,nsigradjac
+              tval(k)=tval(k)+radptr%dtb_dvar(k,nn)*val
+           enddo
+        end if !l_do_adjoint
+      
+     end do !nn=1,nchan
 
 !          Begin adjoint
      if (l_do_adjoint) then
-        do k=1,nsigradjac
-           tval(k)=zero
-
-           do nn=1,radptr%nchan
-!          Extract contributions from atmospheric jacobian
-              tval(k)=tval(k)+radptr%dtb_dvar(k,nn)*val(nn)
-           end do
-
-        end do
-
 !    Distribute adjoint contributions over surrounding grid points
  
         if(luseu) then
@@ -586,8 +530,6 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
            i2 = i2n(k)
            i3 = i3n(k)
            i4 = i4n(k)
-
- 
            if(luset)then
               mm=itv+k
               rt(i1)=rt(i1)+w1*tval(mm)
@@ -660,13 +602,10 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
            end if
         end do
 
-     endif ! < l_do_adjoint >
-     deallocate(val)
+     endif ! l_do_adjoint
 
-     !radptr => radptr%llpoint
      radptr => radNode_nextcast(radptr)
-  end do
-
+  end do !while associated(radptr)
   call timer_fnl('intrad')
 
   return

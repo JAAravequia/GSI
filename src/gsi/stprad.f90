@@ -24,7 +24,10 @@ module stpradmod
 !   machine:
 !
 !$$$ end documentation block
-
+use radinfo, only: b_rad,pg_rad
+use qcmod, only: nlnqc_iter,varqc_iter
+use constants, only: half,one,two,tiny_r_kind,cg_term,zero_quad
+use intradmod, only:lgoback 
 use kinds, only: r_kind,r_quad,i_kind
 use m_obsNode, only: obsNode
 use m_radNode, only: radNode
@@ -32,20 +35,18 @@ use m_radNode, only: radNode_typecast
 use m_radNode, only: radNode_nextcast
 
 implicit none
-
-integer(i_kind) nn,kk,ic
+real(r_kind) cg_rad,wgross,wnotgross
 
 PRIVATE
 PUBLIC stprad_state,stprad
 
 
 contains
-!KAB only need to call this if nstep>0?
-subroutine stprad_state(radhead,dval,rpred)
+subroutine stprad_state(radhead,dval,rpred,out,sges,nstep)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    stprad_state compute the value of the current state estimate in 
-!                radiance space
+!                radiance space, as well as the contribution to penalty
 !   prgmmr: parrish          org: np22                date: 1990-10-11
 !
 ! abstract: compute the current state in radiance space
@@ -61,12 +62,6 @@ subroutine stprad_state(radhead,dval,rpred)
 !     ru       - search direction for zonal wind
 !     rv       - search direction for meridional wind
 !     rst      - search direction for skin temperature
-!     st       - input temperature correction field        
-!     sq       - input q correction field        
-!     soz      - input ozone correction field        
-!     su       - input u correction field
-!     sv       - input v correction field
-!     sst      - input skin temp. vector 
 !     rpred    - search direction for predictors
 !
 !
@@ -75,9 +70,9 @@ subroutine stprad_state(radhead,dval,rpred)
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+  use constants, only: zero
   use radinfo, only: npred,jpch_rad
   use radinfo, only: nsigradjac
-  use constants, only: zero
   use gridmod, only: nsig,latlon11
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -88,6 +83,9 @@ subroutine stprad_state(radhead,dval,rpred)
   
 ! Declare passed variables
   class(obsNode), pointer                ,intent(in   ) :: radhead
+  integer(i_kind)                        ,intent(in   ) :: nstep
+  real(r_quad),dimension(max(1,nstep))   ,intent(inout) :: out
+  real(r_kind),dimension(max(1,nstep))   ,intent(in   ) :: sges
   real(r_kind),dimension(npred,jpch_rad) ,intent(in   ) :: rpred
   type(gsi_bundle),intent(in) :: dval
 
@@ -96,10 +94,12 @@ subroutine stprad_state(radhead,dval,rpred)
   integer(i_kind) n,k,nx,j1,j2,j3,j4,mm, ic1
   real(r_kind) w1,w2,w3,w4
   real(r_kind),dimension(nsigradjac):: rdir
-  real(r_kind) cg_rad,wgross,wnotgross
-  integer(i_kind),dimension(nsig) :: j1n,j2n,j3n,j4n
-  type(radNode), pointer :: radptr
   real(r_kind),pointer,dimension(:) :: rt,rq,rcw,roz,ru,rv,rqg,rqh,rqi,rql,rqr,rqs,rst
+  real(r_kind),dimension(max(1,nstep)) :: term,rad
+  integer(i_kind) nn,kk,ic
+  type(radNode), pointer :: radptr
+  
+  out=zero_quad
 
 !  If no rad data return
   if(.not. associated(radhead))return
@@ -120,6 +120,7 @@ subroutine stprad_state(radhead,dval,rpred)
   call gsi_bundlegetpointer(dval,'ql' ,rql,istatus)
   call gsi_bundlegetpointer(dval,'qr' ,rqr,istatus)
   call gsi_bundlegetpointer(dval,'qs' ,rqs,istatus)
+
   rdir=zero
 
   radptr=> radNode_typecast(radhead)
@@ -135,22 +136,8 @@ subroutine stprad_state(radhead,dval,rpred)
         w4=radptr%wij(4)
         if(luseu) rdir(ius+1)=w1*ru(j1)+w2*ru(j2)+w3*ru(j3)+w4*ru(j4)
         if(lusev) rdir(ivs+1)=w1*rv(j1)+w2*rv(j2)+w3*rv(j3)+w4* rv(j4)
-        if (isst>=0) rdir(isst+1)=w1*rst(j1)+w2*rst(j2)+w3*rst(j3)+w4*rst(j4)   
-        j1n(1) = j1
-        j2n(1) = j2
-        j3n(1) = j3
-        j4n(1) = j4
-        do n=2,nsig
-           j1n(n) = j1n(n-1)+latlon11
-           j2n(n) = j2n(n-1)+latlon11
-           j3n(n) = j3n(n-1)+latlon11
-           j4n(n) = j4n(n-1)+latlon11
-        enddo
+        if (isst>=0) rdir(isst+1)=w1*rst(j1)+w2*rst(j2)+w3*rst(j3)+w4*rst(j4) 
         do n=1,nsig
-           j1 = j1n(n)
-           j2 = j2n(n)
-           j3 = j3n(n)
-           j4 = j4n(n)
 !          Input state vector
 !          Input search direction vector
            if (luset ) rdir(itv+n)=w1*rt(j1)+w2*rt(j2)+w3*rt(j3)+w4*rt(j4)
@@ -163,6 +150,10 @@ subroutine stprad_state(radhead,dval,rpred)
            if (luseql) rdir(iql+n)=w1*rql(j1)+w2*rql(j2)+ w3*rql(j3)+w4*rql(j4)
            if (luseqr) rdir(iqr+n)=w1*rqr(j1)+w2*rqr(j2)+ w3*rqr(j3)+w4*rqr(j4)
            if (luseqs) rdir(iqs+n)=w1*rqs(j1)+w2*rqs(j2)+ w3*rqs(j3)+w4*rqs(j4)
+           j1 = j1+latlon11
+           j2 = j2+latlon11
+           j3 = j3+latlon11
+           j4 = j4+latlon11
         end do
         do nn=1,radptr%nchan 
            radptr%val(nn) = zero
@@ -184,7 +175,31 @@ subroutine stprad_state(radhead,dval,rpred)
            do k=1,nsigradjac
               radptr%val(nn) =radptr%val(nn) +rdir(k)*radptr%dtb_dvar(k,nn)
            end do
-        enddo
+!          calculate radiances for each stepsize
+           do kk=1,nstep
+              rad(kk)=radptr%val2(nn)+sges(kk)*radptr%val(nn)
+           end do
+!          calculate contribution to J
+           do kk=1,max(1,nstep)
+              term(kk)  = radptr%err2(nn)*rad(kk)*rad(kk)
+           end do
+
+!          Modify penalty term if nonlinear QC
+           if(nlnqc_iter .and. pg_rad(ic) > tiny_r_kind .and. &
+                               b_rad(ic)  > tiny_r_kind)then
+              cg_rad=cg_term/b_rad(ic)
+              wnotgross= one-pg_rad(ic)*varqc_iter
+              wgross = varqc_iter*pg_rad(ic)*cg_rad/wnotgross
+              do kk=1,max(1,nstep)
+                 term(kk)  = -two*log((exp(-half*term(kk) )+wgross)/(one+wgross))
+              end do
+           endif
+
+           out(1) = out(1) + term(1)*radptr%raterr2(nn)
+           do kk=2,nstep
+              out(kk) = out(kk) + (term(kk)-term(1))*radptr%raterr2(nn)
+           end do
+        enddo !nn=1,nchan
      endif !luse
      radptr => radNode_nextcast(radptr)
   enddo !while associated(radptr)
@@ -245,10 +260,6 @@ subroutine stprad(radhead,out,sges,nstep)
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-  use radinfo, only: b_rad,pg_rad
-  use qcmod, only: nlnqc_iter,varqc_iter
-  use constants, only: half,one,two,tiny_r_kind,cg_term,zero_quad
-  use intradmod, only:lgoback !KAB what is this?
   implicit none
 
 ! Declare passed variables
@@ -257,10 +268,10 @@ subroutine stprad(radhead,out,sges,nstep)
   real(r_quad),dimension(max(1,nstep))   ,intent(inout) :: out
   real(r_kind),dimension(max(1,nstep))   ,intent(in   ) :: sges
   real(r_kind),dimension(max(1,nstep)) :: term,rad
-! Declare local variables
-  integer(i_kind) istatus
-  real(r_kind) cg_rad,wgross,wnotgross
+
+  integer(i_kind) nn,kk,ic
   type(radNode), pointer :: radptr
+
   out=zero_quad
 
 !  If no rad data return
@@ -271,6 +282,7 @@ subroutine stprad(radhead,out,sges,nstep)
   do while(associated(radptr))
      if(radptr%luse)then
         do nn=1,radptr%nchan
+           ic=radptr%icx(nn)
            if(nstep > 0)then
 !             calculate radiances for each stepsize
               do kk=1,nstep

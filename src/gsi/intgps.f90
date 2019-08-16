@@ -152,8 +152,6 @@ subroutine intgps_(gpshead,rval,sval)
      w2=gpsptr%wij(2)
      w3=gpsptr%wij(3)
      w4=gpsptr%wij(4)
-
-
      val=zero
 
 !  local refractivity (linear operator)
@@ -173,7 +171,7 @@ subroutine intgps_(gpshead,rval,sval)
            if (gpsptr%luse) gpsptr%diags%tldepart(jiter)=val
         endif
      endif
-
+     gpsptr%val2=val-gpsptr%res
 !    Do adjoint
      if (l_do_adjoint) then
 
@@ -198,9 +196,7 @@ subroutine intgps_(gpshead,rval,sval)
            end if
         endif
 
-
 !       adjoint 
-
         do j=1,nsig
            t_AD = grad*gpsptr%jac_t(j)
            rt(i1(j))=rt(i1(j))+w1*t_AD
@@ -218,10 +214,7 @@ subroutine intgps_(gpshead,rval,sval)
            rp(i3(j))=rp(i3(j))+w3*p_AD
            rp(i4(j))=rp(i4(j))+w4*p_AD
         enddo
-
-     endif
-
-     !gpsptr => gpsptr%llpoint
+     endif !l_do_adjoint
      gpsptr => gpsNode_nextcast(gpsptr)
 
   end do

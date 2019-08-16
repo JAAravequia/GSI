@@ -35,7 +35,6 @@ contains
 
 subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
                    diry,penalty,penaltynew,pjcost,pjcostnew,end_iter)
-!KAB
 
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -218,7 +217,6 @@ subroutine stpcalc(stpinout,sval,sbias,xhat,dirx,dval,dbias, &
   use jfunc, only: iout_iter,nclen,xhatsave,yhatsave,&
        iter
   use jcmod, only: ljcpdry,ljc4tlevs,ljcdfi
-  use radinfo, only: jpch_rad !KAB
   use obsmod, only: nobs_type
   use stpjcmod, only: stplimq,stplimg,stplimv,stplimp,stplimw10m,&
        stplimhowv,stplimcldch,stpjcdfi,stpjcpdry,stpliml
