@@ -27,7 +27,6 @@ module stpradmod
 use radinfo, only: b_rad,pg_rad
 use qcmod, only: nlnqc_iter,varqc_iter
 use constants, only: half,one,two,tiny_r_kind,cg_term,zero_quad
-use intradmod, only:lgoback 
 use kinds, only: r_kind,r_quad,i_kind
 use m_obsNode, only: obsNode
 use m_radNode, only: radNode
@@ -35,7 +34,6 @@ use m_radNode, only: radNode_typecast
 use m_radNode, only: radNode_nextcast
 
 implicit none
-real(r_kind) cg_rad,wgross,wnotgross
 
 PRIVATE
 PUBLIC stprad_state,stprad
@@ -79,8 +77,8 @@ subroutine stprad_state(radhead,dval,rpred,out,sges,nstep)
   use intradmod, only: luseu,lusev,luset,luseq,lusecw,luseoz,luseqg,luseqh,luseqi,luseql, &
           luseqr,luseqs
   use intradmod, only: itv,iqv,ioz,icw,ius,ivs,isst,iqg,iqh,iqi,iql,iqr,iqs,lgoback
-  implicit none
-  
+
+  implicit none 
 ! Declare passed variables
   class(obsNode), pointer                ,intent(in   ) :: radhead
   integer(i_kind)                        ,intent(in   ) :: nstep
@@ -98,6 +96,7 @@ subroutine stprad_state(radhead,dval,rpred,out,sges,nstep)
   real(r_kind),dimension(max(1,nstep)) :: term,rad
   integer(i_kind) nn,kk,ic
   type(radNode), pointer :: radptr
+  real(r_kind) cg_rad,wgross,wnotgross
   
   out=zero_quad
 
@@ -260,6 +259,8 @@ subroutine stprad(radhead,out,sges,nstep)
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+  use intradmod, only: lgoback
+
   implicit none
 
 ! Declare passed variables
@@ -271,6 +272,7 @@ subroutine stprad(radhead,out,sges,nstep)
 
   integer(i_kind) nn,kk,ic
   type(radNode), pointer :: radptr
+  real(r_kind) cg_rad,wgross,wnotgross
 
   out=zero_quad
 

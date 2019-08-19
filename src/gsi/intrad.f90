@@ -317,7 +317,6 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
   real(r_kind),pointer,dimension(:) :: sst
   real(r_kind),pointer,dimension(:) :: rt,rq,rcw,roz,ru,rv,rqg,rqh,rqi,rql,rqr,rqs
   real(r_kind),pointer,dimension(:) :: rst
-  tval=zero
 !  If no rad observations return
   if(.not.associated(radhead)) return
 ! Set required parameters
@@ -382,6 +381,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
 
   radptr => radNode_typecast(radhead)
   do while (associated(radptr))
+     tval=zero
      j1=radptr%ij(1)
      j2=radptr%ij(2)
      j3=radptr%ij(3)

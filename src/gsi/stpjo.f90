@@ -393,12 +393,12 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins,ii)
 !          call stplight(yobs(ib)%light,dval(ib),xval(ib),pbcjo(1,i_light_ob_type,ib),sges,nstep)
 
 !   penalty, b, and c for GPS local observation
-!KABdone       case(i_gps_ob_type)
-!          if ((ii==1).and.(nstep>0)) then
-!             call stpgps_state(yobs(ib)%gps,dval(ib),pbcjo(1,i_gps_ob_type,ib),sges,nstep)
-!          else if (ii>1) then
-!             call stpgps(yobs(ib)%gps,pbcjo(1,i_gps_ob_type,ib),sges,nstep)
-!          endif
+       case(i_gps_ob_type)
+          if ((ii==1).and.(nstep>0)) then
+             call stpgps_state(yobs(ib)%gps,dval(ib),pbcjo(1,i_gps_ob_type,ib),sges,nstep)
+          else if (ii>1) then
+             call stpgps(yobs(ib)%gps,pbcjo(1,i_gps_ob_type,ib),sges,nstep)
+          endif
 
 !   penalty, b, and c for conventional sst
 !KAB       case(i_sst_ob_type)

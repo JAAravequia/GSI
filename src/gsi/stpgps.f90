@@ -33,8 +33,7 @@ use m_gpsNode, only: gpsNode_typecast
 use m_gpsNode, only: gpsNode_nextcast
 
 implicit none
-real(r_kind) cg_gps,wgross,wnotgross
-real(r_kind) pg_gps
+
 PRIVATE
 PUBLIC stpgps,stpgps_state
 
@@ -95,6 +94,8 @@ subroutine stpgps_state(gpshead,rval,out,sges,nstep)
   real(r_kind),dimension(max(1,nstep))::pen
   type(gpsNode), pointer :: gpsptr
   integer(i_kind) kk
+  real(r_kind) cg_gps,wgross,wnotgross
+  real(r_kind) pg_gps
 
 ! Initialize penalty, b1, and b3 to zero
   out=zero_quad
@@ -230,6 +231,9 @@ subroutine stpgps(gpshead,out,sges,nstep)
   type(gpsNode), pointer :: gpsptr
   integer(i_kind):: kk
   real(r_kind):: nref
+  real(r_kind) cg_gps,wgross,wnotgross
+  real(r_kind) pg_gps
+
 ! Initialize penalty, b1, and b3 to zero
   out=zero_quad
 
