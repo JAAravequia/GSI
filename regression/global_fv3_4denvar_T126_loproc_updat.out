@@ -1,0 +1,2543 @@
+Start prolog.task v19.07.23 on node t0901 for job 2014935 :: Mon Aug 19 20:08:55 GMT 2019
+_______________________________________________________________
+End prolog.task v19.07.23 Mon Aug 19 20:08:55 GMT 2019
+_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build
+beginning regression_var.sh, machine is Theia
+machine is set to 'Theia'
+done loading modules
+
+Currently Loaded Modules:
+  1) intel/15.6.233    6) nemsio/v2.2.1  11) w3emc/v2.3.0
+  2) mvapich2/2.1rc1   7) sfcio/v1.0.0   12) bacio/v2.0.2
+  3) hdf5/1.8.14       8) sigio/v2.0.1   13) crtm/v2.2.3
+  4) netcdf/4.3.0      9) sp/v2.0.2      14) prod_util/1.0.18
+  5) bufr/v10.2.5     10) w3nco/v2.0.6   15) cmake/3.12.3-gcc-8.2.0
+
+ 
+
++ exp=global_fv3_4denvar_T126_loproc_updat
++ export JCAP=62
++ JCAP=62
++ export LEVS=64
++ LEVS=64
++ export JCAP_B=126
++ JCAP_B=126
++ export JCAP_EN=62
++ JCAP_EN=62
++ tmpdir=/scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_global_fv3_4denvar_T126/global_fv3_4denvar_T126_loproc_updat
++ savdir=/scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/out62/global_fv3_4denvar_T126_loproc_updat
++ fixcrtm=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update
++ UNCOMPRESS=gunzip
++ CLEAN=NO
++ ncp=/bin/cp
++ ncpl='ln -fs'
++ [[ 62 = \6\7\0 ]]
++ [[ 62 = \5\7\4 ]]
++ [[ 62 = \3\8\2 ]]
++ [[ 62 = \1\2\6 ]]
++ [[ 62 = \6\2 ]]
++ export LONA=192
++ LONA=192
++ export LATA=94
++ LATA=94
++ export DELTIM=1200
++ DELTIM=1200
++ export resol=2
++ resol=2
++ export NLAT=96
++ NLAT=96
++ ENS_NUM_ANAL=20
++ ENSBEG=1
++ ENSEND=20
+++ echo 2018110500
+++ cut -c1-8
++ PDY=20181105
+++ echo 2018110500
+++ cut -c9-10
++ cyc=00
+++ /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/util/exec/ndate -06 2018110500
++ GDATE=2018110418
+++ echo 2018110418
+++ cut -c1-8
++ gPDY=20181104
+++ echo 2018110418
+++ cut -c9-10
++ gcyc=18
++ dumpobs=gdas
++ prefix_obs=gdas.t00z
++ prefix_ges=gdas.t18z
++ prefix_ens=gdas.t18z
++ suffix=tm00.bufr_d
++ datobs=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00
++ datanl=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00
++ datges=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181104/18
++ datens=/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18
++ rm -rf /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_global_fv3_4denvar_T126/global_fv3_4denvar_T126_loproc_updat
++ mkdir -p /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_global_fv3_4denvar_T126/global_fv3_4denvar_T126_loproc_updat
++ cd /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_global_fv3_4denvar_T126/global_fv3_4denvar_T126_loproc_updat
++ rm -rf 'core*'
++ ICO2=0
++ '[' 0 -gt 0 ']'
++ ICH4=0
++ '[' 0 -gt 0 ']'
++ IN2O=0
++ '[' 0 -gt 0 ']'
++ ICO=0
++ '[' 0 -gt 0 ']'
++ . /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/regression/regression_nl_update.sh
++++ expr substr global_fv3_4denvar_T126_loproc_updat 1 6
+++ [[ global = \g\l\o\b\a\l ]]
++++ expr substr global_fv3_4denvar_T126_loproc_updat 8 5
+++ [[ fv3_4 = \4\d\v\a\r ]]
++++ expr substr global_fv3_4denvar_T126_loproc_updat 8 7
+++ [[ fv3_4de = \l\a\n\c\z\o\s ]]
++++ expr substr global_fv3_4denvar_T126_loproc_updat 12 6
+++ [[ 4denva = \o\z\o\n\l\y ]]
+++ export SETUP_update=newpc4pred=.true.,adp_anglebc=.true.,angord=4,passive_bc=.true.,use_edges=.false.,diag_precon=.true.,step_start=1.0e-3,emiss_bc=.true.,cwoption=3,
+++ SETUP_update=newpc4pred=.true.,adp_anglebc=.true.,angord=4,passive_bc=.true.,use_edges=.false.,diag_precon=.true.,step_start=1.0e-3,emiss_bc=.true.,cwoption=3,
+++ export SETUP_enkf=univaroz=.true.,adp_anglebc=.true.,angord=4,use_edges=.false.,emiss_bc=.true.,
+++ SETUP_enkf=univaroz=.true.,adp_anglebc=.true.,angord=4,use_edges=.false.,emiss_bc=.true.,
++++ expr substr global_fv3_4denvar_T126_loproc_updat 1 4
+++ [[ glob = \r\t\m\a ]]
+++ export OBSQC_update=
+++ OBSQC_update=
+++ export GRIDOPTS_update=
+++ GRIDOPTS_update=
+++ export BKGVERR_update=
+++ BKGVERR_update=
+++ export ANBKGERR_update=
+++ ANBKGERR_update=
+++ export JCOPTS_update=
+++ JCOPTS_update=
++++ expr substr global_fv3_4denvar_T126_loproc_updat 1 6
+++ [[ global = \g\l\o\b\a\l ]]
++++ expr substr global_fv3_4denvar_T126_loproc_updat 32 36
+++ [[ updat = \u\p\d\a\t ]]
+++ export STRONGOPTS_update=
+++ STRONGOPTS_update=
+++ export OBSINPUT_update=
+++ OBSINPUT_update=
+++ export SUPERRAD_update=
+++ SUPERRAD_update=
+++ export SINGLEOB_update=
+++ SINGLEOB_update=
++ SETUP=newpc4pred=.true.,adp_anglebc=.true.,angord=4,passive_bc=.true.,use_edges=.false.,diag_precon=.true.,step_start=1.0e-3,emiss_bc=.true.,cwoption=3,
++ GRIDOPTS=
++ BKGVERR=
++ ANBKGERR=
++ JCOPTS=
++ STRONGOPTS=
++ OBSQC=
++ OBSINPUT=
++ SUPERRAD=
++ SINGLEOB=
++ '[' .false. = .false. ']'
++ . /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/regression/regression_namelists.sh global_fv3_4denvar_T126
+++ regtest=global_fv3_4denvar_T126
+++ case $regtest in
+++ export 'gsi_namelist=
+
+ &SETUP
+   miter=2,niter(1)=5,niter(2)=5,
+   niter_no_qc(1)=2,niter_no_qc(2)=0,
+   write_diag(1)=.true.,write_diag(2)=.false.,write_diag(3)=.true.,
+   qoption=2,
+   gencode=82,factqmin=0.5,factqmax=0.005,deltim=1200,
+   iguess=-1,
+   oneobtest=.false.,retrieval=.false.,l_foto=.false.,
+   use_pbl=.false.,use_compress=.true.,nsig_ext=12,gpstop=50.,
+   use_gfs_nemsio=.true.,lrun_subdirs=.true.,use_readin_anl_sfcmask=.true.,
+   newpc4pred=.true.,adp_anglebc=.true.,angord=4,passive_bc=.true.,use_edges=.false.,
+   diag_precon=.true.,step_start=1.e-3,emiss_bc=.true.,thin4d=.true.,cwoption=3,
+   verbose=.false.,imp_physics=11,lupp=.true.,binary_diag=.false.,netcdf_diag=.true.,
+   l4densvar=.true.,ens_nstarthr=3,nhr_obsbin=1,nhr_assimilation=6,lwrite4danl=.false., tzr_qc=1,sfcnst_comb=.true.,
+   newpc4pred=.true.,adp_anglebc=.true.,angord=4,passive_bc=.true.,use_edges=.false.,diag_precon=.true.,step_start=1.0e-3,emiss_bc=.true.,cwoption=3,
+ /
+ &GRIDOPTS
+   JCAP_B=126,JCAP=62,NLAT=96,NLON=192,nsig=64,
+   regional=.false.,nlayers(63)=3,nlayers(64)=6,
+   
+ /
+ &BKGERR
+   vs=0.7,
+   hzscl=1.7,0.8,0.5,
+   hswgt=0.45,0.3,0.25,
+   bw=0.0,norsp=4,
+   bkgv_flowdep=.true.,bkgv_rewgtfct=1.5,
+   bkgv_write=.false.,
+   cwcoveqqcov=.false.,
+   
+ /
+ &ANBKGERR
+   anisotropic=.false.,
+   
+ /
+ &JCOPTS
+   ljcdfi=.false.,alphajc=0.0,ljcpdry=.true.,bamp_jcpdry=2.5e7,ljc4tlevs=.true.,
+   
+ /
+ &STRONGOPTS
+   tlnmc_option=3,nstrong=1,nvmodes_keep=8,period_max=6.,period_width=1.5,
+   baldiag_full=.false.,baldiag_inc=.false.,
+   
+ /
+ &OBSQC
+   dfact=0.75,dfact1=3.0,noiqc=.true.,oberrflg=.false.,c_varqc=0.04,
+   use_poq7=.true.,qc_noirjaco3_pole=.true.,vqc=.true.,
+   aircraft_t_bc=.true.,biaspredt=1000.0,upd_aircraft=.true.,cleanup_tail=.true.
+   
+ /
+ &OBS_INPUT
+   dmesh(1)=1450.0,dmesh(2)=1500.0,dmesh(3)=1000.0,time_window_max=3.0,
+   
+ /
+OBS_INPUT::
+!  dfile          dtype       dplat       dsis                dval    dthin dsfcalc
+   prepbufr       ps          null        ps                  0.0     0     0
+   prepbufr       t           null        t                   0.0     0     0
+   prepbufr_profl t           null        t                   0.0     0     0
+   prepbufr       q           null        q                   0.0     0     0
+   prepbufr_profl q           null        q                   0.0     0     0
+   prepbufr       pw          null        pw                  0.0     0     0
+   prepbufr       uv          null        uv                  0.0     0     0
+   prepbufr_profl uv          null        uv                  0.0     0     0
+   satwndbufr     uv          null        uv                  0.0     0     0
+   prepbufr       spd         null        spd                 0.0     0     0
+   prepbufr       dw          null        dw                  0.0     0     0
+   radarbufr      rw          null        rw                  0.0     0     0
+   nsstbufr       sst         nsst        sst                 0.0     0     0
+   gpsrobufr      gps_bnd     null        gps                 0.0     0     0
+   ssmirrbufr     pcp_ssmi    dmsp        pcp_ssmi            0.0    -1     0
+   tmirrbufr      pcp_tmi     trmm        pcp_tmi             0.0    -1     0
+   sbuvbufr       sbuv2       n16         sbuv8_n16           0.0     0     0
+   sbuvbufr       sbuv2       n17         sbuv8_n17           0.0     0     0
+   sbuvbufr       sbuv2       n18         sbuv8_n18           0.0     0     0
+   hirs3bufr      hirs3       n17         hirs3_n17           0.0     1     0
+   hirs4bufr      hirs4       metop-a     hirs4_metop-a       0.0     1     1
+   gimgrbufr      goes_img    g11         imgr_g11            0.0     1     0
+   gimgrbufr      goes_img    g12         imgr_g12            0.0     1     0
+   airsbufr       airs        aqua        airs_aqua           0.0     1     1
+   amsuabufr      amsua       n15         amsua_n15           0.0     1     1
+   amsuabufr      amsua       n18         amsua_n18           0.0     1     1
+   amsuabufr      amsua       metop-a     amsua_metop-a       0.0     1     1
+   airsbufr       amsua       aqua        amsua_aqua          0.0     1     1
+   amsubbufr      amsub       n17         amsub_n17           0.0     1     1
+   mhsbufr        mhs         n18         mhs_n18             0.0     1     1
+   mhsbufr        mhs         metop-a     mhs_metop-a         0.0     1     1
+   ssmitbufr      ssmi        f15         ssmi_f15            0.0     1     0
+   amsrebufr      amsre_low   aqua        amsre_aqua          0.0     1     0
+   amsrebufr      amsre_mid   aqua        amsre_aqua          0.0     1     0
+   amsrebufr      amsre_hig   aqua        amsre_aqua          0.0     1     0
+   ssmisbufr      ssmis       f16         ssmis_f16           0.0     1     0
+   ssmisbufr      ssmis       f17         ssmis_f17           0.0     1     0
+   ssmisbufr      ssmis       f18         ssmis_f18           0.0     1     0
+   ssmisbufr      ssmis       f19         ssmis_f19           0.0     1     0
+   gsnd1bufr      sndrd1      g12         sndrD1_g12          0.0     1     0
+   gsnd1bufr      sndrd2      g12         sndrD2_g12          0.0     1     0
+   gsnd1bufr      sndrd3      g12         sndrD3_g12          0.0     1     0
+   gsnd1bufr      sndrd4      g12         sndrD4_g12          0.0     1     0
+   gsnd1bufr      sndrd1      g11         sndrD1_g11          0.0     1     0
+   gsnd1bufr      sndrd2      g11         sndrD2_g11          0.0     1     0
+   gsnd1bufr      sndrd3      g11         sndrD3_g11          0.0     1     0
+   gsnd1bufr      sndrd4      g11         sndrD4_g11          0.0     1     0
+   gsnd1bufr      sndrd1      g13         sndrD1_g13          0.0     1     0
+   gsnd1bufr      sndrd2      g13         sndrD2_g13          0.0     1     0
+   gsnd1bufr      sndrd3      g13         sndrD3_g13          0.0     1     0
+   gsnd1bufr      sndrd4      g13         sndrD4_g13          0.0     1     0
+   iasibufr       iasi        metop-a     iasi_metop-a        0.0     1     1
+   gomebufr       gome        metop-a     gome_metop-a        0.0     2     0
+   omibufr        omi         aura        omi_aura            0.0     2     0
+   sbuvbufr       sbuv2       n19         sbuv8_n19           0.0     0     0
+   hirs4bufr      hirs4       n19         hirs4_n19           0.0     1     1
+   amsuabufr      amsua       n19         amsua_n19           0.0     1     1
+   mhsbufr        mhs         n19         mhs_n19             0.0     1     1
+   tcvitl         tcp         null        tcp                 0.0     0     0
+   seviribufr     seviri      m08         seviri_m08          0.0     1     0
+   seviribufr     seviri      m09         seviri_m09          0.0     1     0
+   seviribufr     seviri      m10         seviri_m10          0.0     1     0
+   hirs4bufr      hirs4       metop-b     hirs4_metop-b       0.0     1     1
+   amsuabufr      amsua       metop-b     amsua_metop-b       0.0     1     1
+   mhsbufr        mhs         metop-b     mhs_metop-b         0.0     1     1
+   iasibufr       iasi        metop-b     iasi_metop-b        0.0     1     1
+   gomebufr       gome        metop-b     gome_metop-b        0.0     2     0
+   atmsbufr       atms        npp         atms_npp            0.0     1     1
+   atmsbufr       atms        n20         atms_n20            0.0     1     1
+   crisbufr       cris        npp         cris_npp            0.0     1     0
+   crisfsbufr     cris-fsr    npp         cris-fsr_npp        0.0     1     0
+   crisfsbufr     cris-fsr    n20         cris-fsr_n20        0.0     1     0
+   gsnd1bufr      sndrd1      g14         sndrD1_g14          0.0     1     0
+   gsnd1bufr      sndrd2      g14         sndrD2_g14          0.0     1     0
+   gsnd1bufr      sndrd3      g14         sndrD3_g14          0.0     1     0
+   gsnd1bufr      sndrd4      g14         sndrD4_g14          0.0     1     0
+   gsnd1bufr      sndrd1      g15         sndrD1_g15          0.0     1     0
+   gsnd1bufr      sndrd2      g15         sndrD2_g15          0.0     1     0
+   gsnd1bufr      sndrd3      g15         sndrD3_g15          0.0     1     0
+   gsnd1bufr      sndrd4      g15         sndrD4_g15          0.0     1     0
+   oscatbufr      uv          null        uv                  0.0     0     0
+   mlsbufr        mls30       aura        mls30_aura          0.0     0     0
+   avhambufr      avhrr       metop-a     avhrr3_metop-a      0.0     1     0
+   avhpmbufr      avhrr       n18         avhrr3_n18          0.0     1     0
+   amsr2bufr      amsr2       gcom-w1     amsr2_gcom-w1       0.0     3     0
+   gmibufr        gmi         gpm         gmi_gpm             0.0     3     0
+   saphirbufr     saphir      meghat      saphir_meghat       0.0     3     0
+   ahibufr        ahi         himawari8   ahi_himawari8       0.0     3     0
+   rapidscatbufr  uv          null        uv                  0.0     0     0
+::
+  &SUPEROB_RADAR
+   
+ /
+ &LAG_DATA
+   
+ /
+ &HYBRID_ENSEMBLE
+   l_hyb_ens=.true.,n_ens=20,beta_s0=0.125,readin_beta=.false.,s_ens_h=800,s_ens_v=-0.8,generate_ens=.false.,uv_hyb_ens=.true.,jcap_ens=62,
+   nlat_ens=96,nlon_ens=192,ANISO_A_EN=.false.,jcap_ens_test=62,oz_univ_static=.false.,readin_localization=.true.,ensemble_path='\''./ensemble_data/'\'',
+   ens_fast_read=.true.,write_ens_sprd=.false.,
+   
+ /
+ &RAPIDREFRESH_CLDSURF
+   dfi_radar_latent_heat_time_period=30.0,
+ /
+ &CHEM
+
+ /
+ &SINGLEOB_TEST
+   maginnov=0.1,magoberr=0.1,oneob_type='\''t'\'',
+   oblat=45.,oblon=180.,obpres=1000.,obdattim=,
+   obhourset=0.,
+   
+ /
+ &NST
+   nst_gsi=3,nstinfo=4,fac_dtl=1,fac_tsl=1,zsea1=0,zsea2=0,
+   
+ /
+'
+++ gsi_namelist='
+
+ &SETUP
+   miter=2,niter(1)=5,niter(2)=5,
+   niter_no_qc(1)=2,niter_no_qc(2)=0,
+   write_diag(1)=.true.,write_diag(2)=.false.,write_diag(3)=.true.,
+   qoption=2,
+   gencode=82,factqmin=0.5,factqmax=0.005,deltim=1200,
+   iguess=-1,
+   oneobtest=.false.,retrieval=.false.,l_foto=.false.,
+   use_pbl=.false.,use_compress=.true.,nsig_ext=12,gpstop=50.,
+   use_gfs_nemsio=.true.,lrun_subdirs=.true.,use_readin_anl_sfcmask=.true.,
+   newpc4pred=.true.,adp_anglebc=.true.,angord=4,passive_bc=.true.,use_edges=.false.,
+   diag_precon=.true.,step_start=1.e-3,emiss_bc=.true.,thin4d=.true.,cwoption=3,
+   verbose=.false.,imp_physics=11,lupp=.true.,binary_diag=.false.,netcdf_diag=.true.,
+   l4densvar=.true.,ens_nstarthr=3,nhr_obsbin=1,nhr_assimilation=6,lwrite4danl=.false., tzr_qc=1,sfcnst_comb=.true.,
+   newpc4pred=.true.,adp_anglebc=.true.,angord=4,passive_bc=.true.,use_edges=.false.,diag_precon=.true.,step_start=1.0e-3,emiss_bc=.true.,cwoption=3,
+ /
+ &GRIDOPTS
+   JCAP_B=126,JCAP=62,NLAT=96,NLON=192,nsig=64,
+   regional=.false.,nlayers(63)=3,nlayers(64)=6,
+   
+ /
+ &BKGERR
+   vs=0.7,
+   hzscl=1.7,0.8,0.5,
+   hswgt=0.45,0.3,0.25,
+   bw=0.0,norsp=4,
+   bkgv_flowdep=.true.,bkgv_rewgtfct=1.5,
+   bkgv_write=.false.,
+   cwcoveqqcov=.false.,
+   
+ /
+ &ANBKGERR
+   anisotropic=.false.,
+   
+ /
+ &JCOPTS
+   ljcdfi=.false.,alphajc=0.0,ljcpdry=.true.,bamp_jcpdry=2.5e7,ljc4tlevs=.true.,
+   
+ /
+ &STRONGOPTS
+   tlnmc_option=3,nstrong=1,nvmodes_keep=8,period_max=6.,period_width=1.5,
+   baldiag_full=.false.,baldiag_inc=.false.,
+   
+ /
+ &OBSQC
+   dfact=0.75,dfact1=3.0,noiqc=.true.,oberrflg=.false.,c_varqc=0.04,
+   use_poq7=.true.,qc_noirjaco3_pole=.true.,vqc=.true.,
+   aircraft_t_bc=.true.,biaspredt=1000.0,upd_aircraft=.true.,cleanup_tail=.true.
+   
+ /
+ &OBS_INPUT
+   dmesh(1)=1450.0,dmesh(2)=1500.0,dmesh(3)=1000.0,time_window_max=3.0,
+   
+ /
+OBS_INPUT::
+!  dfile          dtype       dplat       dsis                dval    dthin dsfcalc
+   prepbufr       ps          null        ps                  0.0     0     0
+   prepbufr       t           null        t                   0.0     0     0
+   prepbufr_profl t           null        t                   0.0     0     0
+   prepbufr       q           null        q                   0.0     0     0
+   prepbufr_profl q           null        q                   0.0     0     0
+   prepbufr       pw          null        pw                  0.0     0     0
+   prepbufr       uv          null        uv                  0.0     0     0
+   prepbufr_profl uv          null        uv                  0.0     0     0
+   satwndbufr     uv          null        uv                  0.0     0     0
+   prepbufr       spd         null        spd                 0.0     0     0
+   prepbufr       dw          null        dw                  0.0     0     0
+   radarbufr      rw          null        rw                  0.0     0     0
+   nsstbufr       sst         nsst        sst                 0.0     0     0
+   gpsrobufr      gps_bnd     null        gps                 0.0     0     0
+   ssmirrbufr     pcp_ssmi    dmsp        pcp_ssmi            0.0    -1     0
+   tmirrbufr      pcp_tmi     trmm        pcp_tmi             0.0    -1     0
+   sbuvbufr       sbuv2       n16         sbuv8_n16           0.0     0     0
+   sbuvbufr       sbuv2       n17         sbuv8_n17           0.0     0     0
+   sbuvbufr       sbuv2       n18         sbuv8_n18           0.0     0     0
+   hirs3bufr      hirs3       n17         hirs3_n17           0.0     1     0
+   hirs4bufr      hirs4       metop-a     hirs4_metop-a       0.0     1     1
+   gimgrbufr      goes_img    g11         imgr_g11            0.0     1     0
+   gimgrbufr      goes_img    g12         imgr_g12            0.0     1     0
+   airsbufr       airs        aqua        airs_aqua           0.0     1     1
+   amsuabufr      amsua       n15         amsua_n15           0.0     1     1
+   amsuabufr      amsua       n18         amsua_n18           0.0     1     1
+   amsuabufr      amsua       metop-a     amsua_metop-a       0.0     1     1
+   airsbufr       amsua       aqua        amsua_aqua          0.0     1     1
+   amsubbufr      amsub       n17         amsub_n17           0.0     1     1
+   mhsbufr        mhs         n18         mhs_n18             0.0     1     1
+   mhsbufr        mhs         metop-a     mhs_metop-a         0.0     1     1
+   ssmitbufr      ssmi        f15         ssmi_f15            0.0     1     0
+   amsrebufr      amsre_low   aqua        amsre_aqua          0.0     1     0
+   amsrebufr      amsre_mid   aqua        amsre_aqua          0.0     1     0
+   amsrebufr      amsre_hig   aqua        amsre_aqua          0.0     1     0
+   ssmisbufr      ssmis       f16         ssmis_f16           0.0     1     0
+   ssmisbufr      ssmis       f17         ssmis_f17           0.0     1     0
+   ssmisbufr      ssmis       f18         ssmis_f18           0.0     1     0
+   ssmisbufr      ssmis       f19         ssmis_f19           0.0     1     0
+   gsnd1bufr      sndrd1      g12         sndrD1_g12          0.0     1     0
+   gsnd1bufr      sndrd2      g12         sndrD2_g12          0.0     1     0
+   gsnd1bufr      sndrd3      g12         sndrD3_g12          0.0     1     0
+   gsnd1bufr      sndrd4      g12         sndrD4_g12          0.0     1     0
+   gsnd1bufr      sndrd1      g11         sndrD1_g11          0.0     1     0
+   gsnd1bufr      sndrd2      g11         sndrD2_g11          0.0     1     0
+   gsnd1bufr      sndrd3      g11         sndrD3_g11          0.0     1     0
+   gsnd1bufr      sndrd4      g11         sndrD4_g11          0.0     1     0
+   gsnd1bufr      sndrd1      g13         sndrD1_g13          0.0     1     0
+   gsnd1bufr      sndrd2      g13         sndrD2_g13          0.0     1     0
+   gsnd1bufr      sndrd3      g13         sndrD3_g13          0.0     1     0
+   gsnd1bufr      sndrd4      g13         sndrD4_g13          0.0     1     0
+   iasibufr       iasi        metop-a     iasi_metop-a        0.0     1     1
+   gomebufr       gome        metop-a     gome_metop-a        0.0     2     0
+   omibufr        omi         aura        omi_aura            0.0     2     0
+   sbuvbufr       sbuv2       n19         sbuv8_n19           0.0     0     0
+   hirs4bufr      hirs4       n19         hirs4_n19           0.0     1     1
+   amsuabufr      amsua       n19         amsua_n19           0.0     1     1
+   mhsbufr        mhs         n19         mhs_n19             0.0     1     1
+   tcvitl         tcp         null        tcp                 0.0     0     0
+   seviribufr     seviri      m08         seviri_m08          0.0     1     0
+   seviribufr     seviri      m09         seviri_m09          0.0     1     0
+   seviribufr     seviri      m10         seviri_m10          0.0     1     0
+   hirs4bufr      hirs4       metop-b     hirs4_metop-b       0.0     1     1
+   amsuabufr      amsua       metop-b     amsua_metop-b       0.0     1     1
+   mhsbufr        mhs         metop-b     mhs_metop-b         0.0     1     1
+   iasibufr       iasi        metop-b     iasi_metop-b        0.0     1     1
+   gomebufr       gome        metop-b     gome_metop-b        0.0     2     0
+   atmsbufr       atms        npp         atms_npp            0.0     1     1
+   atmsbufr       atms        n20         atms_n20            0.0     1     1
+   crisbufr       cris        npp         cris_npp            0.0     1     0
+   crisfsbufr     cris-fsr    npp         cris-fsr_npp        0.0     1     0
+   crisfsbufr     cris-fsr    n20         cris-fsr_n20        0.0     1     0
+   gsnd1bufr      sndrd1      g14         sndrD1_g14          0.0     1     0
+   gsnd1bufr      sndrd2      g14         sndrD2_g14          0.0     1     0
+   gsnd1bufr      sndrd3      g14         sndrD3_g14          0.0     1     0
+   gsnd1bufr      sndrd4      g14         sndrD4_g14          0.0     1     0
+   gsnd1bufr      sndrd1      g15         sndrD1_g15          0.0     1     0
+   gsnd1bufr      sndrd2      g15         sndrD2_g15          0.0     1     0
+   gsnd1bufr      sndrd3      g15         sndrD3_g15          0.0     1     0
+   gsnd1bufr      sndrd4      g15         sndrD4_g15          0.0     1     0
+   oscatbufr      uv          null        uv                  0.0     0     0
+   mlsbufr        mls30       aura        mls30_aura          0.0     0     0
+   avhambufr      avhrr       metop-a     avhrr3_metop-a      0.0     1     0
+   avhpmbufr      avhrr       n18         avhrr3_n18          0.0     1     0
+   amsr2bufr      amsr2       gcom-w1     amsr2_gcom-w1       0.0     3     0
+   gmibufr        gmi         gpm         gmi_gpm             0.0     3     0
+   saphirbufr     saphir      meghat      saphir_meghat       0.0     3     0
+   ahibufr        ahi         himawari8   ahi_himawari8       0.0     3     0
+   rapidscatbufr  uv          null        uv                  0.0     0     0
+::
+  &SUPEROB_RADAR
+   
+ /
+ &LAG_DATA
+   
+ /
+ &HYBRID_ENSEMBLE
+   l_hyb_ens=.true.,n_ens=20,beta_s0=0.125,readin_beta=.false.,s_ens_h=800,s_ens_v=-0.8,generate_ens=.false.,uv_hyb_ens=.true.,jcap_ens=62,
+   nlat_ens=96,nlon_ens=192,ANISO_A_EN=.false.,jcap_ens_test=62,oz_univ_static=.false.,readin_localization=.true.,ensemble_path='\''./ensemble_data/'\'',
+   ens_fast_read=.true.,write_ens_sprd=.false.,
+   
+ /
+ &RAPIDREFRESH_CLDSURF
+   dfi_radar_latent_heat_time_period=30.0,
+ /
+ &CHEM
+
+ /
+ &SINGLEOB_TEST
+   maginnov=0.1,magoberr=0.1,oneob_type='\''t'\'',
+   oblat=45.,oblon=180.,obpres=1000.,obdattim=,
+   obhourset=0.,
+   
+ /
+ &NST
+   nst_gsi=3,nstinfo=4,fac_dtl=1,fac_tsl=1,zsea1=0,zsea2=0,
+   
+ /
+'
++ cat
++ berror=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/Big_Endian/global_berror.l64y96.f77
++ emiscoef_IRwater=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/Nalli.IRwater.EmisCoeff.bin
++ emiscoef_IRice=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.IRice.EmisCoeff.bin
++ emiscoef_IRland=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.IRland.EmisCoeff.bin
++ emiscoef_IRsnow=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.IRsnow.EmisCoeff.bin
++ emiscoef_VISice=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.VISice.EmisCoeff.bin
++ emiscoef_VISland=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.VISland.EmisCoeff.bin
++ emiscoef_VISsnow=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.VISsnow.EmisCoeff.bin
++ emiscoef_VISwater=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.VISwater.EmisCoeff.bin
++ emiscoef_MWwater=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/FASTEM6.MWwater.EmisCoeff.bin
++ aercoef=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/AerosolCoeff.bin
++ cldcoef=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/CloudCoeff.bin
++ satangl=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_satangbias.txt
++ scaninfo=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_scaninfo.txt
++ satinfo=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_satinfo.txt
++ cloudyinfo=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/cloudy_radiance_info.txt
++ convinfo=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_convinfo_reg_test.txt
++ insituinfo=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_insituinfo.txt
++ errtable_pw=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_pw.global
++ errtable_ps=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_ps.global_nqcf
++ errtable_t=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_t.global_nqcf
++ errtable_q=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_q.global_nqcf
++ errtable_uv=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_uv.global_nqcf
++ btable_ps=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nqc_b_ps.global_nqcf
++ btable_t=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nqc_b_t.global_nqcf
++ btable_q=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nqc_b_q.global_nqcf
++ btable_uv=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nqc_b_uv.global_nqcf
++ anavinfo=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_anavinfo.l64.txt
++ ozinfo=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_ozinfo.txt
++ pcpinfo=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_pcpinfo.txt
++ errtable=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable.global
++ hybens_info=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_hybens_info.l64.txt
++ atmsbeamdat=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/atms_beamwidth.txt
++ bufrtable=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_prep.bufrtable
++ bftab_sst=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/bufrtab.012
++ [[ global_fv3_4denvar_T126_loproc_updat == *\u\p\d\a\t* ]]
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/exec/global_gsi.x ./gsi.x
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/Big_Endian/global_berror.l64y96.f77 ./berror_stats
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/Nalli.IRwater.EmisCoeff.bin ./Nalli.IRwater.EmisCoeff.bin
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.IRice.EmisCoeff.bin ./NPOESS.IRice.EmisCoeff.bin
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.IRsnow.EmisCoeff.bin ./NPOESS.IRsnow.EmisCoeff.bin
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.IRland.EmisCoeff.bin ./NPOESS.IRland.EmisCoeff.bin
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.VISice.EmisCoeff.bin ./NPOESS.VISice.EmisCoeff.bin
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.VISland.EmisCoeff.bin ./NPOESS.VISland.EmisCoeff.bin
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.VISsnow.EmisCoeff.bin ./NPOESS.VISsnow.EmisCoeff.bin
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.VISwater.EmisCoeff.bin ./NPOESS.VISwater.EmisCoeff.bin
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/FASTEM6.MWwater.EmisCoeff.bin ./FASTEM6.MWwater.EmisCoeff.bin
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/AerosolCoeff.bin ./AerosolCoeff.bin
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/CloudCoeff.bin ./CloudCoeff.bin
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_satangbias.txt ./satbias_angle
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/atms_beamwidth.txt ./atms_beamwidth.txt
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_scaninfo.txt ./scaninfo
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_satinfo.txt ./satinfo
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/cloudy_radiance_info.txt ./cloudy_radiance_info.txt
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_pcpinfo.txt ./pcpinfo
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_ozinfo.txt ./ozinfo
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_convinfo_reg_test.txt ./convinfo
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_insituinfo.txt ./insituinfo
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable.global ./errtable
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_anavinfo.l64.txt ./anavinfo
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_hybens_info.l64.txt ./hybens_info
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_pw.global ./errtable_pw
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_ps.global_nqcf ./errtable_ps
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_t.global_nqcf ./errtable_t
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_q.global_nqcf ./errtable_q
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_uv.global_nqcf ./errtable_uv
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nqc_b_ps.global_nqcf ./btable_ps
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nqc_b_t.global_nqcf ./btable_t
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nqc_b_q.global_nqcf ./btable_q
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nqc_b_uv.global_nqcf ./btable_uv
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_prep.bufrtable ./prepobs_prep.bufrtable
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/bufrtab.012 ./bftab_sstphr
+++ awk '{if($1!~"!"){print $1}}' ./satinfo
+++ sort
+++ uniq
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/abi_g16.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/abi_g16.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/abi_g17.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/abi_g17.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/ahi_himawari8.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/ahi_himawari8.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/airs_aqua.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/airs_aqua.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsr2_gcom-w1.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsr2_gcom-w1.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsre_aqua.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsre_aqua.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsua_aqua.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsua_aqua.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsua_metop-a.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsua_metop-a.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsua_metop-b.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsua_metop-b.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsua_metop-c.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsua_metop-c.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsua_n15.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsua_n15.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsua_n18.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsua_n18.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsua_n19.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsua_n19.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsub_n17.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/amsub_n17.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/atms_n20.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/atms_n20.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/atms_npp.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/atms_npp.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/avhrr3_metop-a.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/avhrr3_metop-a.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/avhrr3_metop-b.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/avhrr3_metop-b.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/avhrr3_metop-c.SpcCoeff.bin ./
+/bin/cp: cannot stat ‘/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/avhrr3_metop-c.SpcCoeff.bin’: No such file or directory
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/avhrr3_metop-c.TauCoeff.bin ./
+/bin/cp: cannot stat ‘/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/avhrr3_metop-c.TauCoeff.bin’: No such file or directory
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/avhrr3_n18.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/avhrr3_n18.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/avhrr3_n19.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/avhrr3_n19.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/cris-fsr_n20.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/cris-fsr_n20.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/cris-fsr_npp.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/cris-fsr_npp.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/gmi_gpm.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/gmi_gpm.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/hirs3_n17.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/hirs3_n17.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/hirs4_metop-a.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/hirs4_metop-a.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/hirs4_metop-b.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/hirs4_metop-b.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/hirs4_n19.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/hirs4_n19.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/iasi_metop-a.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/iasi_metop-a.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/iasi_metop-b.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/iasi_metop-b.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/iasi_metop-c.SpcCoeff.bin ./
+/bin/cp: cannot stat ‘/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/iasi_metop-c.SpcCoeff.bin’: No such file or directory
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/iasi_metop-c.TauCoeff.bin ./
+/bin/cp: cannot stat ‘/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/iasi_metop-c.TauCoeff.bin’: No such file or directory
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/imgr_g11.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/imgr_g11.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/imgr_g12.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/imgr_g12.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/imgr_g13.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/imgr_g13.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/imgr_g14.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/imgr_g14.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/imgr_g15.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/imgr_g15.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/mhs_metop-a.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/mhs_metop-a.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/mhs_metop-b.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/mhs_metop-b.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/mhs_metop-c.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/mhs_metop-c.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/mhs_n18.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/mhs_n18.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/mhs_n19.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/mhs_n19.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/saphir_meghat.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/saphir_meghat.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/seviri_m08.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/seviri_m08.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/seviri_m09.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/seviri_m09.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/seviri_m10.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/seviri_m10.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/seviri_m11.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/seviri_m11.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD1_g11.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD1_g11.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD1_g12.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD1_g12.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD1_g13.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD1_g13.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD1_g14.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD1_g14.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD1_g15.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD1_g15.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD2_g11.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD2_g11.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD2_g12.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD2_g12.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD2_g13.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD2_g13.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD2_g14.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD2_g14.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD2_g15.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD2_g15.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD3_g11.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD3_g11.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD3_g12.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD3_g12.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD3_g13.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD3_g13.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD3_g14.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD3_g14.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD3_g15.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD3_g15.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD4_g11.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD4_g11.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD4_g12.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD4_g12.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD4_g13.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD4_g13.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD4_g14.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD4_g14.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD4_g15.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/sndrD4_g15.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/ssmi_f15.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/ssmi_f15.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/ssmis_f16.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/ssmis_f16.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/ssmis_f17.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/ssmis_f17.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/ssmis_f18.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/ssmis_f18.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/ssmis_f19.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/ssmis_f19.TauCoeff.bin ./
++ for file in '`awk '\''{if($1!~"!"){print $1}}'\'' ./satinfo | sort | uniq`'
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/ssmis_f20.SpcCoeff.bin ./
++ /bin/cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/ssmis_f20.TauCoeff.bin ./
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.prepbufr ./prepbufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.prepbufr.acft_profiles ./prepbufr_profl
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.nsstbufr ./nsstbufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.gpsro.tm00.bufr_d ./gpsrobufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.satwnd.tm00.bufr_d ./satwndbufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.spssmi.tm00.bufr_d ./ssmirrbufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.sptrmm.tm00.bufr_d ./tmirrbufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.osbuv8.tm00.bufr_d ./sbuvbufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.goesfv.tm00.bufr_d ./gsnd1bufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.1bamua.tm00.bufr_d ./amsuabufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.1bamub.tm00.bufr_d ./amsubbufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.1bhrs2.tm00.bufr_d ./hirs2bufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.1bhrs3.tm00.bufr_d ./hirs3bufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.1bhrs4.tm00.bufr_d ./hirs4bufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.1bmhs.tm00.bufr_d ./mhsbufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.1bmsu.tm00.bufr_d ./msubufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.airsev.tm00.bufr_d ./airsbufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.sevcsr.tm00.bufr_d ./seviribufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.mtiasi.tm00.bufr_d ./iasibufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.ssmit.tm00.bufr_d ./ssmitbufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.ssmisu.tm00.bufr_d ./ssmisbufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.gome.tm00.bufr_d ./gomebufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.omi.tm00.bufr_d ./omibufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.mls.tm00.bufr_d ./mlsbufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.eshrs3.tm00.bufr_d ./hirs3bufrears
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.esamua.tm00.bufr_d ./amsuabufrears
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.esamub.tm00.bufr_d ./amsubbufrears
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.atms.tm00.bufr_d ./atmsbufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.cris.tm00.bufr_d ./crisbufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.crisf4.tm00.bufr_d ./crisfsbufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.syndata.tcvitals.tm00 ./tcvitl
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.avcsam.tm00.bufr_d ./avhambufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.avcspm.tm00.bufr_d ./avhpmbufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.saphir.tm00.bufr_d ./saphirbufr
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.gmi1cr.tm00.bufr_d ./gmibufr
++ '[' .false. = .false. ']'
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.esiasi.tm00.bufr_d ./iasibufrears
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.hrs3db.tm00.bufr_d ./hirs3bufr_db
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.amuadb.tm00.bufr_d ./amsuabufr_db
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.amubdb.tm00.bufr_d ./amsubbufr_db
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.iasidb.tm00.bufr_d ./iasibufr_db
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.crisdb.tm00.bufr_d ./crisbufr_db
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.atmsdb.tm00.bufr_d ./atmsbufr_db
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.escris.tm00.bufr_d ./crisbufrears
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181105/00/gdas.t00z.esatms.tm00.bufr_d ./atmsbufrears
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181104/18/gdas.t18z.abias ./satbias_in
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181104/18/gdas.t18z.abias_pc ./satbias_pc
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181104/18/gdas.t18z.abias_air ./aircftbias_in
++ flist='03 04 05 06 07 08 09'
++ for fh in '$flist'
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181104/18/gdas.t18z.sfcf003.nemsio ./sfcf03
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181104/18/gdas.t18z.atmf003.nemsio ./sigf03
++ for fh in '$flist'
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181104/18/gdas.t18z.sfcf004.nemsio ./sfcf04
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181104/18/gdas.t18z.atmf004.nemsio ./sigf04
++ for fh in '$flist'
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181104/18/gdas.t18z.sfcf005.nemsio ./sfcf05
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181104/18/gdas.t18z.atmf005.nemsio ./sigf05
++ for fh in '$flist'
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181104/18/gdas.t18z.sfcf006.nemsio ./sfcf06
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181104/18/gdas.t18z.atmf006.nemsio ./sigf06
++ for fh in '$flist'
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181104/18/gdas.t18z.sfcf007.nemsio ./sfcf07
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181104/18/gdas.t18z.atmf007.nemsio ./sigf07
++ for fh in '$flist'
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181104/18/gdas.t18z.sfcf008.nemsio ./sfcf08
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181104/18/gdas.t18z.atmf008.nemsio ./sigf08
++ for fh in '$flist'
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181104/18/gdas.t18z.sfcf009.nemsio ./sfcf09
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181104/18/gdas.t18z.atmf009.nemsio ./sigf09
++ ensemble_path=./ensemble_data/
++ mkdir -p ./ensemble_data/
++ enkf_suffix=s
++ flist='03 04 05 06 07 08 09'
++ for fh in '$flist'
++ sigens=gdas.t18z.atmf003s.nemsio
++ imem=1
++ imemloc=1
++ [[ 1 -le 20 ]]
+++ printf %03i 1
++ member=mem001
+++ printf %03i 1
++ memloc=mem001
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem001/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem001
++ ((  imem = 1 + 1  ))
++ ((  imemloc = 1 + 1  ))
++ [[ 2 -le 20 ]]
+++ printf %03i 2
++ member=mem002
+++ printf %03i 2
++ memloc=mem002
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem002/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem002
++ ((  imem = 2 + 1  ))
++ ((  imemloc = 2 + 1  ))
++ [[ 3 -le 20 ]]
+++ printf %03i 3
++ member=mem003
+++ printf %03i 3
++ memloc=mem003
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem003/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem003
++ ((  imem = 3 + 1  ))
++ ((  imemloc = 3 + 1  ))
++ [[ 4 -le 20 ]]
+++ printf %03i 4
++ member=mem004
+++ printf %03i 4
++ memloc=mem004
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem004/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem004
++ ((  imem = 4 + 1  ))
++ ((  imemloc = 4 + 1  ))
++ [[ 5 -le 20 ]]
+++ printf %03i 5
++ member=mem005
+++ printf %03i 5
++ memloc=mem005
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem005/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem005
++ ((  imem = 5 + 1  ))
++ ((  imemloc = 5 + 1  ))
++ [[ 6 -le 20 ]]
+++ printf %03i 6
++ member=mem006
+++ printf %03i 6
++ memloc=mem006
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem006/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem006
++ ((  imem = 6 + 1  ))
++ ((  imemloc = 6 + 1  ))
++ [[ 7 -le 20 ]]
+++ printf %03i 7
++ member=mem007
+++ printf %03i 7
++ memloc=mem007
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem007/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem007
++ ((  imem = 7 + 1  ))
++ ((  imemloc = 7 + 1  ))
++ [[ 8 -le 20 ]]
+++ printf %03i 8
++ member=mem008
+++ printf %03i 8
++ memloc=mem008
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem008/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem008
++ ((  imem = 8 + 1  ))
++ ((  imemloc = 8 + 1  ))
++ [[ 9 -le 20 ]]
+++ printf %03i 9
++ member=mem009
+++ printf %03i 9
++ memloc=mem009
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem009/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem009
++ ((  imem = 9 + 1  ))
++ ((  imemloc = 9 + 1  ))
++ [[ 10 -le 20 ]]
+++ printf %03i 10
++ member=mem010
+++ printf %03i 10
++ memloc=mem010
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem010/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem010
++ ((  imem = 10 + 1  ))
++ ((  imemloc = 10 + 1  ))
++ [[ 11 -le 20 ]]
+++ printf %03i 11
++ member=mem011
+++ printf %03i 11
++ memloc=mem011
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem011/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem011
++ ((  imem = 11 + 1  ))
++ ((  imemloc = 11 + 1  ))
++ [[ 12 -le 20 ]]
+++ printf %03i 12
++ member=mem012
+++ printf %03i 12
++ memloc=mem012
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem012/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem012
++ ((  imem = 12 + 1  ))
++ ((  imemloc = 12 + 1  ))
++ [[ 13 -le 20 ]]
+++ printf %03i 13
++ member=mem013
+++ printf %03i 13
++ memloc=mem013
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem013/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem013
++ ((  imem = 13 + 1  ))
++ ((  imemloc = 13 + 1  ))
++ [[ 14 -le 20 ]]
+++ printf %03i 14
++ member=mem014
+++ printf %03i 14
++ memloc=mem014
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem014/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem014
++ ((  imem = 14 + 1  ))
++ ((  imemloc = 14 + 1  ))
++ [[ 15 -le 20 ]]
+++ printf %03i 15
++ member=mem015
+++ printf %03i 15
++ memloc=mem015
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem015/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem015
++ ((  imem = 15 + 1  ))
++ ((  imemloc = 15 + 1  ))
++ [[ 16 -le 20 ]]
+++ printf %03i 16
++ member=mem016
+++ printf %03i 16
++ memloc=mem016
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem016/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem016
++ ((  imem = 16 + 1  ))
++ ((  imemloc = 16 + 1  ))
++ [[ 17 -le 20 ]]
+++ printf %03i 17
++ member=mem017
+++ printf %03i 17
++ memloc=mem017
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem017/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem017
++ ((  imem = 17 + 1  ))
++ ((  imemloc = 17 + 1  ))
++ [[ 18 -le 20 ]]
+++ printf %03i 18
++ member=mem018
+++ printf %03i 18
++ memloc=mem018
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem018/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem018
++ ((  imem = 18 + 1  ))
++ ((  imemloc = 18 + 1  ))
++ [[ 19 -le 20 ]]
+++ printf %03i 19
++ member=mem019
+++ printf %03i 19
++ memloc=mem019
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem019/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem019
++ ((  imem = 19 + 1  ))
++ ((  imemloc = 19 + 1  ))
++ [[ 20 -le 20 ]]
+++ printf %03i 20
++ member=mem020
+++ printf %03i 20
++ memloc=mem020
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem020/gdas.t18z.atmf003s.nemsio ./ensemble_data/sigf03_ens_mem020
++ ((  imem = 20 + 1  ))
++ ((  imemloc = 20 + 1  ))
++ [[ 21 -le 20 ]]
++ for fh in '$flist'
++ sigens=gdas.t18z.atmf004s.nemsio
++ imem=1
++ imemloc=1
++ [[ 1 -le 20 ]]
+++ printf %03i 1
++ member=mem001
+++ printf %03i 1
++ memloc=mem001
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem001/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem001
++ ((  imem = 1 + 1  ))
++ ((  imemloc = 1 + 1  ))
++ [[ 2 -le 20 ]]
+++ printf %03i 2
++ member=mem002
+++ printf %03i 2
++ memloc=mem002
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem002/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem002
++ ((  imem = 2 + 1  ))
++ ((  imemloc = 2 + 1  ))
++ [[ 3 -le 20 ]]
+++ printf %03i 3
++ member=mem003
+++ printf %03i 3
++ memloc=mem003
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem003/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem003
++ ((  imem = 3 + 1  ))
++ ((  imemloc = 3 + 1  ))
++ [[ 4 -le 20 ]]
+++ printf %03i 4
++ member=mem004
+++ printf %03i 4
++ memloc=mem004
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem004/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem004
++ ((  imem = 4 + 1  ))
++ ((  imemloc = 4 + 1  ))
++ [[ 5 -le 20 ]]
+++ printf %03i 5
++ member=mem005
+++ printf %03i 5
++ memloc=mem005
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem005/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem005
++ ((  imem = 5 + 1  ))
++ ((  imemloc = 5 + 1  ))
++ [[ 6 -le 20 ]]
+++ printf %03i 6
++ member=mem006
+++ printf %03i 6
++ memloc=mem006
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem006/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem006
++ ((  imem = 6 + 1  ))
++ ((  imemloc = 6 + 1  ))
++ [[ 7 -le 20 ]]
+++ printf %03i 7
++ member=mem007
+++ printf %03i 7
++ memloc=mem007
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem007/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem007
++ ((  imem = 7 + 1  ))
++ ((  imemloc = 7 + 1  ))
++ [[ 8 -le 20 ]]
+++ printf %03i 8
++ member=mem008
+++ printf %03i 8
++ memloc=mem008
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem008/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem008
++ ((  imem = 8 + 1  ))
++ ((  imemloc = 8 + 1  ))
++ [[ 9 -le 20 ]]
+++ printf %03i 9
++ member=mem009
+++ printf %03i 9
++ memloc=mem009
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem009/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem009
++ ((  imem = 9 + 1  ))
++ ((  imemloc = 9 + 1  ))
++ [[ 10 -le 20 ]]
+++ printf %03i 10
++ member=mem010
+++ printf %03i 10
++ memloc=mem010
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem010/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem010
++ ((  imem = 10 + 1  ))
++ ((  imemloc = 10 + 1  ))
++ [[ 11 -le 20 ]]
+++ printf %03i 11
++ member=mem011
+++ printf %03i 11
++ memloc=mem011
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem011/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem011
++ ((  imem = 11 + 1  ))
++ ((  imemloc = 11 + 1  ))
++ [[ 12 -le 20 ]]
+++ printf %03i 12
++ member=mem012
+++ printf %03i 12
++ memloc=mem012
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem012/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem012
++ ((  imem = 12 + 1  ))
++ ((  imemloc = 12 + 1  ))
++ [[ 13 -le 20 ]]
+++ printf %03i 13
++ member=mem013
+++ printf %03i 13
++ memloc=mem013
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem013/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem013
++ ((  imem = 13 + 1  ))
++ ((  imemloc = 13 + 1  ))
++ [[ 14 -le 20 ]]
+++ printf %03i 14
++ member=mem014
+++ printf %03i 14
++ memloc=mem014
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem014/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem014
++ ((  imem = 14 + 1  ))
++ ((  imemloc = 14 + 1  ))
++ [[ 15 -le 20 ]]
+++ printf %03i 15
++ member=mem015
+++ printf %03i 15
++ memloc=mem015
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem015/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem015
++ ((  imem = 15 + 1  ))
++ ((  imemloc = 15 + 1  ))
++ [[ 16 -le 20 ]]
+++ printf %03i 16
++ member=mem016
+++ printf %03i 16
++ memloc=mem016
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem016/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem016
++ ((  imem = 16 + 1  ))
++ ((  imemloc = 16 + 1  ))
++ [[ 17 -le 20 ]]
+++ printf %03i 17
++ member=mem017
+++ printf %03i 17
++ memloc=mem017
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem017/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem017
++ ((  imem = 17 + 1  ))
++ ((  imemloc = 17 + 1  ))
++ [[ 18 -le 20 ]]
+++ printf %03i 18
++ member=mem018
+++ printf %03i 18
++ memloc=mem018
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem018/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem018
++ ((  imem = 18 + 1  ))
++ ((  imemloc = 18 + 1  ))
++ [[ 19 -le 20 ]]
+++ printf %03i 19
++ member=mem019
+++ printf %03i 19
++ memloc=mem019
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem019/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem019
++ ((  imem = 19 + 1  ))
++ ((  imemloc = 19 + 1  ))
++ [[ 20 -le 20 ]]
+++ printf %03i 20
++ member=mem020
+++ printf %03i 20
++ memloc=mem020
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem020/gdas.t18z.atmf004s.nemsio ./ensemble_data/sigf04_ens_mem020
++ ((  imem = 20 + 1  ))
++ ((  imemloc = 20 + 1  ))
++ [[ 21 -le 20 ]]
++ for fh in '$flist'
++ sigens=gdas.t18z.atmf005s.nemsio
++ imem=1
++ imemloc=1
++ [[ 1 -le 20 ]]
+++ printf %03i 1
++ member=mem001
+++ printf %03i 1
++ memloc=mem001
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem001/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem001
++ ((  imem = 1 + 1  ))
++ ((  imemloc = 1 + 1  ))
++ [[ 2 -le 20 ]]
+++ printf %03i 2
++ member=mem002
+++ printf %03i 2
++ memloc=mem002
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem002/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem002
++ ((  imem = 2 + 1  ))
++ ((  imemloc = 2 + 1  ))
++ [[ 3 -le 20 ]]
+++ printf %03i 3
++ member=mem003
+++ printf %03i 3
++ memloc=mem003
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem003/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem003
++ ((  imem = 3 + 1  ))
++ ((  imemloc = 3 + 1  ))
++ [[ 4 -le 20 ]]
+++ printf %03i 4
++ member=mem004
+++ printf %03i 4
++ memloc=mem004
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem004/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem004
++ ((  imem = 4 + 1  ))
++ ((  imemloc = 4 + 1  ))
++ [[ 5 -le 20 ]]
+++ printf %03i 5
++ member=mem005
+++ printf %03i 5
++ memloc=mem005
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem005/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem005
++ ((  imem = 5 + 1  ))
++ ((  imemloc = 5 + 1  ))
++ [[ 6 -le 20 ]]
+++ printf %03i 6
++ member=mem006
+++ printf %03i 6
++ memloc=mem006
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem006/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem006
++ ((  imem = 6 + 1  ))
++ ((  imemloc = 6 + 1  ))
++ [[ 7 -le 20 ]]
+++ printf %03i 7
++ member=mem007
+++ printf %03i 7
++ memloc=mem007
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem007/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem007
++ ((  imem = 7 + 1  ))
++ ((  imemloc = 7 + 1  ))
++ [[ 8 -le 20 ]]
+++ printf %03i 8
++ member=mem008
+++ printf %03i 8
++ memloc=mem008
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem008/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem008
++ ((  imem = 8 + 1  ))
++ ((  imemloc = 8 + 1  ))
++ [[ 9 -le 20 ]]
+++ printf %03i 9
++ member=mem009
+++ printf %03i 9
++ memloc=mem009
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem009/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem009
++ ((  imem = 9 + 1  ))
++ ((  imemloc = 9 + 1  ))
++ [[ 10 -le 20 ]]
+++ printf %03i 10
++ member=mem010
+++ printf %03i 10
++ memloc=mem010
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem010/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem010
++ ((  imem = 10 + 1  ))
++ ((  imemloc = 10 + 1  ))
++ [[ 11 -le 20 ]]
+++ printf %03i 11
++ member=mem011
+++ printf %03i 11
++ memloc=mem011
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem011/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem011
++ ((  imem = 11 + 1  ))
++ ((  imemloc = 11 + 1  ))
++ [[ 12 -le 20 ]]
+++ printf %03i 12
++ member=mem012
+++ printf %03i 12
++ memloc=mem012
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem012/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem012
++ ((  imem = 12 + 1  ))
++ ((  imemloc = 12 + 1  ))
++ [[ 13 -le 20 ]]
+++ printf %03i 13
++ member=mem013
+++ printf %03i 13
++ memloc=mem013
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem013/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem013
++ ((  imem = 13 + 1  ))
++ ((  imemloc = 13 + 1  ))
++ [[ 14 -le 20 ]]
+++ printf %03i 14
++ member=mem014
+++ printf %03i 14
++ memloc=mem014
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem014/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem014
++ ((  imem = 14 + 1  ))
++ ((  imemloc = 14 + 1  ))
++ [[ 15 -le 20 ]]
+++ printf %03i 15
++ member=mem015
+++ printf %03i 15
++ memloc=mem015
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem015/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem015
++ ((  imem = 15 + 1  ))
++ ((  imemloc = 15 + 1  ))
++ [[ 16 -le 20 ]]
+++ printf %03i 16
++ member=mem016
+++ printf %03i 16
++ memloc=mem016
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem016/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem016
++ ((  imem = 16 + 1  ))
++ ((  imemloc = 16 + 1  ))
++ [[ 17 -le 20 ]]
+++ printf %03i 17
++ member=mem017
+++ printf %03i 17
++ memloc=mem017
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem017/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem017
++ ((  imem = 17 + 1  ))
++ ((  imemloc = 17 + 1  ))
++ [[ 18 -le 20 ]]
+++ printf %03i 18
++ member=mem018
+++ printf %03i 18
++ memloc=mem018
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem018/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem018
++ ((  imem = 18 + 1  ))
++ ((  imemloc = 18 + 1  ))
++ [[ 19 -le 20 ]]
+++ printf %03i 19
++ member=mem019
+++ printf %03i 19
++ memloc=mem019
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem019/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem019
++ ((  imem = 19 + 1  ))
++ ((  imemloc = 19 + 1  ))
++ [[ 20 -le 20 ]]
+++ printf %03i 20
++ member=mem020
+++ printf %03i 20
++ memloc=mem020
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem020/gdas.t18z.atmf005s.nemsio ./ensemble_data/sigf05_ens_mem020
++ ((  imem = 20 + 1  ))
++ ((  imemloc = 20 + 1  ))
++ [[ 21 -le 20 ]]
++ for fh in '$flist'
++ sigens=gdas.t18z.atmf006s.nemsio
++ imem=1
++ imemloc=1
++ [[ 1 -le 20 ]]
+++ printf %03i 1
++ member=mem001
+++ printf %03i 1
++ memloc=mem001
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem001/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem001
++ ((  imem = 1 + 1  ))
++ ((  imemloc = 1 + 1  ))
++ [[ 2 -le 20 ]]
+++ printf %03i 2
++ member=mem002
+++ printf %03i 2
++ memloc=mem002
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem002/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem002
++ ((  imem = 2 + 1  ))
++ ((  imemloc = 2 + 1  ))
++ [[ 3 -le 20 ]]
+++ printf %03i 3
++ member=mem003
+++ printf %03i 3
++ memloc=mem003
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem003/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem003
++ ((  imem = 3 + 1  ))
++ ((  imemloc = 3 + 1  ))
++ [[ 4 -le 20 ]]
+++ printf %03i 4
++ member=mem004
+++ printf %03i 4
++ memloc=mem004
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem004/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem004
++ ((  imem = 4 + 1  ))
++ ((  imemloc = 4 + 1  ))
++ [[ 5 -le 20 ]]
+++ printf %03i 5
++ member=mem005
+++ printf %03i 5
++ memloc=mem005
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem005/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem005
++ ((  imem = 5 + 1  ))
++ ((  imemloc = 5 + 1  ))
++ [[ 6 -le 20 ]]
+++ printf %03i 6
++ member=mem006
+++ printf %03i 6
++ memloc=mem006
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem006/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem006
++ ((  imem = 6 + 1  ))
++ ((  imemloc = 6 + 1  ))
++ [[ 7 -le 20 ]]
+++ printf %03i 7
++ member=mem007
+++ printf %03i 7
++ memloc=mem007
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem007/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem007
++ ((  imem = 7 + 1  ))
++ ((  imemloc = 7 + 1  ))
++ [[ 8 -le 20 ]]
+++ printf %03i 8
++ member=mem008
+++ printf %03i 8
++ memloc=mem008
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem008/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem008
++ ((  imem = 8 + 1  ))
++ ((  imemloc = 8 + 1  ))
++ [[ 9 -le 20 ]]
+++ printf %03i 9
++ member=mem009
+++ printf %03i 9
++ memloc=mem009
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem009/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem009
++ ((  imem = 9 + 1  ))
++ ((  imemloc = 9 + 1  ))
++ [[ 10 -le 20 ]]
+++ printf %03i 10
++ member=mem010
+++ printf %03i 10
++ memloc=mem010
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem010/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem010
++ ((  imem = 10 + 1  ))
++ ((  imemloc = 10 + 1  ))
++ [[ 11 -le 20 ]]
+++ printf %03i 11
++ member=mem011
+++ printf %03i 11
++ memloc=mem011
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem011/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem011
++ ((  imem = 11 + 1  ))
++ ((  imemloc = 11 + 1  ))
++ [[ 12 -le 20 ]]
+++ printf %03i 12
++ member=mem012
+++ printf %03i 12
++ memloc=mem012
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem012/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem012
++ ((  imem = 12 + 1  ))
++ ((  imemloc = 12 + 1  ))
++ [[ 13 -le 20 ]]
+++ printf %03i 13
++ member=mem013
+++ printf %03i 13
++ memloc=mem013
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem013/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem013
++ ((  imem = 13 + 1  ))
++ ((  imemloc = 13 + 1  ))
++ [[ 14 -le 20 ]]
+++ printf %03i 14
++ member=mem014
+++ printf %03i 14
++ memloc=mem014
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem014/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem014
++ ((  imem = 14 + 1  ))
++ ((  imemloc = 14 + 1  ))
++ [[ 15 -le 20 ]]
+++ printf %03i 15
++ member=mem015
+++ printf %03i 15
++ memloc=mem015
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem015/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem015
++ ((  imem = 15 + 1  ))
++ ((  imemloc = 15 + 1  ))
++ [[ 16 -le 20 ]]
+++ printf %03i 16
++ member=mem016
+++ printf %03i 16
++ memloc=mem016
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem016/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem016
++ ((  imem = 16 + 1  ))
++ ((  imemloc = 16 + 1  ))
++ [[ 17 -le 20 ]]
+++ printf %03i 17
++ member=mem017
+++ printf %03i 17
++ memloc=mem017
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem017/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem017
++ ((  imem = 17 + 1  ))
++ ((  imemloc = 17 + 1  ))
++ [[ 18 -le 20 ]]
+++ printf %03i 18
++ member=mem018
+++ printf %03i 18
++ memloc=mem018
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem018/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem018
++ ((  imem = 18 + 1  ))
++ ((  imemloc = 18 + 1  ))
++ [[ 19 -le 20 ]]
+++ printf %03i 19
++ member=mem019
+++ printf %03i 19
++ memloc=mem019
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem019/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem019
++ ((  imem = 19 + 1  ))
++ ((  imemloc = 19 + 1  ))
++ [[ 20 -le 20 ]]
+++ printf %03i 20
++ member=mem020
+++ printf %03i 20
++ memloc=mem020
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem020/gdas.t18z.atmf006s.nemsio ./ensemble_data/sigf06_ens_mem020
++ ((  imem = 20 + 1  ))
++ ((  imemloc = 20 + 1  ))
++ [[ 21 -le 20 ]]
++ for fh in '$flist'
++ sigens=gdas.t18z.atmf007s.nemsio
++ imem=1
++ imemloc=1
++ [[ 1 -le 20 ]]
+++ printf %03i 1
++ member=mem001
+++ printf %03i 1
++ memloc=mem001
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem001/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem001
++ ((  imem = 1 + 1  ))
++ ((  imemloc = 1 + 1  ))
++ [[ 2 -le 20 ]]
+++ printf %03i 2
++ member=mem002
+++ printf %03i 2
++ memloc=mem002
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem002/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem002
++ ((  imem = 2 + 1  ))
++ ((  imemloc = 2 + 1  ))
++ [[ 3 -le 20 ]]
+++ printf %03i 3
++ member=mem003
+++ printf %03i 3
++ memloc=mem003
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem003/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem003
++ ((  imem = 3 + 1  ))
++ ((  imemloc = 3 + 1  ))
++ [[ 4 -le 20 ]]
+++ printf %03i 4
++ member=mem004
+++ printf %03i 4
++ memloc=mem004
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem004/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem004
++ ((  imem = 4 + 1  ))
++ ((  imemloc = 4 + 1  ))
++ [[ 5 -le 20 ]]
+++ printf %03i 5
++ member=mem005
+++ printf %03i 5
++ memloc=mem005
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem005/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem005
++ ((  imem = 5 + 1  ))
++ ((  imemloc = 5 + 1  ))
++ [[ 6 -le 20 ]]
+++ printf %03i 6
++ member=mem006
+++ printf %03i 6
++ memloc=mem006
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem006/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem006
++ ((  imem = 6 + 1  ))
++ ((  imemloc = 6 + 1  ))
++ [[ 7 -le 20 ]]
+++ printf %03i 7
++ member=mem007
+++ printf %03i 7
++ memloc=mem007
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem007/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem007
++ ((  imem = 7 + 1  ))
++ ((  imemloc = 7 + 1  ))
++ [[ 8 -le 20 ]]
+++ printf %03i 8
++ member=mem008
+++ printf %03i 8
++ memloc=mem008
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem008/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem008
++ ((  imem = 8 + 1  ))
++ ((  imemloc = 8 + 1  ))
++ [[ 9 -le 20 ]]
+++ printf %03i 9
++ member=mem009
+++ printf %03i 9
++ memloc=mem009
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem009/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem009
++ ((  imem = 9 + 1  ))
++ ((  imemloc = 9 + 1  ))
++ [[ 10 -le 20 ]]
+++ printf %03i 10
++ member=mem010
+++ printf %03i 10
++ memloc=mem010
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem010/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem010
++ ((  imem = 10 + 1  ))
++ ((  imemloc = 10 + 1  ))
++ [[ 11 -le 20 ]]
+++ printf %03i 11
++ member=mem011
+++ printf %03i 11
++ memloc=mem011
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem011/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem011
++ ((  imem = 11 + 1  ))
++ ((  imemloc = 11 + 1  ))
++ [[ 12 -le 20 ]]
+++ printf %03i 12
++ member=mem012
+++ printf %03i 12
++ memloc=mem012
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem012/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem012
++ ((  imem = 12 + 1  ))
++ ((  imemloc = 12 + 1  ))
++ [[ 13 -le 20 ]]
+++ printf %03i 13
++ member=mem013
+++ printf %03i 13
++ memloc=mem013
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem013/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem013
++ ((  imem = 13 + 1  ))
++ ((  imemloc = 13 + 1  ))
++ [[ 14 -le 20 ]]
+++ printf %03i 14
++ member=mem014
+++ printf %03i 14
++ memloc=mem014
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem014/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem014
++ ((  imem = 14 + 1  ))
++ ((  imemloc = 14 + 1  ))
++ [[ 15 -le 20 ]]
+++ printf %03i 15
++ member=mem015
+++ printf %03i 15
++ memloc=mem015
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem015/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem015
++ ((  imem = 15 + 1  ))
++ ((  imemloc = 15 + 1  ))
++ [[ 16 -le 20 ]]
+++ printf %03i 16
++ member=mem016
+++ printf %03i 16
++ memloc=mem016
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem016/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem016
++ ((  imem = 16 + 1  ))
++ ((  imemloc = 16 + 1  ))
++ [[ 17 -le 20 ]]
+++ printf %03i 17
++ member=mem017
+++ printf %03i 17
++ memloc=mem017
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem017/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem017
++ ((  imem = 17 + 1  ))
++ ((  imemloc = 17 + 1  ))
++ [[ 18 -le 20 ]]
+++ printf %03i 18
++ member=mem018
+++ printf %03i 18
++ memloc=mem018
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem018/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem018
++ ((  imem = 18 + 1  ))
++ ((  imemloc = 18 + 1  ))
++ [[ 19 -le 20 ]]
+++ printf %03i 19
++ member=mem019
+++ printf %03i 19
++ memloc=mem019
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem019/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem019
++ ((  imem = 19 + 1  ))
++ ((  imemloc = 19 + 1  ))
++ [[ 20 -le 20 ]]
+++ printf %03i 20
++ member=mem020
+++ printf %03i 20
++ memloc=mem020
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem020/gdas.t18z.atmf007s.nemsio ./ensemble_data/sigf07_ens_mem020
++ ((  imem = 20 + 1  ))
++ ((  imemloc = 20 + 1  ))
++ [[ 21 -le 20 ]]
++ for fh in '$flist'
++ sigens=gdas.t18z.atmf008s.nemsio
++ imem=1
++ imemloc=1
++ [[ 1 -le 20 ]]
+++ printf %03i 1
++ member=mem001
+++ printf %03i 1
++ memloc=mem001
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem001/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem001
++ ((  imem = 1 + 1  ))
++ ((  imemloc = 1 + 1  ))
++ [[ 2 -le 20 ]]
+++ printf %03i 2
++ member=mem002
+++ printf %03i 2
++ memloc=mem002
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem002/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem002
++ ((  imem = 2 + 1  ))
++ ((  imemloc = 2 + 1  ))
++ [[ 3 -le 20 ]]
+++ printf %03i 3
++ member=mem003
+++ printf %03i 3
++ memloc=mem003
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem003/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem003
++ ((  imem = 3 + 1  ))
++ ((  imemloc = 3 + 1  ))
++ [[ 4 -le 20 ]]
+++ printf %03i 4
++ member=mem004
+++ printf %03i 4
++ memloc=mem004
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem004/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem004
++ ((  imem = 4 + 1  ))
++ ((  imemloc = 4 + 1  ))
++ [[ 5 -le 20 ]]
+++ printf %03i 5
++ member=mem005
+++ printf %03i 5
++ memloc=mem005
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem005/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem005
++ ((  imem = 5 + 1  ))
++ ((  imemloc = 5 + 1  ))
++ [[ 6 -le 20 ]]
+++ printf %03i 6
++ member=mem006
+++ printf %03i 6
++ memloc=mem006
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem006/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem006
++ ((  imem = 6 + 1  ))
++ ((  imemloc = 6 + 1  ))
++ [[ 7 -le 20 ]]
+++ printf %03i 7
++ member=mem007
+++ printf %03i 7
++ memloc=mem007
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem007/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem007
++ ((  imem = 7 + 1  ))
++ ((  imemloc = 7 + 1  ))
++ [[ 8 -le 20 ]]
+++ printf %03i 8
++ member=mem008
+++ printf %03i 8
++ memloc=mem008
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem008/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem008
++ ((  imem = 8 + 1  ))
++ ((  imemloc = 8 + 1  ))
++ [[ 9 -le 20 ]]
+++ printf %03i 9
++ member=mem009
+++ printf %03i 9
++ memloc=mem009
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem009/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem009
++ ((  imem = 9 + 1  ))
++ ((  imemloc = 9 + 1  ))
++ [[ 10 -le 20 ]]
+++ printf %03i 10
++ member=mem010
+++ printf %03i 10
++ memloc=mem010
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem010/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem010
++ ((  imem = 10 + 1  ))
++ ((  imemloc = 10 + 1  ))
++ [[ 11 -le 20 ]]
+++ printf %03i 11
++ member=mem011
+++ printf %03i 11
++ memloc=mem011
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem011/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem011
++ ((  imem = 11 + 1  ))
++ ((  imemloc = 11 + 1  ))
++ [[ 12 -le 20 ]]
+++ printf %03i 12
++ member=mem012
+++ printf %03i 12
++ memloc=mem012
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem012/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem012
++ ((  imem = 12 + 1  ))
++ ((  imemloc = 12 + 1  ))
++ [[ 13 -le 20 ]]
+++ printf %03i 13
++ member=mem013
+++ printf %03i 13
++ memloc=mem013
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem013/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem013
++ ((  imem = 13 + 1  ))
++ ((  imemloc = 13 + 1  ))
++ [[ 14 -le 20 ]]
+++ printf %03i 14
++ member=mem014
+++ printf %03i 14
++ memloc=mem014
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem014/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem014
++ ((  imem = 14 + 1  ))
++ ((  imemloc = 14 + 1  ))
++ [[ 15 -le 20 ]]
+++ printf %03i 15
++ member=mem015
+++ printf %03i 15
++ memloc=mem015
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem015/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem015
++ ((  imem = 15 + 1  ))
++ ((  imemloc = 15 + 1  ))
++ [[ 16 -le 20 ]]
+++ printf %03i 16
++ member=mem016
+++ printf %03i 16
++ memloc=mem016
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem016/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem016
++ ((  imem = 16 + 1  ))
++ ((  imemloc = 16 + 1  ))
++ [[ 17 -le 20 ]]
+++ printf %03i 17
++ member=mem017
+++ printf %03i 17
++ memloc=mem017
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem017/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem017
++ ((  imem = 17 + 1  ))
++ ((  imemloc = 17 + 1  ))
++ [[ 18 -le 20 ]]
+++ printf %03i 18
++ member=mem018
+++ printf %03i 18
++ memloc=mem018
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem018/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem018
++ ((  imem = 18 + 1  ))
++ ((  imemloc = 18 + 1  ))
++ [[ 19 -le 20 ]]
+++ printf %03i 19
++ member=mem019
+++ printf %03i 19
++ memloc=mem019
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem019/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem019
++ ((  imem = 19 + 1  ))
++ ((  imemloc = 19 + 1  ))
++ [[ 20 -le 20 ]]
+++ printf %03i 20
++ member=mem020
+++ printf %03i 20
++ memloc=mem020
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem020/gdas.t18z.atmf008s.nemsio ./ensemble_data/sigf08_ens_mem020
++ ((  imem = 20 + 1  ))
++ ((  imemloc = 20 + 1  ))
++ [[ 21 -le 20 ]]
++ for fh in '$flist'
++ sigens=gdas.t18z.atmf009s.nemsio
++ imem=1
++ imemloc=1
++ [[ 1 -le 20 ]]
+++ printf %03i 1
++ member=mem001
+++ printf %03i 1
++ memloc=mem001
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem001/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem001
++ ((  imem = 1 + 1  ))
++ ((  imemloc = 1 + 1  ))
++ [[ 2 -le 20 ]]
+++ printf %03i 2
++ member=mem002
+++ printf %03i 2
++ memloc=mem002
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem002/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem002
++ ((  imem = 2 + 1  ))
++ ((  imemloc = 2 + 1  ))
++ [[ 3 -le 20 ]]
+++ printf %03i 3
++ member=mem003
+++ printf %03i 3
++ memloc=mem003
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem003/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem003
++ ((  imem = 3 + 1  ))
++ ((  imemloc = 3 + 1  ))
++ [[ 4 -le 20 ]]
+++ printf %03i 4
++ member=mem004
+++ printf %03i 4
++ memloc=mem004
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem004/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem004
++ ((  imem = 4 + 1  ))
++ ((  imemloc = 4 + 1  ))
++ [[ 5 -le 20 ]]
+++ printf %03i 5
++ member=mem005
+++ printf %03i 5
++ memloc=mem005
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem005/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem005
++ ((  imem = 5 + 1  ))
++ ((  imemloc = 5 + 1  ))
++ [[ 6 -le 20 ]]
+++ printf %03i 6
++ member=mem006
+++ printf %03i 6
++ memloc=mem006
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem006/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem006
++ ((  imem = 6 + 1  ))
++ ((  imemloc = 6 + 1  ))
++ [[ 7 -le 20 ]]
+++ printf %03i 7
++ member=mem007
+++ printf %03i 7
++ memloc=mem007
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem007/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem007
++ ((  imem = 7 + 1  ))
++ ((  imemloc = 7 + 1  ))
++ [[ 8 -le 20 ]]
+++ printf %03i 8
++ member=mem008
+++ printf %03i 8
++ memloc=mem008
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem008/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem008
++ ((  imem = 8 + 1  ))
++ ((  imemloc = 8 + 1  ))
++ [[ 9 -le 20 ]]
+++ printf %03i 9
++ member=mem009
+++ printf %03i 9
++ memloc=mem009
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem009/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem009
++ ((  imem = 9 + 1  ))
++ ((  imemloc = 9 + 1  ))
++ [[ 10 -le 20 ]]
+++ printf %03i 10
++ member=mem010
+++ printf %03i 10
++ memloc=mem010
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem010/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem010
++ ((  imem = 10 + 1  ))
++ ((  imemloc = 10 + 1  ))
++ [[ 11 -le 20 ]]
+++ printf %03i 11
++ member=mem011
+++ printf %03i 11
++ memloc=mem011
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem011/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem011
++ ((  imem = 11 + 1  ))
++ ((  imemloc = 11 + 1  ))
++ [[ 12 -le 20 ]]
+++ printf %03i 12
++ member=mem012
+++ printf %03i 12
++ memloc=mem012
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem012/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem012
++ ((  imem = 12 + 1  ))
++ ((  imemloc = 12 + 1  ))
++ [[ 13 -le 20 ]]
+++ printf %03i 13
++ member=mem013
+++ printf %03i 13
++ memloc=mem013
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem013/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem013
++ ((  imem = 13 + 1  ))
++ ((  imemloc = 13 + 1  ))
++ [[ 14 -le 20 ]]
+++ printf %03i 14
++ member=mem014
+++ printf %03i 14
++ memloc=mem014
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem014/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem014
++ ((  imem = 14 + 1  ))
++ ((  imemloc = 14 + 1  ))
++ [[ 15 -le 20 ]]
+++ printf %03i 15
++ member=mem015
+++ printf %03i 15
++ memloc=mem015
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem015/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem015
++ ((  imem = 15 + 1  ))
++ ((  imemloc = 15 + 1  ))
++ [[ 16 -le 20 ]]
+++ printf %03i 16
++ member=mem016
+++ printf %03i 16
++ memloc=mem016
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem016/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem016
++ ((  imem = 16 + 1  ))
++ ((  imemloc = 16 + 1  ))
++ [[ 17 -le 20 ]]
+++ printf %03i 17
++ member=mem017
+++ printf %03i 17
++ memloc=mem017
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem017/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem017
++ ((  imem = 17 + 1  ))
++ ((  imemloc = 17 + 1  ))
++ [[ 18 -le 20 ]]
+++ printf %03i 18
++ member=mem018
+++ printf %03i 18
++ memloc=mem018
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem018/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem018
++ ((  imem = 18 + 1  ))
++ ((  imemloc = 18 + 1  ))
++ [[ 19 -le 20 ]]
+++ printf %03i 19
++ member=mem019
+++ printf %03i 19
++ memloc=mem019
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem019/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem019
++ ((  imem = 19 + 1  ))
++ ((  imemloc = 19 + 1  ))
++ [[ 20 -le 20 ]]
+++ printf %03i 20
++ member=mem020
+++ printf %03i 20
++ memloc=mem020
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/mem020/gdas.t18z.atmf009s.nemsio ./ensemble_data/sigf09_ens_mem020
++ ((  imem = 20 + 1  ))
++ ((  imemloc = 20 + 1  ))
++ [[ 21 -le 20 ]]
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/enkfgdas.20181104/18/gdas.t18z.sfcf006.ensmean.nemsio ./sfcf06_anlgrid
++ ln -fs /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/global/fv3/2018110500/gdas.20181104/18/gdas.t18z.radstat ./radstat.gdas
+++ tar xvf radstat.gdas
+++ cut '-d ' -f2
+++ grep --color=auto _ges
++ listdiag='diag_sndrd1_g15_ges.2018110418.nc4.gz
+diag_sndrd2_g15_ges.2018110418.nc4.gz
+diag_sndrd3_g15_ges.2018110418.nc4.gz
+diag_sndrd4_g15_ges.2018110418.nc4.gz
+diag_amsua_n15_ges.2018110418.nc4.gz
+diag_airs_aqua_ges.2018110418.nc4.gz
+diag_amsua_aqua_ges.2018110418.nc4.gz
+diag_hirs4_metop-a_ges.2018110418.nc4.gz
+diag_amsua_n18_ges.2018110418.nc4.gz
+diag_amsua_metop-a_ges.2018110418.nc4.gz
+diag_mhs_metop-a_ges.2018110418.nc4.gz
+diag_ssmis_f17_ges.2018110418.nc4.gz
+diag_ssmis_f18_ges.2018110418.nc4.gz
+diag_iasi_metop-a_ges.2018110418.nc4.gz
+diag_hirs4_n19_ges.2018110418.nc4.gz
+diag_amsua_n19_ges.2018110418.nc4.gz
+diag_mhs_n19_ges.2018110418.nc4.gz
+diag_seviri_m08_ges.2018110418.nc4.gz
+diag_seviri_m11_ges.2018110418.nc4.gz
+diag_cris-fsr_npp_ges.2018110418.nc4.gz
+diag_cris-fsr_n20_ges.2018110418.nc4.gz
+diag_atms_npp_ges.2018110418.nc4.gz
+diag_atms_n20_ges.2018110418.nc4.gz
+diag_hirs4_metop-b_ges.2018110418.nc4.gz
+diag_amsua_metop-b_ges.2018110418.nc4.gz
+diag_mhs_metop-b_ges.2018110418.nc4.gz
+diag_iasi_metop-b_ges.2018110418.nc4.gz
+diag_avhrr_n18_ges.2018110418.nc4.gz
+diag_avhrr_metop-a_ges.2018110418.nc4.gz
+diag_saphir_meghat_ges.2018110418.nc4.gz'
++ for type in '$listdiag'
+++ echo diag_sndrd1_g15_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_sndrd1_g15_ges.2018110418.nc4.gz
+++ echo diag_sndrd1_g15_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_sndrd1_g15_ges
+++ echo diag_sndrd1_g15_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_sndrd1_g15_ges.2018110418.nc4.gz
+++ echo diag_sndrd1_g15_ges
+++ sed s/_ges//g
++ fnameanl=diag_sndrd1_g15
++ mv diag_sndrd1_g15_ges.2018110418 diag_sndrd1_g15
+mv: cannot stat ‘diag_sndrd1_g15_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_sndrd2_g15_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_sndrd2_g15_ges.2018110418.nc4.gz
+++ echo diag_sndrd2_g15_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_sndrd2_g15_ges
+++ echo diag_sndrd2_g15_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_sndrd2_g15_ges.2018110418.nc4.gz
+++ echo diag_sndrd2_g15_ges
+++ sed s/_ges//g
++ fnameanl=diag_sndrd2_g15
++ mv diag_sndrd2_g15_ges.2018110418 diag_sndrd2_g15
+mv: cannot stat ‘diag_sndrd2_g15_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_sndrd3_g15_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_sndrd3_g15_ges.2018110418.nc4.gz
+++ echo diag_sndrd3_g15_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_sndrd3_g15_ges
+++ echo diag_sndrd3_g15_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_sndrd3_g15_ges.2018110418.nc4.gz
+++ echo diag_sndrd3_g15_ges
+++ sed s/_ges//g
++ fnameanl=diag_sndrd3_g15
++ mv diag_sndrd3_g15_ges.2018110418 diag_sndrd3_g15
+mv: cannot stat ‘diag_sndrd3_g15_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_sndrd4_g15_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_sndrd4_g15_ges.2018110418.nc4.gz
+++ echo diag_sndrd4_g15_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_sndrd4_g15_ges
+++ echo diag_sndrd4_g15_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_sndrd4_g15_ges.2018110418.nc4.gz
+++ echo diag_sndrd4_g15_ges
+++ sed s/_ges//g
++ fnameanl=diag_sndrd4_g15
++ mv diag_sndrd4_g15_ges.2018110418 diag_sndrd4_g15
+mv: cannot stat ‘diag_sndrd4_g15_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_amsua_n15_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_amsua_n15_ges.2018110418.nc4.gz
+++ echo diag_amsua_n15_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_amsua_n15_ges
+++ echo diag_amsua_n15_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_amsua_n15_ges.2018110418.nc4.gz
+++ echo diag_amsua_n15_ges
+++ sed s/_ges//g
++ fnameanl=diag_amsua_n15
++ mv diag_amsua_n15_ges.2018110418 diag_amsua_n15
+mv: cannot stat ‘diag_amsua_n15_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_airs_aqua_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_airs_aqua_ges.2018110418.nc4.gz
+++ echo diag_airs_aqua_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_airs_aqua_ges
+++ echo diag_airs_aqua_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_airs_aqua_ges.2018110418.nc4.gz
+++ echo diag_airs_aqua_ges
+++ sed s/_ges//g
++ fnameanl=diag_airs_aqua
++ mv diag_airs_aqua_ges.2018110418 diag_airs_aqua
+mv: cannot stat ‘diag_airs_aqua_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_amsua_aqua_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_amsua_aqua_ges.2018110418.nc4.gz
+++ echo diag_amsua_aqua_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_amsua_aqua_ges
+++ echo diag_amsua_aqua_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_amsua_aqua_ges.2018110418.nc4.gz
+++ echo diag_amsua_aqua_ges
+++ sed s/_ges//g
++ fnameanl=diag_amsua_aqua
++ mv diag_amsua_aqua_ges.2018110418 diag_amsua_aqua
+mv: cannot stat ‘diag_amsua_aqua_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_hirs4_metop-a_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_hirs4_metop-a_ges.2018110418.nc4.gz
+++ echo diag_hirs4_metop-a_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_hirs4_metop-a_ges
+++ echo diag_hirs4_metop-a_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_hirs4_metop-a_ges.2018110418.nc4.gz
+++ echo diag_hirs4_metop-a_ges
+++ sed s/_ges//g
++ fnameanl=diag_hirs4_metop-a
++ mv diag_hirs4_metop-a_ges.2018110418 diag_hirs4_metop-a
+mv: cannot stat ‘diag_hirs4_metop-a_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_amsua_n18_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_amsua_n18_ges.2018110418.nc4.gz
+++ echo diag_amsua_n18_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_amsua_n18_ges
+++ echo diag_amsua_n18_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_amsua_n18_ges.2018110418.nc4.gz
+++ echo diag_amsua_n18_ges
+++ sed s/_ges//g
++ fnameanl=diag_amsua_n18
++ mv diag_amsua_n18_ges.2018110418 diag_amsua_n18
+mv: cannot stat ‘diag_amsua_n18_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_amsua_metop-a_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_amsua_metop-a_ges.2018110418.nc4.gz
+++ echo diag_amsua_metop-a_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_amsua_metop-a_ges
+++ echo diag_amsua_metop-a_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_amsua_metop-a_ges.2018110418.nc4.gz
+++ echo diag_amsua_metop-a_ges
+++ sed s/_ges//g
++ fnameanl=diag_amsua_metop-a
++ mv diag_amsua_metop-a_ges.2018110418 diag_amsua_metop-a
+mv: cannot stat ‘diag_amsua_metop-a_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_mhs_metop-a_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_mhs_metop-a_ges.2018110418.nc4.gz
+++ echo diag_mhs_metop-a_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_mhs_metop-a_ges
+++ echo diag_mhs_metop-a_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_mhs_metop-a_ges.2018110418.nc4.gz
+++ echo diag_mhs_metop-a_ges
+++ sed s/_ges//g
++ fnameanl=diag_mhs_metop-a
++ mv diag_mhs_metop-a_ges.2018110418 diag_mhs_metop-a
+mv: cannot stat ‘diag_mhs_metop-a_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_ssmis_f17_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_ssmis_f17_ges.2018110418.nc4.gz
+++ echo diag_ssmis_f17_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_ssmis_f17_ges
+++ echo diag_ssmis_f17_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_ssmis_f17_ges.2018110418.nc4.gz
+++ echo diag_ssmis_f17_ges
+++ sed s/_ges//g
++ fnameanl=diag_ssmis_f17
++ mv diag_ssmis_f17_ges.2018110418 diag_ssmis_f17
+mv: cannot stat ‘diag_ssmis_f17_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_ssmis_f18_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_ssmis_f18_ges.2018110418.nc4.gz
+++ echo diag_ssmis_f18_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_ssmis_f18_ges
+++ echo diag_ssmis_f18_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_ssmis_f18_ges.2018110418.nc4.gz
+++ echo diag_ssmis_f18_ges
+++ sed s/_ges//g
++ fnameanl=diag_ssmis_f18
++ mv diag_ssmis_f18_ges.2018110418 diag_ssmis_f18
+mv: cannot stat ‘diag_ssmis_f18_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_iasi_metop-a_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_iasi_metop-a_ges.2018110418.nc4.gz
+++ echo diag_iasi_metop-a_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_iasi_metop-a_ges
+++ echo diag_iasi_metop-a_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_iasi_metop-a_ges.2018110418.nc4.gz
+++ echo diag_iasi_metop-a_ges
+++ sed s/_ges//g
++ fnameanl=diag_iasi_metop-a
++ mv diag_iasi_metop-a_ges.2018110418 diag_iasi_metop-a
+mv: cannot stat ‘diag_iasi_metop-a_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_hirs4_n19_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_hirs4_n19_ges.2018110418.nc4.gz
+++ echo diag_hirs4_n19_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_hirs4_n19_ges
+++ echo diag_hirs4_n19_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_hirs4_n19_ges.2018110418.nc4.gz
+++ echo diag_hirs4_n19_ges
+++ sed s/_ges//g
++ fnameanl=diag_hirs4_n19
++ mv diag_hirs4_n19_ges.2018110418 diag_hirs4_n19
+mv: cannot stat ‘diag_hirs4_n19_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_amsua_n19_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_amsua_n19_ges.2018110418.nc4.gz
+++ echo diag_amsua_n19_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_amsua_n19_ges
+++ echo diag_amsua_n19_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_amsua_n19_ges.2018110418.nc4.gz
+++ echo diag_amsua_n19_ges
+++ sed s/_ges//g
++ fnameanl=diag_amsua_n19
++ mv diag_amsua_n19_ges.2018110418 diag_amsua_n19
+mv: cannot stat ‘diag_amsua_n19_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_mhs_n19_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_mhs_n19_ges.2018110418.nc4.gz
+++ echo diag_mhs_n19_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_mhs_n19_ges
+++ echo diag_mhs_n19_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_mhs_n19_ges.2018110418.nc4.gz
+++ echo diag_mhs_n19_ges
+++ sed s/_ges//g
++ fnameanl=diag_mhs_n19
++ mv diag_mhs_n19_ges.2018110418 diag_mhs_n19
+mv: cannot stat ‘diag_mhs_n19_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_seviri_m08_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_seviri_m08_ges.2018110418.nc4.gz
+++ echo diag_seviri_m08_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_seviri_m08_ges
+++ echo diag_seviri_m08_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_seviri_m08_ges.2018110418.nc4.gz
+++ echo diag_seviri_m08_ges
+++ sed s/_ges//g
++ fnameanl=diag_seviri_m08
++ mv diag_seviri_m08_ges.2018110418 diag_seviri_m08
+mv: cannot stat ‘diag_seviri_m08_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_seviri_m11_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_seviri_m11_ges.2018110418.nc4.gz
+++ echo diag_seviri_m11_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_seviri_m11_ges
+++ echo diag_seviri_m11_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_seviri_m11_ges.2018110418.nc4.gz
+++ echo diag_seviri_m11_ges
+++ sed s/_ges//g
++ fnameanl=diag_seviri_m11
++ mv diag_seviri_m11_ges.2018110418 diag_seviri_m11
+mv: cannot stat ‘diag_seviri_m11_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_cris-fsr_npp_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_cris-fsr_npp_ges.2018110418.nc4.gz
+++ echo diag_cris-fsr_npp_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_cris-fsr_npp_ges
+++ echo diag_cris-fsr_npp_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_cris-fsr_npp_ges.2018110418.nc4.gz
+++ echo diag_cris-fsr_npp_ges
+++ sed s/_ges//g
++ fnameanl=diag_cris-fsr_npp
++ mv diag_cris-fsr_npp_ges.2018110418 diag_cris-fsr_npp
+mv: cannot stat ‘diag_cris-fsr_npp_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_cris-fsr_n20_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_cris-fsr_n20_ges.2018110418.nc4.gz
+++ echo diag_cris-fsr_n20_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_cris-fsr_n20_ges
+++ echo diag_cris-fsr_n20_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_cris-fsr_n20_ges.2018110418.nc4.gz
+++ echo diag_cris-fsr_n20_ges
+++ sed s/_ges//g
++ fnameanl=diag_cris-fsr_n20
++ mv diag_cris-fsr_n20_ges.2018110418 diag_cris-fsr_n20
+mv: cannot stat ‘diag_cris-fsr_n20_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_atms_npp_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_atms_npp_ges.2018110418.nc4.gz
+++ echo diag_atms_npp_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_atms_npp_ges
+++ echo diag_atms_npp_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_atms_npp_ges.2018110418.nc4.gz
+++ echo diag_atms_npp_ges
+++ sed s/_ges//g
++ fnameanl=diag_atms_npp
++ mv diag_atms_npp_ges.2018110418 diag_atms_npp
+mv: cannot stat ‘diag_atms_npp_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_atms_n20_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_atms_n20_ges.2018110418.nc4.gz
+++ echo diag_atms_n20_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_atms_n20_ges
+++ echo diag_atms_n20_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_atms_n20_ges.2018110418.nc4.gz
+++ echo diag_atms_n20_ges
+++ sed s/_ges//g
++ fnameanl=diag_atms_n20
++ mv diag_atms_n20_ges.2018110418 diag_atms_n20
+mv: cannot stat ‘diag_atms_n20_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_hirs4_metop-b_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_hirs4_metop-b_ges.2018110418.nc4.gz
+++ echo diag_hirs4_metop-b_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_hirs4_metop-b_ges
+++ echo diag_hirs4_metop-b_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_hirs4_metop-b_ges.2018110418.nc4.gz
+++ echo diag_hirs4_metop-b_ges
+++ sed s/_ges//g
++ fnameanl=diag_hirs4_metop-b
++ mv diag_hirs4_metop-b_ges.2018110418 diag_hirs4_metop-b
+mv: cannot stat ‘diag_hirs4_metop-b_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_amsua_metop-b_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_amsua_metop-b_ges.2018110418.nc4.gz
+++ echo diag_amsua_metop-b_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_amsua_metop-b_ges
+++ echo diag_amsua_metop-b_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_amsua_metop-b_ges.2018110418.nc4.gz
+++ echo diag_amsua_metop-b_ges
+++ sed s/_ges//g
++ fnameanl=diag_amsua_metop-b
++ mv diag_amsua_metop-b_ges.2018110418 diag_amsua_metop-b
+mv: cannot stat ‘diag_amsua_metop-b_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_mhs_metop-b_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_mhs_metop-b_ges.2018110418.nc4.gz
+++ echo diag_mhs_metop-b_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_mhs_metop-b_ges
+++ echo diag_mhs_metop-b_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_mhs_metop-b_ges.2018110418.nc4.gz
+++ echo diag_mhs_metop-b_ges
+++ sed s/_ges//g
++ fnameanl=diag_mhs_metop-b
++ mv diag_mhs_metop-b_ges.2018110418 diag_mhs_metop-b
+mv: cannot stat ‘diag_mhs_metop-b_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_iasi_metop-b_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_iasi_metop-b_ges.2018110418.nc4.gz
+++ echo diag_iasi_metop-b_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_iasi_metop-b_ges
+++ echo diag_iasi_metop-b_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_iasi_metop-b_ges.2018110418.nc4.gz
+++ echo diag_iasi_metop-b_ges
+++ sed s/_ges//g
++ fnameanl=diag_iasi_metop-b
++ mv diag_iasi_metop-b_ges.2018110418 diag_iasi_metop-b
+mv: cannot stat ‘diag_iasi_metop-b_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_avhrr_n18_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_avhrr_n18_ges.2018110418.nc4.gz
+++ echo diag_avhrr_n18_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_avhrr_n18_ges
+++ echo diag_avhrr_n18_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_avhrr_n18_ges.2018110418.nc4.gz
+++ echo diag_avhrr_n18_ges
+++ sed s/_ges//g
++ fnameanl=diag_avhrr_n18
++ mv diag_avhrr_n18_ges.2018110418 diag_avhrr_n18
+mv: cannot stat ‘diag_avhrr_n18_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_avhrr_metop-a_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_avhrr_metop-a_ges.2018110418.nc4.gz
+++ echo diag_avhrr_metop-a_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_avhrr_metop-a_ges
+++ echo diag_avhrr_metop-a_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_avhrr_metop-a_ges.2018110418.nc4.gz
+++ echo diag_avhrr_metop-a_ges
+++ sed s/_ges//g
++ fnameanl=diag_avhrr_metop-a
++ mv diag_avhrr_metop-a_ges.2018110418 diag_avhrr_metop-a
+mv: cannot stat ‘diag_avhrr_metop-a_ges.2018110418’: No such file or directory
++ for type in '$listdiag'
+++ echo diag_saphir_meghat_ges.2018110418.nc4.gz
+++ cut -d, -f1
++ diag_file=diag_saphir_meghat_ges.2018110418.nc4.gz
+++ echo diag_saphir_meghat_ges.2018110418.nc4.gz
+++ cut -d. -f1
++ fname=diag_saphir_meghat_ges
+++ echo diag_saphir_meghat_ges.2018110418.nc4.gz
+++ cut -d. -f2
++ date=2018110418
++ gunzip diag_saphir_meghat_ges.2018110418.nc4.gz
+++ echo diag_saphir_meghat_ges
+++ sed s/_ges//g
++ fnameanl=diag_saphir_meghat
++ mv diag_saphir_meghat_ges.2018110418 diag_saphir_meghat
+mv: cannot stat ‘diag_saphir_meghat_ges.2018110418’: No such file or directory
++ cd /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_global_fv3_4denvar_T126/global_fv3_4denvar_T126_loproc_updat
++ echo 'run gsi now'
+run gsi now
++ eval 'srun /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_global_fv3_4denvar_T126/global_fv3_4denvar_T126_loproc_updat/gsi.x > stdout 2>&1'
+++ srun /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_global_fv3_4denvar_T126/global_fv3_4denvar_T126_loproc_updat/gsi.x
++ rc=0
++ exit 0
+_______________________________________________________________
+Start Epilog v19.07.23 on node t0901 for job 2014935 :: Mon Aug 19 20:19:50 UTC 2019
+Job 2014935 (not serial) finished for user Louis.Kouvaris in partition theia with exit code 0:0
+_______________________________________________________________
+End Epilogue v19.07.23 Mon Aug 19 20:19:50 UTC 2019

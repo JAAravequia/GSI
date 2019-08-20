@@ -1,0 +1,957 @@
+Start prolog.task v19.07.23 on node t0235 for job 2015100 :: Mon Aug 19 21:02:37 GMT 2019
+_______________________________________________________________
+End prolog.task v19.07.23 Mon Aug 19 21:02:37 GMT 2019
+_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build
+beginning regression_var.sh, machine is Theia
+machine is set to 'Theia'
+done loading modules
+
+Currently Loaded Modules:
+  1) intel/15.6.233    6) nemsio/v2.2.1  11) w3emc/v2.3.0
+  2) mvapich2/2.1rc1   7) sfcio/v1.0.0   12) bacio/v2.0.2
+  3) hdf5/1.8.14       8) sigio/v2.0.1   13) crtm/v2.2.3
+  4) netcdf/4.3.0      9) sp/v2.0.2      14) prod_util/1.0.18
+  5) bufr/v10.2.5     10) w3nco/v2.0.6   15) cmake/3.12.3-gcc-8.2.0
+
+ 
+
++ exp=nmmb_nems_4denvar_hiproc_updat
++ tmpdir=/scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_nmmb_nems_4denvar/nmmb_nems_4denvar_hiproc_updat
++ savdir=/scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/outreg_nmmb_nems_4denvar/nmmb_nems_4denvar_hiproc_updat
++ UNCOMPRESS=gunzip
++ CLEAN=NO
++ ncp=/bin/cp
++ rm -rf /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_nmmb_nems_4denvar/nmmb_nems_4denvar_hiproc_updat
++ mkdir -p /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_nmmb_nems_4denvar/nmmb_nems_4denvar_hiproc_updat
++ chgrp rstprod /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_nmmb_nems_4denvar/nmmb_nems_4denvar_hiproc_updat
++ chmod 750 /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_nmmb_nems_4denvar/nmmb_nems_4denvar_hiproc_updat
++ cd /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_nmmb_nems_4denvar/nmmb_nems_4denvar_hiproc_updat
++ fixcrtm=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update
++ berror=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nam_nmm_berror.f77.gcv
++ anavinfo=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/anavinfo_nems_nmmb
++ . /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/regression/regression_nl_update.sh
++++ expr substr nmmb_nems_4denvar_hiproc_updat 1 6
+++ [[ nmmb_n = \g\l\o\b\a\l ]]
++++ expr substr nmmb_nems_4denvar_hiproc_updat 1 4
+++ [[ nmmb = \r\t\m\a ]]
+++ export OBSQC_update=
+++ OBSQC_update=
+++ export GRIDOPTS_update=
+++ GRIDOPTS_update=
+++ export BKGVERR_update=
+++ BKGVERR_update=
+++ export ANBKGERR_update=
+++ ANBKGERR_update=
+++ export JCOPTS_update=
+++ JCOPTS_update=
++++ expr substr nmmb_nems_4denvar_hiproc_updat 1 6
+++ [[ nmmb_n = \g\l\o\b\a\l ]]
+++ export OBSINPUT_update=
+++ OBSINPUT_update=
+++ export SUPERRAD_update=
+++ SUPERRAD_update=
+++ export SINGLEOB_update=
+++ SINGLEOB_update=
++ SETUP=
++ GRIDOPTS=
++ BKGVERR=
++ ANBKGERR=
++ JCOPTS=
++ STRONGOPTS=
++ OBSQC=
++ OBSINPUT=
++ SUPERRAD=
++ HYBRID_ENSEMBLE='ensemble_path="",'
++ SINGLEOB=
++ '[' .false. = .false. ']'
++ . /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/regression/regression_namelists.sh nems_nmmb_4denvar
+++ regtest=nems_nmmb_4denvar
+++ case $regtest in
+++ export 'gsi_namelist=
+
+ &SETUP
+   miter=2,niter(1)=50,niter(2)=50,niter_no_qc(1)=20,
+   write_diag(1)=.true.,write_diag(2)=.false.,write_diag(3)=.true.,
+   gencode=78,qoption=2,
+   factqmin=0.0,factqmax=0.0,
+   iguess=-1,use_gfs_ozone=.true.,
+   oneobtest=.false.,retrieval=.false.,
+   nhr_assimilation=6,l_foto=.false.,
+   use_pbl=.false.,gpstop=30.,
+   print_diag_pcg=.true.,
+   newpc4pred=.true., adp_anglebc=.true., angord=4,
+   passive_bc=.false., use_edges=.false., emiss_bc=.true.,
+   diag_precon=.true., step_start=1.e-3,
+   l4densvar=.true.,nhr_obsbin=3,ens_nstarthr=3,
+   
+ /
+ &GRIDOPTS
+   wrf_nmm_regional=.false.,wrf_mass_regional=.false.,nems_nmmb_regional=.true.,diagnostic_reg=.false.,
+   nmmb_reference_grid='\''H'\'',grid_ratio_nmmb=3.0,
+   filled_grid=.false.,half_grid=.false.,netcdf=.false.,
+   
+ /
+ &BKGERR
+   hzscl=0.373,0.746,1.50,
+   vs=1.0,bw=0.,fstat=.true.,
+   
+ /
+ &ANBKGERR
+   anisotropic=.false.,
+   
+ /
+ &JCOPTS
+   
+ /
+ &STRONGOPTS
+   nstrong=0,nvmodes_keep=20,period_max=3.,
+    baldiag_full=.true.,baldiag_inc=.true.,  
+   
+ /
+ &OBSQC
+   dfact=0.75,dfact1=3.0,noiqc=.true.,c_varqc=0.02,
+   vadfile='\''prepbufr'\'',oberrflg=.false.,njqc=.false.,vqc=.true.,
+   
+ /
+ &OBS_INPUT
+   dmesh(1)=120.0,time_window_max=3.0,ext_sonde=.true.,
+   
+ /
+OBS_INPUT::
+!  dfile          dtype       dplat       dsis                  dval    dthin  dsfcalc
+   prepbufr       ps          null        ps                    0.0      0      0
+   prepbufr       t           null        t                     0.0      0      0
+   prepbufr       q           null        q                     0.0      0      0
+   prepbufr       pw          null        pw                    0.0      0      0
+   prepbufr       uv          null        uv                    0.0      0      0
+   prepbufr       spd         null        spd                   0.0      0      0
+   prepbufr       dw          null        dw                    0.0      0      0
+   radarbufr      rw          null        l3rw                  0.0      0      0
+   l2rwbufr       rw          null        l2rw                  0.0      0      0
+   prepbufr       sst         null        sst                   0.0      0      0
+   gpsrobufr      gps_bnd     null        gps_bnd               0.0      0      0
+   ssmirrbufr     pcp_ssmi    dmsp        pcp_ssmi              0.0     -1      0
+   tmirrbufr      pcp_tmi     trmm        pcp_tmi               0.0     -1      0
+   sbuvbufr       sbuv2       n16         sbuv8_n16             0.0      0      0
+   sbuvbufr       sbuv2       n17         sbuv8_n17             0.0      0      0
+   sbuvbufr       sbuv2       n18         sbuv8_n18             0.0      0      0
+   hirs2bufr      hirs2       n14         hirs2_n14             0.0      1      0
+   hirs3bufr      hirs3       n16         hirs3_n16             0.0      1      0
+   hirs3bufr      hirs3       n17         hirs3_n17             0.0      1      0
+   hirs4bufr      hirs4       n18         hirs4_n18             0.0      1      0
+   hirs4bufr      hirs4       metop-a     hirs4_metop-a         0.0      1      0
+   gsndrbufr      sndr        g11         sndr_g11              0.0      1      0
+   gsndrbufr      sndr        g12         sndr_g12              0.0      1      0
+   gimgrbufr      goes_img    g11         imgr_g11              0.0      1      0
+   gimgrbufr      goes_img    g12         imgr_g12              0.0      1      0
+   airsbufr       airs        aqua        airs_aqua             0.0      1      0
+   msubufr        msu         n14         msu_n14               0.0      1      0
+   amsuabufr      amsua       n15         amsua_n15             0.0      1      0
+   amsuabufr      amsua       n16         amsua_n16             0.0      1      0
+   amsuabufr      amsua       n17         amsua_n17             0.0      1      0
+   amsuabufr      amsua       n18         amsua_n18             0.0      1      0
+   amsuabufr      amsua       metop-a     amsua_metop-a         0.0      1      0
+   airsbufr       amsua       aqua        amsua_aqua            0.0      1      0
+   amsubbufr      amsub       n15         amsub_n15             0.0      1      0
+   amsubbufr      amsub       n16         amsub_n16             0.0      1      0
+   amsubbufr      amsub       n17         amsub_n17             0.0      1      0
+   mhsbufr        mhs         n18         mhs_n18               0.0      1      0
+   mhsbufr        mhs         metop-a     mhs_metop-a           0.0      1      0
+   ssmitbufr      ssmi        f13         ssmi_f13              0.0      1      0
+   ssmitbufr      ssmi        f15         ssmi_f15              0.0      1      0
+   amsrebufr      amsre_low   aqua        amsre_aqua            0.0      1      0
+   amsrebufr      amsre_mid   aqua        amsre_aqua            0.0      1      0
+   amsrebufr      amsre_hig   aqua        amsre_aqua            0.0      1      0
+   ssmisbufr      ssmis       f16         ssmis_f16             0.0      1      0
+   gsnd1bufr      sndrd1      g12         sndrD1_g12            0.0      1      0
+   gsnd1bufr      sndrd2      g12         sndrD2_g12            0.0      1      0
+   gsnd1bufr      sndrd3      g12         sndrD3_g12            0.0      1      0
+   gsnd1bufr      sndrd4      g12         sndrD4_g12            0.0      1      0
+   gsnd1bufr      sndrd1      g11         sndrD1_g11            0.0      1      0
+   gsnd1bufr      sndrd2      g11         sndrD2_g11            0.0      1      0
+   gsnd1bufr      sndrd3      g11         sndrD3_g11            0.0      1      0
+   gsnd1bufr      sndrd4      g11         sndrD4_g11            0.0      1      0
+   gsnd1bufr      sndrd1      g13         sndrD1_g13            0.0      1      0
+   gsnd1bufr      sndrd2      g13         sndrD2_g13            0.0      1      0
+   gsnd1bufr      sndrd3      g13         sndrD3_g13            0.0      1      0
+   gsnd1bufr      sndrd4      g13         sndrD4_g13            0.0      1      0
+   iasibufr       iasi        metop-a     iasi_metop-a          0.0      1      0
+   gomebufr       gome        metop-a     gome_metop-a          0.0      1      0
+   omibufr        omi         aura        omi_aura              0.0      1      0
+   sbuvbufr       sbuv2       n19         sbuv8_n19             0.0      1      0
+   hirs4bufr      hirs4       n19         hirs4_n19             0.0      1      0
+   amsuabufr      amsua       n19         amsua_n19             0.0      1      0
+   mhsbufr        mhs         n19         mhs_n19               0.0      1      0
+   tcvitl         tcp         null        tcp                   0.0      0      0
+   satwndbufr     uv          null        uv                    0.0      0      0
+   gsnd1bufr      sndrd1      g15         sndrD1_g15            0.0      1      0
+   gsnd1bufr      sndrd2      g15         sndrD2_g15            0.0      1      0
+   gsnd1bufr      sndrd3      g15         sndrD3_g15            0.0      1      0
+   gsnd1bufr      sndrd4      g15         sndrD4_g15            0.0      1      0
+   ompsnpbufr     ompsnp      npp       ompsnp_npp              0.0      0      0
+   ompstcbufr     ompstc8     npp       ompstc8_npp             0.0      1      0
+::
+ &SUPEROB_RADAR
+   del_azimuth=5.,del_elev=.25,del_range=5000.,del_time=.5,elev_angle_max=5.,minnum=50,range_max=100000.,
+   l2superob_only=.false.,
+   
+ /
+ &LAG_DATA
+   
+ /
+ &HYBRID_ENSEMBLE
+   l_hyb_ens=.true.,
+   readin_beta=.true.,
+   n_ens=10,
+   uv_hyb_ens=.true.,
+   beta_s0=0.25,
+   s_ens_h=800,
+   s_ens_v=5,
+   generate_ens=.false.,
+   regional_ensemble_option=1,
+   aniso_a_en=.false.,
+   nlon_ens=0,
+   nlat_ens=0,
+   jcap_ens=0,
+   jcap_ens_test=0,
+   full_ensemble=.true.,pwgtflg=.true.,
+   ensemble_path="",
+ /
+ &RAPIDREFRESH_CLDSURF
+   
+ /
+ &CHEM
+   
+ /
+ &SINGLEOB_TEST
+   maginnov=0.1,magoberr=0.1,oneob_type='\''t'\'',
+   oblat=45.,oblon=270.,obpres=850.,obdattim=2015031300,
+   obhourset=0.,
+   
+ /
+ &NST
+ /
+'
+++ gsi_namelist='
+
+ &SETUP
+   miter=2,niter(1)=50,niter(2)=50,niter_no_qc(1)=20,
+   write_diag(1)=.true.,write_diag(2)=.false.,write_diag(3)=.true.,
+   gencode=78,qoption=2,
+   factqmin=0.0,factqmax=0.0,
+   iguess=-1,use_gfs_ozone=.true.,
+   oneobtest=.false.,retrieval=.false.,
+   nhr_assimilation=6,l_foto=.false.,
+   use_pbl=.false.,gpstop=30.,
+   print_diag_pcg=.true.,
+   newpc4pred=.true., adp_anglebc=.true., angord=4,
+   passive_bc=.false., use_edges=.false., emiss_bc=.true.,
+   diag_precon=.true., step_start=1.e-3,
+   l4densvar=.true.,nhr_obsbin=3,ens_nstarthr=3,
+   
+ /
+ &GRIDOPTS
+   wrf_nmm_regional=.false.,wrf_mass_regional=.false.,nems_nmmb_regional=.true.,diagnostic_reg=.false.,
+   nmmb_reference_grid='\''H'\'',grid_ratio_nmmb=3.0,
+   filled_grid=.false.,half_grid=.false.,netcdf=.false.,
+   
+ /
+ &BKGERR
+   hzscl=0.373,0.746,1.50,
+   vs=1.0,bw=0.,fstat=.true.,
+   
+ /
+ &ANBKGERR
+   anisotropic=.false.,
+   
+ /
+ &JCOPTS
+   
+ /
+ &STRONGOPTS
+   nstrong=0,nvmodes_keep=20,period_max=3.,
+    baldiag_full=.true.,baldiag_inc=.true.,  
+   
+ /
+ &OBSQC
+   dfact=0.75,dfact1=3.0,noiqc=.true.,c_varqc=0.02,
+   vadfile='\''prepbufr'\'',oberrflg=.false.,njqc=.false.,vqc=.true.,
+   
+ /
+ &OBS_INPUT
+   dmesh(1)=120.0,time_window_max=3.0,ext_sonde=.true.,
+   
+ /
+OBS_INPUT::
+!  dfile          dtype       dplat       dsis                  dval    dthin  dsfcalc
+   prepbufr       ps          null        ps                    0.0      0      0
+   prepbufr       t           null        t                     0.0      0      0
+   prepbufr       q           null        q                     0.0      0      0
+   prepbufr       pw          null        pw                    0.0      0      0
+   prepbufr       uv          null        uv                    0.0      0      0
+   prepbufr       spd         null        spd                   0.0      0      0
+   prepbufr       dw          null        dw                    0.0      0      0
+   radarbufr      rw          null        l3rw                  0.0      0      0
+   l2rwbufr       rw          null        l2rw                  0.0      0      0
+   prepbufr       sst         null        sst                   0.0      0      0
+   gpsrobufr      gps_bnd     null        gps_bnd               0.0      0      0
+   ssmirrbufr     pcp_ssmi    dmsp        pcp_ssmi              0.0     -1      0
+   tmirrbufr      pcp_tmi     trmm        pcp_tmi               0.0     -1      0
+   sbuvbufr       sbuv2       n16         sbuv8_n16             0.0      0      0
+   sbuvbufr       sbuv2       n17         sbuv8_n17             0.0      0      0
+   sbuvbufr       sbuv2       n18         sbuv8_n18             0.0      0      0
+   hirs2bufr      hirs2       n14         hirs2_n14             0.0      1      0
+   hirs3bufr      hirs3       n16         hirs3_n16             0.0      1      0
+   hirs3bufr      hirs3       n17         hirs3_n17             0.0      1      0
+   hirs4bufr      hirs4       n18         hirs4_n18             0.0      1      0
+   hirs4bufr      hirs4       metop-a     hirs4_metop-a         0.0      1      0
+   gsndrbufr      sndr        g11         sndr_g11              0.0      1      0
+   gsndrbufr      sndr        g12         sndr_g12              0.0      1      0
+   gimgrbufr      goes_img    g11         imgr_g11              0.0      1      0
+   gimgrbufr      goes_img    g12         imgr_g12              0.0      1      0
+   airsbufr       airs        aqua        airs_aqua             0.0      1      0
+   msubufr        msu         n14         msu_n14               0.0      1      0
+   amsuabufr      amsua       n15         amsua_n15             0.0      1      0
+   amsuabufr      amsua       n16         amsua_n16             0.0      1      0
+   amsuabufr      amsua       n17         amsua_n17             0.0      1      0
+   amsuabufr      amsua       n18         amsua_n18             0.0      1      0
+   amsuabufr      amsua       metop-a     amsua_metop-a         0.0      1      0
+   airsbufr       amsua       aqua        amsua_aqua            0.0      1      0
+   amsubbufr      amsub       n15         amsub_n15             0.0      1      0
+   amsubbufr      amsub       n16         amsub_n16             0.0      1      0
+   amsubbufr      amsub       n17         amsub_n17             0.0      1      0
+   mhsbufr        mhs         n18         mhs_n18               0.0      1      0
+   mhsbufr        mhs         metop-a     mhs_metop-a           0.0      1      0
+   ssmitbufr      ssmi        f13         ssmi_f13              0.0      1      0
+   ssmitbufr      ssmi        f15         ssmi_f15              0.0      1      0
+   amsrebufr      amsre_low   aqua        amsre_aqua            0.0      1      0
+   amsrebufr      amsre_mid   aqua        amsre_aqua            0.0      1      0
+   amsrebufr      amsre_hig   aqua        amsre_aqua            0.0      1      0
+   ssmisbufr      ssmis       f16         ssmis_f16             0.0      1      0
+   gsnd1bufr      sndrd1      g12         sndrD1_g12            0.0      1      0
+   gsnd1bufr      sndrd2      g12         sndrD2_g12            0.0      1      0
+   gsnd1bufr      sndrd3      g12         sndrD3_g12            0.0      1      0
+   gsnd1bufr      sndrd4      g12         sndrD4_g12            0.0      1      0
+   gsnd1bufr      sndrd1      g11         sndrD1_g11            0.0      1      0
+   gsnd1bufr      sndrd2      g11         sndrD2_g11            0.0      1      0
+   gsnd1bufr      sndrd3      g11         sndrD3_g11            0.0      1      0
+   gsnd1bufr      sndrd4      g11         sndrD4_g11            0.0      1      0
+   gsnd1bufr      sndrd1      g13         sndrD1_g13            0.0      1      0
+   gsnd1bufr      sndrd2      g13         sndrD2_g13            0.0      1      0
+   gsnd1bufr      sndrd3      g13         sndrD3_g13            0.0      1      0
+   gsnd1bufr      sndrd4      g13         sndrD4_g13            0.0      1      0
+   iasibufr       iasi        metop-a     iasi_metop-a          0.0      1      0
+   gomebufr       gome        metop-a     gome_metop-a          0.0      1      0
+   omibufr        omi         aura        omi_aura              0.0      1      0
+   sbuvbufr       sbuv2       n19         sbuv8_n19             0.0      1      0
+   hirs4bufr      hirs4       n19         hirs4_n19             0.0      1      0
+   amsuabufr      amsua       n19         amsua_n19             0.0      1      0
+   mhsbufr        mhs         n19         mhs_n19               0.0      1      0
+   tcvitl         tcp         null        tcp                   0.0      0      0
+   satwndbufr     uv          null        uv                    0.0      0      0
+   gsnd1bufr      sndrd1      g15         sndrD1_g15            0.0      1      0
+   gsnd1bufr      sndrd2      g15         sndrD2_g15            0.0      1      0
+   gsnd1bufr      sndrd3      g15         sndrD3_g15            0.0      1      0
+   gsnd1bufr      sndrd4      g15         sndrD4_g15            0.0      1      0
+   ompsnpbufr     ompsnp      npp       ompsnp_npp              0.0      0      0
+   ompstcbufr     ompstc8     npp       ompstc8_npp             0.0      1      0
+::
+ &SUPEROB_RADAR
+   del_azimuth=5.,del_elev=.25,del_range=5000.,del_time=.5,elev_angle_max=5.,minnum=50,range_max=100000.,
+   l2superob_only=.false.,
+   
+ /
+ &LAG_DATA
+   
+ /
+ &HYBRID_ENSEMBLE
+   l_hyb_ens=.true.,
+   readin_beta=.true.,
+   n_ens=10,
+   uv_hyb_ens=.true.,
+   beta_s0=0.25,
+   s_ens_h=800,
+   s_ens_v=5,
+   generate_ens=.false.,
+   regional_ensemble_option=1,
+   aniso_a_en=.false.,
+   nlon_ens=0,
+   nlat_ens=0,
+   jcap_ens=0,
+   jcap_ens_test=0,
+   full_ensemble=.true.,pwgtflg=.true.,
+   ensemble_path="",
+ /
+ &RAPIDREFRESH_CLDSURF
+   
+ /
+ &CHEM
+   
+ /
+ &SINGLEOB_TEST
+   maginnov=0.1,magoberr=0.1,oneob_type='\''t'\'',
+   oblat=45.,oblon=270.,obpres=850.,obdattim=2015031300,
+   obhourset=0.,
+   
+ /
+ &NST
+ /
+'
++ cat
++ emiscoef_IRwater=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/Nalli.IRwater.EmisCoeff.bin
++ emiscoef_IRice=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.IRice.EmisCoeff.bin
++ emiscoef_IRland=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.IRland.EmisCoeff.bin
++ emiscoef_IRsnow=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.IRsnow.EmisCoeff.bin
++ emiscoef_VISice=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.VISice.EmisCoeff.bin
++ emiscoef_VISland=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.VISland.EmisCoeff.bin
++ emiscoef_VISsnow=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.VISsnow.EmisCoeff.bin
++ emiscoef_VISwater=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.VISwater.EmisCoeff.bin
++ emiscoef_MWwater=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/FASTEM6.MWwater.EmisCoeff.bin
++ aercoef=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/AerosolCoeff.bin
++ cldcoef=/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/CloudCoeff.bin
++ satinfo=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nam_regional_satinfo.txt
++ cloudyinfo=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/cloudy_radiance_info.txt
++ scaninfo=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_scaninfo.txt
++ pcpinfo=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nam_global_pcpinfo.txt
++ ozinfo=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nam_global_ozinfo.txt
++ errtable=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nam_errtable.r3dv
++ convinfo=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nam_regional_convinfo.txt
++ mesonetuselist=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nam_mesonet_uselist.txt
++ stnuselist=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nam_mesonet_stnuselist.txt
++ qdaylist=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/rtma_q_day_rejectlist
++ qnightlist=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/rtma_q_night_rejectlist
++ tdaylist=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/rtma_t_day_rejectlist
++ tnightlist=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/rtma_t_night_rejectlist
++ wbinuselist=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/rtma_wbinuselist
++ locinfo=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nam_hybens_d01_locinfo
++ errtable_pw=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_pw.global
++ errtable_ps=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_ps.global_nqcf
++ errtable_t=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_t.global_nqcf
++ errtable_q=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_q.global_nqcf
++ errtable_uv=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_uv.global_nqcf
++ btable_ps=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nqc_b_ps.global_nqcf
++ btable_t=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nqc_b_t.global_nqcf
++ btable_q=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nqc_b_q.global_nqcf
++ btable_uv=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nqc_b_uv.global_nqcf
++ hybens_info=/scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nam_hybens_d01_info
++ [[ nmmb_nems_4denvar_hiproc_updat == *\u\p\d\a\t* ]]
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/exec/global_gsi.x ./gsi.x
++ cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/anavinfo_nems_nmmb ./anavinfo
++ cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nam_nmm_berror.f77.gcv ./berror_stats
++ cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nam_errtable.r3dv ./errtable
++ cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/Nalli.IRwater.EmisCoeff.bin ./Nalli.IRwater.EmisCoeff.bin
++ cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.IRice.EmisCoeff.bin ./NPOESS.IRice.EmisCoeff.bin
++ cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.IRsnow.EmisCoeff.bin ./NPOESS.IRsnow.EmisCoeff.bin
++ cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.IRland.EmisCoeff.bin ./NPOESS.IRland.EmisCoeff.bin
++ cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.VISice.EmisCoeff.bin ./NPOESS.VISice.EmisCoeff.bin
++ cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.VISland.EmisCoeff.bin ./NPOESS.VISland.EmisCoeff.bin
++ cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.VISsnow.EmisCoeff.bin ./NPOESS.VISsnow.EmisCoeff.bin
++ cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/NPOESS.VISwater.EmisCoeff.bin ./NPOESS.VISwater.EmisCoeff.bin
++ cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/FASTEM6.MWwater.EmisCoeff.bin ./FASTEM6.MWwater.EmisCoeff.bin
++ cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/AerosolCoeff.bin ./AerosolCoeff.bin
++ cp /scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update/CloudCoeff.bin ./CloudCoeff.bin
++ cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nam_regional_satinfo.txt ./satinfo
++ cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/cloudy_radiance_info.txt ./cloudy_radiance_info.txt
++ cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/global_scaninfo.txt ./scaninfo
++ cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nam_global_pcpinfo.txt ./pcpinfo
++ cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nam_global_ozinfo.txt ./ozinfo
++ cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nam_regional_convinfo.txt ./convinfo
++ cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nam_mesonet_uselist.txt ./mesonetuselist
++ cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nam_mesonet_stnuselist.txt ./mesonet_stnuselist
++ cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/rtma_q_day_rejectlist ./q_day_rejectlist
++ cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/rtma_q_night_rejectlist ./q_night_rejectlist
++ cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/rtma_t_day_rejectlist ./t_day_rejectlist
++ cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/rtma_t_night_rejectlist ./t_night_rejectlist
++ cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/rtma_wbinuselist ./wbinuselist
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_pw.global ./errtable_pw
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_ps.global_nqcf ./errtable_ps
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_t.global_nqcf ./errtable_t
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_q.global_nqcf ./errtable_q
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/prepobs_errtable_uv.global_nqcf ./errtable_uv
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nqc_b_ps.global_nqcf ./btable_ps
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nqc_b_t.global_nqcf ./btable_t
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nqc_b_q.global_nqcf ./btable_q
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nqc_b_uv.global_nqcf ./btable_uv
++ /bin/cp /scratch4/NCEPDEV/da/save/Louis.Kouvaris/fv3gfs/sorc/gsi.fd/fix/nam_hybens_d01_info ./hybens_info
++ set +x
+++ echo
+++ cut -c1-8
++ PDY=
+++ echo
+++ cut -c9-10
++ CYC=
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/nam.t00z.radwnd.tm00.bufr_d ./radarbufr
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/nam.t00z.nexrad.tm00.bufr_d ./l2rwbufr
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/gdas1.t00z.prepbufr ./prepbufr
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/gdas1.t00z.mtiasi.tm00.bufr_d ./iasibufr
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/gdas1.t00z.gpsro.tm00.bufr_d ./gpsrobufr
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/gdas1.t00z.1bamua.tm00.bufr_d ./amsuabufr
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/gdas1.t00z.esamua.tm00.bufr_d ./amsuabufrears
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/gdas1.t00z.1bmhs.tm00.bufr_d ./mhsbufr
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/gdas1.t00z.1bhrs4.tm00.bufr_d ./hirs4bufr
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/gdas1.t00z.goesfv.tm00.bufr_d ./gsnd1bufr
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/gdas1.t00z.airsev.tm00.bufr_d ./airsbufr
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/gdas1.t00z.satwnd.tm00.bufr_d ./satwndbufr
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/wrf_inout03 .
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/wrf_inout06 .
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/wrf_inout09 .
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/ndas.t00z.satbiaspc.tm03 ./satbias_pc
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/ndas.t00z.satbiasc.tm03 ./satbias_in
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/ndas.t00z.radstat.tm03 ./radstat.gdas
+++ tar xvf radstat.gdas
+++ cut '-d ' -f2
+++ grep --color=auto _ges
++ listdiag='diag_sndrd1_g13_ges.2015060921.gz
+diag_sndrd2_g13_ges.2015060921.gz
+diag_sndrd3_g13_ges.2015060921.gz
+diag_sndrd4_g13_ges.2015060921.gz
+diag_sndrd1_g15_ges.2015060921.gz
+diag_sndrd2_g15_ges.2015060921.gz
+diag_sndrd3_g15_ges.2015060921.gz
+diag_sndrd4_g15_ges.2015060921.gz
+diag_amsua_n15_ges.2015060921.gz
+diag_airs_aqua_ges.2015060921.gz
+diag_amsua_aqua_ges.2015060921.gz
+diag_hirs4_metop-a_ges.2015060921.gz
+diag_amsua_n18_ges.2015060921.gz
+diag_amsua_metop-a_ges.2015060921.gz
+diag_mhs_n18_ges.2015060921.gz
+diag_mhs_metop-a_ges.2015060921.gz
+diag_iasi_metop-a_ges.2015060921.gz
+diag_hirs4_n19_ges.2015060921.gz
+diag_amsua_n19_ges.2015060921.gz
+diag_mhs_n19_ges.2015060921.gz'
++ for type in '$listdiag'
+++ echo diag_sndrd1_g13_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_sndrd1_g13_ges.2015060921.gz
+++ echo diag_sndrd1_g13_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_sndrd1_g13_ges
+++ echo diag_sndrd1_g13_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_sndrd1_g13_ges.2015060921.gz
+++ echo diag_sndrd1_g13_ges
+++ sed s/_ges//g
++ fnameanl=diag_sndrd1_g13
++ mv diag_sndrd1_g13_ges.2015060921 diag_sndrd1_g13
++ for type in '$listdiag'
+++ echo diag_sndrd2_g13_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_sndrd2_g13_ges.2015060921.gz
+++ echo diag_sndrd2_g13_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_sndrd2_g13_ges
+++ echo diag_sndrd2_g13_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_sndrd2_g13_ges.2015060921.gz
+++ echo diag_sndrd2_g13_ges
+++ sed s/_ges//g
++ fnameanl=diag_sndrd2_g13
++ mv diag_sndrd2_g13_ges.2015060921 diag_sndrd2_g13
++ for type in '$listdiag'
+++ echo diag_sndrd3_g13_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_sndrd3_g13_ges.2015060921.gz
+++ echo diag_sndrd3_g13_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_sndrd3_g13_ges
+++ echo diag_sndrd3_g13_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_sndrd3_g13_ges.2015060921.gz
+++ echo diag_sndrd3_g13_ges
+++ sed s/_ges//g
++ fnameanl=diag_sndrd3_g13
++ mv diag_sndrd3_g13_ges.2015060921 diag_sndrd3_g13
++ for type in '$listdiag'
+++ echo diag_sndrd4_g13_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_sndrd4_g13_ges.2015060921.gz
+++ echo diag_sndrd4_g13_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_sndrd4_g13_ges
+++ echo diag_sndrd4_g13_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_sndrd4_g13_ges.2015060921.gz
+++ echo diag_sndrd4_g13_ges
+++ sed s/_ges//g
++ fnameanl=diag_sndrd4_g13
++ mv diag_sndrd4_g13_ges.2015060921 diag_sndrd4_g13
++ for type in '$listdiag'
+++ echo diag_sndrd1_g15_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_sndrd1_g15_ges.2015060921.gz
+++ echo diag_sndrd1_g15_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_sndrd1_g15_ges
+++ echo diag_sndrd1_g15_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_sndrd1_g15_ges.2015060921.gz
+++ echo diag_sndrd1_g15_ges
+++ sed s/_ges//g
++ fnameanl=diag_sndrd1_g15
++ mv diag_sndrd1_g15_ges.2015060921 diag_sndrd1_g15
++ for type in '$listdiag'
+++ echo diag_sndrd2_g15_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_sndrd2_g15_ges.2015060921.gz
+++ echo diag_sndrd2_g15_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_sndrd2_g15_ges
+++ echo diag_sndrd2_g15_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_sndrd2_g15_ges.2015060921.gz
+++ echo diag_sndrd2_g15_ges
+++ sed s/_ges//g
++ fnameanl=diag_sndrd2_g15
++ mv diag_sndrd2_g15_ges.2015060921 diag_sndrd2_g15
++ for type in '$listdiag'
+++ echo diag_sndrd3_g15_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_sndrd3_g15_ges.2015060921.gz
+++ echo diag_sndrd3_g15_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_sndrd3_g15_ges
+++ echo diag_sndrd3_g15_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_sndrd3_g15_ges.2015060921.gz
+++ echo diag_sndrd3_g15_ges
+++ sed s/_ges//g
++ fnameanl=diag_sndrd3_g15
++ mv diag_sndrd3_g15_ges.2015060921 diag_sndrd3_g15
++ for type in '$listdiag'
+++ echo diag_sndrd4_g15_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_sndrd4_g15_ges.2015060921.gz
+++ echo diag_sndrd4_g15_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_sndrd4_g15_ges
+++ echo diag_sndrd4_g15_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_sndrd4_g15_ges.2015060921.gz
+++ echo diag_sndrd4_g15_ges
+++ sed s/_ges//g
++ fnameanl=diag_sndrd4_g15
++ mv diag_sndrd4_g15_ges.2015060921 diag_sndrd4_g15
++ for type in '$listdiag'
+++ echo diag_amsua_n15_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_amsua_n15_ges.2015060921.gz
+++ echo diag_amsua_n15_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_amsua_n15_ges
+++ echo diag_amsua_n15_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_amsua_n15_ges.2015060921.gz
+++ echo diag_amsua_n15_ges
+++ sed s/_ges//g
++ fnameanl=diag_amsua_n15
++ mv diag_amsua_n15_ges.2015060921 diag_amsua_n15
++ for type in '$listdiag'
+++ echo diag_airs_aqua_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_airs_aqua_ges.2015060921.gz
+++ echo diag_airs_aqua_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_airs_aqua_ges
+++ echo diag_airs_aqua_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_airs_aqua_ges.2015060921.gz
+++ echo diag_airs_aqua_ges
+++ sed s/_ges//g
++ fnameanl=diag_airs_aqua
++ mv diag_airs_aqua_ges.2015060921 diag_airs_aqua
++ for type in '$listdiag'
+++ echo diag_amsua_aqua_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_amsua_aqua_ges.2015060921.gz
+++ echo diag_amsua_aqua_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_amsua_aqua_ges
+++ echo diag_amsua_aqua_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_amsua_aqua_ges.2015060921.gz
+++ echo diag_amsua_aqua_ges
+++ sed s/_ges//g
++ fnameanl=diag_amsua_aqua
++ mv diag_amsua_aqua_ges.2015060921 diag_amsua_aqua
++ for type in '$listdiag'
+++ echo diag_hirs4_metop-a_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_hirs4_metop-a_ges.2015060921.gz
+++ echo diag_hirs4_metop-a_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_hirs4_metop-a_ges
+++ echo diag_hirs4_metop-a_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_hirs4_metop-a_ges.2015060921.gz
+++ echo diag_hirs4_metop-a_ges
+++ sed s/_ges//g
++ fnameanl=diag_hirs4_metop-a
++ mv diag_hirs4_metop-a_ges.2015060921 diag_hirs4_metop-a
++ for type in '$listdiag'
+++ echo diag_amsua_n18_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_amsua_n18_ges.2015060921.gz
+++ echo diag_amsua_n18_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_amsua_n18_ges
+++ echo diag_amsua_n18_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_amsua_n18_ges.2015060921.gz
+++ echo diag_amsua_n18_ges
+++ sed s/_ges//g
++ fnameanl=diag_amsua_n18
++ mv diag_amsua_n18_ges.2015060921 diag_amsua_n18
++ for type in '$listdiag'
+++ echo diag_amsua_metop-a_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_amsua_metop-a_ges.2015060921.gz
+++ echo diag_amsua_metop-a_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_amsua_metop-a_ges
+++ echo diag_amsua_metop-a_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_amsua_metop-a_ges.2015060921.gz
+++ echo diag_amsua_metop-a_ges
+++ sed s/_ges//g
++ fnameanl=diag_amsua_metop-a
++ mv diag_amsua_metop-a_ges.2015060921 diag_amsua_metop-a
++ for type in '$listdiag'
+++ echo diag_mhs_n18_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_mhs_n18_ges.2015060921.gz
+++ echo diag_mhs_n18_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_mhs_n18_ges
+++ echo diag_mhs_n18_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_mhs_n18_ges.2015060921.gz
+++ echo diag_mhs_n18_ges
+++ sed s/_ges//g
++ fnameanl=diag_mhs_n18
++ mv diag_mhs_n18_ges.2015060921 diag_mhs_n18
++ for type in '$listdiag'
+++ echo diag_mhs_metop-a_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_mhs_metop-a_ges.2015060921.gz
+++ echo diag_mhs_metop-a_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_mhs_metop-a_ges
+++ echo diag_mhs_metop-a_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_mhs_metop-a_ges.2015060921.gz
+++ echo diag_mhs_metop-a_ges
+++ sed s/_ges//g
++ fnameanl=diag_mhs_metop-a
++ mv diag_mhs_metop-a_ges.2015060921 diag_mhs_metop-a
++ for type in '$listdiag'
+++ echo diag_iasi_metop-a_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_iasi_metop-a_ges.2015060921.gz
+++ echo diag_iasi_metop-a_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_iasi_metop-a_ges
+++ echo diag_iasi_metop-a_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_iasi_metop-a_ges.2015060921.gz
+++ echo diag_iasi_metop-a_ges
+++ sed s/_ges//g
++ fnameanl=diag_iasi_metop-a
++ mv diag_iasi_metop-a_ges.2015060921 diag_iasi_metop-a
++ for type in '$listdiag'
+++ echo diag_hirs4_n19_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_hirs4_n19_ges.2015060921.gz
+++ echo diag_hirs4_n19_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_hirs4_n19_ges
+++ echo diag_hirs4_n19_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_hirs4_n19_ges.2015060921.gz
+++ echo diag_hirs4_n19_ges
+++ sed s/_ges//g
++ fnameanl=diag_hirs4_n19
++ mv diag_hirs4_n19_ges.2015060921 diag_hirs4_n19
++ for type in '$listdiag'
+++ echo diag_amsua_n19_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_amsua_n19_ges.2015060921.gz
+++ echo diag_amsua_n19_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_amsua_n19_ges
+++ echo diag_amsua_n19_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_amsua_n19_ges.2015060921.gz
+++ echo diag_amsua_n19_ges
+++ sed s/_ges//g
++ fnameanl=diag_amsua_n19
++ mv diag_amsua_n19_ges.2015060921 diag_amsua_n19
++ for type in '$listdiag'
+++ echo diag_mhs_n19_ges.2015060921.gz
+++ cut -d, -f1
++ diag_file=diag_mhs_n19_ges.2015060921.gz
+++ echo diag_mhs_n19_ges.2015060921.gz
+++ cut -d. -f1
++ fname=diag_mhs_n19_ges
+++ echo diag_mhs_n19_ges.2015060921.gz
+++ cut -d. -f2
++ date=2015060921
++ gunzip diag_mhs_n19_ges.2015060921.gz
+++ echo diag_mhs_n19_ges
+++ sed s/_ges//g
++ fnameanl=diag_mhs_n19
++ mv diag_mhs_n19_ges.2015060921 diag_mhs_n19
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/rtma2p5.t00z.w_rejectlist ./w_rejectlist
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/rtma2p5.t00z.t_rejectlist ./t_rejectlist
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/rtma2p5.t00z.p_rejectlist ./p_rejectlist
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/rtma2p5.t00z.q_rejectlist ./q_rejectlist
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr06_ensmean
++ nsum=1
++ [[ 1 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr06s_mem001
+++ expr 1 + 1
++ nsum=2
++ [[ 2 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr06s_mem002
+++ expr 2 + 1
++ nsum=3
++ [[ 3 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr06s_mem003
+++ expr 3 + 1
++ nsum=4
++ [[ 4 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr06s_mem004
+++ expr 4 + 1
++ nsum=5
++ [[ 5 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr06s_mem005
+++ expr 5 + 1
++ nsum=6
++ [[ 6 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr06s_mem006
+++ expr 6 + 1
++ nsum=7
++ [[ 7 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr06s_mem007
+++ expr 7 + 1
++ nsum=8
++ [[ 8 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr06s_mem008
+++ expr 8 + 1
++ nsum=9
++ [[ 9 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr06s_mem009
+++ expr 9 + 1
++ nsum=10
++ [[ 10 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr03_ensmean
++ nsum=1
++ [[ 1 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr03s_mem001
+++ expr 1 + 1
++ nsum=2
++ [[ 2 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr03s_mem002
+++ expr 2 + 1
++ nsum=3
++ [[ 3 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr03s_mem003
+++ expr 3 + 1
++ nsum=4
++ [[ 4 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr03s_mem004
+++ expr 4 + 1
++ nsum=5
++ [[ 5 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr03s_mem005
+++ expr 5 + 1
++ nsum=6
++ [[ 6 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr03s_mem006
+++ expr 6 + 1
++ nsum=7
++ [[ 7 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr03s_mem007
+++ expr 7 + 1
++ nsum=8
++ [[ 8 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr03s_mem008
+++ expr 8 + 1
++ nsum=9
++ [[ 9 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr03s_mem009
+++ expr 9 + 1
++ nsum=10
++ [[ 10 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr09_ensmean
++ nsum=1
++ [[ 1 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr09s_mem001
+++ expr 1 + 1
++ nsum=2
++ [[ 2 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr09s_mem002
+++ expr 2 + 1
++ nsum=3
++ [[ 3 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr09s_mem003
+++ expr 3 + 1
++ nsum=4
++ [[ 4 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr09s_mem004
+++ expr 4 + 1
++ nsum=5
++ [[ 5 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr09s_mem005
+++ expr 5 + 1
++ nsum=6
++ [[ 6 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr09s_mem006
+++ expr 6 + 1
++ nsum=7
++ [[ 7 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr09s_mem007
+++ expr 7 + 1
++ nsum=8
++ [[ 8 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr09s_mem008
+++ expr 8 + 1
++ nsum=9
++ [[ 9 -lt 10 ]]
++ ls /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/sfg_2015060918_fhr09s_mem009
+++ expr 9 + 1
++ nsum=10
++ [[ 10 -lt 10 ]]
++ cp /scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES/regional/nmmb_nems/2015061000/gdas1.t18z.sf06 ./gfs_sigf06
++ cd /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_nmmb_nems_4denvar/nmmb_nems_4denvar_hiproc_updat
++ echo 'run gsi now'
+run gsi now
++ eval 'srun /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_nmmb_nems_4denvar/nmmb_nems_4denvar_hiproc_updat/gsi.x > stdout 2>&1'
+++ srun /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_nmmb_nems_4denvar/nmmb_nems_4denvar_hiproc_updat/gsi.x
++ rc=0
++ exit 0
+_______________________________________________________________
+Start Epilog v19.07.23 on node t0235 for job 2015100 :: Mon Aug 19 21:17:22 UTC 2019
+Job 2015100 (not serial) finished for user Louis.Kouvaris in partition theia with exit code 0:0
+_______________________________________________________________
+End Epilogue v19.07.23 Mon Aug 19 21:17:23 UTC 2019

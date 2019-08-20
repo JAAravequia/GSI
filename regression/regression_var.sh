@@ -17,7 +17,7 @@ if [ "$#" = 8 ] ; then
   export scripts="$gsisrc/regression"
   export ush="$gsisrc/ush"
   export cmaketest="true"
-  export clean="false"
+  export clean="true"
   export ptmpName=`echo $builddir | sed -e "s/\//_/g"`
   echo $ptmpName
 else
@@ -25,7 +25,7 @@ else
   updat="XXXXXXXX"
   contrl="XXXXXXXX"
   export cmaketest="false"
-  export clean="false"
+  export clean="true"
   export ptmpName=""
 fi
 echo "beginning regression_var.sh, machine is $machine"
@@ -190,7 +190,7 @@ case $machine in
    export check_resource="no"
    export accnt="g0613"
    export queue="compute"
-   export clean=".false."
+   export clean=".true."
    ;;
 esac
 
