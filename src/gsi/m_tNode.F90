@@ -40,15 +40,17 @@ module m_tNode
      real(r_kind)    :: err2          !  temperature error squared
      real(r_kind)    :: raterr2       !  square of ratio of final obs error 
                                       !  to original obs error
-     !real(r_kind)    :: time          !  observation time in sec     
+     !real(r_kind)   :: time          !  observation time in sec     
      real(r_kind)    :: b             !  variational quality control parameter
      real(r_kind)    :: pg            !  variational quality control parameter
      real(r_kind)    :: jb            !  variational quality control parameter
      real(r_kind)    :: tlm_tsfc(6)   !  sensitivity vector for sfc temp 
                                       !  forward model
      real(r_kind)    :: wij(8)        !  horizontal interpolation weights
+     real(r_kind)    :: val           !  search direction
+     real(r_kind)    :: val2          !  solution at current iteration
      real(r_kind)    :: tpertb        !  random number adding to the obs
-     !logical         :: luse          !  flag indicating if ob is used in pen.
+!     logical         :: luse          !  flag indicating if ob is used in pen
      logical         :: use_sfc_model !  logical flag for using boundary model
      logical         :: tv_ob         !  logical flag for virtual temperature or
      integer(i_kind) :: idx           !  index of tail number
@@ -206,6 +208,8 @@ _ENTRY_(myname_)
                                 aNode%kx        , &
                                 aNode%dlev      , &
                                 aNode%wij       , &
+                                aNode%val       , &
+                                aNode%val2      , &
                                 aNode%ij
                 if(istat/=0) then
                   call perr(myname_,'read(%(res,err2,...), iostat =',istat)
@@ -231,6 +235,8 @@ _ENTRY_(myname_)
                                 aNode%kx        , &
                                 aNode%dlev      , &
                                 aNode%wij       , &
+                                aNode%val       , &
+                                aNode%val2      , &
                                 aNode%ij
                 if(istat/=0) then
                   call perr(myname_,'read(%res,err2,...), iostat =',istat)
@@ -278,6 +284,8 @@ _ENTRY_(myname_)
                                 aNode%kx        , &
                                 aNode%dlev      , &
                                 aNode%wij       , &
+                                aNode%val       , &
+                                aNode%val2      , &
                                 aNode%ij
                 if(jstat/=0) then
                   call perr(myname_,'write(%(res,err2,...), iostat =',jstat)
@@ -303,6 +311,8 @@ _ENTRY_(myname_)
                                 aNode%kx        , &
                                 aNode%dlev      , &
                                 aNode%wij       , &
+                                aNode%val       , &
+                                aNode%val2      , &
                                 aNode%ij
                 if(jstat/=0) then
                   call perr(myname_,'write(%res,err2,...), iostat =',jstat)

@@ -148,8 +148,8 @@ subroutine intt_(thead,rval,sval,rpred,spred)
   real(r_kind) cg_t,val,p0,grad,wnotgross,wgross,t_pg
   real(r_kind) psfc_grad,tg_grad
   real(r_kind) ts_grad,us_grad,vs_grad,qs_grad
-  real(r_kind) qs_prime0,tg_prime0,ts_prime0,psfc_prime0
-  real(r_kind) us_prime0,vs_prime0
+  real(r_kind) ts_prime0,psfc_prime0
+  real(r_kind) qs_prime0,us_prime0,vs_prime0
   type(tNode), pointer :: tptr
 
 !  If no t data return
@@ -177,7 +177,6 @@ subroutine intt_(thead,rval,sval,rpred,spred)
   if(ier/=0) return
 
   time_t=zero
-  !tptr => thead
   tptr => tNode_typecast(thead)
   do while (associated(tptr))
 
@@ -208,18 +207,18 @@ subroutine intt_(thead,rval,sval,rpred,spred)
            ts_prime0=w1*st(j1)+w2*st(j2)+w3*st(j3)+w4*st(j4)
         end if 
         if (isst==0) then 
-           tg_prime0=w1* ssst(j1)+w2*ssst(j2)+w3*ssst(j3)+w4*ssst(j4)
+           ts_prime0=w1*ssst(j1)+w2*ssst(j2)+w3*ssst(j3)+w4*ssst(j4)
         else 
-           tg_prime0=zero
+           ts_prime0=zero
         end if
-        qs_prime0=w1*   sq(j1)+w2*  sq(j2)+w3*  sq(j3)+w4*  sq(j4)
-        us_prime0=w1*   su(j1)+w2*  su(j2)+w3*  su(j3)+w4*  su(j4)
-        vs_prime0=w1*   sv(j1)+w2*  sv(j2)+w3*  sv(j3)+w4*  sv(j4)
-        psfc_prime0=w1* sp(j1)+w2*  sp(j2)+w3*  sp(j3)+w4*  sp(j4)
+        qs_prime0=w1*sq(j1)+w2*sq(j2)+w3*sq(j3)+w4*sq(j4)
+        us_prime0=w1*su(j1)+w2*su(j2)+w3*su(j3)+w4*su(j4)
+        vs_prime0=w1*sv(j1)+w2*sv(j2)+w3*sv(j3)+w4*sv(j4)
+        psfc_prime0=w1*sp(j1)+w2*sp(j2)+w3*sp(j3)+w4*sp(j4)
 
-        val=psfc_prime0*tptr%tlm_tsfc(1) + tg_prime0*tptr%tlm_tsfc(2) + &
-            ts_prime0  *tptr%tlm_tsfc(3) + qs_prime0*tptr%tlm_tsfc(4) + &
-            us_prime0  *tptr%tlm_tsfc(5) + vs_prime0*tptr%tlm_tsfc(6)
+        val=psfc_prime0*tptr%tlm_tsfc(1)+ts_prime0*tptr%tlm_tsfc(2) + &
+            ts_prime0 *tptr%tlm_tsfc(3)+qs_prime0*tptr%tlm_tsfc(4) + &
+            us_prime0*tptr%tlm_tsfc(5)+vs_prime0*tptr%tlm_tsfc(6)
  
      else
 
@@ -228,8 +227,8 @@ subroutine intt_(thead,rval,sval,rpred,spred)
            val=w1*stv(j1)+w2*stv(j2)+w3*stv(j3)+w4*stv(j4)&
               +w5*stv(j5)+w6*stv(j6)+w7*stv(j7)+w8*stv(j8)
         else
-           val=w1*    st(j1)+w2*    st(j2)+w3*    st(j3)+w4*    st(j4)&
-              +w5*    st(j5)+w6*    st(j6)+w7*    st(j7)+w8*    st(j8)
+           val=w1*st(j1)+w2*st(j2)+w3*st(j3)+w4*st(j4)&
+              +w5*st(j5)+w6*st(j6)+w7*st(j7)+w8*st(j8)
         end if
 
      end if
@@ -241,7 +240,7 @@ subroutine intt_(thead,rval,sval,rpred,spred)
            val=val+spred(ix+n)*tptr%pred(n)
         end do
      end if
-
+     tptr%val2=val-tptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*tptr%raterr2*tptr%err2
@@ -361,13 +360,12 @@ subroutine intt_(thead,rval,sval,rpred,spred)
  
            end if
 
-        end if
+        end if !sfc_model
 
-     end if
+     end if !l_do_adjoint
 
-     !tptr => tptr%llpoint
      tptr => tNode_nextcast(tptr)
-  end do
+  end do !while associated(tptr)
   return
 end subroutine intt_
 

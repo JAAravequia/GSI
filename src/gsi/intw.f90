@@ -150,7 +150,8 @@ subroutine intw_(whead,rval,sval)
           w5* su(i5)+w6* su(i6)+w7* su(i7)+w8* su(i8)
      valv=w1* sv(i1)+w2* sv(i2)+w3* sv(i3)+w4* sv(i4)+&
           w5* sv(i5)+w6* sv(i6)+w7* sv(i7)+w8* sv(i8)
-
+     wptr%valu2=valu-wptr%ures
+     wptr%valv2=valv-wptr%vres
      if(luse_obsdiag)then
         if (lsaveobsens) then
            gradu = valu*wptr%raterr2*wptr%err2
@@ -220,12 +221,10 @@ subroutine intw_(whead,rval,sval)
         rv(i7)=rv(i7)+w7*gradv
         rv(i8)=rv(i8)+w8*gradv
      
-     endif
-
-     !wptr => wptr%llpoint
+     endif !l_do_adjoint
      wptr => wNode_nextcast(wptr)
 
-  end do
+  end do !while associated(wptr)
   return
 end subroutine intw_
 

@@ -2,10 +2,10 @@ module stpradmod
 
 !$$$ module documentation block
 !           .      .    .                                       .
-! module:   stpradmod    module for stprad_state and stprad
+! module:   stpradmod    module for stprad_search and stprad
 !  prgmmr:
 !
-! abstract: module for stprad_state and stprad
+! abstract: module for stprad_search and stprad
 !
 ! program history log:
 !   2005-05-20  Yanqiu zhu - wrap stprad and its tangent linear stprad_tl into one module
@@ -14,10 +14,10 @@ module stpradmod
 !   2009-08-12  lueken - update documentation
 !   2011-05-17  todling - add internal routine set_
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
-!   2019-08-14  kbathmann - split into stprad and stprad_state
+!   2019-08-14  kbathmann - split into stprad and stprad_search
 !
 ! subroutines included:
-!   sub stprad
+!   sub stprad, stprad_search
 !
 ! attributes:
 !   language: f90
@@ -36,18 +36,18 @@ use m_radNode, only: radNode_nextcast
 implicit none
 
 PRIVATE
-PUBLIC stprad_state,stprad
+PUBLIC stprad_search,stprad
 
 
 contains
-subroutine stprad_state(radhead,dval,rpred,out,sges,nstep)
+subroutine stprad_search(radhead,dval,rpred,out,sges,nstep)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:    stprad_state compute the value of the current state estimate in 
+! subprogram:    stprad_search compute the value of the current search direction in 
 !                radiance space, as well as the contribution to penalty
 !   prgmmr: parrish          org: np22                date: 1990-10-11
 !
-! abstract: compute the current state in radiance space
+! abstract: compute the current search direction in radiance space
 !
 ! program history log:
 !   2019-08-14 kbathmann split the computation of val into its own subroutine
@@ -203,7 +203,7 @@ subroutine stprad_state(radhead,dval,rpred,out,sges,nstep)
      radptr => radNode_nextcast(radptr)
   enddo !while associated(radptr)
   return
-end subroutine stprad_state
+end subroutine stprad_search
 
 subroutine stprad(radhead,out,sges,nstep)
 !$$$  subprogram documentation block
@@ -316,10 +316,9 @@ subroutine stprad(radhead,out,sges,nstep)
            end do
 
         end do
-     end if
-
+     end if !luse
      radptr => radNode_nextcast(radptr)
-  end do
+  end do !while associated(radptr)
   return
 end subroutine stprad
 

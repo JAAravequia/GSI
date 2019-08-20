@@ -44,6 +44,8 @@ module m_pwNode
      real(r_kind)    :: b             !  variational quality control parameter
      real(r_kind)    :: pg            !  variational quality control parameter
      real(r_kind)    :: wij(4)        !  horizontal interpolation weights
+     real(r_kind)    :: val           ! search direction
+     real(r_kind)    :: val2          ! solution at current iteration
      real(r_kind),dimension(:),pointer :: dp  => NULL()
                                       !  delta pressure at mid layers at obs locations
      integer(i_kind) :: ij(4)         !  horizontal locations
@@ -215,6 +217,8 @@ _ENTRY_(myname_)
                                 aNode%pg     , &
                                 aNode%dp     , &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if (istat/=0) then
                   call perr(myname_,'read(%(res,err2,...)), iostat =',istat)
@@ -250,6 +254,8 @@ _ENTRY_(myname_)
                                 aNode%pg     , &
                                 aNode%dp     , &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if (jstat/=0) then
                   call perr(myname_,'write(%(res,err2,...)), iostat =',jstat)

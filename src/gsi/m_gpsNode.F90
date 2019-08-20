@@ -45,8 +45,8 @@ module m_gpsNode
      real(r_kind)    :: b      =0._r_kind    !  variational quality control parameter
      real(r_kind)    :: pg     =0._r_kind    !  variational quality control parameter
      real(r_kind)    :: wij(4) =0._r_kind    !  horizontal interpolation weights
-     real(r_kind)    :: val  ! solution at current iteration
-     real(r_kind)    :: val2 ! searh direction
+     real(r_kind)    :: val  ! search direction
+     real(r_kind)    :: val2 ! solution at current iteration
      real(r_kind),dimension(:),pointer :: jac_q => NULL()
                                       !  q jacobian 
      real(r_kind),dimension(:),pointer :: jac_t => NULL()

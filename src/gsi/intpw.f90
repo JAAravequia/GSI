@@ -128,7 +128,6 @@ subroutine intpw_(pwhead,rval,sval)
    
   time_pw = zero
 
-  !pwptr => pwhead
   pwptr => pwNode_typecast(pwhead)
   do while (associated(pwptr))
      w1=pwptr%wij(1)
@@ -153,7 +152,7 @@ subroutine intpw_(pwhead,rval,sval)
                + w3* sq(i3(k))+w4* sq(i4(k)))*          &
                  tpwcon*pwptr%dp(k)
      end do
-
+     pwptr%val2=val-pwptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*pwptr%raterr2*pwptr%err2
@@ -192,12 +191,11 @@ subroutine intpw_(pwhead,rval,sval)
            rq(i3(k))   =   rq(i3(k))+w3*pwcon1
            rq(i4(k))   =   rq(i4(k))+w4*pwcon1
         end do
-     endif
+     endif !l_do_adjoint
 
-     !pwptr => pwptr%llpoint
      pwptr => pwNode_nextcast(pwptr)
 
-  end do
+  end do !while associated(pwptr)
 
   return
 end subroutine intpw_

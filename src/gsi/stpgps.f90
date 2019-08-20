@@ -2,10 +2,10 @@ module stpgpsmod
 
 !$$$ module documentation block
 !           .      .    .                                       .
-! module:   stpgpsmod    module for stpref and its tangent linear stpref_tl
+! module:   stpgpsmod    module for stpgps_search and stpgps
 !  prgmmr:
 !
-! abstract: module for stpref and its tangent linear stpref_tl
+! abstract: module for stpgps_search and stpgps
 !
 ! program history log:
 !   2005-05-19  Yanqiu zhu - wrap stpref and its tangent linear stpref_tl into one module
@@ -14,10 +14,10 @@ module stpgpsmod
 !   2010-05-13  todling - uniform interface across stp routines
 !   2013-10-28  todling - rename p3d to prse
 !   2016-05-18  guo     - replaced ob_type with polymorphic obsNode through type casting
-!   2019-08-15  kbathmann - split into stpgps and stpgps_state
+!   2019-08-15  kbathmann - split into stpgps and stpgps_search
 !
 ! subroutines included:
-!   sub stpgps
+!   sub stpgps, stpgps_search
 !
 ! attributes:
 !   language: f90
@@ -35,14 +35,14 @@ use m_gpsNode, only: gpsNode_nextcast
 implicit none
 
 PRIVATE
-PUBLIC stpgps,stpgps_state
+PUBLIC stpgps,stpgps_search
 
 contains
 
-subroutine stpgps_state(gpshead,rval,out,sges,nstep)
+subroutine stpgps_search(gpshead,rval,out,sges,nstep)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram: stpgps_state compute the value of the current state estimate in
+! subprogram: stpgps_search compute the value of the current search direction in
 !                          obs space, as well as the contribution to penalty
 !                       from ref, using nonlinear qc    
 !   prgmmr: cucurull,l.     org: JCSDA/NCEP           date: 2004-05-06
@@ -156,12 +156,12 @@ subroutine stpgps_state(gpshead,rval,out,sges,nstep)
            out(kk) = out(kk)+(pen(kk)-pen(1))*gpsptr%raterr2
         end do
 
-     endif !nstep >0 
+     endif !luse
      gpsptr => gpsNode_nextcast(gpsptr)
   end do
 
  return
-end subroutine stpgps_state
+end subroutine stpgps_search
 subroutine stpgps(gpshead,out,sges,nstep)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
@@ -269,9 +269,9 @@ subroutine stpgps(gpshead,out,sges,nstep)
         do kk=2,nstep
            out(kk) = out(kk)+(pen(kk)-pen(1))*gpsptr%raterr2
         end do
-     endif
+     endif !luse
      gpsptr => gpsNode_nextcast(gpsptr)
-  end do
+  end do !while associated(gpsptr)
 
  return
 end subroutine stpgps

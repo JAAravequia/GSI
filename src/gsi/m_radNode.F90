@@ -58,8 +58,8 @@ module m_radNode
      integer(i_kind) :: nchan         !  number of channels for this profile
      integer(i_kind) :: ij(4)         !  horizontal locations
      logical         :: use_corr_obs  !  logical to indicate if using correlated obs
-     real(r_kind),dimension(:),pointer :: val  ! solution at current iteration
-     real(r_kind),dimension(:),pointer :: val2 ! searh direction
+     real(r_kind),dimension(:),pointer :: val  ! search direction
+     real(r_kind),dimension(:),pointer :: val2 ! solution at current iteration
      !logical         :: luse          !  flag indicating if ob is used in pen.
 
      !integer(i_kind) :: idv,iob              ! device id and obs index for sorting

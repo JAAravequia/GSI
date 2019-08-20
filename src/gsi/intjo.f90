@@ -253,20 +253,20 @@ real(r_quad),dimension(max(1,nrclen)), intent(inout) :: qpred
 !******************************************************************************
 
 ! RHS for conventional temperatures
-!KAB  if (ntclen>0) then
-!     call intt(yobs%t,rval,sval,qpred(nsclen+npclen+1:nrclen),sbias%predt)
-!  else
-!     call intt(yobs%t,rval,sval)
-!  end if
+  if (ntclen>0) then
+     call intt(yobs%t,rval,sval,qpred(nsclen+npclen+1:nrclen),sbias%predt)
+  else
+     call intt(yobs%t,rval,sval)
+  end if
 
 ! RHS for precipitable water
-!  call intpw(yobs%pw,rval,sval)
+  call intpw(yobs%pw,rval,sval)
 
 ! RHS for conventional moisture
 !  call intq(yobs%q,rval,sval)
 
 ! RHS for conventional winds
-!  call intw(yobs%w,rval,sval)
+  call intw(yobs%w,rval,sval)
 
 ! RHS for lidar winds
 !  call intdw(yobs%dw,rval,sval)
@@ -303,7 +303,7 @@ real(r_quad),dimension(max(1,nrclen)), intent(inout) :: qpred
 !  call intsst(yobs%sst,rval,sval)
 
 ! RHS for GPS local observations
-!  call intgps(yobs%gps,rval,sval)
+  call intgps(yobs%gps,rval,sval)
 
 ! RHS for conventional lag observations
 !  call intlag(yobs%lag,rval,sval,ibin)

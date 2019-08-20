@@ -264,13 +264,13 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins,ii)
 !
 !$$$
   use kinds, only: i_kind,r_kind,r_quad
-  use stptmod, only: stpt
-  use stpwmod, only: stpw
+  use stptmod, only: stpt_search,stpt
+  use stpwmod, only: stpw_search,stpw
   use stppsmod, only: stpps
-  use stppwmod, only: stppw
+  use stppwmod, only: stppw_search,stppw
   use stpqmod, only: stpq
-  use stpradmod, only: stprad_state,stprad
-  use stpgpsmod, only: stpgps
+  use stpradmod, only: stprad_search,stprad
+  use stpgpsmod, only: stpgps_search,stpgps
   use stprwmod, only: stprw
   use stpdbzmod, only: stpdbz
   use stpspdmod, only: stpspd
@@ -334,27 +334,39 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins,ii)
 !   penalty, b, and c for radiances
        case(i_rad_ob_type)
           if ((ii==1).and.(nstep>0)) then
-             call stprad_state(yobs(ib)%rad,dval(ib),dbias%predr,pbcjo(1,i_rad_ob_type,ib),sges,nstep)
+             call stprad_search(yobs(ib)%rad,dval(ib),dbias%predr,pbcjo(1,i_rad_ob_type,ib),sges,nstep)
           else if (ii>1) then
              call stprad(yobs(ib)%rad,pbcjo(1,i_rad_ob_type,ib),sges,nstep)
           endif
 
 !   penalty, b, and c for temperature
-!KAB       case(i_t_ob_type)
-!          if (.not. (aircraft_t_bc_pof .or. aircraft_t_bc)) then
-!             call stpt(yobs(ib)%t,dval(ib),xval(ib),pbcjo(1,i_t_ob_type,ib),sges,nstep) 
-!          else
-!             call stpt(yobs(ib)%t,dval(ib),xval(ib),pbcjo(1,i_t_ob_type,ib),sges,nstep, &
-!                 dbias%predt,xbias%predt) 
-!          end if
+       case(i_t_ob_type)
+          if ((ii==1).and.(nstep>0)) then
+             if (.not. (aircraft_t_bc_pof .or. aircraft_t_bc)) then
+                call stpt_search(yobs(ib)%t,dval(ib),pbcjo(1,i_t_ob_type,ib),sges,nstep) 
+             else
+                call stpt_search(yobs(ib)%t,dval(ib),pbcjo(1,i_t_ob_type,ib),sges,nstep, &
+                    dbias%predt,xbias%predt) 
+             end if
+          else if (ii>1) then
+                call stpt(yobs(ib)%t,pbcjo(1,i_t_ob_type,ib),sges,nstep)
+          endif
 
 !   penalty, b, and c for winds
-!KAB       case(i_w_ob_type)
-!          call stpw(yobs(ib)%w,dval(ib),xval(ib),pbcjo(1,i_w_ob_type,ib),sges,nstep)
+       case(i_w_ob_type)
+          if ((ii==1).and.(nstep>0)) then
+             call stpw_search(yobs(ib)%w,dval(ib),pbcjo(1,i_w_ob_type,ib),sges,nstep)
+          else
+             call stpw(yobs(ib)%w,pbcjo(1,i_w_ob_type,ib),sges,nstep)
+          endif
 
 !   penalty, b, and c for precipitable water
-!KAB       case(i_pw_ob_type)
-!          call stppw(yobs(ib)%pw,dval(ib),xval(ib),pbcjo(1,i_pw_ob_type,ib),sges,nstep)
+       case(i_pw_ob_type)
+         if ((ii==1).and.(nstep>0)) then
+            call stppw_search(yobs(ib)%pw,dval(ib),pbcjo(1,i_pw_ob_type,ib),sges,nstep)
+         else
+            call stppw(yobs(ib)%pw,pbcjo(1,i_pw_ob_type,ib),sges,nstep)
+         endif
 
 !   penalty, b, and c for ozone
 !KAB       case(i_colvk_ob_type)
@@ -395,7 +407,7 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins,ii)
 !   penalty, b, and c for GPS local observation
        case(i_gps_ob_type)
           if ((ii==1).and.(nstep>0)) then
-             call stpgps_state(yobs(ib)%gps,dval(ib),pbcjo(1,i_gps_ob_type,ib),sges,nstep)
+             call stpgps_search(yobs(ib)%gps,dval(ib),pbcjo(1,i_gps_ob_type,ib),sges,nstep)
           else if (ii>1) then
              call stpgps(yobs(ib)%gps,pbcjo(1,i_gps_ob_type,ib),sges,nstep)
           endif
