@@ -105,8 +105,6 @@ contains
        call gsi_bundlegetpointer(rval,'pm2_5',rpm2_5,istatus);ier=istatus+ier
 
        if(ier/=0) return
-
-       !pm2_5ptr => pm2_5head
        pm2_5ptr => pm2_5Node_typecast(pm2_5head)
        do while (associated(pm2_5ptr))
           j1=pm2_5ptr%ij(1)
@@ -129,7 +127,7 @@ contains
 !    forward model
           val=w1* spm2_5(j1)+w2* spm2_5(j2)+w3* spm2_5(j3)+w4* spm2_5(j4)+ &
                w5* spm2_5(j5)+w6* spm2_5(j6)+w7* spm2_5(j7)+w8* spm2_5(j8)
-
+          pm2_5ptr%val2=val-pm2_5ptr%res
           if(luse_obsdiag)then
              if (lsaveobsens) then
                 pm2_5ptr%diags%obssen(jiter) = val*pm2_5ptr%raterr2*pm2_5ptr%err2
@@ -174,18 +172,15 @@ contains
              rpm2_5(j7)=rpm2_5(j7)+w7*grad
              rpm2_5(j8)=rpm2_5(j8)+w8*grad
 
-          endif
-
-          !pm2_5ptr => pm2_5ptr%llpoint
+          endif !l_do_adjoint
           pm2_5ptr => pm2_5Node_nextcast(pm2_5ptr)
 
-       end do
+       end do !while associated pm2_5ptr
 
-    endif
+    endif !cmaq_regional or wrf_mass_regional and not laeroana_gocart
 
     if (wrf_mass_regional .and. laeroana_gocart) then
 
-       !pm2_5ptr => pm2_5head
        pm2_5ptr => pm2_5Node_typecast(pm2_5head)
        do while (associated(pm2_5ptr))
           j1=pm2_5ptr%ij(1)
@@ -363,7 +358,7 @@ contains
                val
           
           nullify(spm2_5)
-
+          pm2_5ptr%val2=val-pm2_5ptr%res
           if(luse_obsdiag)then
              if (lsaveobsens) then
                 pm2_5ptr%diags%obssen(jiter) = val*pm2_5ptr%raterr2*pm2_5ptr%err2
@@ -581,14 +576,12 @@ contains
              rpm2_5(j8)=rpm2_5(j8)+w8*grad
              nullify(rpm2_5)
 
-          endif
-
-          !pm2_5ptr => pm2_5ptr%llpoint
+          endif !l_do_adjoint
           pm2_5ptr => pm2_5Node_nextcast(pm2_5ptr)
 
-       end do
+       end do !while associated(pm2_5ptr)
 
-    endif
+    endif !wrf_mass_regional and laeroana_gocart
 
     return
   end subroutine intpm2_5_

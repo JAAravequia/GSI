@@ -145,7 +145,7 @@ subroutine intq_(qhead,rval,sval)
 !    Forward model
      val=w1* sq(j1)+w2* sq(j2)+w3* sq(j3)+w4* sq(j4)+ &
          w5* sq(j5)+w6* sq(j6)+w7* sq(j7)+w8* sq(j8)
-
+     qptr%val2=val-qptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*qptr%raterr2*qptr%err2

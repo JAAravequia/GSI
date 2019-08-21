@@ -263,19 +263,19 @@ real(r_quad),dimension(max(1,nrclen)), intent(inout) :: qpred
   call intpw(yobs%pw,rval,sval)
 
 ! RHS for conventional moisture
-!  call intq(yobs%q,rval,sval)
+  call intq(yobs%q,rval,sval)
 
 ! RHS for conventional winds
   call intw(yobs%w,rval,sval)
 
 ! RHS for lidar winds
-!  call intdw(yobs%dw,rval,sval)
+  call intdw(yobs%dw,rval,sval)
 
 ! RHS for radar winds
-!  call intrw(yobs%rw,rval,sval)
+  call intrw(yobs%rw,rval,sval)
 
 ! RHS for radar reflectivity
-!  call intdbz(yobs%dbz,rval,sval)
+  call intdbz(yobs%dbz,rval,sval)
 
 ! RHS for wind speed observations
 !  call intspd(yobs%spd,rval,sval)
@@ -285,10 +285,10 @@ real(r_quad),dimension(max(1,nrclen)), intent(inout) :: qpred
 !  call intozlev(yobs%o3l,rval,sval)
 
 ! RHS for carbon monoxide
-!  call intco(yobs%colvk,rval,sval)
+  call intco(yobs%colvk,rval,sval)
 
 ! RHS for pm2_5
-!  call intpm2_5(yobs%pm2_5,rval,sval)
+  call intpm2_5(yobs%pm2_5,rval,sval)
 
 ! RHS for pm10
 !  call intpm10(yobs%pm10,rval,sval)

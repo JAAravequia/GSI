@@ -268,20 +268,20 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins,ii)
   use stpwmod, only: stpw_search,stpw
   use stppsmod, only: stpps
   use stppwmod, only: stppw_search,stppw
-  use stpqmod, only: stpq
+  use stpqmod, only: stpq_search,stpq
   use stpradmod, only: stprad_search,stprad
   use stpgpsmod, only: stpgps_search,stpgps
-  use stprwmod, only: stprw
-  use stpdbzmod, only: stpdbz
+  use stprwmod, only: stprw_search,stprw
+  use stpdbzmod, only: stpdbz_search,stpdbz
   use stpspdmod, only: stpspd
   use stpsstmod, only: stpsst
   use stptcpmod, only: stptcp
-  use stpdwmod, only: stpdw
+  use stpdwmod, only: stpdw,stpdw_search
   use stppcpmod, only: stppcp
   use stpozmod, only: stpozlay => stpozlay_
   use stpozmod, only: stpozlev => stpozlev_
   use stpcomod, only: stpco
-  use stppm2_5mod, only: stppm2_5
+  use stppm2_5mod, only: stppm2_5,stppm2_5_search
   use stppm10mod, only: stppm10
   use stpaodmod, only: stpaod
   use stpgustmod, only: stpgust
@@ -368,30 +368,50 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins,ii)
             call stppw(yobs(ib)%pw,pbcjo(1,i_pw_ob_type,ib),sges,nstep)
          endif
 
-!   penalty, b, and c for ozone
-!KAB       case(i_colvk_ob_type)
-!          call stpco(yobs(ib)%colvk,dval(ib),xval(ib),pbcjo(1,i_colvk_ob_type,ib),sges,nstep)
+!   penalty, b, and c for carbon monoxide
+       case(i_colvk_ob_type)
+          call stpco(yobs(ib)%colvk,dval(ib),xval(ib),pbcjo(1,i_colvk_ob_type,ib),sges,nstep)
 
-!   penalty, b, and c for ozone
-!KAB       case(i_pm2_5_ob_type)
-!          call stppm2_5(yobs(ib)%pm2_5,dval(ib),xval(ib),pbcjo(1,i_pm2_5_ob_type,ib),sges,nstep)
+!   penalty, b, and c for aerosols
+       case(i_pm2_5_ob_type)
+         if ((ii==1).and.(nstep>0)) then
+            call stppm2_5_search(yobs(ib)%pm2_5,dval(ib),pbcjo(1,i_pm2_5_ob_type,ib),sges,nstep)
+         else
+            call stppm2_5(yobs(ib)%pm2_5,pbcjo(1,i_pm2_5_ob_type,ib),sges,nstep)
+         endif
+
 
 !   penalty, b, and c for wind lidar
-!KAB       case(i_dw_ob_type)
-!          call stpdw(yobs(ib)%dw,dval(ib),xval(ib),pbcjo(1,i_dw_ob_type,ib),sges,nstep) 
+       case(i_dw_ob_type)
+         if ((ii==1).and.(nstep>0)) then
+            call stpdw_search(yobs(ib)%dw,dval(ib),pbcjo(1,i_dw_ob_type,ib),sges,nstep) 
+         else
+            call stpdw(yobs(ib)%dw,pbcjo(1,i_dw_ob_type,ib),sges,nstep)
+         endif
 
 !   penalty, b, and c for radar
-!KAB       case(i_rw_ob_type)
-!          call stprw(yobs(ib)%rw,dval(ib),xval(ib),pbcjo(1,i_rw_ob_type,ib),sges,nstep) 
+       case(i_rw_ob_type)
+         if ((ii==1).and.(nstep>0)) then
+            call stprw_search(yobs(ib)%rw,dval(ib),pbcjo(1,i_rw_ob_type,ib),sges,nstep) 
+         else
+            call stprw(yobs(ib)%rw,pbcjo(1,i_rw_ob_type,ib),sges,nstep)
+         endif
 
 !   penalty, b, and c for radar reflectivity
-!KAB       case(i_dbz_ob_type)
-!          call stpdbz(yobs(ib)%dbz,dval(ib),xval(ib),pbcjo(1,i_dbz_ob_type,ib),sges,nstep)
+       case(i_dbz_ob_type)
+         if ((ii==1).and.(nstep>0)) then
+            call stpdbz_search(yobs(ib)%dbz,dval(ib),pbcjo(1,i_dbz_ob_type,ib),sges,nstep)
+         else
+            call stpdbz(yobs(ib)%dbz,pbcjo(1,i_dbz_ob_type,ib),sges,nstep)
+         endif
 
 !   penalty, b, and c for moisture
-!KAB       case(i_q_ob_type)
-!          call stpq(yobs(ib)%q,dval(ib),xval(ib),pbcjo(1,i_q_ob_type,ib),sges,nstep)
-
+       case(i_q_ob_type)
+         if ((ii==1).and.(nstep>0)) then
+            call stpq_search(yobs(ib)%q,dval(ib),pbcjo(1,i_q_ob_type,ib),sges,nstep)
+         else
+            call stpq(yobs(ib)%q,pbcjo(1,i_q_ob_type,ib),sges,nstep)
+         endif
 !   penalty, b, and c for ozone:oz
 !KAB       case(i_oz_ob_type)
 !          call stpozlay(yobs(ib)%oz ,dval(ib),xval(ib),pbcjo(1, i_oz_ob_type,ib),sges,nstep)

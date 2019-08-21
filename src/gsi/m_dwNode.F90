@@ -46,6 +46,8 @@ module m_dwNode
      real(r_kind)    :: cosazm =0._r_kind    !  v factor
      real(r_kind)    :: sinazm =0._r_kind    !  u factor
      real(r_kind)    :: wij(8) =0._r_kind    !  horizontal interpolation weights
+     real(r_kind)    :: val                  ! search direction
+     real(r_kind)    :: val2                 ! solution at current iteration
      integer(i_kind) :: ij(8)  =0_i_kind     !  horizontal locations
      !logical         :: luse          !  flag indicating if ob is used in pen.
 
@@ -152,6 +154,8 @@ _ENTRY_(myname_)
                                 aNode%dlev   , &
                                 aNode%factw  , &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if (istat/=0) then
                   call perr(myname_,'read(%(res,err2,...)), istat =',istat)
@@ -190,6 +194,8 @@ _ENTRY_(myname_)
                                 aNode%dlev   , &
                                 aNode%factw  , &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if (jstat/=0) then
                   call perr(myname_,'write(%(res,err2,...)), jstat =',jstat)

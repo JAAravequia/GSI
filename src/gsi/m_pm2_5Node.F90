@@ -50,6 +50,8 @@ module m_pm2_5Node
      real(r_kind)    :: b             !  variational quality control parameter
      real(r_kind)    :: pg            !  variational quality control parameter
      real(r_kind)    :: wij(8)        !  horizontal interpolation weights
+     real(r_kind)    :: val           ! search direction
+     real(r_kind)    :: val2          ! solution at current iteration
      integer(i_kind) :: ij(8)         !  horizontal locations
      !logical         :: luse          !  flag indicating if ob is used in pen.
      !integer(i_kind) :: idv,iob       ! device id and obs index for sorting
@@ -151,6 +153,8 @@ _ENTRY_(myname_)
                                 aNode%pg     , &
                                 aNode%dlev   , &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if (istat/=0) then
                   call perr(myname_,'read(%(res,err2,...)), iostat =',istat)
@@ -186,6 +190,8 @@ _ENTRY_(myname_)
                                 aNode%pg     , &
                                 aNode%dlev   , &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if (jstat/=0) then
                   call perr(myname_,'write(%(res,err2,...)), iostat =',jstat)

@@ -126,8 +126,6 @@ subroutine intdbz_(dbzhead,rval,sval)
 
   if(ier/=0)return
 
-
-  !dbzptr => dbzhead
   dbzptr => dbzNode_typecast(dbzhead)
   do while (associated(dbzptr))
      j1=dbzptr%ij(1)
@@ -166,7 +164,7 @@ subroutine intdbz_(dbzhead,rval,sval)
        end if
   
      end if
-
+     dbzptr%val2=val-dbzptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*dbzptr%raterr2*dbzptr%err2
@@ -245,8 +243,6 @@ subroutine intdbz_(dbzhead,rval,sval)
         end if
  
      endif
-
-     !dbzptr => dbzptr%llpoint
      dbzptr => dbzNode_nextcast(dbzptr)
   end do
   return

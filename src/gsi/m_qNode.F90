@@ -45,6 +45,8 @@ module m_qNode
      real(r_kind)    :: pg            !  variational quality control parameter
      real(r_kind)    :: jb            !  variational quality control parameter
      real(r_kind)    :: wij(8)        !  horizontal interpolation weights
+     real(r_kind)    :: val           ! search direction
+     real(r_kind)    :: val2          ! solution at current iteration
      real(r_kind)    :: qpertb        !  random number adding to the obs
      integer(i_kind) :: ij(8)         !  horizontal locations
      integer(i_kind) :: k1            !  level of errtable 1-33
@@ -155,6 +157,8 @@ _ENTRY_(myname_)
                                 aNode%kx     , &
                                 aNode%dlev   , &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if (istat/=0) then
                   call perr(myname_,'read(%(res,err2,...)), iostat =',istat)
@@ -194,6 +198,8 @@ _ENTRY_(myname_)
                                 aNode%kx     , &
                                 aNode%dlev   , &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if (jstat/=0) then
                   call perr(myname_,'write(%(res,err2,...)), iostat =',jstat)

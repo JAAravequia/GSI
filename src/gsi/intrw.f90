@@ -143,8 +143,6 @@ subroutine intrw_(rwhead,rval,sval)
 
   if(ier/=0)return
 
-
-  !rwptr => rwhead
   rwptr => rwNode_typecast(rwhead)
   do while (associated(rwptr))
      j1=rwptr%ij(1)
@@ -174,7 +172,7 @@ subroutine intrw_(rwhead,rval,sval)
         val=val+(w1*sw(j1)+ w2*sw(j2)+ w3*sw(j3)+ w4*sw(j4)+ w5*sw(j5)+   &
                  w6*sw(j6)+ w7*sw(j7)+ w8*sw(j8))*rwptr%sintilt
      end if
-
+     rwptr%val2=val-rwptr%res
 
      if(luse_obsdiag)then
         if (lsaveobsens) then
@@ -238,11 +236,9 @@ subroutine intrw_(rwhead,rval,sval)
            rw(j7)=rw(j7)+w7*valw
            rw(j8)=rw(j8)+w8*valw
         end if
-     endif
-
-     !rwptr => rwptr%llpoint
+     endif !luse
      rwptr => rwNode_nextcast(rwptr)
-  end do
+  end do !while associated(rwptr)
   return
 end subroutine intrw_
 

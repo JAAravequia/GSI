@@ -50,7 +50,7 @@ subroutine stpt_search(thead,dval,out,sges,nstep,rpred,spred)
 !                            using nonlinear qc
 !   prgmmr: derber           org: np23                date: 1991-02-26
 !
-! abstract: calculate penalty and contribution to stepsize from temperatures,
+! abstract: calculate search direction, penalty and contribution to stepsize from temperatures,
 !              using nonlinear qc.
 !
 ! program history log:

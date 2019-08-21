@@ -122,7 +122,6 @@ subroutine intdw_(dwhead,rval,sval)
   call gsi_bundlegetpointer(rval,'v',rv,istatus);ier=istatus+ier
   if(ier/=0)return
 
-  !dwptr => dwhead
   dwptr => dwNode_typecast(dwhead)
   do while (associated(dwptr))
      j1=dwptr%ij(1)
@@ -148,7 +147,7 @@ subroutine intdw_(dwhead,rval,sval)
           w5*su(j5)+w6*su(j6)+w7*su(j7)+w8*su(j8))*dwptr%sinazm+     &
          (w1*sv(j1)+w2*sv(j2)+w3*sv(j3)+w4*sv(j4)+                   &
           w5*sv(j5)+w6*sv(j6)+w7*sv(j7)+w8*sv(j8))*dwptr%cosazm
-
+     dwptr%val2=val-dwptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val * dwptr%raterr2 * dwptr%err2
@@ -200,12 +199,11 @@ subroutine intdw_(dwhead,rval,sval)
         rv(j6)=rv(j6)+w6*valv
         rv(j7)=rv(j7)+w7*valv
         rv(j8)=rv(j8)+w8*valv
-     endif
+     endif !l_do_adjoint
 
-     !dwptr => dwptr%llpoint
      dwptr => dwNode_nextcast(dwptr)
 
-  end do
+  end do !while associated(dwptr)
 
   return
 end subroutine intdw_
