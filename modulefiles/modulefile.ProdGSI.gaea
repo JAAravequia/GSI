@@ -31,7 +31,7 @@ setenv LDFLAGS_COM " "
 #setenv WRF_SHARED_PATH ${WRF_SHARED_ROOT}.${WRF_SHARED_VER}
 
 # Known conflicts
-setenv NCEPLIBS /lustre/f1/pdata/ncep_shared/NCEPLIBS/lib
+setenv NCEPLIBS /lustre/f2/pdata/ncep_shared/NCEPLIBS/lib
 
 # Loading ncep environment
 ##module load ncep/1.0
@@ -50,7 +50,7 @@ module use /sw/gaea/modulefiles
 module load cmake
 
 # Loading nceplibs modules
-module use /lustre/f1/pdata/ncep_shared/NCEPLIBS/lib/modulefiles 
+module use /lustre/f2/pdata/ncep_shared/NCEPLIBS/lib/modulefiles 
 #module load HDF5-serial-intel-haswell/1.8.9
 #module load NetCDF-intel-haswell/4.2
 module load cray-hdf5
@@ -64,9 +64,11 @@ module load sigio-intel-sandybridge/2.0.1
 module load sp-intel-sandybridge/2.0.2
 module load w3nco-intel-sandybridge/2.0.6
 module load w3emc-intel-sandybridge/2.2.0
-module load crtm-intel/2.2.4
-#setenv CRTM_INC /lustre/f1/pdata/ncep_shared/NCEPLIBS/lib/crtm/v2.2.4/intel/include/crtm_v2.2.4
-#setenv CRTM_LIB /lustre/f1/pdata/ncep_shared/NCEPLIBS/lib/crtm/v2.2.4/intel/libcrtm_v2.2.4.a 
+#module load crtm-intel/2.2.4
+#setenv CRTM_INC /lustre/f2/pdata/ncep_shared/NCEPLIBS/lib/crtm/v2.2.5/intel/include/crtm_v2.2.5
+#setenv CRTM_LIB /lustre/f2/pdata/ncep_shared/NCEPLIBS/lib/crtm/v2.2.5/intel/libcrtm_v2.2.5.a 
+setenv CRTM_INC /lustre/f2/dev/ncep/Mingjing.Tong/REL-2.3.0/crtm_v2.3.0/include
+setenv CRTM_LIB /lustre/f2/dev/ncep/Mingjing.Tong/REL-2.3.0/crtm_v2.3.0/lib/libcrtm.a
 module load bacio-intel-sandybridge/2.0.2
 setenv CRAYOS_VERSION $::env(CRAYPE_VERSION)
 #setenv CRAYOS_VERSION ${CRAYPE_VERSION}

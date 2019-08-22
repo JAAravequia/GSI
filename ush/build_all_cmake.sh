@@ -60,8 +60,10 @@ if [ $target = wcoss_d ]; then
     module purge
     module use -a $dir_modules
     module load modulefile.ProdGSI.$target
-elif [ $target = wcoss -o $target = gaea ]; then
+elif [ $target = wcoss ]; then
     module purge
+    module load $dir_modules/modulefile.ProdGSI.$target
+elif [ $target = gaea ]; then
     module load $dir_modules/modulefile.ProdGSI.$target
 elif [ $target = theia -o $target = cheyenne ]; then
     module purge
