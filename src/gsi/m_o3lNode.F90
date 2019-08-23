@@ -45,6 +45,8 @@ module m_o3lNode
      real(r_kind)    :: pg            !  variational quality control parameter
      real(r_kind)    :: wij(8)        !  horizontal interpolation weights
      integer(i_kind) :: ij(8)         !  horizontal locations
+     real(r_kind)    :: val           !  search direction
+     real(r_kind)    :: val2          !  solution at current iteration
      !logical         :: luse          !  flag indicating if ob is used in pen.
 
      !integer(i_kind) :: idv,iob	      ! device id and obs index for sorting
@@ -144,6 +146,8 @@ subroutine obsNode_xread_(aNode,iunit,istat,diagLookup,skip)
                                 aNode%pg     , &
                                 aNode%dlev   , &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if(istat/=0) then
                   call perr(myname_,'read(%(res,err2,...)), istat =',istat)
@@ -176,6 +180,8 @@ subroutine obsNode_xwrite_(aNode,junit,jstat)
                                 aNode%pg     , &
                                 aNode%dlev   , &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if (jstat/=0) then
                   call perr(myname_,'write(%(res,err2,...)), jstat =',jstat)

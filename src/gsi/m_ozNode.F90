@@ -51,6 +51,8 @@ module m_ozNode
      integer(i_kind),dimension(:),pointer :: ipos  => NULL()
      integer(i_kind) :: nloz          ! number of levels for this profile
      integer(i_kind) :: ij(4)         !  horizontal locations
+     real(r_kind),dimension(:),pointer :: val  !  search direction
+     real(r_kind),dimension(:),pointer :: val2 !  solution at current iteration
      !logical         :: luse          !  flag indicating if ob is used in pen.
 
      !integer(i_kind) :: idv,iob	      ! device id and obs index for sorting
@@ -142,6 +144,8 @@ _ENTRY_(myname_)
         if(associated(aNode%efficiency)) deallocate(aNode%efficiency)
         if(associated(aNode%dprsi  )) deallocate(aNode%dprsi  )
         if(associated(aNode%wij    )) deallocate(aNode%wij    )
+        if(associated(aNode%val    )) deallocate(aNode%val    )
+        if(associated(aNode%val2   )) deallocate(aNode%val2   )
 _EXIT_(myname_)
 return
 end subroutine obsNode_clean_
@@ -202,6 +206,8 @@ _ENTRY_(myname_)
         if(associated(aNode%efficiency)) deallocate(aNode%efficiency)
         if(associated(aNode%dprsi  )) deallocate(aNode%dprsi  )
         if(associated(aNode%wij    )) deallocate(aNode%wij    )
+        if(associated(aNode%val    )) deallocate(aNode%val    )
+        if(associated(aNode%val2   )) deallocate(aNode%val2   )
 
         allocate( aNode%diags  (mlev ), &
                   aNode%res    (mlev ), &
@@ -212,6 +218,8 @@ _ENTRY_(myname_)
                   aNode%apriori(meff ), &
                   aNode%efficiency(meff), &
                   aNode%wij  (4,msig ), &
+                  aNode%val    (mlev ), &
+                  aNode%val2   (mlev ), &
                   aNode%dprsi(  msig )  )
 
         allocate(ich(mlev))
@@ -227,6 +235,8 @@ _ENTRY_(myname_)
                                 aNode%rozcon , &
                                 aNode%dprsi  , &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if (istat/=0) then
                   call perr(myname_,'read(%(res,err2,...)), istat =',istat)
@@ -290,6 +300,8 @@ _ENTRY_(myname_)
                                 aNode%rozcon , &
                                 aNode%dprsi  , &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if (jstat/=0) then
                   call perr(myname_,'write(%(res,err2,...)), jstat =',jstat)

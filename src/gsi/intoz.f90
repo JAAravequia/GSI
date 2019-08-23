@@ -198,18 +198,16 @@ subroutine intozlay_(ozhead,rval,sval)
 ! Loop over ozone observations.
   ozptr => ozNode_typecast(ozhead)
   do while (associated(ozptr))
-
+     ozptr%val2=zero_quad
 !    Set location
      j1=ozptr%ij(1)
      j2=ozptr%ij(2)
      j3=ozptr%ij(3)
      j4=ozptr%ij(4)
 
-
 !    Accumulate contribution from layer observations
      dz1=nsig+1
      if ( ozptr%nloz >= 1 ) then
-
         do k=1,ozptr%nloz
            val1= zero_quad
            pob = ozptr%prs(k)
@@ -230,7 +228,7 @@ subroutine intozlay_(ozhead,rval,sval)
                    w3* soz(j3,kk)+ &
                    w4* soz(j4,kk))*delz
            enddo
-
+           ozptr%val2(k)=ozptr%val2(k)+val1-ozptr%res(k)
            if(luse_obsdiag)then
               if (lsaveobsens) then
                  valx=val1*ozptr%err2(k)*ozptr%raterr2(k)
@@ -266,8 +264,8 @@ subroutine intozlay_(ozhead,rval,sval)
                  roz(j4,kk)  =  roz(j4,kk) + valx*w4*delz
               enddo
               dz1=pob
-           endif
-        end do
+           endif !l_do_adjoint
+        end do !k=1,nloz
 
      end if   ! (ozptr%nloz >= 1)
 
@@ -286,6 +284,7 @@ subroutine intozlay_(ozhead,rval,sval)
                 w3* soz(j3,kk)+ &
                 w4* soz(j4,kk)
         enddo
+!KAB        ozptr%val2(k)=ozptr%val2(k)+val1-ozptr%res(k)
      else  ! OMI ozone with efficiency factor
 ! Integrate ozone within each layer
         dz1=nsig+1
@@ -303,7 +302,7 @@ subroutine intozlay_(ozhead,rval,sval)
               w2=ozptr%wij(2,kk)
               w3=ozptr%wij(3,kk)
               w4=ozptr%wij(4,kk)
-              val_lay(kl)=val_lay(kl) + ( &
+              val_lay(kl)=val_lay(kl) + ( & !KAB can change to scalar?
                    w1* soz(j1,kk)+ &
                    w2* soz(j2,kk)+ &
                    w3* soz(j3,kk)+ &
@@ -318,7 +317,7 @@ subroutine intozlay_(ozhead,rval,sval)
            val1=val1+ozptr%efficiency(j)*val_lay(j)
         enddo    
      endif ! OMI ozone with efficiency factor
-     
+     ozptr%val2(k)=ozptr%val2(k)+val1-ozptr%res(k)
 
      if(luse_obsdiag)then
         if (lsaveobsens) then
@@ -547,7 +546,6 @@ subroutine intozlev_(o3lhead,rval,sval)
         roz1d(j8)=roz1d(j8)+w8*grad
 
      endif
-
      o3lptr => o3lNode_nextcast(o3lptr)
 
   end do

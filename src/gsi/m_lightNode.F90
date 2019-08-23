@@ -72,6 +72,8 @@ module m_lightNode
      real(r_kind)    :: b      =0._r_kind    !  variational quality control parameter
      real(r_kind)    :: pg     =0._r_kind    !  variational quality control parameter
      real(r_kind)    :: wij(4) =0._r_kind    !  horizontal interpolation weights
+     real(r_kind)    :: val                  ! search direction
+     real(r_kind)    :: val2                 ! solution at current iteration
 
 ! Central quadrant
      real(r_kind),pointer               :: jac_z0i1  => NULL() ! surface z at i1
@@ -623,6 +625,8 @@ _ENTRY_(myname_)
                                 aNode%jac_wmaxflagi3, &
                                 aNode%jac_wmaxflagi4, &
                                 aNode%wij           , & !(4)
+                                aNode%val           , &
+                                aNode%val2          , &
                                 aNode%ij                !(12,nsig)
     if (istat/=0) then
        call perr(myname_,'read(%(res,err2,...)), iostat =',istat)
@@ -754,6 +758,8 @@ _ENTRY_(myname_)
                                 aNode%jac_wmaxflagi3, &
                                 aNode%jac_wmaxflagi4, &
                                 aNode%wij           , & !(4)
+                                aNode%val           , &
+                                aNode%val2          , &
                                 aNode%ij                !(12,nsig)
   if (jstat/=0) then
      call perr(myname_,'write(%(res,err2,...)), iostat =',jstat)

@@ -626,6 +626,8 @@ subroutine setupozlay(lunin,mype,stats_oz,nlevs,nreal,nobs,&
                        my_head%raterr2(nlev), &
                        my_head%prs(nlevp), &
                        my_head%wij(4,nsig), &
+                       my_head%val(nlevp), &
+                       my_head%val2(nlevp), &
                        my_head%dprsi(nsig), &
                        my_head%ipos(nlev),  &
                        my_head%apriori(nloz_omi), &

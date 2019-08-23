@@ -530,7 +530,7 @@ subroutine intlight_(lighthead,rval,sval)
         val =  flashrate_TL
 
      end if ! global block
-
+     lightptr%val2=val-lightptr%res
      if (luse_obsdiag)then
          if (lsaveobsens) then
             grad = val*lightptr%raterr2*lightptr%err2
