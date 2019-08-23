@@ -44,6 +44,10 @@ module m_spdNode
      real(r_kind)    :: b             !  variational quality control parameter
      real(r_kind)    :: pg            !  variational quality control parameter
      real(r_kind)    :: wij(4)        !  horizontal interpolation weights
+     real(r_kind)    :: valu          ! search direction
+     real(r_kind)    :: valv          ! search direction
+     real(r_kind)    :: valu2         ! solution at current iteration
+     real(r_kind)    :: valv2         ! solution at current iteration
      real(r_kind)    :: uges          !  guess u value        
      real(r_kind)    :: vges          !  guess v value        
      integer(i_kind) :: ij(4)         !  horizontal locations
@@ -150,6 +154,10 @@ _ENTRY_(myname_)
                                 aNode%vges   , &
                                 aNode%factw  , &
                                 aNode%wij    , &
+                                aNode%valu   , &
+                                aNode%valv   , &
+                                aNode%valu2  , &
+                                aNode%valv2  , &
                                 aNode%ij
                 if (istat/=0) then
                   call perr(myname_,'read(%(res,err2,...)), iostat =',istat)
@@ -187,6 +195,10 @@ _ENTRY_(myname_)
                                 aNode%vges   , &
                                 aNode%factw  , &
                                 aNode%wij    , &
+                                aNode%valu   , &
+                                aNode%valv   , &
+                                aNode%valu2  , &
+                                aNode%valv2  , &
                                 aNode%ij
                 if (jstat/=0) then
                   call perr(myname_,'write(%(res,err2,...)), iostat =',jstat)

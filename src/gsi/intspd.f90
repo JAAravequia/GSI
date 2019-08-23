@@ -156,6 +156,8 @@ subroutine intspd_(spdhead,rval,sval)
 !          Forward model
            uatl=w1*su(j1)+w2*su(j2)+w3*su(j3)+w4*su(j4)
            vatl=w1*sv(j1)+w2*sv(j2)+w3*sv(j3)+w4*sv(j4)
+           spdptr%valu2=uatl+spdptr%uges
+           spdptr%valv2=vatl+spdptr%vges
            spdatl=spdptr%uges*uatl+spdptr%vges*vatl
            spdatl=spdatl/spdtra
 
@@ -195,6 +197,8 @@ subroutine intspd_(spdhead,rval,sval)
 !       Forward model
         uanl=spdptr%uges+w1* su(j1)+w2* su(j2)+w3* su(j3)+w4* su(j4)
         vanl=spdptr%vges+w1* sv(j1)+w2* sv(j2)+w3* sv(j3)+w4* sv(j4)
+        spdptr%valu2=uanl+spdptr%uges
+        spdptr%valv2=vanl+spdptr%vges
         spdanl=sqrt(uanl*uanl+vanl*vanl)
         if (luse_obsdiag .and. spdptr%luse) spdptr%diags%tldepart(jiter)=spdanl-spdtra
 

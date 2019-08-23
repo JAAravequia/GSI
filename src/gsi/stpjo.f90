@@ -273,7 +273,7 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins,ii)
   use stpgpsmod, only: stpgps_search,stpgps
   use stprwmod, only: stprw_search,stprw
   use stpdbzmod, only: stpdbz_search,stpdbz
-  use stpspdmod, only: stpspd
+  use stpspdmod, only: stpspd_search,stpspd
   use stpsstmod, only: stpsst_search,stpsst
   use stptcpmod, only: stptcp
   use stpdwmod, only: stpdw,stpdw_search
@@ -455,9 +455,13 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins,ii)
           endif
 
 !   penalty, b, and c for wind speed
-!KAB
        case(i_spd_ob_type)
-          call stpspd(yobs(ib)%spd,dval(ib),xval(ib),pbcjo(1,i_spd_ob_type,ib),sges,nstep) 
+          if ((ii==1).and.(nstep>0)) then
+             call stpspd_search(yobs(ib)%spd,dval(ib),pbcjo(1,i_spd_ob_type,ib),sges,nstep) 
+          else if (ii>1) then
+             call stpspd(yobs(ib)%spd,pbcjo(1,i_spd_ob_type,ib),sges,nstep)
+          endif
+
 
 !   penalty, b, and c for precipitation
 !KAB
