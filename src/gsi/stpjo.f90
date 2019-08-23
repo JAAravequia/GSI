@@ -274,7 +274,7 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins,ii)
   use stprwmod, only: stprw_search,stprw
   use stpdbzmod, only: stpdbz_search,stpdbz
   use stpspdmod, only: stpspd
-  use stpsstmod, only: stpsst
+  use stpsstmod, only: stpsst_search,stpsst
   use stptcpmod, only: stptcp
   use stpdwmod, only: stpdw,stpdw_search
   use stppcpmod, only: stppcp
@@ -373,6 +373,7 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins,ii)
 !   penalty, b, and c for carbon monoxide
        case(i_colvk_ob_type)
           call stpco(yobs(ib)%colvk,dval(ib),xval(ib),pbcjo(1,i_colvk_ob_type,ib),sges,nstep)
+!KAB what to do about this one?
 
 !   penalty, b, and c for aerosols
        case(i_pm2_5_ob_type)
@@ -446,9 +447,12 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins,ii)
           endif
 
 !   penalty, b, and c for conventional sst
-!KAB
        case(i_sst_ob_type)
-          call stpsst(yobs(ib)%sst,dval(ib),xval(ib),pbcjo(1,i_sst_ob_type,ib),sges,nstep)
+          if ((ii==1).and.(nstep>0)) then
+             call stpsst_search(yobs(ib)%sst,dval(ib),pbcjo(1,i_sst_ob_type,ib),sges,nstep)
+          else if (ii>1) then
+             call stpsst(yobs(ib)%sst,pbcjo(1,i_sst_ob_type,ib),sges,nstep)
+          endif
 
 !   penalty, b, and c for wind speed
 !KAB

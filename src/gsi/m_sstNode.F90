@@ -44,6 +44,8 @@ module m_sstNode
      real(r_kind)    :: b             !  variational quality control parameter
      real(r_kind)    :: pg            !  variational quality control parameter
      real(r_kind)    :: wij(4)        !  horizontal interpolation weights
+     real(r_kind)    :: val           ! search direction
+     real(r_kind)    :: val2          ! solution at current iteration
      integer(i_kind) :: ij(4)         !  horizontal locations
      real(r_kind)    :: zob           !  observation depth in meter
      real(r_kind)    :: tz_tr         !  sensitivity of tob to tref : d(Tz)/d(Tr)
@@ -148,6 +150,8 @@ _ENTRY_(myname_)
                                 aNode%zob    , &
                                 aNode%tz_tr  , &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if (istat/=0) then
                   call perr(myname_,'read(%(res,err2,...)), iostat =',istat)
@@ -184,6 +188,8 @@ _ENTRY_(myname_)
                                 aNode%zob    , &
                                 aNode%tz_tr  , &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if (jstat/=0) then
                   call perr(myname_,'write(%(res,err2,...)), iostat =',jstat)

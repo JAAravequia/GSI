@@ -137,7 +137,7 @@ subroutine intsst(ssthead,rval,sval)
      else
        val = w1*ssst(j1)+w2*ssst(j2)+w3*ssst(j3)+w4*ssst(j4)          ! Forward
      endif
-
+     sstptr%val2=val-sstptr%res
 
      if(luse_obsdiag)then
         if (lsaveobsens) then
