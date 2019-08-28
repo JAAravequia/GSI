@@ -413,6 +413,7 @@
               allocate(my_head%res(icc),my_head%err2(icc), &
                        my_head%raterr2(icc), &
                        my_head%daod_dvar(nsigaerojac,icc), &
+                       my_head%val(icc),my_head%val2(icc), &
                        my_head%ich(icc),&
                        my_head%icx(icc))
               if(luse_obsdiag)allocate (my_head%diags(icc))

@@ -107,7 +107,7 @@ subroutine intmxtm(mxtmhead,rval,sval)
 !    Forward model
      val=w1*smxtm(j1)+w2*smxtm(j2)&
         +w3*smxtm(j3)+w4*smxtm(j4)
-
+     mxtmptr%val2=val-mxtmptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*mxtmptr%raterr2*mxtmptr%err2

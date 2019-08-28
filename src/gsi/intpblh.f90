@@ -108,7 +108,7 @@ subroutine intpblh(pblhhead,rval,sval)
 !    Forward model
      val=w1*spblh(j1)+w2*spblh(j2)&
         +w3*spblh(j3)+w4*spblh(j4)
-
+     pblhptr%val2=val-pblhptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*pblhptr%raterr2*pblhptr%err2

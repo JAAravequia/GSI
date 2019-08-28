@@ -107,7 +107,7 @@ subroutine intmitm(mitmhead,rval,sval)
 !    Forward model
      val=w1*smitm(j1)+w2*smitm(j2)&
         +w3*smitm(j3)+w4*smitm(j4)
-
+     mitmptr%val2=val-mitmptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*mitmptr%raterr2*mitmptr%err2

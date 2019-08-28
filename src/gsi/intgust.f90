@@ -107,7 +107,7 @@ subroutine intgust(gusthead,rval,sval)
 !    Forward model
      val=w1*sgust(j1)+w2*sgust(j2)&
         +w3*sgust(j3)+w4*sgust(j4)
-
+     gustptr%val2=val-gustptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*gustptr%raterr2*gustptr%err2

@@ -169,7 +169,7 @@ subroutine intlwcp_(lwcphead,rval,sval)
                        qr_TL*lwcpptr%jac_qr(k) ) ! tpwcon*r10*(piges(k)-piges(k+1)) already did in setuplwcp.f90
        end do
      endif ! l_wcp_cwm
-
+     lwcpptr%val2=val-lwcpptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*lwcpptr%raterr2*lwcpptr%err2

@@ -44,6 +44,8 @@ module m_swcpNode
      real(r_kind)    :: b             !  variational quality control parameter
      real(r_kind)    :: pg            !  variational quality control parameter
      real(r_kind)    :: wij(4)        !  horizontal interpolation weights
+     real(r_kind)    :: val           ! search direction
+     real(r_kind)    :: val2          ! solution at current iteration
      real(r_kind),dimension(:),pointer :: jac_t => NULL()
                                       !  t jacobian 
      real(r_kind),dimension(:),pointer :: jac_p => NULL()
@@ -246,6 +248,8 @@ _ENTRY_(myname_)
                                 aNode%b      , &
                                 aNode%pg     , &
                                 aNode%wij    , & !(4)
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%jac_t  , & !(  nsig)
                                 aNode%jac_p  , & !(  nsig)
                                 aNode%jac_q  , & !(  nsig)
@@ -288,6 +292,8 @@ _ENTRY_(myname_)
                                 aNode%b      , &
                                 aNode%pg     , &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%jac_t  , &
                                 aNode%jac_p  , &
                                 aNode%jac_q  , &

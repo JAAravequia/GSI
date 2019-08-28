@@ -266,7 +266,7 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins,ii)
   use kinds, only: i_kind,r_kind,r_quad
   use stptmod, only: stpt_search,stpt
   use stpwmod, only: stpw_search,stpw
-  use stppsmod, only: stpps
+  use stppsmod, only: stpps_search,stpps
   use stppwmod, only: stppw_search,stppw
   use stpqmod, only: stpq_search,stpq
   use stpradmod, only: stprad_search,stprad
@@ -275,33 +275,33 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins,ii)
   use stpdbzmod, only: stpdbz_search,stpdbz
   use stpspdmod, only: stpspd_search,stpspd
   use stpsstmod, only: stpsst_search,stpsst
-  use stptcpmod, only: stptcp
+  use stptcpmod, only: stptcp_search,stptcp
   use stpdwmod, only: stpdw,stpdw_search
-  use stppcpmod, only: stppcp
+  use stppcpmod, only: stppcp_search,stppcp
   use stpozmod, only: stpozlay_search => stpozlay_search_
   use stpozmod, only: stpozlev_search => stpozlev_search_
   use stpozmod, only: stpozlay => stpozlay_
   use stpozmod, only: stpozlev => stpozlev_
   use stpcomod, only: stpco
   use stppm2_5mod, only: stppm2_5,stppm2_5_search
-  use stppm10mod, only: stppm10
-  use stpaodmod, only: stpaod
-  use stpgustmod, only: stpgust
-  use stpvismod, only: stpvis
-  use stppblhmod, only: stppblh
-  use stpwspd10mmod, only: stpwspd10m
-  use stptd2mmod, only: stptd2m
-  use stpmxtmmod, only: stpmxtm
-  use stpmitmmod, only: stpmitm
-  use stppmslmod, only: stppmsl
-  use stphowvmod, only: stphowv
-  use stptcamtmod, only: stptcamt
-  use stplcbasmod, only: stplcbas
-  use stpcldchmod, only: stpcldch
-  use stpuwnd10mmod, only: stpuwnd10m
-  use stpvwnd10mmod, only: stpvwnd10m
-  use stpswcpmod, only: stpswcp
-  use stplwcpmod, only: stplwcp
+  use stppm10mod, only: stppm10_search,stppm10
+  use stpaodmod, only: stpaod_search,stpaod
+  use stpgustmod, only: stpgust_search,stpgust
+  use stpvismod, only: stpvis_search,stpvis
+  use stppblhmod, only: stppblh_search,stppblh
+  use stpwspd10mmod, only: stpwspd10m_search,stpwspd10m
+  use stptd2mmod, only: stptd2m_search,stptd2m
+  use stpmxtmmod, only: stpmxtm_search,stpmxtm
+  use stpmitmmod, only: stpmitm_search,stpmitm
+  use stppmslmod, only: stppmsl_search,stppmsl
+  use stphowvmod, only: stphowv_search,stphowv
+  use stptcamtmod, only: stptcamt_search,stptcamt
+  use stplcbasmod, only: stplcbas_search,stplcbas
+  use stpcldchmod, only: stpcldch_search,stpcldch
+  use stpuwnd10mmod, only: stpuwnd10m_search,stpuwnd10m
+  use stpvwnd10mmod, only: stpvwnd10m_search,stpvwnd10m
+  use stpswcpmod, only: stpswcp_search,stpswcp
+  use stplwcpmod, only: stplwcp_search,stplwcp
   use stplightmod, only: stplight_search,stplight
   use bias_predictors, only: predictors
   use aircraftinfo, only: aircraft_t_bc_pof,aircraft_t_bc
@@ -337,7 +337,7 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins,ii)
        case(i_rad_ob_type)
           if ((ii==1).and.(nstep>0)) then
              call stprad_search(yobs(ib)%rad,dval(ib),dbias%predr,pbcjo(1,i_rad_ob_type,ib),sges,nstep)
-          else if (ii>1) then
+          else !if (ii>1) then
              call stprad(yobs(ib)%rad,pbcjo(1,i_rad_ob_type,ib),sges,nstep)
           endif
 
@@ -350,7 +350,7 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins,ii)
                 call stpt_search(yobs(ib)%t,dval(ib),pbcjo(1,i_t_ob_type,ib),sges,nstep, &
                     dbias%predt,xbias%predt) 
              end if
-          else if (ii>1) then
+          else !if (ii>1) then
                 call stpt(yobs(ib)%t,pbcjo(1,i_t_ob_type,ib),sges,nstep)
           endif
 
@@ -442,7 +442,7 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins,ii)
        case(i_gps_ob_type)
           if ((ii==1).and.(nstep>0)) then
              call stpgps_search(yobs(ib)%gps,dval(ib),pbcjo(1,i_gps_ob_type,ib),sges,nstep)
-          else if (ii>1) then
+          else !if (ii>1) then
              call stpgps(yobs(ib)%gps,pbcjo(1,i_gps_ob_type,ib),sges,nstep)
           endif
 
@@ -450,7 +450,7 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins,ii)
        case(i_sst_ob_type)
           if ((ii==1).and.(nstep>0)) then
              call stpsst_search(yobs(ib)%sst,dval(ib),pbcjo(1,i_sst_ob_type,ib),sges,nstep)
-          else if (ii>1) then
+          else !if (ii>1) then
              call stpsst(yobs(ib)%sst,pbcjo(1,i_sst_ob_type,ib),sges,nstep)
           endif
 
@@ -458,129 +458,211 @@ subroutine stpjo(yobs,dval,dbias,xval,xbias,sges,pbcjo,nstep,nobs_bins,ii)
        case(i_spd_ob_type)
           if ((ii==1).and.(nstep>0)) then
              call stpspd_search(yobs(ib)%spd,dval(ib),pbcjo(1,i_spd_ob_type,ib),sges,nstep) 
-          else if (ii>1) then
+          else !if (ii>1) then
              call stpspd(yobs(ib)%spd,pbcjo(1,i_spd_ob_type,ib),sges,nstep)
           endif
 
 
 !   penalty, b, and c for precipitation
-!KAB
        case(i_pcp_ob_type)
-          call stppcp(yobs(ib)%pcp,dval(ib),xval(ib),pbcjo(1,i_pcp_ob_type,ib),sges,nstep)
+          if ((ii==1).and.(nstep>0)) then
+             call stppcp_search(yobs(ib)%pcp,dval(ib),pbcjo(1,i_pcp_ob_type,ib),sges,nstep)
+          else !if (ii>1) then
+             call stppcp(yobs(ib)%pcp,pbcjo(1,i_pcp_ob_type,ib),sges,nstep)
+          endif
+
 
 !   penalty, b, and c for surface pressure
-!KAB
        case(i_ps_ob_type)
-          call stpps(yobs(ib)%ps,dval(ib),xval(ib),pbcjo(1,i_ps_ob_type,ib),sges,nstep)
+          if ((ii==1).and.(nstep>0)) then
+             call stpps_search(yobs(ib)%ps,dval(ib),pbcjo(1,i_ps_ob_type,ib),sges,nstep)
+          else !if (ii>1) then
+             call stpps(yobs(ib)%ps,pbcjo(1,i_ps_ob_type,ib),sges,nstep)
+          endif
 
 !   penalty, b, and c for MSLP TC obs
-!KAB
        case(i_tcp_ob_type)
-          call stptcp(yobs(ib)%tcp,dval(ib),xval(ib),pbcjo(1,i_tcp_ob_type,ib),sges,nstep)
+          if ((ii==1).and.(nstep>0)) then
+             call stptcp_search(yobs(ib)%tcp,dval(ib),pbcjo(1,i_tcp_ob_type,ib),sges,nstep)
+          else !if (ii>1) then
+             call stptcp(yobs(ib)%tcp,pbcjo(1,i_tcp_ob_type,ib),sges,nstep)
+          endif
 
 !   penalty, b, and c for conventional gust
-!KAB
        case(i_gust_ob_type)
-          if (getindex(cvars2d,'gust')>0) &
-          call stpgust(yobs(ib)%gust,dval(ib),xval(ib),pbcjo(1,i_gust_ob_type,ib),sges,nstep)
+          if (getindex(cvars2d,'gust')>0) then
+             if ((ii==1).and.(nstep>0)) then
+                call stpgust_search(yobs(ib)%gust,dval(ib),pbcjo(1,i_gust_ob_type,ib),sges,nstep)
+             else !if (ii>1) then
+                call stpgust(yobs(ib)%gust,pbcjo(1,i_gust_ob_type,ib),sges,nstep)
+             endif
+          endif
 
 !   penalty, b, and c for conventional vis
-!KAB
        case(i_vis_ob_type)
-          if (getindex(cvars2d,'vis')>0) &
-          call stpvis(yobs(ib)%vis,dval(ib),xval(ib),pbcjo(1,i_vis_ob_type,ib),sges,nstep)
+          if (getindex(cvars2d,'vis')>0) then
+             if ((ii==1).and.(nstep>0)) then
+                call stpvis_search(yobs(ib)%vis,dval(ib),pbcjo(1,i_vis_ob_type,ib),sges,nstep)
+             else !if (ii>1) then
+                call stpvis(yobs(ib)%vis,pbcjo(1,i_vis_ob_type,ib),sges,nstep)
+             endif
+          endif
 
 !   penalty, b, and c for conventional pblh
-!KAB
        case(i_pblh_ob_type)
-          if (getindex(cvars2d,'pblh')>0) &
-          call stppblh(yobs(ib)%pblh,dval(ib),xval(ib),pbcjo(1,i_pblh_ob_type,ib),sges,nstep)
+          if (getindex(cvars2d,'pblh')>0) then
+             if ((ii==1).and.(nstep>0)) then
+                call stppblh_search(yobs(ib)%pblh,dval(ib),pbcjo(1,i_pblh_ob_type,ib),sges,nstep)
+             else !if (ii>1) then
+                call stppblh(yobs(ib)%pblh,pbcjo(1,i_pblh_ob_type,ib),sges,nstep)
+             endif
+          endif
 
 !   penalty, b, and c for conventional wspd10m
-!KAB
        case(i_wspd10m_ob_type)
-          if (getindex(cvars2d,'wspd10m')>0) &
-          call stpwspd10m(yobs(ib)%wspd10m,dval(ib),xval(ib),pbcjo(1,i_wspd10m_ob_type,ib),sges,nstep)
+          if (getindex(cvars2d,'wspd10m')>0) then
+             if ((ii==1).and.(nstep>0)) then
+                call stpwspd10m_search(yobs(ib)%wspd10m,dval(ib),pbcjo(1,i_wspd10m_ob_type,ib),sges,nstep)
+             else !if (ii>1) then
+                call stpwspd10m(yobs(ib)%wspd10m,pbcjo(1,i_wspd10m_ob_type,ib),sges,nstep)
+             endif
+          endif
+
 
 !   penalty, b, and c for conventional td2m
-!KAB
        case(i_td2m_ob_type)
-          if (getindex(cvars2d,'td2m')>0) &
-          call stptd2m(yobs(ib)%td2m,dval(ib),xval(ib),pbcjo(1,i_td2m_ob_type,ib),sges,nstep)
+          if (getindex(cvars2d,'td2m')>0) then
+             if ((ii==1).and.(nstep>0)) then
+                call stptd2m_search(yobs(ib)%td2m,dval(ib),pbcjo(1,i_td2m_ob_type,ib),sges,nstep)
+             else
+                call stptd2m_search(yobs(ib)%td2m,dval(ib),pbcjo(1,i_td2m_ob_type,ib),sges,nstep)
+             endif
+          endif
 
 !   penalty, b, and c for conventional mxtm
-!KAB
        case(i_mxtm_ob_type)
-          if (getindex(cvars2d,'mxtm')>0) &
-          call stpmxtm(yobs(ib)%mxtm,dval(ib),xval(ib),pbcjo(1,i_mxtm_ob_type,ib),sges,nstep)
+          if (getindex(cvars2d,'mxtm')>0) then
+             if ((ii==1).and.(nstep>0)) then
+                call stpmxtm_search(yobs(ib)%mxtm,dval(ib),pbcjo(1,i_mxtm_ob_type,ib),sges,nstep)
+             else
+                call stpmxtm(yobs(ib)%mxtm,pbcjo(1,i_mxtm_ob_type,ib),sges,nstep)
+             endif
+          endif
 
 !   penalty, b, and c for conventional mitm
-!KAB
        case(i_mitm_ob_type)
-          if (getindex(cvars2d,'mitm')>0) &
-          call stpmitm(yobs(ib)%mitm,dval(ib),xval(ib),pbcjo(1,i_mitm_ob_type,ib),sges,nstep)
+          if (getindex(cvars2d,'mitm')>0) then
+             if ((ii==1).and.(nstep>0)) then
+                call stpmitm_search(yobs(ib)%mitm,dval(ib),pbcjo(1,i_mitm_ob_type,ib),sges,nstep)
+             else
+                call stpmitm(yobs(ib)%mitm,pbcjo(1,i_mitm_ob_type,ib),sges,nstep)
+             endif
+          endif
 
 !   penalty, b, and c for conventional pmsl
-!KAB
        case(i_pmsl_ob_type)
-          if (getindex(cvars2d,'pmsl')>0) &
-          call stppmsl(yobs(ib)%pmsl,dval(ib),xval(ib),pbcjo(1,i_pmsl_ob_type,ib),sges,nstep)
+          if (getindex(cvars2d,'pmsl')>0) then
+             if ((ii==1).and.(nstep>0)) then
+                call stppmsl_search(yobs(ib)%pmsl,dval(ib),pbcjo(1,i_pmsl_ob_type,ib),sges,nstep)
+             else
+                call stppmsl(yobs(ib)%pmsl,pbcjo(1,i_pmsl_ob_type,ib),sges,nstep)
+             endif
+          endif
 
 !   penalty, b, and c for conventional howv
-!KAB
        case(i_howv_ob_type)
-          if (getindex(cvars2d,'howv')>0) &
-          call stphowv(yobs(ib)%howv,dval(ib),xval(ib),pbcjo(1,i_howv_ob_type,ib),sges,nstep)
+          if (getindex(cvars2d,'howv')>0) then
+             if ((ii==1).and.(nstep>0)) then
+                call stphowv_search(yobs(ib)%howv,dval(ib),pbcjo(1,i_howv_ob_type,ib),sges,nstep)
+             else
+                call stphowv(yobs(ib)%howv,pbcjo(1,i_howv_ob_type,ib),sges,nstep)
+             endif
+          endif
 
 !   penalty, b, and c for total cloud amount
-!KAB
        case(i_tcamt_ob_type)
-          if (getindex(cvars2d,'tcamt')>0) &
-          call stptcamt(yobs(ib)%tcamt,dval(ib),xval(ib),pbcjo(1,i_tcamt_ob_type,ib),sges,nstep)
+          if (getindex(cvars2d,'tcamt')>0) then
+             if ((ii==1).and.(nstep>0)) then
+                call stptcamt_search(yobs(ib)%tcamt,dval(ib),pbcjo(1,i_tcamt_ob_type,ib),sges,nstep)
+             else
+                call stptcamt(yobs(ib)%tcamt,pbcjo(1,i_tcamt_ob_type,ib),sges,nstep)
+             endif
+          endif
+
 
 !   penalty, b, and c for cloud base of lowest cloud
-!KAB
        case(i_lcbas_ob_type)
-          if (getindex(cvars2d,'lcbas')>0) &
-          call stplcbas(yobs(ib)%lcbas,dval(ib),xval(ib),pbcjo(1,i_lcbas_ob_type,ib),sges,nstep)
+          if (getindex(cvars2d,'lcbas')>0) then
+             if ((ii==1).and.(nstep>0)) then
+                call stplcbas_search(yobs(ib)%lcbas,dval(ib),pbcjo(1,i_lcbas_ob_type,ib),sges,nstep)
+             else
+                call stplcbas(yobs(ib)%lcbas,pbcjo(1,i_lcbas_ob_type,ib),sges,nstep)
+             endif
+          endif
 
 !   penalty, b, and c for aod
-!KAB
        case(i_aero_ob_type)
-          call stpaod(yobs(ib)%aero,dval(ib),xval(ib),pbcjo(1,i_aero_ob_type,ib),sges,nstep)
+          if ((ii==1).and.(nstep>0)) then
+             call stpaod_search(yobs(ib)%aero,dval(ib),pbcjo(1,i_aero_ob_type,ib),sges,nstep)
+          else
+             call stpaod(yobs(ib)%aero,pbcjo(1,i_aero_ob_type,ib),sges,nstep)
+          endif
 
 !   penalty, b, and c for pm10
-!KAB
        case(i_pm10_ob_type)
-          call stppm10(yobs(ib)%pm10,dval(ib),xval(ib),pbcjo(1,i_pm10_ob_type,ib),sges,nstep)
+          if ((ii==1).and.(nstep>0)) then
+             call stppm10_search(yobs(ib)%pm10,dval(ib),pbcjo(1,i_pm10_ob_type,ib),sges,nstep)
+          else
+             call stppm10(yobs(ib)%pm10,pbcjo(1,i_pm10_ob_type,ib),sges,nstep)
+          endif
+
 
 !   penalty, b, and c for conventional cldch
-!KAB
        case(i_cldch_ob_type)
-          if (getindex(cvars2d,'cldch')>0) &
-          call stpcldch(yobs(ib)%cldch,dval(ib),xval(ib),pbcjo(1,i_cldch_ob_type,ib),sges,nstep)
+          if (getindex(cvars2d,'cldch')>0) then
+             if ((ii==1).and.(nstep>0)) then
+                call stpcldch_search(yobs(ib)%cldch,dval(ib),pbcjo(1,i_cldch_ob_type,ib),sges,nstep)
+             else
+                call stpcldch(yobs(ib)%cldch,pbcjo(1,i_cldch_ob_type,ib),sges,nstep)
+             endif
+          endif
 
 !   penalty, b, and c for conventional uwnd10m
-!KAB
        case(i_uwnd10m_ob_type)
-          if (getindex(cvars2d,'uwnd10m')>0) &
-          call stpuwnd10m(yobs(ib)%uwnd10m,dval(ib),xval(ib),pbcjo(1,i_uwnd10m_ob_type,ib),sges,nstep)
+          if (getindex(cvars2d,'uwnd10m')>0) then
+             if ((ii==1).and.(nstep>0)) then
+                call stpuwnd10m_search(yobs(ib)%uwnd10m,dval(ib),pbcjo(1,i_uwnd10m_ob_type,ib),sges,nstep)
+             else
+                call stpuwnd10m(yobs(ib)%uwnd10m,pbcjo(1,i_uwnd10m_ob_type,ib),sges,nstep)
+             endif
+          endif
+
 
 !   penalty, b, and c for conventional vwnd10m
-!KAB
        case(i_vwnd10m_ob_type)
-          if (getindex(cvars2d,'vwnd10m')>0) &
-          call stpvwnd10m(yobs(ib)%vwnd10m,dval(ib),xval(ib),pbcjo(1,i_vwnd10m_ob_type,ib),sges,nstep)
+          if (getindex(cvars2d,'vwnd10m')>0) then
+             if ((ii==1).and.(nstep>0)) then
+                call stpvwnd10m_search(yobs(ib)%vwnd10m,dval(ib),pbcjo(1,i_vwnd10m_ob_type,ib),sges,nstep)
+             else
+                call stpvwnd10m(yobs(ib)%vwnd10m,pbcjo(1,i_vwnd10m_ob_type,ib),sges,nstep)
+             endif
+          endif
 
 !   penalty, b, and c for solid-water content path
-!KAB
        case(i_swcp_ob_type)
-          call stpswcp(yobs(ib)%swcp,dval(ib),xval(ib),pbcjo(1,i_swcp_ob_type,ib),sges,nstep)
-
+          if ((ii==1).and.(nstep>0)) then
+             call stpswcp_search(yobs(ib)%swcp,dval(ib),pbcjo(1,i_swcp_ob_type,ib),sges,nstep)
+          else
+             call stpswcp(yobs(ib)%swcp,pbcjo(1,i_swcp_ob_type,ib),sges,nstep)
+          endif
 !   penalty, b, and c for liquid-water content path
-!KAB
+
        case(i_lwcp_ob_type)
-          call stplwcp(yobs(ib)%lwcp,dval(ib),xval(ib),pbcjo(1,i_lwcp_ob_type,ib),sges,nstep)
+          if ((ii==1).and.(nstep>0)) then
+             call stplwcp_search(yobs(ib)%lwcp,dval(ib),pbcjo(1,i_lwcp_ob_type,ib),sges,nstep)
+          else
+             call stplwcp(yobs(ib)%lwcp,pbcjo(1,i_lwcp_ob_type,ib),sges,nstep)
+          endif
 
        case default
           call perr('stpjo','unexpected thread, ll_jo(mm) =',ll)

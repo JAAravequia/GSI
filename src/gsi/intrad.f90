@@ -395,11 +395,21 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
      if(luseu)   tdir(ius+1)=w1*su(j1)+w2*su(j2)+w3*su(j3)+w4*su(j4)
      if(lusev)   tdir(ivs+1)=w1*sv(j1)+w2*sv(j2)+w3*sv(j3)+w4* sv(j4)
      if(lusesst) tdir(isst+1)=w1*sst(j1)+w2*sst(j2)+w3*sst(j3)+w4*sst(j4)
-     i1=j1
-     i2=j2
-     i3=j3
-     i4=j4
+     i1n(1) = j1
+     i2n(1) = j2
+     i3n(1) = j3
+     i4n(1) = j4
+     do k=2,nsig
+        i1n(k) = i1n(k-1)+latlon11
+        i2n(k) = i2n(k-1)+latlon11
+        i3n(k) = i3n(k-1)+latlon11
+        i4n(k) = i4n(k-1)+latlon11
+     enddo
      do k=1,nsig
+        i1 = i1n(k)
+        i2 = i2n(k)
+        i3 = i3n(k)
+        i4 = i4n(k)
         if(luset)  tdir(itv+k)=w1*st(i1)+w2*st(i2)+w3*st(i3)+w4*st(i4)
         if(luseq)  tdir(iqv+k)=w1*sq(i1)+w2*sq(i2)+w3*sq(i3)+w4*sq(i4)
         if(luseoz) tdir(ioz+k)=w1*soz(i1)+w2*soz(i2)+w3*soz(i3)+w4*soz(i4)
@@ -410,14 +420,6 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
         if(luseqg) tdir(iqg+k)=w1*sqg(i1)+w2*sqg(i2)+w3*sqg(i3)+w4*sqg(i4)
         if(luseqr) tdir(iqr+k)=w1*sqr(i1)+w2*sqr(i2)+w3*sqr(i3)+w4*sqr(i4)
         if(luseqs) tdir(iqs+k)=w1*sqs(i1)+w2*sqs(i2)+w3*sqs(i3)+w4*sqs(i4)
-        i1n(k) =i1
-        i2n(k) =i2
-        i3n(k) =i3
-        i4n(k) =i4
-        i1=i1+latlon11
-        i2=i2+latlon11
-        i3=i3+latlon11
-        i4=i4+latlon11
      end do
 
 !  For all other configurations

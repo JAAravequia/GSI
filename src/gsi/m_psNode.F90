@@ -43,6 +43,8 @@ module m_psNode
      real(r_kind)    :: pg     =0._r_kind    !  variational quality control parameter
      real(r_kind)    :: jb     =0._r_kind    !  variational quality control parameter
      real(r_kind)    :: wij(4) =0._r_kind    !  horizontal interpolation weights
+     real(r_kind)    :: val                  ! search direction
+     real(r_kind)    :: val2                 ! solution at current iteration
      real(r_kind)    :: ppertb =0._r_kind    !  random number adding to the obs
      integer(i_kind) :: ij(4)  =0_i_kind     !  horizontal locations
      integer(i_kind) :: kx     =0_i_kind     !  ob type
@@ -151,6 +153,8 @@ _ENTRY_(myname_)
                                 aNode%ppertb , &
                                 aNode%kx     , &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if (istat/=0) then
                   call perr(myname_,'read(%(res,...)), iostat =',istat)
@@ -187,6 +191,8 @@ _ENTRY_(myname_)
                                 aNode%ppertb , &
                                 aNode%kx     , &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if (jstat/=0) then
                   call perr(myname_,'write(%(res,...)), iostat =',jstat)

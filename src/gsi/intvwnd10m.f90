@@ -110,7 +110,7 @@ subroutine intvwnd10m(vwnd10mhead,rval,sval)
 !    Forward model
      val=w1*svwnd10m(j1)+w2*svwnd10m(j2)&
         +w3*svwnd10m(j3)+w4*svwnd10m(j4)
-
+     vwnd10mptr%val2=val-vwnd10mptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*vwnd10mptr%raterr2*vwnd10mptr%err2

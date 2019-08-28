@@ -139,7 +139,7 @@ subroutine intps_(pshead,rval,sval)
 
 !    Forward model
      val=w1* sp(j1)+w2* sp(j2)+w3* sp(j3)+w4* sp(j4)
-
+     psptr%val2=val-psptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*psptr%raterr2*psptr%err2

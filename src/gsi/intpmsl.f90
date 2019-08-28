@@ -107,7 +107,7 @@ subroutine intpmsl(pmslhead,rval,sval)
 !    Forward model
      val=w1*spmsl(j1)+w2*spmsl(j2)&
         +w3*spmsl(j3)+w4*spmsl(j4)
-
+     pmslptr%val2=val-pmslptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*pmslptr%raterr2*pmslptr%err2

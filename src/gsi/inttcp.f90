@@ -116,7 +116,7 @@ subroutine inttcp_(tcphead,rval,sval)
      
 !    Forward model
      val=w1* sp(j1)+w2* sp(j2)+w3* sp(j3)+w4* sp(j4)
-
+     tcpptr%val2=val-tcpptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*tcpptr%raterr2*tcpptr%err2

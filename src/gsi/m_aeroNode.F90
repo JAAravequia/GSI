@@ -43,6 +43,8 @@ module m_aeroNode
                                                                !  to original obs error
      !real(r_kind)                         :: time             !  observation time in sec
      real(r_kind)    :: wij(4)  =0._r_kind                     !  horizontal interpolation weights
+     real(r_kind),dimension(:),pointer :: val                  ! search direction
+     real(r_kind),dimension(:),pointer :: val2                 ! solution at current iteration
      real(r_kind),dimension(:,:),pointer :: daod_dvar => NULL()! jacobians_aero (nsig*n_aerosols,nchan)
      real(r_kind),dimension(:),pointer    :: prs => NULL()     !  pressure levels
      integer(i_kind),dimension(:),pointer :: ipos  => NULL()
@@ -131,6 +133,8 @@ _ENTRY_(myname_)
         if(associated(aNode%prs    )) deallocate(aNode%prs    )
         if(associated(aNode%ipos   )) deallocate(aNode%ipos   )
         if(associated(aNode%icx    )) deallocate(aNode%icx    )
+        if(associated(aNode%val     )) deallocate(aNode%val   )
+        if(associated(aNode%val2    )) deallocate(aNode%val2  )
 _EXIT_(myname_)
 return
 end subroutine obsNode_clean_
@@ -185,7 +189,8 @@ _ENTRY_(myname_)
         if(associated(aNode%prs    )) deallocate(aNode%prs    )
         if(associated(aNode%ipos   )) deallocate(aNode%ipos   )
         if(associated(aNode%icx    )) deallocate(aNode%icx    )
-
+        if(associated(aNode%val     )) deallocate(aNode%val   )
+        if(associated(aNode%val2    )) deallocate(aNode%val2  )
     nlaero=aNode%nlaero
     nlevp = max(nlaero,1)
 
@@ -196,7 +201,9 @@ _ENTRY_(myname_)
                   aNode%raterr2(nlaero), &
                   aNode%prs  (nlevp ), &
                   aNode%ipos (nlaero), &
-                  aNode%icx  (nlaero)  )
+                  aNode%icx  (nlaero), &
+                  aNode%val  (nlaero), &
+                  aNode%val2 (nlaero)  )
 
         allocate(       ich  (nlaero)  )
 
@@ -209,6 +216,8 @@ _ENTRY_(myname_)
                                 aNode%icx    , &
                                 aNode%daod_dvar, &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if (istat/=0) then
                   call perr(myname_,'read(ich,%(...)), iostat =',istat)
@@ -259,6 +268,8 @@ _ENTRY_(myname_)
                                 aNode%icx    , & !(nlaero)
                                 aNode%daod_dvar, & !(nsigaerojac,nlaero)
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if (jstat/=0) then
                   call perr(myname_,'write(ich,%(...)), iostat =',jstat)

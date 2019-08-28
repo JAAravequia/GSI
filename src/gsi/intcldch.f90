@@ -106,7 +106,7 @@ subroutine intcldch(cldchhead,rval,sval)
 !    Forward model
      val=w1*scldch(j1)+w2*scldch(j2)&
         +w3*scldch(j3)+w4*scldch(j4)
-
+     cldchptr%val2=val-cldchptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*cldchptr%raterr2*cldchptr%err2

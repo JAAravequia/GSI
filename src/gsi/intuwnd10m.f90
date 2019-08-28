@@ -111,7 +111,7 @@ subroutine intuwnd10m(uwnd10mhead,rval,sval)
 !    Forward model
      val=w1*suwnd10m(j1)+w2*suwnd10m(j2)&
         +w3*suwnd10m(j3)+w4*suwnd10m(j4)
-
+     uwnd10mptr%val2=val-uwnd10mptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*uwnd10mptr%raterr2*uwnd10mptr%err2

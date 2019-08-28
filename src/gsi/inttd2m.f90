@@ -107,7 +107,7 @@ subroutine inttd2m(td2mhead,rval,sval)
 !    Forward model
      val=w1*std2m(j1)+w2*std2m(j2)&
         +w3*std2m(j3)+w4*std2m(j4)
-
+     td2mptr%val2=val-td2mptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*td2mptr%raterr2*td2mptr%err2

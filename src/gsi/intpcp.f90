@@ -216,7 +216,7 @@ subroutine intpcp_(pcphead,rval,sval)
         
      end do
      pcp_cur = pcp_ges + pcp_ges_tl
-
+     pcpptr%val2=pcp_cur
 !    Ensure rain rate is greater than a small zero
      pcp_ges = max(pcp_ges,zero)
      termges = log(one+pcp_ges)

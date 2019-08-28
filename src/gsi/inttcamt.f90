@@ -108,7 +108,7 @@ subroutine inttcamt(tcamthead,rval,sval)
 !    Forward model
      val=w1*stcamt(j1)+w2*stcamt(j2)&
         +w3*stcamt(j3)+w4*stcamt(j4)
-
+     tcamtptr%val2=val-tcamtptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*tcamtptr%raterr2*tcamtptr%err2

@@ -107,7 +107,7 @@ subroutine intlcbas(lcbashead,rval,sval)
 !    Forward model
      val=w1*slcbas(j1)+w2*slcbas(j2)&
         +w3*slcbas(j3)+w4*slcbas(j4)
-
+     lcbasptr%val2=val-lcbasptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*lcbasptr%raterr2*lcbasptr%err2

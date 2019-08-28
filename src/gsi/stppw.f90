@@ -42,32 +42,15 @@ contains
 subroutine stppw_search(pwhead,rval,out,sges,nstep)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:    stppw       calculate penalty and contribution to stepsize
-!                            for precip. water using nonlinear qc
+! subprogram:    stppw       calculate search direction, penalty and contribution to
+!                            stepsize for precip. water using nonlinear qc
 !   prgmmr: derber           org: np23                date: 1991-02-26
 !
-! abstract: calculate penalty and contribution to stepsize from
+! abstract: calculate search direction, penalty and contribution to stepsize from
 !           precip. water, using nonlinear qc.
 !
 ! program history log:
-!   1991-02-26  derber
-!   1993-08-25  wu
-!   1998-02-03  weiyu yang
-!   1999-08-24  derber, j., treadon, r., yang, w., first frozen mpp version
-!   2003-12-23  kleist, generalized to use interpolated delta(pressure)
-!   2004-08-02  treadon - add only to module use, add intent in/out
-!   2004-10-08  parrish - add nonlinear qc option
-!   2005-04-11  treadon - merge stppw and stppw_qc into single routine
-!   2005-08-02  derber  - modify for variational qc parameters for each ob
-!   2005-09-28  derber  - consolidate location and weight arrays
-!   2006-07-28  derber  - modify to use new inner loop obs data structure
-!                       - unify NL qc
-!   2006-09-18  derber  - modify to output for b1 and b3
-!   2007-06-04  derber  - use quad precision to get reproducability over number of processors
-!   2008-06-02  safford - rm unused var and uses
-!   2008-12-03  todling - changed handling of ptr%time
-!   2010-01-04  zhang,b - bug fix: accumulate penalty for multiple obs bins
-!   2010-05-13  todling - udpate to use gsi_bundle
+!   2019-08-20 kbathmann split the computation of val into its own subroutine
 !
 !   input argument list:
 !     pwhead

@@ -107,7 +107,7 @@ subroutine intvis(vishead,rval,sval)
 !    Forward model
      val=w1*svis(j1)+w2*svis(j2)&
         +w3*svis(j3)+w4*svis(j4)
-
+     visptr%val2=val-visptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*visptr%raterr2*visptr%err2

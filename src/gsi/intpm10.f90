@@ -335,7 +335,7 @@ contains
                val
           
           nullify(spm10)
-
+          pm10ptr%val2=val-pm10ptr%res
           if(luse_obsdiag)then
              if (lsaveobsens) then
                 pm10ptr%diags%obssen(jiter) = val*pm10ptr%raterr2*pm10ptr%err2

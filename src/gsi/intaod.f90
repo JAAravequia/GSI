@@ -149,7 +149,7 @@ contains
           do k=1,nsigaerojac
              val=val+tdir(k)*aeroptr%daod_dvar(k,nn)
           end do
-
+          aeroptr%val2(nn)=val-aeroptr%res(nn)
           if(luse_obsdiag)then
              if (lsaveobsens) then
                 val = val*aeroptr%err2(nn)*aeroptr%raterr2(nn)

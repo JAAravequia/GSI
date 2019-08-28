@@ -42,6 +42,8 @@ module m_pcpNode
      !real(r_kind)    :: time          !  observation time in sec     
      real(r_kind)    :: ges           !  guess observation value
      real(r_kind)    :: wij(4)        !  horizontal interpolation weights
+     real(r_kind)    :: val           ! search direction
+     real(r_kind)    :: val2          ! solution at current iteration
      real(r_kind),dimension(:),pointer :: predp => NULL()
                                       !  predictors (npredp)
      real(r_kind),dimension(:),pointer :: dpcp_dvar => NULL()
@@ -235,6 +237,8 @@ _ENTRY_(myname_)
                                 aNode%predp(:)    , &
                                 aNode%dpcp_dvar(:), &
                                 aNode%wij(:) , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij(:)
                 if (istat/=0) then
                   call perr(myname_,'read(%(res,err2,...)), iostat =',istat)
@@ -271,6 +275,8 @@ _ENTRY_(myname_)
                                 aNode%predp(:)    , &
                                 aNode%dpcp_dvar(:), &
                                 aNode%wij(:) , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij(:)
                 if (jstat/=0) then
                   call perr(myname_,'write(%(res,err2,...)), iostat =',jstat)

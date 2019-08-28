@@ -97,7 +97,7 @@ subroutine stprad_search(radhead,dval,rpred,out,sges,nstep)
   integer(i_kind) nn,kk,ic
   type(radNode), pointer :: radptr
   real(r_kind) cg_rad,wgross,wnotgross
-  
+
   out=zero_quad
 
 !  If no rad data return
@@ -126,6 +126,7 @@ subroutine stprad_search(radhead,dval,rpred,out,sges,nstep)
   do while(associated(radptr))
      if(radptr%luse)then
         j1=radptr%ij(1)
+        if(nstep > 0)then !KAB
         j2=radptr%ij(2)
         j3=radptr%ij(3)
         j4=radptr%ij(4)
@@ -154,7 +155,9 @@ subroutine stprad_search(radhead,dval,rpred,out,sges,nstep)
            j3 = j3+latlon11
            j4 = j4+latlon11
         end do
+end if !KAB
         do nn=1,radptr%nchan 
+if (nstep>0) then !KAB
            radptr%val(nn) = zero
 !          contribution from bias corection
            ic=radptr%icx(nn)
@@ -178,6 +181,9 @@ subroutine stprad_search(radhead,dval,rpred,out,sges,nstep)
            do kk=1,nstep
               rad(kk)=radptr%val2(nn)+sges(kk)*radptr%val(nn)
            end do
+else !KAB
+              rad(kk)= radptr%val2(nn)
+           end if
 !          calculate contribution to J
            do kk=1,max(1,nstep)
               term(kk)  = radptr%err2(nn)*rad(kk)*rad(kk)

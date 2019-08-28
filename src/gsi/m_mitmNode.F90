@@ -46,6 +46,8 @@ module m_mitmNode
      real(r_kind)    :: b             !  variational quality control parameter
      real(r_kind)    :: pg            !  variational quality control parameter
      real(r_kind)    :: wij(4)        !  horizontal interpolation weights
+     real(r_kind)    :: val           ! search direction
+     real(r_kind)    :: val2          ! solution at current iteration
      integer(i_kind) :: ij(4)         !  horizontal locations
      !logical         :: luse          !  flag indicating if ob is used in pen.
 
@@ -143,6 +145,8 @@ _ENTRY_(myname_)
                                 aNode%b      , &
                                 aNode%pg     , &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if (istat/=0) then
                   call perr(myname_,'read(%(res,...)), iostat =',istat)
@@ -176,6 +180,8 @@ _ENTRY_(myname_)
                                 aNode%b      , &
                                 aNode%pg     , &
                                 aNode%wij    , &
+                                aNode%val    , &
+                                aNode%val2   , &
                                 aNode%ij
                 if (jstat/=0) then
                   call perr(myname_,'write(%(res,...)), iostat =',jstat)

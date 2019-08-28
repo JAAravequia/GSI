@@ -107,7 +107,7 @@ subroutine inthowv(howvhead,rval,sval)
 !    Forward model
      val=w1*showv(j1)+w2*showv(j2)&
         +w3*showv(j3)+w4*showv(j4)
-
+     howvptr%val2=val-howvptr%res
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*howvptr%raterr2*howvptr%err2
