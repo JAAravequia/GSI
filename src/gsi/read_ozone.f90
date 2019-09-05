@@ -1048,7 +1048,7 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   elseif(index(obstype,'ompslp') /= 0 )then
  
      nloz = 81
-     nreal=12
+     nreal=15
      nchanl=1
      nozdat=nreal+nchanl
      read_success=.false.
@@ -1194,6 +1194,9 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
                                            ! ozinfo.txt
          ozout(12,ndata)=j !nloz              ! # of ompslp vertical levels
          ozout(13,ndata)=omr(k)            ! ozone mixing ratio in ppmv
+         ozout(14,ndata)=olpdtsq(3,k)      ! log10 numberdensity of air
+         ozout(15,ndata)=olpdtsq(6,k)   !log10 number density of ozone from UV
+         ozout(16,ndata)=olpdtsq(8,k)   !log10 number density of ozone from VIS
          endif
        enddo
 
