@@ -217,14 +217,14 @@ case $regtest in
         fi
 
         if [ "$debug" = ".true." ] ; then
-           topts[1]="1:30:00"
+           topts[1]="2:00:00"
         fi
 
         scaling[1]=10; scaling[2]=8; scaling[3]=4
 
     ;;
 
-    global_fv3_4denvar_T126)
+    global_fv3_4denvar_T126|global_corr_obs)
 
         if [[ "$machine" = "Theia" ]]; then
            topts[1]="0:35:00" ; popts[1]="6/8/" ; ropts[1]="/1"

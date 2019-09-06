@@ -268,8 +268,6 @@ public isazi_ang2           ! = 37 index of solar azimuth angle (degrees)
   integer(i_kind), parameter, dimension(1:SOIL_N_TYPES) :: map_soil_to_crtm=(/1, &
     1, 4, 2, 2, 8, 7, 2, 6, 5, 2, 3, 8, 1, 6, 9/)
   
-  logical,parameter:: GMAO_ZENITH_ANGLE = .false.
-  !logical,parameter:: GMAO_ZENITH_ANGLE = .true.
 contains
 subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,nreal,isis,obstype,radmod)
 !$$$  subprogram documentation block
@@ -1549,18 +1547,10 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
            panglr = data_s(iscan_ang)
            if(obstype == 'goes_img' .or. obstype == 'seviri' .or. obstype == 'abi')panglr = zero
 
-           if(.not.GMAO_ZENITH_ANGLE) then
-!=================================
-!!!!!NCEP's Vlab Version
-             geometryinfo(1)%sensor_zenith_angle = abs(data_s(ilzen_ang)*rad2deg) ! local zenith angle
-             geometryinfo(1)%source_zenith_angle = abs(data_s(iszen_ang))         ! solar zenith angle
-           else
-!=================================
-!!!! GMAO's current FP ==> Switch to NCEP's Vlab version will result in non-zero(but very small) diff in most of all satellite radiance DA
-             geometryinfo(1)%sensor_zenith_angle = data_s(ilzen_ang)*rad2deg      ! local zenith angle
-             geometryinfo(1)%source_zenith_angle = data_s(iszen_ang)              ! solar zenith angle
-           endif
-!=================================
+           geometryinfo(1)%sensor_zenith_angle = abs(data_s(ilzen_ang)*rad2deg) ! local zenith angle
+           geometryinfo(1)%source_zenith_angle = abs(data_s(iszen_ang))         ! solar zenith angle
+!          geometryinfo(1)%sensor_zenith_angle = data_s(ilzen_ang)*rad2deg      ! local zenith angle
+!          geometryinfo(1)%source_zenith_angle = data_s(iszen_ang)              ! solar zenith angle
            geometryinfo(1)%sensor_azimuth_angle = data_s(ilazi_ang)            ! local azimuth angle
            geometryinfo(1)%source_azimuth_angle = data_s(isazi_ang)            ! solar azimuth angle
            geometryinfo(1)%sensor_scan_angle   = panglr*rad2deg                ! scan angle

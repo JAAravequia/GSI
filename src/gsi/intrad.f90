@@ -249,7 +249,8 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs         
 !   2015-04-01  W. Gu   - scale the bias correction term to handle the
 !                       - inter-channel correlated obs errors.
-!   2016-07-19  kbathmann - move decomposition of correlated R to outer loop.
+!   2019-04-22  kbathmann/W. Gu - use of Cholesky factoriztion of R to update the bias correction term
+!   2019-08-14  W. Gu/guo- speed up bias correction term in the case of the correlated obs
 !
 !   input argument list:
 !     radhead  - obs type pointer to obs structure
@@ -314,7 +315,7 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
   real(r_kind),dimension(nsigradjac):: tval,tdir
   real(r_kind) cg_rad,p0,wnotgross,wgross
   type(radNode), pointer :: radptr
-  real(r_kind),allocatable,dimension(:,:) :: rsqrtinv
+  real(r_kind),allocatable,dimension(:) :: biasvect 
   integer(i_kind) :: ic1,ix1
   integer(i_kind) :: chan_count, ii, jj
   real(r_kind),pointer,dimension(:) :: st,sq,scw,soz,su,sv,sqg,sqh,sqi,sql,sqr,sqs
@@ -396,17 +397,6 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
      w2=radptr%wij(2)
      w3=radptr%wij(3)
      w4=radptr%wij(4)
-     if (radptr%use_corr_obs .and. radptr%iuse_PredOper_type==1) then
-        allocate(rsqrtinv(radptr%nchan,radptr%nchan))
-        chan_count=0
-        do ii=1,radptr%nchan
-           do jj=ii,radptr%nchan
-              chan_count=chan_count+1
-              rsqrtinv(ii,jj)=radptr%rsqrtinv(chan_count)
-              rsqrtinv(jj,ii)=radptr%rsqrtinv(chan_count)
-           end do
-       end do
-     end if
 !  Begin Forward model
 !  calculate temperature, q, ozone, sst vector at observation location
      i1n(1) = j1
@@ -484,8 +474,21 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
 !  For all other configurations
 !  begin channel specific calculations
      allocate(val(radptr%nchan))
+
+     if (.not. ladtest_obs) then
+        allocate(biasvect(radptr%nchan))
+        do nn=1,radptr%nchan
+          ic1=radptr%icx(nn)
+          ix1=(ic1-1)*npred
+          val_quad = zero_quad
+          do n=1,npred
+            val_quad = val_quad + spred(ix1+n)*radptr%pred(n,nn)
+          end do
+          biasvect(nn) = val_quad
+        end do
+     end if
      ncr1=0
-     ncr2=0
+
      do nn=1,radptr%nchan
         ic=radptr%icx(nn)
         ix=(ic-1)*npred
@@ -500,36 +503,17 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
 
 !       Include contributions from remaining bias correction terms
         if( .not. ladtest_obs) then
-          if(radptr%use_corr_obs)then
-            select case(radptr%iuse_PredOper_type)
-            case(1)
+           if(radptr%use_corr_obs)then
               val_quad = zero_quad
-              do n=1,npred
-                 do mm=1,radptr%nchan
-                    ic1=radptr%icx(mm)
-                    ix1=(ic1-1)*npred
-                    val_quad=val_quad+rsqrtinv(nn,mm)*spred(ix1+n)*radptr%pred(n,mm)
-                 enddo
+              do mm=1,nn
+                 ncr1=ncr1+1
+                 val_quad=val_quad+radptr%rsqrtinv(ncr1)*biasvect(mm)
               enddo
               val(nn)=val(nn) + val_quad
-            case(2)
-              do mm=1,nn
-                 ic1=radptr%icx(mm)
-                 ix1=(ic1-1)*npred
-                 ncr1=ncr1+1
-                 do n=1,npred
-                    val(nn)=val(nn)+spred(ix1+n)*radptr%Rpred(ncr1,n)
-                 enddo
-              enddo
-            end select
-
-          else
-              do n=1,npred
-                 val(nn)=val(nn)+spred(ix+n)*radptr%pred(n,nn)
-              end do
-          endif
+           else
+              val(nn)=val(nn)+biasvect(nn)
+           endif
         end if
-
 
         if(luse_obsdiag)then
            if (lsaveobsens) then
@@ -541,8 +525,11 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
               if (radptr%luse) call obsdiagNode_set(radptr%diags(nn)%ptr,jiter=jiter,tldepart=val(nn))
            endif
         endif
+     end do
 
-        if (l_do_adjoint) then
+     if (l_do_adjoint) then
+        do nn=1,radptr%nchan
+           ic=radptr%icx(nn)
            if (.not. lsaveobsens) then
               if( .not. ladtest_obs)   val(nn)=val(nn)-radptr%res(nn)
 
@@ -558,44 +545,50 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
 
               if(.not.ladtest_obs) val(nn) = val(nn)*radptr%err2(nn)*radptr%raterr2(nn)
            endif
+        enddo
 
 !          Extract contributions from bias correction terms
 !          use compensated summation
-           if( .not. ladtest_obs) then
-              if(radptr%luse)then
-                if(radptr%use_corr_obs)then
-                  select case(radptr%iuse_PredOper_type)
-                  case(1)
-                    do n=1,npred
-                      do mm=1,radptr%nchan
-                         ic1=radptr%icx(mm)
-                         ix1=(ic1-1)*npred
-                         rpred(ix1+n)=rpred(ix1+n)+rsqrtinv(nn,mm)*radptr%pred(n,mm)*val(nn)
-                      enddo
-                    enddo
 
-                  case(2)
-                    do mm=1,nn
-                       ic1=radptr%icx(mm)
-                       ix1=(ic1-1)*npred
-                       ncr2=ncr2+1
-                       do n=1,npred
-                          rpred(ix1+n)=rpred(ix1+n)+radptr%Rpred(ncr2,n)*val(nn)
-                       enddo
-                    enddo
-                  end select
+        if( .not. ladtest_obs) then
+           if (radptr%use_corr_obs) then
+             ncr2 = 0 
+             ncr1 = 0
+             do mm=1,radptr%nchan
+               ncr1 = ncr1 + mm
+               ncr2 = ncr1
+               biasvect(mm) = zero
+               do nn=mm,radptr%nchan
+                 biasvect(mm)=biasvect(mm)+radptr%rsqrtinv(ncr2)*val(nn)
+                 ncr2 = ncr2 + nn
+               enddo
+             end do
+           endif
 
-                else
-                    do n=1,npred
-                       rpred(ix+n)=rpred(ix+n)+radptr%pred(n,nn)*val(nn)
-                    end do
-                end if
-              end if
-           end if ! not ladtest_obs
-        end if
-     end do
+           if(radptr%luse)then
+             if(radptr%use_corr_obs)then
+                do mm=1,radptr%nchan
+                   ic1=radptr%icx(mm)
+                   ix1=(ic1-1)*npred
+                   do n=1,npred
+                      rpred(ix1+n)=rpred(ix1+n)+biasvect(mm)*radptr%pred(n,mm)
+                   enddo
+                enddo
+             else
+                do nn=1,radptr%nchan
+                   ic=radptr%icx(nn)
+                   ix=(ic-1)*npred
+                   do n=1,npred
+                      rpred(ix+n)=rpred(ix+n)+radptr%pred(n,nn)*val(nn)
+                   end do
+                end do
+             end if
+           end if
 
-     if(radptr%use_corr_obs .and. radptr%iuse_PredOper_type==1) deallocate(rsqrtinv)
+           deallocate(biasvect)
+        end if ! not ladtest_obs
+
+     endif
 
 !          Begin adjoint
      if (l_do_adjoint) then

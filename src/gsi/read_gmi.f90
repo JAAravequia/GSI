@@ -88,8 +88,6 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
 !                         within a FOV. When it is equal to one, integrate
 !                         model fields over a FOV. When it is not equal to one, bilinearly
 !                         interpolate model fields at a FOV center.)
-!   2019-08-08  guo     - add ORIGINAL_GMI_BUFR flag to separate original "gmibufr"
-!                         file content from other newer BUFR contents.
 !
 !$$$  end documentation block
   use kinds, only: r_kind,r_double,i_kind
@@ -239,15 +237,11 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   integer(i_kind) :: ithin_time,n_tbin
   integer(i_kind),pointer:: it_mesh => null()
 
-  logical:: ORIGINAL_GMI_BUFR = .false.
-
 !**************************************************************************
 
 ! Initialize variables
   call init_(maxchanl,maxobs)
   use_swath_edge = .false.
-
-  ORIGINAL_GMI_BUFR = infile=="gmibufr"
 
   do_noise_reduction = .true.
   if (gmi_method == 0) do_noise_reduction = .false.
@@ -333,19 +327,17 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
   call datelen(10)
 
 !This block may be needed if used at GMAO, for its gmi data.
-  if(ORIGINAL_GMI_BUFR) then
-!       Extract satellite id from the 1st MG.  If it is not the one we want, exit reading.
-        call readmg(lnbufr, subset, iret, idate)
-        rd_loop: do while (ireadsb(lnbufr)==0)
+!Extract satellite id from the 1st MG.  If it is not the one we want, exit reading.
+  call readmg(lnbufr, subset, iret, idate)
+  rd_loop: do while (ireadsb(lnbufr)==0)
 
-          call ufbint(lnbufr,satinfo_v,ninfo,1,iret,satinfo)
-          if(nint(satinfo_v(1)) /= bufsat) then 
-            write(6,*) 'READ_GMI: Bufr satellie ID SAID', nint(satinfo_v(1)), &
-                       ' does not match ', bufsat
-            go to 690   ! skip to the end of read_subset block
-          endif
-        enddo rd_loop
-  endif
+    call ufbint(lnbufr,satinfo_v,ninfo,1,iret,satinfo)
+    if(nint(satinfo_v(1)) /= bufsat) then 
+      write(6,*) 'READ_GMI: Bufr satellie ID SAID', nint(satinfo_v(1)), &
+                 ' does not match ', bufsat
+      go to 690   ! skip to the end of read_subset block
+    endif
+  enddo rd_loop
 
 ! Big loop to read data file
   next=0
@@ -415,24 +407,12 @@ subroutine read_gmi(mype,val_gmi,ithin,rmesh,jsatid,gstime,&
         call tdiff2crit(tdiff,ptime,ithin_time,timeinflat,crit0,crit1,it_mesh)
 
 ! ----- Read header record to extract obs location information  
-        if(.not. ORIGINAL_GMI_BUFR) then
-
-          call ufbint(lnbufr,midat,nloc,1,iret,'SCLAT SCLON HMSL')
-          call ufbrep(lnbufr,gmichq,1,nchanl,iret,'TPQC2')
-          call ufbrep(lnbufr,gmirfi,1,nchanl,iret,'VIIRSQ')
-          call ufbrep(lnbufr,pixelsaza,1,ngs,iret,strsaza)
-          call ufbrep(lnbufr,val_angls,n_angls,ngs,iret,str_angls)
-          call ufbint(lnbufr,pixelloc,2, 1,iret,strloc)
-
-        else
           call ufbint(lnbufr,midat,nloc,1,iret,'SCLAT SCLON HMSL')
           call ufbrep(lnbufr,gmichq,1,nchanl,iret,'GMICHQ')
           call ufbrep(lnbufr,gmirfi,1,nchanl,iret,'GMIRFI')
           call ufbrep(lnbufr,pixelsaza,1,ngs,iret,'SAZA')
           call ufbrep(lnbufr,val_angls,n_angls,ngs,iret,'SAMA SZA SMA SGA')
           call ufbint(lnbufr,pixelloc,2, 1,iret,'CLATH CLONH')
-
-        endif
 
 !---    Extract brightness temperature data.  Apply gross check to data. 
 !       If obs fails gross check, reset to missing obs value.

@@ -70,6 +70,7 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
 !   2011-05-16  todling - generalize entries in radiance jacobian
 !   2011-05-17  augline/todling - add hydrometeors
 !   2016-07-19  kbathmann- adjustment to bias correction when using correlated obs
+!   2019-08-14  W. Gu/guo- speed up bias correction term in the case of the correlated obs
 !
 !   input argument list:
 !     radhead
@@ -135,11 +136,12 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
   integer(i_kind),dimension(nsig) :: j1n,j2n,j3n,j4n
   real(r_kind),dimension(max(1,nstep)) :: term,rad
   type(radNode), pointer :: radptr
-  real(r_kind), dimension(:,:), allocatable:: rsqrtinv
-  integer(i_kind) :: chan_count, ii, jj
+  real(r_kind),allocatable,dimension(:) :: biasvects 
+  real(r_kind),allocatable,dimension(:) :: biasvectr
   real(r_kind),pointer,dimension(:) :: rt,rq,rcw,roz,ru,rv,rqg,rqh,rqi,rql,rqr,rqs
   real(r_kind),pointer,dimension(:) :: st,sq,scw,soz,su,sv,sqg,sqh,sqi,sql,sqr,sqs
   real(r_kind),pointer,dimension(:) :: rst,sst
+  real(r_quad) :: valr_quad,vals_quad
 
   out=zero_quad
 
@@ -193,17 +195,6 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
            w2=radptr%wij(2)
            w3=radptr%wij(3)
            w4=radptr%wij(4)
-           if (radptr%use_corr_obs.and.radptr%iuse_PredOper_type==1) then
-              allocate(rsqrtinv(radptr%nchan,radptr%nchan))
-              chan_count=0
-              do ii=1,radptr%nchan
-                 do jj=ii,radptr%nchan
-                    chan_count=chan_count+1
-                    rsqrtinv(ii,jj)=radptr%rsqrtinv(chan_count)
-                    rsqrtinv(jj,ii)=radptr%rsqrtinv(chan_count)
-                 end do
-              end do
-           end if
            if(luseu)then
               tdir(ius+1)=w1* su(j1) + w2* su(j2) + w3* su(j3) + w4* su(j4)
               rdir(ius+1)=w1* ru(j1) + w2* ru(j2) + w3* ru(j3) + w4* ru(j4)
@@ -279,6 +270,23 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
 
            end do
         end if
+
+        if(nstep > 0)then
+            allocate(biasvects(radptr%nchan))
+            allocate(biasvectr(radptr%nchan))
+            do nn=1,radptr%nchan
+              ic1=radptr%icx(nn)
+              vals_quad = zero_quad
+              valr_quad = zero_quad
+              do nx=1,npred
+                vals_quad = vals_quad + spred(nx,ic1)*radptr%pred(nx,nn)
+                valr_quad = valr_quad + rpred(nx,ic1)*radptr%pred(nx,nn)
+              end do
+              biasvects(nn) = vals_quad
+              biasvectr(nn) = valr_quad
+            end do
+        endif
+
         ncr=0
         do nn=1,radptr%nchan
 
@@ -289,31 +297,14 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
 !             contribution from bias corection
               ic=radptr%icx(nn)
               if(radptr%use_corr_obs) then
-                select case(radptr%iuse_PredOper_type)
-                case(1)
-                  do nx=1,npred
-                    do mm=1,radptr%nchan
-                       ic1=radptr%icx(mm)
-                       val2=val2+spred(nx,ic1)*rsqrtinv(nn,mm)*radptr%pred(nx,mm)
-                       val=val+rpred(nx,ic1)*rsqrtinv(nn,mm)*radptr%pred(nx,mm)
-                    end do
-                  end do
-                case(2)
                  do mm=1,nn
                     ncr=ncr+1
-                    ic1=radptr%icx(mm)
-                    do nx=1,npred
-                       val2=val2+spred(nx,ic1)*radptr%Rpred(ncr,nx)
-                       val=val+rpred(nx,ic1)*radptr%Rpred(ncr,nx)
-                    end do
-                  end do
-                end select
-
-              else
-                 do nx=1,npred
-                    val2=val2+spred(nx,ic)*radptr%pred(nx,nn)
-                    val =val +rpred(nx,ic)*radptr%pred(nx,nn)
+                    val2=val2+radptr%rsqrtinv(ncr)*biasvects(mm)
+                    val =val +radptr%rsqrtinv(ncr)*biasvectr(mm)
                  end do
+              else
+                 val2=val2+biasvects(nn)
+                 val =val +biasvectr(nn)
               end if
  
 !             contribution from atmosphere
@@ -332,11 +323,7 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
         
 !          calculate contribution to J
            do kk=1,max(1,nstep)
-              if(radptr%use_corr_obs) then
-                 term(kk)  = rad(kk)*rad(kk)
-              else
-                 term(kk)  = radptr%err2(nn)*rad(kk)*rad(kk)
-              endif
+              term(kk)  = radptr%err2(nn)*rad(kk)*rad(kk)
            end do
 
 !          Modify penalty term if nonlinear QC
@@ -350,21 +337,14 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
               end do
            endif
 
-           if(radptr%use_corr_obs) then
-              out(1) = out(1) + term(1)
-           else
-              out(1) = out(1) + term(1)*radptr%raterr2(nn)
-           endif
+           out(1) = out(1) + term(1)*radptr%raterr2(nn)
            do kk=2,nstep
-              if(radptr%use_corr_obs) then
-                 out(kk) = out(kk) + (term(kk)-term(1))
-              else
-                 out(kk) = out(kk) + (term(kk)-term(1))*radptr%raterr2(nn)
-              endif
+              out(kk) = out(kk) + (term(kk)-term(1))*radptr%raterr2(nn)
            end do
 
         end do
-        if (radptr%use_corr_obs .and. radptr%iuse_PredOper_type==1) deallocate(rsqrtinv)
+
+        if(nstep > 0) deallocate(biasvects, biasvectr)
 
      end if
 

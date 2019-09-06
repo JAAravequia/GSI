@@ -206,7 +206,7 @@ contains
 !   2016-10-23  zhu     - add cloudy radiance assimilation for ATMS
 !   2017-02-09  guo     - Remove m_alloc, n_alloc.
 !                       . Remove my_node with corrected typecast().
-!   2017-07-27  kbathmann -introduce Rinvdiag into the rstats computation for correlated error
+!   2017-07-27  kbathmann/W. Gu -introduce rinvdiag into the rstats computation for correlated error
 !   2018-04-04  zhu     - add additional radiance_ex_obserr and radiance_ex_biascor calls for all-sky
 !   2018-08-08  mkim    - merging NCEP all-sky generalization stuff (radiance_mod, cloudy_radiance_info.txt...)
 !   2018-07-24  W. Gu   - Store the R-covariance matrix only needed for method=1 or 2
@@ -214,9 +214,6 @@ contains
 !   2019-03-13  eliu    - add components to handle precipitation-affected radiances 
 !   2019-03-13  eliu    - add calculation of scattering index for MHS/ATMS 
 !   2019-03-27  h. liu  - add ABI assimilation
-!   2019-04-22  kbathmann -option to replace obs errors used in qc to the
-!                          diagonal of a specified full covariance matrix
-!                          and multiply bias predictor jacobian by R^-1/2 
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
@@ -299,7 +296,7 @@ contains
   use qcmod, only: setup_tzr_qc,ifail_scanedge_qc,ifail_outside_range
   use state_vectors, only: svars3d, levels, svars2d, ns3d, nsdim
   use oneobmod, only: lsingleradob,obchan,oblat,oblon,oneob_type
-  use correlated_obsmod, only: corr_adjust_jacobian, idnames,corr_oberr_qc
+  use correlated_obsmod, only: corr_adjust_jacobian, idnames
   use radiance_mod, only: rad_obs_type,radiance_obstype_search,radiance_ex_obserr,radiance_ex_biascor
   use sparsearr, only: sparr2, new, writearray, size, fullarray
   use radiance_mod, only: radiance_ex_obserr_gmi,radiance_ex_biascor_gmi
@@ -330,7 +327,7 @@ contains
 
   integer(i_kind) iextra,jextra,error_status,istat
   integer(i_kind) ich9,isli,icc,iccm,mm1,ixx
-  integer(i_kind) m,mm,jc,j,k,i,ncr
+  integer(i_kind) m,mm,jc,j,k,i
   integer(i_kind) n,nlev,kval,ibin,ioff,ioff0,iii,ijacob
   integer(i_kind) ii,jj,idiag,inewpc,nchanl_diag
   integer(i_kind) ii_ptr
@@ -386,10 +383,10 @@ contains
   real(r_kind),dimension(npred+2):: predterms
   real(r_kind),dimension(npred+2,nchanl):: predbias
   real(r_kind),dimension(npred,nchanl):: pred,predchan
-  real(r_kind),dimension(nchanl):: err2,tbc,raterr2,wgtjo
+  real(r_kind),dimension(nchanl):: err2,tbc0,raterr2,wgtjo
   real(r_kind),dimension(nchanl):: varinv0
   real(r_kind),dimension(nchanl):: varinv,varinv_use,error0,errf,errf0
-  real(r_kind),dimension(nchanl):: tb_obs,utbc,tbcnob,tlapchn,tb_obs_sdv
+  real(r_kind),dimension(nchanl):: tb_obs,tbc,tbcnob,tlapchn,tb_obs_sdv
   real(r_kind),dimension(nchanl):: tnoise,tnoise_cld
   real(r_kind),dimension(nchanl):: emissivity,ts,emissivity_k
   real(r_kind),dimension(nchanl):: tsim,wavenumber,tsim_bc
@@ -404,11 +401,10 @@ contains
   real(r_kind),dimension(nchanl):: weightmax
   real(r_kind),dimension(nchanl):: cld_rbc_idx,cld_rbc_idx2
   real(r_kind),dimension(nchanl):: tcc         
-  real(r_kind),dimension(nchanl):: Rinv
-  real(r_kind),dimension(nchanl,nchanl):: rsqrtinv
   real(r_kind) :: ptau5deriv, ptau5derivmax
   real(r_kind) :: clw_guess,clw_guess_retrieval,ciw_guess,rain_guess,snow_guess,clw_avg
   real(r_kind) :: tnoise_save
+  real(r_kind),dimension(:), allocatable :: rsqrtinv
   real(r_kind),dimension(:), allocatable :: rinvdiag
 
 !for GMI (dual scan angles)
@@ -441,11 +437,6 @@ contains
   type(fptr_obsdiagNode),dimension(nchanl):: odiags
 
   logical:: muse_ii
-  integer(i_kind),parameter:: GMAO_PredOper_TYPE=1   ! store %rsqrtinv
-  integer(i_kind),parameter:: NCEP_PredOper_TYPE=2   ! store %Rpred
-
-! integer(i_kind),parameter:: IUSE_PredOper_TYPE=GMAO_PredOper_TYPE
-  integer(i_kind),parameter:: IUSE_PredOper_TYPE=NCEP_PredOper_TYPE
 
 ! Notations in use: for a single obs. or a single obs. type
 ! nchanl        : a known channel count of a given type obs stream
@@ -1745,11 +1736,12 @@ contains
 
         enddo
 
-        utbc=tbc
+        tbc0=tbc
         varinv0 = varinv
         raterr2 = zero
         err2 = one/error0**2
         wgtjo= varinv     ! weight used in Jo term
+        account_for_corr_obs = .false.
         if (l_may_be_passive .and. .not. retrieval) then
           iii=0
           do ii=1,nchanl
@@ -1759,12 +1751,13 @@ contains
                raterr2(ii)=error0(ii)**2*varinv(ii)
              endif
           enddo
-          if(iii>0)then
+          if(iii>0 .and. iinstr.ne.-1)then
+            chan_count=(iii*(iii+1))/2
+            allocate(rsqrtinv(chan_count))
             allocate(rinvdiag(iii))
             rsqrtinv=zero
             rinvdiag=zero
-            account_for_corr_obs = .false.
-            if(iinstr.ne.-1)account_for_corr_obs = corr_adjust_jacobian(iinstr,nchanl,nsigradjac,ich,varinv,&
+            account_for_corr_obs = corr_adjust_jacobian(iinstr,nchanl,nsigradjac,ich,varinv,&
                                                tbc,err2,raterr2,wgtjo,jacobian,cor_opt,iii,rsqrtinv,rinvdiag)
             varinv = wgtjo
           endif
@@ -1781,16 +1774,16 @@ contains
 
               m = ich(i)
               if(luse(n))then
-                 drad    = utbc(i)   
+                 drad    = tbc0(i)   
                  dradnob = tbcnob(i)
                  varrad  = tbc(i)*varinv(i)
                  stats(1,m)  = stats(1,m) + one              !number of obs
 !                stats(3,m)  = stats(3,m) + drad             !obs-mod(w_biascor)
-!                stats(4,m)  = stats(4,m) + utbc(i)*drad     !(obs-mod(w_biascor))**2
+!                stats(4,m)  = stats(4,m) + tbc0(i)*drad     !(obs-mod(w_biascor))**2
 !                stats(5,m)  = stats(5,m) + tbc(i)*varrad    !penalty contribution
 !                stats(6,m)  = stats(6,m) + dradnob          !obs-mod(w/o_biascor)
                  stats(3,m)  = stats(3,m) + drad*cld_rbc_idx(i)        !obs-mod(w_biascor)
-                 stats(4,m)  = stats(4,m) + utbc(i)*drad*cld_rbc_idx(i)!(obs-mod(w_biascor))**2
+                 stats(4,m)  = stats(4,m) + tbc0(i)*drad*cld_rbc_idx(i)!(obs-mod(w_biascor))**2
                  stats(5,m)  = stats(5,m) + tbc(i)*varrad    !penalty contribution
                  stats(6,m)  = stats(6,m) + dradnob*cld_rbc_idx(i)     !obs-mod(w/o_biascor)
 
@@ -1958,40 +1951,16 @@ contains
               my_head%nchan  = iii         ! profile observation count
 
               my_head%use_corr_obs=.false.
-              my_head%iuse_PredOper_type = 0
               if (account_for_corr_obs .and. (cor_opt ==1 .or. cor_opt ==2) ) then
-                 select case(IUSE_PredOper_TYPE)
-                 case(1)
-                   chan_count=(my_head%nchan*(my_head%nchan+1))/2
-                   allocate(my_head%rsqrtinv(chan_count)) 
-                   my_head%rsqrtinv=zero
-                   chan_count=0
-                   do ii=1,my_head%nchan
-                      do jj=ii,my_head%nchan
-                         chan_count=chan_count+1
-                         my_head%rsqrtinv(chan_count)=rsqrtinv(ii,jj)
-                      end do
-                   end do
-
-                 case(2)
-                   ncr=(my_head%nchan+1)*my_head%nchan
-                   ncr=ncr/2
-                   allocate(my_head%Rpred(ncr,npred))
-                   do k=1,npred
-                     ncr=0
-                     do jj=1,my_head%nchan
-                       do ii=1,jj
-                          ncr=ncr+1
-                          my_head%Rpred(ncr,k)=my_head%pred(k,ii)*rsqrtinv(ii,jj)
-                       enddo
-                     enddo
-                   enddo
-
-                 end select
+                 chan_count=(my_head%nchan*(my_head%nchan+1))/2
+                 allocate(my_head%rsqrtinv(chan_count)) 
+                 my_head%rsqrtinv(1:chan_count)=rsqrtinv(1:chan_count)
                  my_head%use_corr_obs=.true.
-                 my_head%iuse_PredOper_type = IUSE_PredOper_TYPE
               end if
-              if(allocated(rinvdiag)) deallocate(rinvdiag)
+              if(iinstr.ne.-1)then
+                if(allocated(rsqrtinv)) deallocate(rsqrtinv)
+                if(allocated(rinvdiag)) deallocate(rinvdiag)
+              endif
 
               my_head => null()
            end if ! icc
@@ -2032,7 +2001,7 @@ contains
                muse_ii=varinv(ii)>tiny_r_kind .and. iuse_rad(m)>=1
 
                call obsdiagNode_set(my_diag, wgtjo=wgtjo(ii), &
-                        jiter=jiter, muse=muse_ii, nldepart=utbc(ii) )
+                        jiter=jiter, muse=muse_ii, nldepart=tbc0(ii) )
 
 !              Load data into output arrays
                if (muse_ii) then
@@ -2381,7 +2350,7 @@ contains
 
            do i=1,nchanl_diag
               diagbufchan(1,i)=tb_obs(ich_diag(i))       ! observed brightness temperature (K)
-              diagbufchan(2,i)=utbc(ich_diag(i))         ! observed - simulated Tb with bias corrrection (K)
+              diagbufchan(2,i)=tbc0(ich_diag(i))         ! observed - simulated Tb with bias corrrection (K)
               diagbufchan(3,i)=tbcnob(ich_diag(i))       ! observed - simulated Tb with no bias correction (K)
               errinv = sqrt(varinv0(ich_diag(i)))
               diagbufchan(4,i)=errinv                    ! inverse observation error
@@ -2610,7 +2579,7 @@ contains
                  call nc_diag_metadata("SST_dTz_dTfound",          sngl(data_s(itz_tr,n))            )       ! d(Tz)/d(Tr)
 
                  call nc_diag_metadata("Observation",                           sngl(tb_obs(ich_diag(i)))  )     ! observed brightness temperature (K)
-                 call nc_diag_metadata("Obs_Minus_Forecast_adjusted",           sngl(tbc(ich_diag(i)   ))  )     ! observed - simulated Tb with bias corrrection (K)
+                 call nc_diag_metadata("Obs_Minus_Forecast_adjusted",           sngl(tbc0(ich_diag(i)  ))  )     ! observed - simulated Tb with bias corrrection (K)
                  call nc_diag_metadata("Obs_Minus_Forecast_unadjusted",         sngl(tbcnob(ich_diag(i)))  )     ! observed - simulated Tb with no bias correction (K)
                  errinv = sqrt(varinv0(ich_diag(i)))
                  call nc_diag_metadata("Inverse_Observation_Error",             sngl(errinv)          )
