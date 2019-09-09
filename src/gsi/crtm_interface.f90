@@ -974,7 +974,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   use gsi_chemguess_mod, only: gsi_chemguess_get
   use gsi_metguess_mod,  only: gsi_metguess_bundle   ! for now, a common block
   use gsi_metguess_mod,  only: gsi_metguess_get
-  use gridmod, only: istart,jstart,nlon,nlat,lon1
+  use gridmod, only: istart,jstart,nlon,nlat,lon1,lsidea
   use wrf_params_mod, only: cold_start
   use constants, only: zero,half,one,one_tenth,fv,r0_05,r10,r100,r1000,constoz,grav,rad2deg, &
       sqrt_tiny_r_kind,constoz,two, three, four,five,t0c
@@ -1072,6 +1072,8 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   real(r_kind),pointer,dimension(:,:,:)::aeroges_itsig =>NULL()
   real(r_kind),pointer,dimension(:,:,:)::aeroges_itsigp=>NULL()
 
+  integer(i_kind):: nsigx
+
   logical :: sea,icmask   
 
   integer(i_kind),parameter,dimension(12):: mday=(/0,31,59,90,&
@@ -1079,6 +1081,13 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   real(r_kind) ::   lai
 
   m1=mype+1
+
+!wanghj:
+  if (lsidea) then
+     nsigx = msig
+  else
+     nsigx = nsig
+  endif
 
   dx  = data_s(ilat)                 ! grid relative latitude
   dy  = data_s(ilon)                 ! grid relative longitude
@@ -1179,6 +1188,10 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 ! Space-time interpolation of temperature (h) and q fields from sigma files
 !$omp parallel do  schedule(dynamic,1) private(k,ii,iii)
   do k=1,nsig
+
+!wanghj: could possibly use nsigx here, but use nsig for now
+! do k=1,nsigx
+
     if(k == 1)then
         jacobian=zero
 !    Set surface type flag.  (Same logic as in subroutine deter_sfc)
@@ -1955,6 +1968,13 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 !   wmix  - moisture sensitivity
 !   omix  - ozone sensitivity
 !   ptau5 - layer transmittance
+
+       if (lsidea) then
+!         ptau5(1:nsig,i)=1.
+!wanghj: safety check, but maybe not necessary if we do it correctly 
+          ptau5(msig+1:nsig,i)=1.
+       end if
+
        do k=1,msig
           kk = klevel(msig-k+1)
           temp(kk,i) = temp(kk,i) + atmosphere_k(i,1)%temperature(k)
@@ -1965,7 +1985,8 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
        end do
 
 !  Load jacobian array
-       do k=1,nsig
+      !do k=1,nsig
+       do k=1,nsigx
 
 !  Small sensitivities for temp
           if (abs(temp(k,i))<sqrt_tiny_r_kind) temp(k,i)=sign(sqrt_tiny_r_kind,temp(k,i))
@@ -1973,13 +1994,15 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 
 !  Deflate moisture jacobian above the tropopause.
        if (itv>=0) then
-          do k=1,nsig
+         !do k=1,nsig
+          do k=1,nsigx
              jacobian(itv+k,i)=temp(k,i)*c2(k)               ! virtual temperature sensitivity
           end do ! <nsig>
        endif
        if (iqv>=0) then
           m=ich(i)
-          do k=1,nsig
+         !do k=1,nsig
+          do k=1,nsigx
              jacobian(iqv+k,i)=c5(k)*wmix(k,i)-c4(k)*temp(k,i)        ! moisture sensitivity
              if (prsi(k) < trop5) then
                 term = (prsi(k)-trop5)/(trop5-prsi(nsig))
@@ -1989,7 +2012,8 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
        endif
        if (ioz>=0) then
 !        if (.not. regional .or. use_gfs_ozone)then
-          do k=1,nsig
+         !do k=1,nsig
+          do k=1,nsigx
              jacobian(ioz+k,i)=omix(k,i)*constoz       ! ozone sensitivity
           end do ! <nsig>
 !        end if
@@ -2012,7 +2036,8 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
                       kk = klevel(msig-k+1)
                       cwj(kk) = cwj(kk) + atmosphere_k(i,1)%cloud(ii)%water_content(k)*c6(k)
                    end do
-                   do k=1,nsig
+                  !do k=1,nsig
+                   do k=1,nsigx
                       jacobian(icw(ii)+k,i) = cwj(k)
                    end do ! <nsig>
                  end do
@@ -2068,7 +2093,8 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
            enddo
         enddo
         if (present(jacobian_aero)) then
-           do k=1,nsig
+          !do k=1,nsig
+           do k=1,nsigx
               do ii=1,n_aerosols_jac_wk
                  jacobian_aero(iaero_jac(ii)+k,i) = jaero(k,i,ii)*ugkg_kgm2(k)
               end do

@@ -78,6 +78,7 @@ module gridmod
 !   2013-10-24 todling  - general interface to strip routine
 !                       - move vars ltosj/i to commvars and corresponding load routines
 !   2012-12-04 s.liu    - added use_reflectivity flag
+!   2014-01-29  wanghj  - add lsidea flag for IDEA/WAM model         
 !   2014-03-12  Hu     - Code for GSI analysis on Mass grid larger than background mass grid   
 !   08-18-2014 tong      add jcap_gfs, nlon_gfs, nlat_gfs for regional analysis,
 !                        when running with use_gfs_ozone = .true. or use_gfs_stratosphere = .true.,
@@ -152,6 +153,7 @@ module gridmod
   public :: jcap_gfs,nlat_gfs,nlon_gfs
   public :: use_sp_eqspace,jcap_cut
   public :: wrf_mass_hybridcord
+  public :: lsidea
 
   interface strip
      module procedure strip_single_rank33_
@@ -185,8 +187,9 @@ module gridmod
   logical use_gfs_nemsio    ! .t. for using NEMSIO to real global first guess
   logical sfcnst_comb       ! .t. for using combined sfc & nst file
   logical use_sp_eqspace    ! .t. use equally-space grid in spectral transforms
-
   logical use_readin_anl_sfcmask        ! .t. for using readin surface mask
+  logical lsidea            ! .t. for using IDEA/WAM model first guess
+
   character(1) nmmb_reference_grid      ! ='H': use nmmb H grid as reference for analysis grid
                                         ! ='V': use nmmb V grid as reference for analysis grid
   real(r_kind) grid_ratio_fv3_regional  ! ratio of analysis grid to fv3 model grid in fv3 grid units.
@@ -395,6 +398,7 @@ contains
 !   2010-10-14  pagowski- add CMAQ
 !   2010-10-18  hcHuang - add flag use_gfs_nemsio to determine whether to use NEMSIO to read global first guess field
 !   2011-09-14  todling - add use_sp_eqspace to better control lat/lon grid case
+!   2014-01-29  wanghj  - add lsidea flag for IDEA/WAM model
 !   2016-08-28       li - tic591: add use_readin_anl_sfcmask for consistent sfcmask
 !                         between analysis grids and others
 !
@@ -456,6 +460,8 @@ contains
     update_regsfc = .false.
     nlon_regional = 0
     nlat_regional = 0
+
+    lsidea = .false.
 
     msig = nsig
     do k=1,size(nlayers)
@@ -579,6 +585,18 @@ contains
     do k=1,nsig
        msig = msig + nlayers(k)
     end do
+
+!   2014-01-29 wanghj   - modify msig for use with the IDEA/WAM model;
+!                         this is kind of ad hoc since the vertical extension
+!                         of WAM exceeds current CRTM: TOA_PRESSURE=0.005 (hPa)
+!                         for current CRTM, which is just above the WAM model
+!                         level 92 - this is the limit for using CRTM with WAM;
+!                         set it model level 90 for now, as 'levr' in IDEA/WAM;
+!                         (msig should be <= 200 for current CRTM)
+
+  if (lsidea) msig = 90
+
+  if (mype==0) write(6,*) 'INIT_GRID_VARS:  msig set to ', msig
 
 ! Initialize structure(s) for spectral <--> grid transforms
     if (.not.regional) then

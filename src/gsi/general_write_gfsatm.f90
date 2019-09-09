@@ -12,6 +12,7 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
 ! program history log:
 !   2010-02-25  parrish
 !   2010-03-29  todling - add prologue; load_grid now in commvars
+!   2014-01-30  wanghj  - add more tracers for IDEA/WAM with lsidea
 !   2014-12-03  derber - simplify if structure and use guess surface height
 !               directly
 !   2016-05-06  thomas - recalculate cw increment to account for qcmin
@@ -38,7 +39,7 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
     use obsmod, only: iadate
     use mpimod, only: npe,mype
     use general_specmod, only: spec_vars
-    use gridmod, only: ntracer,ncepgfs_head,idpsfc5,idthrm5,cp5,idvc5,idvm5
+    use gridmod, only: ntracer,ncepgfs_head,idpsfc5,idthrm5,cp5,idvc5,idvm5,lsidea
     use general_commvars_mod, only: load_grid
     use ncepgfs_io, only: sigio_cnvtdv8,sighead
     use constants, only: zero,zero_single,one,fv,qcmin
@@ -67,6 +68,9 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
     real(r_kind),pointer,dimension(:,:) :: sub_ps
     real(r_kind),pointer,dimension(:,:,:) :: sub_vor,sub_div,sub_tv
     real(r_kind),pointer,dimension(:,:,:) :: sub_q,sub_oz,sub_cwmr
+    real(r_kind),pointer,dimension(:,:,:) :: sub_o,sub_o2
+
+    real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig,ntracer):: sub_qsm
 
     real(r_kind),dimension(grd%itotsub):: work
     real(r_kind),dimension(grd%nlon,grd%nlat-2):: grid,grid2
@@ -94,7 +98,13 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
     ! Initialize local variables
     iret_write=0
     nlatm2=grd%nlat-2
-    itotflds=6*grd%nsig+2  ! Hardwired for now!  vor,div,tv,q,oz,cwmr,ps,z
+
+    if (lsidea) then
+       itotflds=8*grd%nsig+2  ! Hardwired for now!  vor,div,tv,q,oz,cwmr,o,o2,ps,z
+    else
+       itotflds=6*grd%nsig+2  ! Hardwired for now!  vor,div,tv,q,oz,cwmr,ps,z
+    endif
+
     lloop=.true.
 
     istatus=0
@@ -105,6 +115,12 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
     call gsi_bundlegetpointer(gfs_bundle,'q',  sub_q,   iret); istatus=istatus+iret
     call gsi_bundlegetpointer(gfs_bundle,'oz', sub_oz,  iret); istatus=istatus+iret
     call gsi_bundlegetpointer(gfs_bundle,'cw', sub_cwmr,iret); istatus=istatus+iret
+
+    if (lsidea) then
+       call gsi_bundlegetpointer(gfs_bundle,'o' , sub_o,  iret); istatus=istatus+iret
+       call gsi_bundlegetpointer(gfs_bundle,'o2', sub_o2,  iret); istatus=istatus+iret
+    endif
+
     if ( istatus /= 0 ) then
        if ( mype == 0 ) then
          write(6,*) 'general_write_gfsatm: ERROR'
@@ -209,9 +225,25 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
         enddo
 
         ! If output is enthalpy, convert dry temperature to CpT
-        if ( idthrm5 == 3 ) call sigio_cnvtdv8(grd%lat2*grd%lon2,&
-            grd%lat2*grd%lon2,grd%nsig,idvc5,idvm5,ntracer,&
-            iret,work_tv,sub_q,cp5,-1)
+
+        if ( idthrm5 == 3 ) then
+
+           sub_qsm(:,:,:,1) = sub_q(:,:,:)
+           sub_qsm(:,:,:,2) = sub_oz(:,:,:)
+           sub_qsm(:,:,:,3) = sub_cwmr(:,:,:)
+
+           if (lsidea) then
+              sub_qsm(:,:,:,4) = sub_o (:,:,:)
+              sub_qsm(:,:,:,5) = sub_o2(:,:,:)
+           endif
+
+           call sigio_cnvtdv8(grd%lat2*grd%lon2,&
+                grd%lat2*grd%lon2,grd%nsig,idvc5,idvm5,ntracer,&
+!               iret,work_tv,sub_q,cp5,-1)
+                iret,work_tv,sub_qsm,cp5,-1)
+
+        endif
+
     endif
 
     ! Do loop until total fields have been processed.  Stop condition on itotflds
@@ -221,7 +253,7 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
 
         ! First, perform sub2grid for up to npe
         call general_gather(grd,work_ps,work_tv,sub_vor,sub_div,sub_q,sub_oz,&
-             sub_cwmr,icount,ivar,ilev,work)
+             sub_cwmr,sub_o,sub_o2,icount,ivar,ilev,work)
 
         pe_loop: do k=1,npe  ! loop over pe distributed data
 
@@ -246,6 +278,12 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
                    sigdati%i = sighead%levs * (2+2) + 2 + klev
                 else if ( kvar == 8 ) then ! cw, 3rd tracer
                    sigdati%i = sighead%levs * (2+3) + 2 + klev
+
+                else if ( lsidea .and. kvar==9 ) then ! O, 4th tracer
+                   sigdati%i = sighead%levs * (2+4) + 2 + klev
+                else if ( lsidea .and. kvar==10 ) then ! O2, 5th tracer
+                   sigdati%i = sighead%levs * (2+5) + 2 + klev
+
                 endif
 
                 if ( klev > 0 ) then
@@ -339,7 +377,7 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
 
 end subroutine general_write_gfsatm
 
-subroutine general_gather(grd,g_ps,g_tv,g_vor,g_div,g_q,g_oz,g_cwmr, &
+subroutine general_gather(grd,g_ps,g_tv,g_vor,g_div,g_q,g_oz,g_cwmr,g_o,g_o2, &
            icountx,ivar,ilev,work)
 
 ! !USES:
@@ -347,7 +385,7 @@ subroutine general_gather(grd,g_ps,g_tv,g_vor,g_div,g_q,g_oz,g_cwmr, &
   use kinds, only: r_kind,i_kind
   use mpimod, only: npe,mpi_comm_world,ierror,mpi_rtype
   use general_sub2grid_mod, only: sub2grid_info
-  use gridmod, only: strip
+  use gridmod, only: strip,lsidea
   use constants, only: zero
   implicit none
 
@@ -363,12 +401,14 @@ subroutine general_gather(grd,g_ps,g_tv,g_vor,g_div,g_q,g_oz,g_cwmr, &
   real(r_kind),dimension(grd%lat2,grd%lon2)     ,intent(  in) :: g_ps
   real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),intent(  in) :: g_tv,&
        g_vor,g_div,g_q,g_oz,g_cwmr
+  real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),intent(  in) :: g_o,g_o2
 
 ! !DESCRIPTION: Transfer contents of 3d subdomains to 2d work arrays over pes
 !
 ! !REVISION HISTORY:
 !   2013-06-19  treadon
 !   2013-10-24  todling  update interface to strip
+!   2014-01-30  wanghj   add more tracers for IDEA/WAM with lsidea
 !
 ! !REMARKS:
 !
@@ -433,6 +473,18 @@ subroutine general_gather(grd,g_ps,g_tv,g_vor,g_div,g_q,g_oz,g_cwmr, &
         klev=icount-2-5*(grd%nsig)
         ilev(k)=klev
         call strip(g_cwmr(:,:,klev) ,sub(:,k))
+
+    else if( lsidea .and. icount>=6*(grd%nsig)+3 .and. icount<=7*(grd%nsig)+2)then
+        ivar(k)=9
+        klev=icount-2-6*(grd%nsig)
+        ilev(k)=klev
+        call strip(g_o(:,:,klev) ,sub(:,k))
+    else if( lsidea .and. icount>=7*(grd%nsig)+3 .and. icount<=8*(grd%nsig)+2)then
+        ivar(k)=10
+        klev=icount-2-7*(grd%nsig)
+        ilev(k)=klev
+        call strip(g_o2(:,:,klev) ,sub(:,k))
+
     else
 ! NULL, No work to be done for this pe
         ivar(k)=-1
