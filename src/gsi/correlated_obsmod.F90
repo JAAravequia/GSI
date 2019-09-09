@@ -192,13 +192,14 @@ character(len=MAXSTR),allocatable :: idnames(:)
 
 integer :: ninstr=-1   ! single instrument for now
 logical :: iamroot_
+logical :: GMAO_ObsErrorCov=.false.
 
 ! !PRIVATE TYPES:
-
 type ObsErrorCov
      character(len=40) :: name                        ! R covariance name
      character(len=20) :: instrument                  ! instrument
      integer(i_kind)   :: nch_active=-1               ! active channels
+     integer(i_kind)   :: nctot=-1                    ! total number of channels (active+passive)
      integer(i_kind)   :: method    =-1               ! define method of computation
      real(r_kind)      :: kreq      =-99.             ! Weston et al-like spectrum adjustment factor
      real(r_kind)      :: kmut      =-99.             ! multiplicative inflation factor
@@ -363,7 +364,7 @@ type(ObsErrorCov) :: ErrorCov              ! cov(R) for this instrument
 !BOC
 
 character(len=*),parameter :: myname_=myname//'*set'
-integer(i_kind) nch_active,lu,ii,ioflag,iprec
+integer(i_kind) nch_active,lu,ii,ioflag,iprec,nctot
 
 real(r_single),allocatable, dimension(:,:) :: readR4  ! nch_active x nch_active x ninstruments
 real(r_double),allocatable, dimension(:,:) :: readR8  ! nch_active x nch_active x ninstruments
@@ -378,10 +379,14 @@ real(r_kind),allocatable, dimension(:) :: diag
 
    lu = luavail()
    open(lu,file=trim(fname),convert='little_endian',form='unformatted')
-   read(lu,IOSTAT=ioflag) nch_active, iprec
+   if (GMAO_ObsErrorCov) then
+      read(lu,IOSTAT=ioflag) nch_active, iprec
+   else
+      read(lu,IOSTAT=ioflag) nch_active, nctot, iprec
+   endif
    if(ioflag/=0) call die(myname_,' failed to read nch from '//trim(fname))
    ErrorCov%nch_active = nch_active
-
+   if (.not.GMAO_ObsErrorCov) ErrorCov%nctot = nctot
    call create_(nch_active,ErrorCov)
 
 !  Read GSI-like channel numbers used in estimating R for this instrument
@@ -775,9 +780,14 @@ subroutine upd_varch_
 
    character(len=*),parameter :: myname_=myname//'*upd_varch_'
    character(len=80) covtype
-   integer(i_kind) :: nch_active,ii,jj,mm,nn,jj0,itbl,ntrow,iinstr
+   integer(i_kind) :: nch_active,ii,jj,iii,jjj,mm,nn,ncp,ifound,jj0,itbl,ntrow
    integer(i_kind),dimension(6) ::nsatype
-   integer(i_kind)::nsat,isurf
+   integer(i_kind)::nsat,isurf,rr
+   integer(i_kind),allocatable,dimension(:)   :: ircv
+   integer(i_kind),allocatable,dimension(:)   :: ijac
+   integer(i_kind),allocatable,dimension(:)   :: IRsubset
+   integer(i_kind),allocatable,dimension(:)   :: IJsubset
+   integer(i_kind) iinstr,indR
    integer(i_kind),allocatable,dimension(:) :: ich1  ! true channel number
    integer(i_kind),allocatable,dimension(:,:) :: tblidx
    integer(i_kind) :: nchanl1,jc   ! total number of channels in instrument
@@ -860,21 +870,93 @@ subroutine upd_varch_
             nch_active=GSI_BundleErrorCov(itbl)%nch_active
             if(nch_active<0) return
 
-            do jj=1,nch_active
-               nn=GSI_BundleErrorCov(itbl)%indxR(jj)
-               mm=ich1(nn)
-               if( iuse_rad(mm)<1 ) then
-                 call die(myname_,' active channels used in R do not match those used in GSI, aborting')
+            if(GMAO_ObsErrorCov)then
+               do jj=1,nch_active
+                  nn=GSI_BundleErrorCov(itbl)%indxR(jj)
+                  mm=ich1(nn)
+                  if( iuse_rad(mm)<1 ) then
+                    call die(myname_,' active channels used in R do not match those used in GSI, aborting')
+                  endif
+                  if(isurf==1) then 
+                    if(iamroot_)write(6,'(1x,a6,a20,2i6,2f20.15)')'>>>',idnames(itbl),jj,nn,varch(mm),sqrt(GSI_BundleErrorCov(itbl)%R(jj,jj))
+                    varch_sea(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(jj,jj))
+                  endif
+                  if(isurf==2) varch_land(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(jj,jj))
+                  if(isurf==3) varch_ice(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(jj,jj))
+                  if(isurf==4) varch_snow(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(jj,jj))
+                  if(isurf==5) varch_mixed(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(jj,jj))
+               enddo
+            else
+               allocate(ircv(nchanl1))
+               allocate(ijac(nchanl1))
+               ircv = -1
+               ijac = -1
+               do jj=1,nchanl1
+                  mm=ich1(jj)       ! true channel number (has no bearing here except in iuse)
+                  if (iuse_rad(mm)>=1) then
+                     ifound=-1
+                     do ii=1,nch_active
+                        if (GSI_BundleErrorCov(itbl)%nctot>nchanl1) then
+                           indR=ii
+                        else
+                           indR=GSI_BundleErrorCov(itbl)%indxR(ii)
+                        end if
+                        if(jj==indR) then
+                           ifound=ii
+                           exit
+                        endif
+                     enddo
+                     if(ifound/=-1) then
+                        ijac(jj)=jj      ! index value in 1 to nchanl
+                        ircv(jj)=ifound  ! index value in 1 to nch_active 
+                     endif
+                  endif
+               enddo
+               ncp=count(ircv>0) ! number of active channels in profile
+               if(ncp/=nch_active) then
+                  call die(myname_,'serious inconsistency in handling correlated obs')
                endif
-               if(isurf==1) then 
-                 if(iamroot_)write(6,'(1x,a6,a20,2i6,2f20.15)')'>>>',idnames(itbl),jj,nn,varch(mm),sqrt(GSI_BundleErrorCov(itbl)%R(jj,jj))
-                 varch_sea(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(jj,jj))
+               allocate(IRsubset(ncp)) ! these indexes apply to the matrices/vec in ErrorCov
+               allocate(IJsubset(ncp)) ! these indexes in 1 to nchanl
+               iii=0;jjj=0
+               do ii=1,nchanl1
+                  if(ircv(ii)>0) then
+                     iii=iii+1
+                     IRsubset(iii)=ircv(ii)  ! subset indexes in R presently in use
+                  endif
+                  if(ijac(ii)>0) then
+                     jjj=jjj+1
+                     IJsubset(iii)=ijac(ii)  ! subset indexes in channels presently in use
+                  endif
+               enddo
+               if (iii/=ncp) then
+                  if (iamroot_) then
+                     write(6,*) myname, ' iii,ncp= ',iii,ncp
+                  endif
+                  call die(myname_,' serious dimensions insconsistency, aborting')
                endif
-               if(isurf==2) varch_land(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(jj,jj))
-               if(isurf==3) varch_ice(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(jj,jj))
-               if(isurf==4) varch_snow(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(jj,jj))
-               if(isurf==5) varch_mixed(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(jj,jj))
-            enddo
+               if (jjj/=ncp) then
+                  if (iamroot_) then
+                     write(6,*) myname, ' jjj,ncp= ',jjj,ncp
+                  endif
+                  call die(myname_,' serious dimensions insconsistency, aborting')
+               endif
+               do ii=1,ncp
+                  nn=IJsubset(ii)
+                  mm=ich1(nn)
+                  rr=IRsubset(ii)
+                  if(isurf==1) varch_sea(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
+                  if(isurf==2) varch_land(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
+                  if(isurf==3) varch_ice(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
+                  if(isurf==4) varch_snow(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
+                  if(isurf==5) varch_mixed(mm)=sqrt(GSI_BundleErrorCov(itbl)%R(rr,rr))
+               enddo
+! clean up
+               deallocate(IJsubset)
+               deallocate(IRsubset)
+               deallocate(ijac)
+               deallocate(ircv)
+            endif
          enddo !jj=1,nsat
       endif !nsat >0
    enddo !isurf=1,5
@@ -1001,7 +1083,7 @@ logical function scale_jac_(depart,err2,raterr2,jacobian,nchanl,varinv,wgtjo, &
 
    character(len=*),parameter :: myname_=myname//'*scale_jac'
    integer(i_kind) :: chan_count
-   integer(i_kind) :: nch_active,ii,jj,kk,iii,jjj,mm,nn,ncp,ifound,nsigjac
+   integer(i_kind) :: nch_active,ii,jj,kk,iii,jjj,mm,nn,ncp,ifound,nsigjac,indR
    integer(i_kind),allocatable,dimension(:)   :: ircv
    integer(i_kind),allocatable,dimension(:)   :: ijac
    integer(i_kind),allocatable,dimension(:)   :: IRsubset
@@ -1028,10 +1110,22 @@ logical function scale_jac_(depart,err2,raterr2,jacobian,nchanl,varinv,wgtjo, &
      if (varinv(jj)>tiny_r_kind .and. iuse_rad(mm)>=1) then
        ifound=-1
        do ii=1,nch_active
-         if(jj==ErrorCov%indxR(ii)) then
-            ifound=ii       
-            exit
-         endif
+          if(GMAO_ObsErrorCov)then
+             if(jj==ErrorCov%indxR(ii)) then
+                ifound=ii       
+                exit
+             endif
+          else
+             if (ErrorCov%nctot>nchanl) then
+                indR=ii
+             else
+                indR=ErrorCov%indxR(ii)
+             end if
+             if(jj==indR) then
+                ifound=ii
+                exit
+             endif
+          endif
        enddo
        if(ifound/=-1) then
          ijac(jj)=jj      ! index value applies to the jacobian and departure
