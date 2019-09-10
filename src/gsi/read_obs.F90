@@ -534,7 +534,6 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
              write(6,*)'did not find pm10 in anow bufr'
           endif
 
-
        end if
       end if
 
@@ -888,6 +887,7 @@ subroutine read_obs(ndata,mype)
            .or. obstype == 'ompsnp' &
            .or. obstype == 'gome' &
            .or. mls &
+           .or. obstype == 'ompslp' &
            ) then
           ditype(i) = 'ozone'
        else if (obstype == 'mopitt') then
@@ -1528,7 +1528,6 @@ subroutine read_obs(ndata,mype)
 
 !            Process radar reflectivity from MRMS
              else if (obstype == 'dbz' ) then
-                print *, "calling read_dbz"
                 if(trim(infile)=='dbzobs.nc')then
                   call read_dbz_nc(nread,npuse,nouse,infile,lunout,obstype,sis,hgtl_full,nobs_sub1(1,i))
                   string='READ_dBZ'

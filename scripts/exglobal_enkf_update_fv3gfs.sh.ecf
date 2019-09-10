@@ -320,6 +320,7 @@ cat > enkf.nml << EOFnml
    sattypes_oz(8) = 'mls30_aura',
    sattypes_oz(9) = 'ompsnp_npp',
    sattypes_oz(10) = 'ompstc8_npp',
+   sattypes_oz(11) = 'ompslp_npp',
    $OZOBS_ENKF
 /
 EOFnml
