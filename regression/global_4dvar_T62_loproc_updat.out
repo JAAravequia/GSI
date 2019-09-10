@@ -1,13 +1,10 @@
-Start prolog.task v19.07.23 on node t0233 for job 2014930 :: Mon Aug 19 19:49:12 GMT 2019
-_______________________________________________________________
-End prolog.task v19.07.23 Mon Aug 19 19:49:12 GMT 2019
 _scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build
 beginning regression_var.sh, machine is Theia
 machine is set to 'Theia'
 done loading modules
 
 Currently Loaded Modules:
-  1) intel/15.6.233    6) nemsio/v2.2.1  11) w3emc/v2.3.0
+  1) intel/14.0.2      6) nemsio/v2.2.1  11) w3emc/v2.3.0
   2) mvapich2/2.1rc1   7) sfcio/v1.0.0   12) bacio/v2.0.2
   3) hdf5/1.8.14       8) sigio/v2.0.1   13) crtm/v2.2.3
   4) netcdf/4.3.0      9) sp/v2.0.2      14) prod_util/1.0.18
@@ -59,9 +56,10 @@ Currently Loaded Modules:
 ++ cut -c1-8
 + gdate0=20140803
 + rm -rf /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_global_4dvar_T62/global_4dvar_T62_loproc_updat
+rm: cannot remove ‘/scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_global_4dvar_T62/global_4dvar_T62_loproc_updat’: Directory not empty
 + mkdir -p /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_global_4dvar_T62/global_4dvar_T62_loproc_updat
 + cd /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_global_4dvar_T62/global_4dvar_T62_loproc_updat
-+ rm -rf 'core*'
++ rm -rf core.2020 core.2025 core.29282 core.29285 core.29286
 + ICO2=0
 + '[' 0 -gt 0 ']'
 + ICH4=0
@@ -774,7 +772,12 @@ rm: cannot remove ‘new’: No such file or directory
 run gsi now
 + eval 'srun /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_global_4dvar_T62/global_4dvar_T62_loproc_updat/gsi.x > stdout.obsvr 2>&1'
 ++ srun /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_global_4dvar_T62/global_4dvar_T62_loproc_updat/gsi.x
-+ rm -f siganl sfcanl.gsi satbias_out fort.201 fort.202 fort.203 fort.204 fort.205 fort.206 fort.207 fort.208 fort.209 fort.210 fort.212 fort.213 fort.214 fort.215 fort.217 fort.218 fort.219 fort.220 fort.221 fort.223 fort.224 fort.225 fort.226 fort.227 fort.228 fort.229 fort.230 fort.232 fort.233 fort.234 fort.235 fort.236 fort.237 fort.238
+_______________________________________________________________
+Start Epilog v19.07.23 on node t0024 for job 2362857 :: Mon Sep 9 14:22:55 UTC 2019
+Job 2362857 (not serial) finished for user Louis.Kouvaris in partition theia with exit code 99:0
+_______________________________________________________________
+End Epilogue v19.07.23 Mon Sep 9 14:22:55 UTC 2019
++ rm -f siganl sfcanl.gsi satbias_out fort.206 fort.207 fort.208 fort.217 fort.237
 + rm -rf dir.0000 dir.0001 dir.0002 dir.0003 dir.0004 dir.0005 dir.0006 dir.0007 dir.0008 dir.0009 dir.0010 dir.0011 dir.0012 dir.0013 dir.0014 dir.0015 dir.0016 dir.0017 dir.0018 dir.0019 dir.0020 dir.0021 dir.0022 dir.0023 dir.0024 dir.0025 dir.0026 dir.0027 dir.0028 dir.0029 dir.0030 dir.0031 dir.0032 dir.0033 dir.0034 dir.0035
 + SETUP4dv=l4dvar=.true.,jiterstart=1,nhr_assimilation=6,nhr_obsbin=6,idmodel=.true.,iwrtinc=1,lanczosave=.true.,
 + SETUP='miter=1,niter(1)=50,niter_no_qc(1)=500, l4dvar=.true.,jiterstart=1,nhr_assimilation=6,nhr_obsbin=6,idmodel=.true.,iwrtinc=1,lanczosave=.true., '
@@ -1087,10 +1090,10 @@ OBS_INPUT::
 run gsi now
 + eval 'srun /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_global_4dvar_T62/global_4dvar_T62_loproc_updat/gsi.x > stdout 2>&1'
 ++ srun /scratch4/NCEPDEV/stmp3/Louis.Kouvaris/_scratch4_NCEPDEV_da_save_Louis.Kouvaris_fv3gfs_sorc_gsi.fd_build/tmpreg_global_4dvar_T62/global_4dvar_T62_loproc_updat/gsi.x
-+ rc=0
-+ exit 0
++ rc=2
++ exit 2
 _______________________________________________________________
-Start Epilog v19.07.23 on node t0233 for job 2014930 :: Mon Aug 19 20:00:36 UTC 2019
-Job 2014930 (not serial) finished for user Louis.Kouvaris in partition theia with exit code 0:0
+Start Epilog v19.07.23 on node t0069 for job 2362910 :: Mon Sep 9 14:23:19 UTC 2019
+Job 2362910 (not serial) finished for user Louis.Kouvaris in partition theia with exit code 2:0
 _______________________________________________________________
-End Epilogue v19.07.23 Mon Aug 19 20:00:36 UTC 2019
+End Epilogue v19.07.23 Mon Sep 9 14:23:19 UTC 2019
