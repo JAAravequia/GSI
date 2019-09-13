@@ -106,7 +106,6 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   use qcmod, only: use_poq7
   use ozinfo, only: jpch_oz,nusis_oz,iuse_oz
   use mpimod, only: npe
-  use file_utility, only : get_lun
   
   implicit none
 
@@ -181,7 +180,6 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
   real(r_double),allocatable,dimension(:,:):: olpdtsq,lpsdvals
   real(r_double),allocatable,dimension(:):: press,omr,omrstd
-  real(r_double),allocatable,dimension(:,:)::rpseq3
 
   real(r_double) said, lat, lon, year, month, day, hour, minu
   real(r_double) soza
@@ -1069,7 +1067,6 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
 
      ! Allocate arrays
      allocate(olpdtsq(12,81))
-     allocate(rpseq3(1,990))
      allocate(lpsdvals(3,81))
      allocate(press(nloz))
      allocate(omr(nloz))
@@ -1241,7 +1238,6 @@ subroutine read_ozone(nread,ndata,nodata,jsatid,infile,gstime,lunout, &
   end if
   if(index(obstype,'ompslp')/=0) then
      if(allocated(olpdtsq))deallocate(olpdtsq)
-     if(allocated(rpseq3))deallocate(rpseq3)
      if(allocated(lpsdvals))deallocate(lpsdvals)
      if(allocated(press))deallocate(press)
      if(allocated(omr))deallocate(omr)
