@@ -29,7 +29,7 @@ export MY_MACHINE=wcoss_d
    #         Once sources begin to use the new format this can either be
    #         set to 1 or may go away.
    #
-   export OZNMON_NEW_HDR=0
+   export OZNMON_NEW_HDR=${OZNMON_NEW_HDR:-0}
 
    #
    # MY_OZNMON should point to your working directory which contains the
@@ -65,7 +65,7 @@ export MY_OZNMON=${MY_OZNMON:-/gpfs/dell2/emc/modeling/noscrub/Edward.Safford/Pr
    #  and the succedding scripts will construct and use subdirectories under
    #  this location.
    #
-export OZN_TANKDIR=${OZN_TANKDIR:-/u/Edward.Safford/nbns}
+export OZN_TANKDIR=${OZN_TANKDIR:-/gpfs/dell2/emc/modeling/noscrub/Edward.Safford/nbns}
 
    if [[ $GLB_AREA -eq 1 ]]; then
       OZN_IMGN_TANKDIR=${OZN_TANKDIR}/imgn/${OZNMON_SUFFIX}

@@ -44,7 +44,7 @@ export OZNSTAT_LOCATION=${OZNSTAT_LOCATION:-/com2/gfs/prod}
 #
 #     0 = off, 1 = on
 #
-export USE_ANL=${USE_ANL:-0}
+export USE_ANL=${USE_ANL:-1}
 
 #
 #  OZN_USE_RUN affects the data, image, and log file naming scheme, and is 

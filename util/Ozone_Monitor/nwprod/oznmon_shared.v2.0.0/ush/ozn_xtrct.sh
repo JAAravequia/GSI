@@ -151,7 +151,9 @@ else
    #  NOTE:  If ges && anl are to be processed then add an outer for loop on 
    #  $ozn_ptype
    #
+   echo "ozn_ptype = $ozn_ptype"
    for ptype in ${ozn_ptype}; do
+      echo "ptype = $ptype"
 
  
       for type in ${SATYPE}; do
@@ -169,6 +171,7 @@ else
       ihh=`echo $PDATE | cut -c9-10`
 
       for type in ${SATYPE}; do
+         echo "processing ptype, type:  $ptype, $type"
          rm -f input
 
 cat << EOF > input
@@ -235,14 +238,15 @@ EOF
          if [[ ! -d ${TANKverf_ozn}/horiz ]]; then
             mkdir -p ${TANKverf_ozn}/horiz
          fi
-         $NCP ${type}.${ptype}.ctl                ${TANKverf_ozn}/horiz/
+         $NCP ${type}.${ptype}.ctl                  ${TANKverf_ozn}/horiz/
 
          $COMPRESS ${type}.${ptype}.${PDATE}.ieee_d
-         $NCP ${type}.${ptype}.${PDATE}.ieee_d.${Z}        ${TANKverf_ozn}/horiz/
+         $NCP ${type}.${ptype}.${PDATE}.ieee_d.${Z} ${TANKverf_ozn}/horiz/
       
 #         $COMPRESS stdout.horiz.${type}.${ptype}
-#         $NCP stdout.horiz.${type}.${ptype}.${Z}  ${TANKverf_ozn}/horiz/
+#         $NCP stdout.horiz.${type}.${ptype}.${Z}   ${TANKverf_ozn}/horiz/
 
+         echo "finished processing ptype, type:  $ptype, $type"
       done  # type in SATYPE
 
    done	 # ptype in $ozn_ptype

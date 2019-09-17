@@ -234,7 +234,7 @@ module read_diag
     print*, 'nlevs_last, header_fix%nlevs=',nlevs_last,header_fix%nlevs
 
     read(ftin,IOSTAT=iflag) ntobs
-    print*,'ntobs=',ntobs
+    print*,'ntobs, iflag =',ntobs, iflag
 
     if( header_fix%nlevs /= nlevs_last )then
       if( nlevs_last > 0 )then
@@ -244,20 +244,32 @@ module read_diag
         deallocate( data_mpi )
       endif
 
-      print*, 'allocate array data_fix, data_nlev, data_mpi'
+      print*, 'attempt to allocate array data_fix, data_nlev, data_mpi'
       allocate( data_fix( ntobs ) )
+      print*, 'data_fix( ntobs ) allocated', ntobs
       allocate( data_mpi( ntobs ) )
+      print*, 'data_mpi( ntobs ) allocated', ntobs
       allocate( data_nlev( header_fix%nlevs,ntobs ) )
+      print*, 'data_nlev( header_fix%nlevs, ntobs ) allocated', header_fix%nlevs, ntobs
       nlevs_last = header_fix%nlevs
     endif
 
-    if (header_fix%iextra /= iextra_last) then
+!------------------------------------------------------------------------
+!   looks like this might be the issue:
+!     data_extra is dimensioned by iextra and ntobs but is only
+!     de/allocated based on not agreeing with the iextra_last value
+!     but _obs_ will vary from call to call, so that won't always work.
+!------------------------------------------------------------------------
+    print*, 'header_fix%iextra, iextra_last =', header_fix%iextra, iextra_last
+!    if (header_fix%iextra /= iextra_last) then
        if (iextra_last > 0) then
           deallocate (data_extra)
+          print*, 'deallocated data_extra'
        endif
        allocate( data_extra(header_fix%iextra,ntobs) )
+       print*, 'allocated data_extra, iextra, ntobs', header_fix%iextra, ntobs
        iextra_last = header_fix%iextra
-    endif
+!    endif
 
     !--- read a record
 
@@ -267,9 +279,11 @@ module read_diag
 
     if (header_fix%iextra == 0) then
        read(ftin,IOSTAT=iflag) data_mpi, tmp_fix, tmp_nlev
+       print*,'iflag = ', iflag
     else
        allocate(  tmp_extra(header_fix%iextra,ntobs) )
        read(ftin,IOSTAT=iflag) data_mpi, tmp_fix, tmp_nlev, tmp_extra
+       print*,'iflag =',iflag
 
        do j=1,ntobs
           do i=1,header_fix%iextra
