@@ -422,7 +422,6 @@ subroutine read_cris(mype,val_cris,ithin,isfcalc,rmesh,jsatid,gstime,&
 !          Read FOV information
            if (char_mtyp == 'FSR') then
               call ufbint(lnbufr,linele,4,1,iret,'FOVN SLNM FORN  (CRCHNM)')
-              !call ufbint(lnbufr,linele,4,1,iret,'FOVN SLNM FORN  (CRCHN)')
            else
               call ufbint(lnbufr,linele,4,1,iret,'FOVN SLNM FORN  (CRCHN)')
           endif
