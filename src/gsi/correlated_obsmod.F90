@@ -113,8 +113,9 @@ Column 3: kreq   - level of required condition for the corresponding cov(R)
           if method=2                recondition the covariance matrix by inflating the
                                      diagional so that R_{r,r}=(sqrt{R_{r,r}+kreq)^2
                                      Note that kreq should be specified as 0<kreq<1
-Column 4: type - determines whether to apply covariance over ocean, land, ice, snow or mixed FOVs
-Column 5: cov_file - name of file holding estimate of error covariance for the
+Colum  4: kmut - a multiplicitve factor to apply to the entire matrix, for method 2 only
+Column 5: type - determines whether to apply covariance over ocean, land, ice, snow or mixed FOVs
+Column 6: cov_file - name of file holding estimate of error covariance for the
                      instrument specified in column 1
 \end{verbatim}
 
@@ -176,6 +177,8 @@ interface corr_ob_finalize; module procedure fnl_; end interface
 !   15Apr2014 Todling  Initial code.
 !   19Dec2014 W. Gu, replace the prescribed obs errors in satinfo with the diag of est(R)
 !   02Nov2016 W. Gu  kmut was added to inflate the whole R-covariance matrix.
+!   22Apr2019 kbathmann Major update to replace eigendecomposion with Cholesky factorization, 
+!                       and genrally speed up the code
 !   27Jul2018 W. Gu  code changes to reduce the round-off errors.
 !   10Jul2019 Todling keep upd_varch_ as internal routine called within initialization
 !   14Aug2019 W. Gu  add lupdqc to replace the obs errors from satinfo with diag of est(R).
@@ -619,17 +622,21 @@ endif ! method=1
 if ( ErrorCov%method==2 ) then
    Revecs=ErrorCov%R
    call decompose_(trim(ErrorCov%name),ErrorCov%Revals,Revecs,ndim,.true.)
-   do jj=1,ndim
-   do ii=1,ndim
-     if(ii==jj)then
-       ErrorCov%R(ii,ii)=ErrorCov%kmut*ErrorCov%kmut*(sqrt(ErrorCov%R(ii,ii))+ErrorCov%kreq)**2  ! inflated by constant standard deviation
-     else
-       ErrorCov%R(ii,jj)=ErrorCov%kmut*ErrorCov%kmut*ErrorCov%R(ii,jj)
-     endif
-   enddo
-   enddo
-   Revecs=ErrorCov%R
-   call decompose_(trim(ErrorCov%name),ErrorCov%Revals,Revecs,ndim,.true.)
+   if ((ErrorCov%kreq>zero).or.(ErrorCov%kmut>one)) then
+      do jj=1,ndim
+         do ii=1,ndim
+           if(ii==jj) then
+             ! inflated by constant standard deviation 
+             ErrorCov%R(ii,ii)=ErrorCov%kmut*ErrorCov%kmut*&
+                     (sqrt(ErrorCov%R(ii,ii))+ErrorCov%kreq)**2  
+           else
+             ErrorCov%R(ii,jj)=ErrorCov%kmut*ErrorCov%kmut*ErrorCov%R(ii,jj)
+           endif
+        enddo
+      enddo
+      Revecs=ErrorCov%R
+      call decompose_(trim(ErrorCov%name),ErrorCov%Revals,Revecs,ndim,.true.)
+   endif
    ! In this case, we can wipe out the eigen-decomp since it will be redone for
    ! each profile at each location at setup time.
    ErrorCov%Revals=zero
@@ -764,7 +771,6 @@ subroutine upd_varch_
 ! !REVISION HISTORY:
 !   2014-11-26  W. Gu     Initial code
 !   2019-02-26  kbathmann Update to be surface type dependent.
-!                         This subroutine is used in methods 0, 2 and 3 only
 !   2019-08-12  W. Gu     Clean up the code, update varch_sea,varch_land etc directly by using indxR
 !
 ! !REMARKS:
@@ -982,7 +988,9 @@ logical function adjust_jac_ (iinstr,nchanl,nsigradjac,ich,varinv,depart, &
 !   2015-04-01  W. Gu   - clean the code
 !   2015-08-18  W. Gu   - add the dependence of the correlated obs errors on the surface types.
 !   2016-06-01  W. Gu   - move the function radinfo_adjust_jacobian from radinfo
-!
+!   2017-07-27  kbathmann  Merge subroutine rsqrtinv into scale_jac, define rinvdiag
+!                          to fix diag_precon for correlated error, and reorder several nested loops
+!   2019-04-22  kbathmann  change to cholesky factorization
 ! attributes:
 !   language: f90
 !   machine:  ibm rs/6000 sp; SGI Origin 2000; Compaq/HP
@@ -1091,7 +1099,7 @@ logical function scale_jac_(depart,err2,raterr2,jacobian,nchanl,varinv,wgtjo, &
    real(r_quad),   allocatable,dimension(:)   :: col
    real(r_quad),   allocatable,dimension(:,:) :: row
    real(r_kind),   allocatable,dimension(:)   :: qcaj
-   real(r_kind),   allocatable,dimension(:,:) :: Revecs
+   real(r_kind),   allocatable,dimension(:,:) :: UT
    logical subset
 
    scale_jac_=.false.
@@ -1198,17 +1206,11 @@ logical function scale_jac_(depart,err2,raterr2,jacobian,nchanl,varinv,wgtjo, &
 
      else if( ErrorCov%method==1 .or. ErrorCov%method== 2) then
 
-              !  case=1 is default; uses corr(Re) only
-              !    Ce = U E U^T  (U=Evecs; E=Evals hold eigen-pairs of corr(R))
-              !    inv(Rg) = D0^(-1/2) U inv(E) U^T D0^(-1/2)
-              !  case=2: uses full Re;
-              !    Re = U De U^T  (Evals/Evecs eigen-pairs of full Re)
-              !    inv(Rg) = U De^(-1/2) U^T U De^(-1/2) U^T
+     !  case=1 is default; uses corr(Re) only
+     !  case=2: uses full Re;
 
 ! decompose the sub-matrix - returning the result in the 
 !                            structure holding the full covariance
-! Multiply Jacobian with matrix of eigenvectors
-! Multiply departure with "right" eigenvectors
        nsigjac=size(jacobian,1)
        allocate(row(nsigjac,ncp))
        allocate(col(ncp))
@@ -1216,46 +1218,50 @@ logical function scale_jac_(depart,err2,raterr2,jacobian,nchanl,varinv,wgtjo, &
        col=zero_quad
 
        allocate(qcaj(ncp))
-       allocate(Revecs(ncp,ncp))
+       allocate(UT(ncp,ncp))
        qcaj = one
-       Revecs = zero
+       UT = zero
        if( ErrorCov%method==2 ) then
          if(lqcoef)then
            do jj=1,ncp
              jjj=IJsubset(jj)
              qcaj(jj) = raterr2(jjj)
            enddo
+           subset = choleskydecom_inv_ (IRsubset,ErrorCov,UT,qcaj)
+         else
+         subset = choleskydecom_inv_ (IRsubset,ErrorCov,UT) 
          endif
        else if( ErrorCov%method==1 ) then
          do jj=1,ncp
            jjj=IJsubset(jj)
            qcaj(jj) = varinv(jjj)
          enddo
+         subset = choleskydecom_inv_ (IRsubset,ErrorCov,UT,qcaj)
+
        endif
-       subset = choleskydecom_inv_ (IRsubset,ErrorCov,Revecs,qcaj)
        if(.not.subset) then
          call die(myname_,' failed to decompose correlated R')
        endif
 
        chan_count = 0
-       do ii=1,ncp
+       do ii=1,ncp 
          do jj=1,ii
            chan_count = chan_count + 1
-           rsqrtinv(chan_count) = Revecs(ii,jj)
+           rsqrtinv(chan_count) = UT(jj,ii)
          enddo
        enddo
 
        do ii=1,ncp
-         do kk=ii,ncp
-           rinvdiag(ii)=rinvdiag(ii)+Revecs(kk,ii)**2
+         do kk=ii,ncp 
+           rinvdiag(ii)=rinvdiag(ii)+UT(ii,kk)**2
          enddo
        enddo
 
        do ii=1,ncp
-         do jj=1,ii
+         do jj=1,ii 
             nn=IJsubset(jj)
-            col(ii)   = col(ii)   + Revecs(ii,jj) * depart(nn)
-            row(:,ii) = row(:,ii) + Revecs(ii,jj) * jacobian(:,nn)
+            col(ii)   = col(ii)   + UT(jj,ii) * depart(nn)
+            row(:,ii) = row(:,ii) + UT(jj,ii) * jacobian(:,nn)
          enddo
        enddo
 
@@ -1272,7 +1278,7 @@ logical function scale_jac_(depart,err2,raterr2,jacobian,nchanl,varinv,wgtjo, &
        deallocate(col)
        deallocate(row)
        deallocate(qcaj)
-       deallocate(Revecs)
+       deallocate(UT)
 
      else if( ErrorCov%method==3 ) then   !use diag(Re) scales GSI specified errors
                                           !    inv(Rg) = inv(De*Dg)
@@ -1305,19 +1311,19 @@ end function scale_jac_
 !BOP
 !
 ! !IROUTINE:  choleskydecom_inv_ ---  compute Choleskyi factorization of cov(R), i.e.,
-!                                    R = L * L^T, then inverse L
+!                                    R = U^T * U, then invert U
 !
 ! !INTERFACE:
 !
-logical function choleskydecom_inv_(Isubset,ErrorCov,Revecs,qcaj)
+logical function choleskydecom_inv_(Isubset,ErrorCov,UT,qcaj)
 ! !USES:
   implicit none
   integer(i_kind),intent(in) :: Isubset(:)
-  real(r_kind),intent(inout) :: Revecs(:,:)
+  real(r_kind),intent(inout) :: UT(:,:)
   real(r_kind),optional,intent(in) :: qcaj(:)
   type(ObsErrorCov) :: ErrorCov
 ! !DESCRIPTION: This routine makes a LAPACK call to Cholesky factorization of cov(R),
-!               then inverses the lower triangular matrix.
+!               then inverts the lower triangular matrix.
 !
 ! !REVISION HISTORY:
 !   2019-04-22  kbathmann/Wei  initial code
@@ -1326,7 +1332,8 @@ logical function choleskydecom_inv_(Isubset,ErrorCov,Revecs,qcaj)
 !   language: f90
 !   machine:  discover
 !
-! !AUTHOR:
+! !AUTHORS:
+!   Kristen Bathmann, EMC  date: 2019-04-22
 !   Wei Gu  org: gmao      date: 2019-04-22
 !
 !EOP
@@ -1343,30 +1350,30 @@ logical function choleskydecom_inv_(Isubset,ErrorCov,Revecs,qcaj)
   if( present(qcaj) ) then
     do jj=1,ncp
       do ii=1,ncp
-        Revecs(ii,jj) = ErrorCov%R(Isubset(ii),Isubset(jj))/sqrt(qcaj(ii)*qcaj(jj))
+        UT(ii,jj) = ErrorCov%R(Isubset(ii),Isubset(jj))/sqrt(qcaj(ii)*qcaj(jj))
       enddo
     enddo
   else 
     do jj=1,ncp
       do ii=1,ncp
-        Revecs(ii,jj) = ErrorCov%R(Isubset(ii),Isubset(jj))
+        UT(ii,jj) = ErrorCov%R(Isubset(ii),Isubset(jj))
       enddo
     enddo
   endif
   if(r_kind==r_single) then ! this trick only works because this uses the f77 lapack interfaces
-     call SPOTRF('L', ncp, Revecs, ncp, info )
+     call SPOTRF('U', ncp, UT, ncp, info )
   else if(r_kind==r_double) then
-     call DPOTRF('L', ncp, Revecs, ncp, info )
+     call DPOTRF('U', ncp, UT, ncp, info )
   endif
   if (info==0) then
      if(r_kind==r_single) then
-        call STRTRI('L', 'N', ncp, Revecs, ncp, info1 )
+        call STRTRI('U', 'N', ncp, UT, ncp, info1 )
      else if(r_kind==r_double) then
-        call DTRTRI('L', 'N', ncp, Revecs, ncp, info1 )
+        call DTRTRI('U', 'N', ncp, UT, ncp, info1 )
      endif
-     if(info1 .ne. 0)call die(myname_,'trouble inverting lower triangular matrix ')
+     if(info1 .ne. 0)call die(myname_,'trouble inverting upper triangular matrix ')
   else
-     call die(myname_,'trouble cholesky factorization')
+     call die(myname_,'trouble performing cholesky factorization') 
   endif
 
   choleskydecom_inv_=.true.
