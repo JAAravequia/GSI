@@ -48,6 +48,7 @@ module radinfo
 !   2016-08-12  mahajan - moved nst related variables from radinfo to gsi_nstcouplermod
 !   2016-09-20  Guo     - added SAVE attributes to module variables *_method, to
 !                         improve standard conformance of the code.
+!   2019-09-19  Winterbottom - added logic for array deallocation to subroutine radinfo_write. 
 !
 ! subroutines included:
 !   sub init_rad            - set satellite related variables to defaults
@@ -1144,7 +1145,14 @@ contains
 !   2008-04-23  safford - add standard subprogram doc block
 !   2010-04-29  zhu     - add analysis variance info for radiance bias correction coefficients
 !   2010-05-06  zhu     - add option adp_anglebc
-!   2011-04-07  todling - adjust argument list (interface) since newpc4pred is local now
+!   2011-04-07  todling - adjust argument list (interface) since newpc4pred is local now    
+!   2019-09-19  winterbottom - added logic for array deallocation to
+!                              check whether respective arrays are
+!                              allocated prior to attempting to
+!                              deallocate; this prevents failures when
+!                              the satinfo file is empty (e.g., no
+!                              satellite observations are being
+!                              assimilated).
 !
 !   input argument list:
 !
@@ -1197,12 +1205,43 @@ contains
 !   Deallocate data arrays for bias correction and those which hold
 !   information from satinfo file.
 
-    deallocate (predx,cbias,tlapmean,nuchan,nusis,iuse_rad,air_rad,ang_rad, &
-         ifactq,varch,varch_cld,inew_rad,icld_det,icloud4crtm,iaerosol4crtm)
+    !deallocate (predx,cbias,tlapmean,nuchan,nusis,iuse_rad,air_rad,ang_rad, &
+    !     ifactq,varch,varch_cld,inew_rad,icld_det,icloud4crtm,iaerosol4crtm)
+    if(allocated(predx)) deallocate(predx)
+    if(allocated(cbias)) deallocate(cbias)
+    if(allocated(tlapmean)) deallocate(tlapmean)
+    if(allocated(nuchan)) deallocate(nuchan)
+    if(allocated(nusis)) deallocate(nusis)
+    if(allocated(iuse_rad)) deallocate(iuse_rad)
+    if(allocated(air_rad)) deallocate(air_rad)
+    if(allocated(ang_rad)) deallocate(ang_rad)
+    if(allocated(ifactq)) deallocate(ifactq)
+    if(allocated(varch)) deallocate(varch)
+    if(allocated(varch_cld)) deallocate(varch_cld)
+    if(allocated(inew_rad)) deallocate(inew_rad)
+    if(allocated(icld_det)) deallocate(icld_det)
+    if(allocated(icloud4crtm)) deallocate(icloud4crtm)
+    if(allocated(iaerosol4crtm)) deallocate(iaerosol4crtm)
 
-    if (adp_anglebc) deallocate(count_tlapmean,update_tlapmean,tsum_tlapmean)
-    if (newpc4pred) deallocate(ostats,rstats,varA)
-    deallocate (radstart,radstep,radnstep,radedge1,radedge2)
+    if (adp_anglebc) then
+       if(allocated(count_tlapmean)) deallocate(count_tlapmean)
+       if(allocated(update_tlapmean)) deallocate(update_tlapmean)
+       if(allocated(tsum_tlapmean)) deallocate(tsum_tlapmean)
+       !deallocate(count_tlapmean,update_tlapmean,tsum_tlapmean)
+    end if
+       
+    if (newpc4pred) then
+       if(allocated(ostats)) deallocate(ostats)
+       if(allocated(rstats)) deallocate(rstats)
+       if(allocated(varA)) deallocate(varA)
+       !deallocate(ostats,rstats,varA)
+    end if
+       
+    if(allocated(radstart)) deallocate(radstart)
+    if(allocated(radstep))  deallocate(radstep)
+    if(allocated(radnstep)) deallocate(radnstep)
+    if(allocated(radedge1)) deallocate(radedge2)
+    !deallocate (radstart,radstep,radnstep,radedge1,radedge2)
     return
   end subroutine radinfo_write
 
