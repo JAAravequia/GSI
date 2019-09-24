@@ -856,6 +856,7 @@ contains
            if (iuse_rad(j)< -1 .or. (channel_passive .and.  &
                 .not.rad_diagsave)) tnoise(jc)=r1e10
            if (passive_bc .and. channel_passive) tnoise(jc)=tnoise_save
+           if (tnoise(jc) < 1.e4_r_kind) toss=.false.
         end do
 
 !       Count data of different surface types
