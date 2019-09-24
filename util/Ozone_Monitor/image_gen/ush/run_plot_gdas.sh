@@ -6,6 +6,10 @@ package=ProdGSI/util/Ozone_Monitor
 suffix=GFS
 run=gdas
 
+DO_COMP=1
+COMP1=sbuv2_n19
+COMP2=ompsnp_npp
+
 idev=`cat /etc/dev | cut -c1`
 iprod=`cat /etc/prod | cut -c1`
 
@@ -18,7 +22,7 @@ data_map=${scripts}/data_map.xml
 #export NDATE=/nwprod/util/exec/ndate
 export NDATE=/gpfs/dell1/nco/ops/nwprod/prod_util.v1.1.0/exec/ips/ndate
 
-export MAIL_CC="russ.treadon@noaa.gov, andrew.collard@noaa.gov, haixia.liu@noaa.gov"
+#export MAIL_CC="russ.treadon@noaa.gov, andrew.collard@noaa.gov, haixia.liu@noaa.gov"
 #export MAIL_CC="edward.c.safford@gmail.com"
 export MAIL_TO="edward.safford@noaa.gov"
 
@@ -36,18 +40,33 @@ idate=`$NDATE +${CYCLE_INTERVAL} $imgdate`
 
 prodate=`${scripts}/find_cycle.pl -run ${run} -cyc 1 -dir ${tankdir}`
 
+logdir=/gpfs/dell2/ptmp/Edward.Safford/logs
+
 echo "imgdate, idate, prodate = $imgdate, $idate, $prodate"
 if [[ $idate -le $prodate ]]; then
 
    echo " firing OznMon_Plt.sh"
-   ${scripts}/OznMon_Plt.sh $suffix -p $idate -r $run  \
-      1>/gpfs/dell2/ptmp/Edward.Safford/logs/${suffix}/${run}/oznmon/OznMon_Plt.log \
-      2>/gpfs/dell2/ptmp/Edward.Safford/logs/${suffix}/${run}/oznmon/OznMon_Plt.err 
 
-   rc=`${scripts}/update_data_map.pl ${data_map} \
-      ${suffix}_${run} imgdate ${idate}`
+   if [[ $DO_COMP -eq 1 ]]; then
+      ${scripts}/OznMon_Plt.sh $suffix -p $idate -r $run \
+                -c1 $COMP1 -c2 $COMP2 \
+         1>${logdir}/${suffix}/${run}/oznmon/OznMon_Plt.log \
+         2>${logdir}/${suffix}/${run}/oznmon/OznMon_Plt.err
+   else
 
-   echo "rc from update_data_map.pl = $rc"
+      ${scripts}/OznMon_Plt.sh $suffix -p $idate -r $run \
+         1>${logdir}/${suffix}/${run}/oznmon/OznMon_Plt.log \
+         2>${logdir}/${suffix}/${run}/oznmon/OznMon_Plt.err
+   fi
+
+#   ${scripts}/OznMon_Plt.sh $suffix -p $idate -r $run  \
+#      1>/gpfs/dell2/ptmp/Edward.Safford/logs/${suffix}/${run}/oznmon/OznMon_Plt.log \
+#      2>/gpfs/dell2/ptmp/Edward.Safford/logs/${suffix}/${run}/oznmon/OznMon_Plt.err 
+
+#   rc=`${scripts}/update_data_map.pl ${data_map} \
+#      ${suffix}_${run} imgdate ${idate}`
+
+#   echo "rc from update_data_map.pl = $rc"
 
 fi
 
