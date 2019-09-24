@@ -73,7 +73,6 @@ export DO_DATA_RPT=${DO_DATA_RPT:-1}
 export NCP=${NCP:-/bin/cp}
 export NDATE=${NDATE:-/nwprod/util/exec/ndate}
 
-netcdf=0
 
 ##################################################################
 # ensure work and TANK dirs exist, verify oznstat is available
@@ -107,6 +106,7 @@ if [[ -s ${oznstat} ]]; then
    tar -xvf oznstat.$PDATE
    rm oznstat.$PDATE
 
+   netcdf=0
    count=`ls diag* | grep ".nc4" | wc -l`
    if [ $count -gt 0 ] ; then
       netcdf=1
