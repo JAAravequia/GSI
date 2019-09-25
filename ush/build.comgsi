@@ -32,6 +32,11 @@ if [ ! -f $modulefile ]; then
 fi
 source $modulefile
 
+## if NETCDF4 is set to 0 or 1, unset it
+if [[ "$NETCDF4" == "1" ]] || [[ "$NETCDF4" == "0" ]]; then
+  unset NETCDF4
+fi
+
 set -x
 rm -rf $dir_root/build
 mkdir -p $dir_root/build
