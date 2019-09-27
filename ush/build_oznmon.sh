@@ -18,6 +18,8 @@ elif [ $target = dell -o $target = wcoss_d ]; then
     . $MODULESHOME/init/sh
 elif [ $target = theia ]; then
     . /apps/lmod/lmod/init/sh
+elif [ $target = s4 ]; then
+    . /opt/apps/lmod/3.1.9/init/sh
 else
     echo "unknown target = $target"
     exit 9

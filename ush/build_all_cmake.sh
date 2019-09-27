@@ -29,6 +29,9 @@ elif [[ -d /jetmon ]] ; then
 elif [[ -d /sw/gaea ]] ; then
     . /opt/cray/pe/modules/3.2.10.5/init/sh
     target=gaea
+elif [[ -d /data/users ]] ; then
+    . /opt/apps/lmod/3.1.9/init/sh
+    target=s4
 else
     echo "unknown target = $target"
     exit 9

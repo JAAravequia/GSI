@@ -104,7 +104,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
 
   real(r_double) rstation_id
   real(r_double) rkx                        !msq
-  real(r_double),dimension(5):: hdr
+!  real(r_double),dimension(5):: hdr
   real(r_double),dimension(8,24):: dwld
 
   integer(i_kind) idate5(5),minobs,minan
@@ -120,6 +120,18 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
   data dwstr2  /'ADWL ELEV BORA NOLS NOLC ADPL LOSC SDLE'/ !msq  used for KNMI data prepared by GMAO
   
   data lunin / 10 /
+
+
+!###################################################################
+! To read SAID and SIID from the ADM-Aeolus ECMWF bufr (TCW 5/1/2019)
+  real (r_kind) rsatid, rsatinid
+  integer(i_kind) satid, satinid
+  real (r_kind), dimension(9):: hdr
+  real (r_kind):: tdhr
+  character(80) echdstr,ecdwstr  
+  data echdstr /'SIID CLONH CLATH YEAR MNTH DAYS HOUR MINU SECW'/ ! there is no MNEMONIC that is equivalent to DHR
+  data ecdwstr /'HEITH ELEV BEARAZ HLSW HLSWEE'/  
+!###################################################################
 
 
 !**************************************************************************
@@ -178,7 +190,16 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      time_correction=zero
   end if
 
+!############################################################
+! For ECMWF ADM-Aeolus Bufr File (TCW 5/1/2019)
+  write(6,*)'READ_LIDAR: idate = ', idate
+  write(6,*)'READ_LIDAR: iadate = ', iadate
+
+  write(6,*)'READ_LIDAR: minobs, minan = ', minobs, minan
+  write(6,*)'READ_LIDAR: time_correction = ', time_correction 
+
   write(6,*)'READ_LIDAR: time offset is ',toff,' hours.'
+!############################################################
 
 ! Big loop over bufr file	
 
@@ -194,6 +215,23 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
 ! 
      call ufbint(lunin,rkx,1,1,iret,'TYP')           !msq
      kx=nint(rkx)                                    !msq
+!############################################################
+! For ECMWF ADM-Aeolus Bufr File (TCW 5/1/2019)
+! print kx value:
+     write(6,*) 'READ_LIDAR: kx = ', kx
+! There is no 'TYP' in ECMWF ADM-Aeolus BUFR file
+! We will use SAID and SIID to identify ADM-Aeolus
+     call ufbint(lunin, rsatid,1,1,iret,'SAID')
+     satid=nint(rsatid)
+     call ufbint(lunin, rsatinid,1,1,iret,'SIID')
+     satinid=nint(rsatinid)
+     write(6,*) 'READ_LIDAR: satid = ', satid
+     write(6,*) 'READ_LIDAR: satinid = ', satinid
+     if (satid==48 .and. satinid==130) then
+        write(6,*) 'READ_LIDAR: We are reading ECMWF ADM-Aeolus Bufr File.'
+     endif
+!############################################################
+
      if (kx==100.or.kx==101) then
 !        ADM data 
          call ufbint(lunin,hdr,5,1,iret,hdstr2)
@@ -201,29 +239,82 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
 !        GWOS data
          call ufbint(lunin,hdr,5,1,iret,hdstr)
      else
+!############################################################
+! For ECMWF ADM-Aeolus Bufr File (TCW 5/1/2019)
+       if (satid==48 .and. satinid==130) then
+         call ufbint(lunin,hdr,9,1,iret,echdstr) 
+!         write(6,*) 'READ_LIDAR: read echdstr iret = ', iret
+         kx=999 ! use undefined dwl data for now
+       else
 !        undefined dwl data
          call ufbint(lunin,hdr,5,1,iret,hdstr)
          kx=999
+       endif
+!############################################################
      endif
 
      
   ikx=0
   do i=1,nconvtype
-     if(trim(obstype) == trim(ioctype(i)) .and. kx == ictype(i))ikx = i
+!############################################################
+! For ECMWF ADM-Aeolus Bufr File (TCW 5/1/2019)
+     if (satid==48 .and. satinid==130) then
+       if(trim(obstype) == trim(ioctype(i))) ikx = i
+     else
+       if(trim(obstype) == trim(ioctype(i)) .and. kx == ictype(i))ikx = i
+     endif
+!############################################################
   end do
+  write(6,*) 'READ_LIDAR: ikx = ', ikx
 ! Determine if this is doppler wind lidar report
-  dwl= (ikx /= 0) .and. (subset=='DWLDAT')  ! jsw chenge kx to ikx (bug)
+!  dwl= (ikx /= 0) .and. (subset=='DWLDAT')  ! jsw chenge kx to ikx (bug)
+!############################################################
+! For ECMWF ADM-Aeolus Bufr File (TCW 5/1/2019)
+  dwl= (ikx /= 0) .and. (subset=='FN023000') 
+!############################################################
   if(.not. dwl) then
        go to 10
   endif
 
   nread=nread+1
 
-  t4dv = toff + hdr(4)
+!############################################################
+! For ECMWF ADM-Aeolus Bufr File (TCW 5/1/2019)
+  if (satid==48 .and. satinid==130) then
+     idate5(1)=iadate(1)
+     idate5(2)=iadate(2)
+     idate5(3)=iadate(3)
+     idate5(4)=iadate(4)
+     idate5(5)=0
+     call w3fs21(idate5,minan)    !  analysis ref time in minutes relative to historic date
+     idate5(1)=nint(hdr(4))
+     idate5(2)=nint(hdr(5))
+     idate5(3)=nint(hdr(6))
+     idate5(4)=nint(hdr(7))
+     idate5(5)=nint(hdr(8))
+     call w3fs21(idate5,minobs)    !  observation ref time in minutes relative to historic date
+     write(6,*)'READ_LIDAR: minobs, minan = ', minobs, minan
+     write(6,*)'READ_LIDAR: idate5 = ', idate5(1), idate5(2), idate5(3), idate5(4), idate5(5)
+     write(6,*)'READ_LIDAR: seconds hdr(9) = ', hdr(9)
+     tdhr = (float(minobs)*60+hdr(9)-float(minan)*60)/3600.    
+     t4dv = toff + tdhr  
+  else
+     t4dv = toff + hdr(4)
+  endif
+  write(6,*)'READ_LIDAR: t4dv ',t4dv,' hours.'
+!############################################################
+
   if (l4dvar.or.l4densvar) then
      if (t4dv<zero .OR. t4dv>winlen) go to 10
   else
-     time=hdr(4) + time_correction
+!############################################################
+! For ECMWF ADM-Aeolus Bufr File (TCW 5/1/2019)
+     if (satid==48 .and. satinid==130) then
+        time=tdhr + time_correction
+     else
+        time=hdr(4) + time_correction
+     endif
+!############################################################
      if (abs(time) > ctwind(ikx) .or. abs(time) > twind) go to 10
   endif
 
@@ -251,7 +342,15 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
   if (kx==100.or.kx==101) then
       call ufbint(lunin,dwld,8,24,levs,dwstr2) !mccarty, msq
   else
+!############################################################
+! For ECMWF ADM-Aeolus Bufr File (TCW 5/1/2019)
+    if (satid==48 .and. satinid==130) then
+      call ufbint(lunin,dwld,5,24,levs,ecdwstr)
+      ! 'HEITH ELEV BEARAZ HLSW HLSWEE'
+    else
       call ufbint(lunin,dwld,8,24,levs,dwstr) !mccarty,msq
+    endif
+!############################################################
   endif
 
   do ilev=1,levs !mccarty, jsw
@@ -265,8 +364,14 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
         if(mod(ndata,ncnumgrp(ikx))== ncgroup(ikx)-1)usage=ncmiter(ikx)
      end if
 
-
+!############################################################
+! For ECMWF ADM-Aeolus Bufr File (TCW 5/1/2019)
+    if (satid==48 .and. satinid==130) then
+     hloswind=dwld(4,ilev)
+    else
      hloswind=dwld(7,ilev)/(cos(dwld(2,ilev)*deg2rad))    ! obs wind (line of sight component)
+    endif
+!############################################################
      call deter_sfc2(dlat_earth,dlon_earth,t4dv,idomsfc,tsavg,ff10,sfcr)
 
      cdata_all(1,ndata)=ikx                    ! obs type
@@ -276,11 +381,22 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      cdata_all(5,ndata)=dwld(1,ilev)           ! obs height (altitude) (m)
      cdata_all(6,ndata)=dwld(2,ilev)*deg2rad   ! elevation angle (radians)
      cdata_all(7,ndata)=dwld(3,ilev)*deg2rad   ! bearing or azimuth (radians)
+!############################################################
+! For ECMWF ADM-Aeolus Bufr File (TCW 5/1/2019)
+    if (satid==48 .and. satinid==130) then
+     cdata_all(8,ndata)=0.0                    ! number of laser shots
+     cdata_all(9,ndata)=0.0                    ! number of cloud laser shots
+     cdata_all(10,ndata)=0.0                   ! atmospheric depth
+     cdata_all(11,ndata)=hloswind              ! obs wind (line of sight component) msq
+     cdata_all(12,ndata)=dwld(5,ilev)          ! standard deviation (obs error) msq
+    else
      cdata_all(8,ndata)=dwld(4,ilev)           ! number of laser shots
      cdata_all(9,ndata)=dwld(5,ilev)           ! number of cloud laser shots
      cdata_all(10,ndata)=dwld(6,ilev)          ! atmospheric depth
-     cdata_all(11,ndata)=hloswind               ! obs wind (line of sight component) msq
+     cdata_all(11,ndata)=hloswind              ! obs wind (line of sight component) msq
      cdata_all(12,ndata)=dwld(8,ilev)          ! standard deviation (obs error) msq
+    endif
+!############################################################
      cdata_all(13,ndata)=rstation_id           ! station id
      cdata_all(14,ndata)=usage                 ! usage parameter
      cdata_all(15,ndata)=idomsfc+0.001_r_kind  ! dominate surface type

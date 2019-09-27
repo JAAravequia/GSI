@@ -21,6 +21,9 @@ elif [ $target = dell -o $target = wcoss_d ]; then
 elif [ $target = theia ]; then
     . /apps/lmod/lmod/init/sh
     conf_target=theia
+elif [ $target = s4 ]; then
+    ./opt/apps/lmod/3.1.9/init/sh
+    conf_target=s4
 else
     echo "unknown target = $target"
     exit 9

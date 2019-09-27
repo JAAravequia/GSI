@@ -5,13 +5,16 @@
 FC   =  ifort # pgf90
 FLAGS=  -O2  
 INCLD=  -I../../include
-LIBS =  -L../../lib -lbufr_i4r8
+#LIBS =  -L../../lib -lbufr_i4r8
+LIBS =  -L/home/twu/s4-cardinal/hwrfrun/sorc/GSI/lib -lbufr_i4r8 -lw3nco_i4r8
+#LIBS =  -L/data/users/twu/SSDAE/nwprod/lib/bufr/v11.0.1/intel/libbufr_v11.0.1_8_64.a
 
 all: bufr_encode_sample bufr_decode_sample bufr_append_sample \
      prepbufr_decode_all bufr_decode_radiance \
      prepbufr_encode_surface prepbufr_append_surface \
      prepbufr_encode_upperair prepbufr_append_upperair \
-     prepbufr_append_retrieve prepbufr_inventory
+     prepbufr_append_retrieve prepbufr_inventory \
+     prepbufr_decode_encode
 
 bufr: bufr_encode_sample bufr_decode_sample bufr_append_sample
 
@@ -19,7 +22,7 @@ sfc: prepbufr_encode_surface prepbufr_append_surface prepbufr_decode_all
 
 up: prepbufr_encode_upperair prepbufr_append_upperair prepbufr_decode_all
 
-others: bufr_decode_radiance prepbufr_append_retrieve
+others: bufr_decode_radiance prepbufr_append_retrieve prepbufr_decode_encode
 
 append_prepbufr_multilevel: append_prepbufr_multilevel.o
 	${FC} -o append_prepbufr_multilevel.exe ${FLAGS} append_prepbufr_multilevel.o ${LIBS} 
@@ -67,6 +70,11 @@ bufr_decode_radiance: bufr_decode_radiance.o
 prepbufr_inventory: prepbufr_inventory.o
 	${FC} -o prepbufr_inventory.exe ${FLAGS} prepbufr_inventory.o ${LIBS} 
 	rm prepbufr_inventory.o
+
+prepbufr_decode_encode: prepbufr_decode_encode.o
+	${FC} -o prepbufr_decode_encode.exe ${FLAGS} prepbufr_decode_encode.o ${LIBS} 
+	rm prepbufr_decode_encode.o
+
 
 .SUFFIXES : .f90  .o
 
