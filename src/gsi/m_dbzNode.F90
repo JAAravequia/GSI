@@ -13,6 +13,7 @@ module m_dbzNode
 !                         implementation.
 !   2017-05-12 Y. Wang and X. Wang - module for defining reflectivity observation, 
 !                                    POC: xuguang.wang@ou.edu
+!   2019-02-18 c tong <cctong@ou.edu> - modified for CAPS  ! CAPS
 !
 !   input argument list: see Fortran 90 style document below
 !
@@ -30,6 +31,7 @@ module m_dbzNode
   use kinds , only: i_kind,r_kind
   use mpeu_util, only: assert_,die,perr,warn,tell
   use m_obsNode, only: obsNode
+  use caps_radaruse_mod, only: l_use_dbz_caps ! CAPS
   implicit none
   private
 
@@ -57,6 +59,15 @@ module m_dbzNode
 !     logical         :: luse          !  flag indicating if ob is used in pen.
 
 !     integer(i_kind) :: idv,iob       ! device id and obs index for sorting
+
+! --- CAPS ---- 
+     real(r_kind)    :: ddiff         !  dbz residual
+     real(r_kind)    :: dbzpertb      !  random number adding to the obs
+     integer(i_kind) :: k1            !  level of errtable 1-33  
+     integer(i_kind) :: kx            !  ob type                 
+     !real   (r_kind) :: elat, elon      ! earth lat-lon for redistribution
+     !real   (r_kind) :: dlat, dlon      ! earth lat-lon for redistribution
+! --- CAPS ----
 
      real   (r_kind) :: dlev            ! reference to the vertical grid
   contains
@@ -149,25 +160,41 @@ _ENTRY_(myname_)
                 endif
 
   else
-    read(iunit,iostat=istat)    aNode%res    , &
-                                aNode%err2   , &
-                                aNode%raterr2, &
-                                aNode%b      , &
-                                aNode%pg     , &
-                                aNode%jqr    , &
-                                aNode%jqs    , &
-                                aNode%jqg    , &
-                                aNode%jqli   , &
-                                aNode%dlev   , &
-                                aNode%wij    , &
-                                aNode%ij
+! --- CAPS ---
+    if ( l_use_dbz_caps ) then
+      read(iunit,iostat=istat)    aNode%ddiff    , &
+                                  aNode%err2   , &
+                                  aNode%raterr2, &
+                                  aNode%b      , &
+                                  aNode%pg     , &
+                                  aNode%dbzpertb , &
+                                  aNode%k1     , &
+                                  aNode%kx     , &
+                                  aNode%dlev   , &
+                                  aNode%wij    , &
+                                  aNode%ij
+! --- CAPS ----
+    else
+      read(iunit,iostat=istat)    aNode%res    , &
+                                  aNode%err2   , &
+                                  aNode%raterr2, &
+                                  aNode%b      , &
+                                  aNode%pg     , &
+                                  aNode%jqr    , &
+                                  aNode%jqs    , &
+                                  aNode%jqg    , &
+                                  aNode%jqli   , &
+                                  aNode%dlev   , &
+                                  aNode%wij    , &
+                                  aNode%ij
+    end if
                 if (istat/=0) then
                   call perr(myname_,'read(%(res,err2,...)), iostat =',istat)
                   _EXIT_(myname_)
                   return
                 end if
 
-    aNode%diags => obsdiagLookup_locate(diagLookup,aNode%idv,aNode%iob,1_i_kind)
+      aNode%diags => obsdiagLookup_locate(diagLookup,aNode%idv,aNode%iob,1_i_kind)
                 if(.not.associated(aNode%diags)) then
                   call perr(myname_,'obsdiagLookup_locate(), %idv =',aNode%idv)
                   call perr(myname_,'                        %iob =',aNode%iob)
@@ -188,18 +215,35 @@ subroutine obsNode_xwrite_(aNode,junit,jstat)
 _ENTRY_(myname_)
 
   jstat=0
-  write(junit,iostat=jstat)     aNode%res    , &
-                                aNode%err2   , &
-                                aNode%raterr2, &
-                                aNode%b      , &
-                                aNode%pg     , &
-                                aNode%jqr    , &
-                                aNode%jqs    , &
-                                aNode%jqg    , &
-                                aNode%jqli   , &
-                                aNode%dlev   , &
-                                aNode%wij    , &
-                                aNode%ij
+ 
+! --- CAPS ---
+  if ( l_use_dbz_caps ) then
+    write(junit,iostat=jstat)     aNode%ddiff  , &
+                                  aNode%err2   , &
+                                  aNode%raterr2, &
+                                  aNode%b      , &
+                                  aNode%pg     , &
+                                  aNode%dbzpertb , &
+                                  aNode%k1     , &
+                                  aNode%kx     , &
+                                  aNode%dlev   , &
+                                  aNode%wij    , &
+                                  aNode%ij
+! --- CAPS ---
+  else
+    write(junit,iostat=jstat)     aNode%res    , &
+                                  aNode%err2   , &
+                                  aNode%raterr2, &
+                                  aNode%b      , &
+                                  aNode%pg     , &
+                                  aNode%jqr    , &
+                                  aNode%jqs    , &
+                                  aNode%jqg    , &
+                                  aNode%jqli   , &
+                                  aNode%dlev   , &
+                                  aNode%wij    , &
+                                  aNode%ij
+  end if
                 if (jstat/=0) then
                   call perr(myname_,'write(%(res,err2,...)), iostat =',jstat)
                   _EXIT_(myname_)

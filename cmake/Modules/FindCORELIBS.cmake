@@ -32,6 +32,10 @@ if(DEFINED ENV{W3NCO_VER})
   set(W3NCO_VER $ENV{W3NCO_VER})
   STRING(REGEX REPLACE "v" "" W3NCO_VER ${W3NCO_VER})
 endif()
+if(DEFINED ENV{RADAREMUL_VER}) # CAPS
+  set(RADAREMUL_VER $ENV{RADAREMUL_VER})
+  STRING(REGEX REPLACE "v" "" RADAREMUL_VER ${RADAREMUL_VER})
+endif()
 
 set (CORE_DEPS " ")
 set( NO_DEFAULT_PATH )
@@ -254,17 +258,47 @@ else()
     set( SP_LIBRARY "${LIBRARY_OUTPUT_PATH}/libsp${libsuffix}.a" CACHE STRING "SP Library" )
     set( sp "sp${libsuffix}")
 endif()
+if(NOT  BUILD_RADAREMUL ) # CAPS
+  if(DEFINED ENV{RADAREMUL_LIB} )
+    set(RADAREMUL_LIBRARY $ENV{RADAREMUL_LIB} )
+  else()
+  find_library( RADAREMUL_LIBRARY
+    NAMES libradaremul.a
+    HINTS
+      $ENV{COREPATH}/lib
+      /usr/local/jcsda/nwprod_gdas_2014/lib
+      ${COREPATH}/radaremul/v${RADAREMUL_VER}
+      ${COREPATH}/radaremul/v${RADAREMUL_VER}/intel
+    PATH_SUFFIXES
+        lib
+       ${NO_DEFAULT_PATH})
+    set( radaremul "radaremul")
+    message("Found RADAREMUL library ${RADAREMUL_LIBRARY}")
+  endif()
+else()
+    if( DEFINED ENV{RADAREMUL_SRC} )
+      set( RADAREMUL_DIR $ENV{RADAREMUL_SRC} CACHE STRING "RADAREMUL Source Directory" )
+    else()
+      if( FIND_SRC )
+        findSrc( "radaremul" RADAREMUL_VER RADAREMUL_DIR )
+      endif()
+    endif()
+    set( RADAREMUL_LIBRARY "${LIBRARY_OUTPUT_PATH}/libradaremul.a" CACHE STRING "RADAREMUL Library" )
+    set( radaremul "radaremul")
+endif()
 
 if( CORE_LIBRARIES )
   list( APPEND CORE_LIBRARIES ${SFCIO_LIBRARY} ${SIGIO_LIBRARY} 
                   ${NEMSIO_LIBRARY} ${SP_LIBRARY} ${W3NCO_LIBRARY} ${BUFR_LIBRARY}  
-                  ${W3EMC_LIBRARY} CACHE INTERNAL "List of Core libs" )
-  list( APPEND CORE_INCS ${INCLUDE_OUTPUT_PATH} ${SFCIOINC} ${SIGIOINC} ${NEMSIOINC} ${W3EMCINC}  )
+                  ${W3EMC_LIBRARY} ${RADAREMUL_LIBRARY} ${GRIB2_LIBRARY} CACHE INTERNAL "List of Core libs" ) # CAPS
+  list( APPEND CORE_INCS ${INCLUDE_OUTPUT_PATH} ${SFCIOINC} ${SIGIOINC} ${NEMSIOINC} ${W3EMCINC} ${RADAREMULINC} ${GRIB2INC} )
+
 else()
   set( CORE_LIBRARIES ${SFCIO_LIBRARY} ${SIGIO_LIBRARY} 
                   ${NEMSIO_LIBRARY} ${SP_LIBRARY} ${W3NCO_LIBRARY} ${BUFR_LIBRARY}  
-                  ${W3EMC_LIBRARY} CACHE INTERNAL "List of Core libs" )
-  set( CORE_INCS ${INCLUDE_OUTPUT_PATH} ${SFCIOINC} ${SIGIOINC} ${NEMSIOINC} ${W3EMCINC}  )
+                  ${W3EMC_LIBRARY} ${RADAREMUL_LIBRARY} ${GRIB2_LIBRARY} CACHE INTERNAL "List of Core libs" )
+  set( CORE_INCS ${INCLUDE_OUTPUT_PATH} ${SFCIOINC} ${SIGIOINC} ${NEMSIOINC} ${W3EMCINC} ${RADAREMULINC} ${GRIB2INC} )
+
 endif()
 
 set( BUFR_LIBRARY_PATH ${BUFR_LIBRARY} CACHE STRING "BUFR Library Location" )
@@ -285,3 +319,5 @@ set( NEMSIO_INCLUDE_PATH ${NEMSIOINC} CACHE STRING "NEMSIO Include Location" )
 
 set( SP_LIBRARY_PATH ${SP_LIBRARY} CACHE STRING "SP Library Location" )
 
+set( RADAREMUL_LIBRARY_PATH ${RADAREMUL_LIBRARY} CACHE STRING "RADAREMUL Library Location" )
+set( RADAREMUL_INCLUDE_PATH ${RADAREMULINC} CACHE STRING "RADAREMUL Include Location" )

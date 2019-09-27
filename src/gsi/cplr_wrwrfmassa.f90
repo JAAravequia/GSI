@@ -1807,6 +1807,8 @@ contains
   !                               concentration)
   !   2017-03-23  Hu     - add code to use hybrid vertical coodinate in WRF MASS
   !                        core
+  !   2018-02-xx  g.zhao - add code of treatments for logarithmic q conversion
+  !   2018-10-23  C.Liu  - add w analysis output 
   !
   !   input argument list:
   !     mype     - pe number
@@ -1839,6 +1841,14 @@ contains
     use mpeu_util, only: die
     use control_vectors, only : w_exist, dbz_exist
     use obsmod,only: if_model_dbz
+! --- CAPS ---
+    use constants, only: zero,r0_01
+    use constants, only: rd
+    use caps_radaruse_mod, only: l_use_log_qx, l_use_log_nt, cld_nt_updt
+    use caps_radaruse_mod, only: l_use_dbz_caps
+    use caps_radaruse_mod, only: init_mm_qnr
+! --- CAPS ---
+
     implicit none
   
   ! Declare passed variables
@@ -1848,6 +1858,7 @@ contains
   ! Declare local parameters
     character(len=*),parameter::myname='wrwrfmassa_netcdf'
     real(r_kind),parameter:: r225=225.0_r_kind
+    real(r_kind),parameter:: D608=0.608_r_kind ! CAPS
   
   ! Declare local variables
     integer(i_kind) im,jm,lm
@@ -1911,6 +1922,15 @@ contains
     real(r_kind), pointer :: ges_seas4(:,:,:)=>NULL()
     real(r_kind), pointer :: ges_p25  (:,:,:)=>NULL()
     real(r_kind), pointer :: ges_pm2_5  (:,:,:)=>NULL()
+
+! --- CAPS ---
+    real(r_kind) :: qr_min, qs_min, qg_min
+    real(r_kind) :: qr_thrshd, qs_thrshd, qg_thrshd
+    real(r_kind) :: qr_tmp, qs_tmp, qg_tmp
+    real(r_kind) :: qnr_tmp
+
+    real(r_kind) :: P1D,T1D,Q1D,RHO,QR1D
+! --- CAPS ---
   
     associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
     end associate
@@ -1927,8 +1947,12 @@ contains
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qg', ges_qg, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnr',ges_qnr,istatus );ier=ier+istatus
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qni',ges_qni,istatus );ier=ier+istatus
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnc',ges_qnc,istatus );ier=ier+istatus
+       if ( l_use_dbz_caps ) then ! CAPS do not use qni and qnc, and read w here
+          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'w',  ges_w, istatus );ier=ier+istatus
+       else
+          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qni',ges_qni,istatus );ier=ier+istatus
+          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnc',ges_qnc,istatus );ier=ier+istatus
+       end if
        if (ier/=0) n_actual_clouds=0
     end if
   
@@ -1939,7 +1963,15 @@ contains
     num_mass_fields_base=2+4*lm + 1
     num_mass_fields=num_mass_fields_base
 !    The 9 3D cloud analysis fields are: ql,qi,qr,qs,qg,qnr,qni,qnc,tt
-    if(l_hydrometeor_bkio .and. n_actual_clouds>0) num_mass_fields=num_mass_fields + 9*lm
+    if ( l_use_dbz_caps ) then ! CAPS
+     write (6,*) 'variable choice work', n_actual_clouds
+!!CCT command-out
+!    if(l_cloud_analysis .or. n_actual_clouds>0) num_mass_fields=num_mass_fields + 9*lm   !CCT command-out
+!    The 8 3D cloud analysis fields are: ql,qi,qr,qs,qg,qnr,w,tt (1 extra vert. lv for w)    !CCT modified  
+       if(l_hydrometeor_bkio .or. n_actual_clouds>0) num_mass_fields=num_mass_fields + 7*lm +lm+1 !CCT modified
+    else
+       if(l_hydrometeor_bkio .and. n_actual_clouds>0) num_mass_fields=num_mass_fields + 9*lm
+    end if
     if(l_gsd_soilTQ_nudge) num_mass_fields=num_mass_fields+2*nsig_soil+1
     if(i_use_2mt4b > 0 ) num_mass_fields=num_mass_fields+2
     if(i_use_2mt4b <= 0 .and. i_use_2mq4b > 0) num_mass_fields=num_mass_fields+1
@@ -1960,7 +1992,7 @@ contains
        allocate(kchem(1))
     endif
 
-    if(w_exist) num_mass_fields = num_mass_fields +lm+1
+    if(w_exist .and. .not. l_use_dbz_caps ) num_mass_fields = num_mass_fields +lm+1   ! JP
     if(dbz_exist.and.if_model_dbz) num_mass_fields = num_mass_fields +lm
     
   
@@ -1975,8 +2007,10 @@ contains
     i_u=i_q+lm
     i_v=i_u+lm
     if(w_exist)then
-      i_w=i_v+lm
-      i_sst=i_w+lm+1
+      if ( .not. l_use_dbz_caps) then ! CAPS use different index for w
+         i_w=i_v+lm
+         i_sst=i_w+lm+1
+      end if
     else
       i_sst=i_v+lm
     endif
@@ -2003,20 +2037,30 @@ contains
     endif
   
   ! for hydrometeors
+  ! Since CAPS use .or. for the conditnioal statement, temporary fix is set on l_hydrometeor_bkio
+    if(l_use_dbz_caps) l_hydrometeor_bkio=.true.    ! turn on
     if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
+       if(l_use_dbz_caps) l_hydrometeor_bkio=.false. ! turn off
        i_qc=i_q2+1
        i_qr=i_qc+lm
        i_qs=i_qr+lm
        i_qi=i_qs+lm
        i_qg=i_qi+lm
        i_qnr=i_qg+lm
-       i_qni=i_qnr+lm
-       i_qnc=i_qni+lm
+       if ( l_use_dbz_caps) then ! CAPS
+          i_w=i_qnr+lm+1
+          i_tt=i_w+lm
+       else 
+          i_qni=i_qnr+lm
+          i_qnc=i_qni+lm
+       end if
        if(dbz_exist.and.if_model_dbz)then
          i_dbz=i_qnc+lm
          i_tt=i_dbz+lm
        else
-         i_tt=i_qnc+lm
+         if ( .not.l_use_dbz_caps) then ! CAPS
+            i_tt=i_qnc+lm
+         end if
        end if
        if ( laeroana_gocart ) then
           do iv = 1, n_gocart_var
@@ -2051,7 +2095,7 @@ contains
     endif
   
     if(mype == 0) write(6,*)' at 2 in wrwrfmassa'
-  
+
     if(mype == 0) then
        write(filename,'("sigf",i2.2)')ifilesig(ntguessig)
        print *,'update ',trim(filename)
@@ -2070,8 +2114,10 @@ contains
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qg', ges_qg, istatus );ier=ier+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnr',ges_qnr,istatus );ier=ier+istatus
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qni',ges_qni,istatus );ier=ier+istatus
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnc',ges_qnc,istatus );ier=ier+istatus
+       if ( .not.l_use_dbz_caps) then ! CAPS do not use qni and qnc
+          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qni',ges_qni,istatus );ier=ier+istatus
+          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnc',ges_qnc,istatus );ier=ier+istatus
+       end if
        if(dbz_exist) &
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'dbz',ges_dbz,istatus );ier=ier+istatus
        if (ier/=0) then
@@ -2084,7 +2130,7 @@ contains
     call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ps', ges_ps, istatus );ier=ier+istatus
     call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'u' , ges_u , istatus );ier=ier+istatus
     call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'v' , ges_v , istatus );ier=ier+istatus
-    if(w_exist)then
+    if(w_exist)then ! CAPS code will be the same if w_exist is .true.
       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'w' , ges_w , istatus );ier=ier+istatus
     endif
     call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q' , ges_q , istatus );ier=ier+istatus
@@ -2102,15 +2148,20 @@ contains
     kv=i_v-1
     if(w_exist)kw=i_w-1
   ! for hydrometeors
+  ! Since CAPS use .or. for the conditnioal statement, temporary fix is set on l_hydrometeor_bkio
+    if(l_use_dbz_caps) l_hydrometeor_bkio=.true.    ! turn on
     if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
+       if(l_use_dbz_caps) l_hydrometeor_bkio=.false.    ! turn off
        kqc=i_qc-1
        kqi=i_qi-1
        kqr=i_qr-1
        kqs=i_qs-1
        kqg=i_qg-1
        kqnr=i_qnr-1
-       kqni=i_qni-1
-       kqnc=i_qnc-1
+       if (.not.l_use_dbz_caps) then ! CAPS
+          kqni=i_qni-1
+          kqnc=i_qnc-1
+       end if 
        if(dbz_exist.and.if_model_dbz)kdbz=i_dbz-1
        ktt=i_tt-1
     endif
@@ -2150,7 +2201,6 @@ contains
        kchem(iv) = i_chem(iv)-1
     endif
   
-  
     q_integral=one
     q_integralc4h=zero_single
     do k=1,nsig
@@ -2161,18 +2211,24 @@ contains
        ku=ku+1
        kv=kv+1
   ! for hydrometeors
+       ! Since CAPS use .or. for the conditnioal statement, temporary fix is set on l_hydrometeor_bkio
+       if(l_use_dbz_caps) l_hydrometeor_bkio=.true.    ! turn on
        if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
+          if(l_use_dbz_caps) l_hydrometeor_bkio=.false.    ! turn off
           kqc=kqc+1
           kqi=kqi+1
           kqr=kqr+1
           kqs=kqs+1
           kqg=kqg+1
           kqnr=kqnr+1
-          kqni=kqni+1
-          kqnc=kqnc+1
+          if ( .not. l_use_dbz_caps) then ! CAPS
+             kqni=kqni+1
+             kqnc=kqnc+1
+          end if
           if(dbz_exist.and.if_model_dbz)kdbz=kdbz+1
           ktt=ktt+1
        endif
+
        if ( laeroana_gocart ) then
           do iv = 1, n_gocart_var
              kchem(iv) = kchem(iv)+1
@@ -2183,7 +2239,6 @@ contains
           iv=1
           kchem(iv) = kchem(iv)+1
        endif
-  
   
        do i=1,lon2
           do j=1,lat2
@@ -2197,20 +2252,152 @@ contains
   
   !          Convert specific humidity to mixing ratio
              all_loc(j,i,kq)= ges_q(j,i,k)/(one-ges_q(j,i,k))
-             	
+
   ! for hydrometeors      
+             ! Since CAPS use .or. for the conditnioal statement, temporary fix is set on l_hydrometeor_bkio
+             if(l_use_dbz_caps) l_hydrometeor_bkio=.true.    ! turn on
              if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
-                all_loc(j,i,kqc)=ges_qc(j,i,k)
-                all_loc(j,i,kqi)=ges_qi(j,i,k)
-                all_loc(j,i,kqr)=ges_qr(j,i,k)
-                all_loc(j,i,kqs)=ges_qs(j,i,k)
-                all_loc(j,i,kqg)=ges_qg(j,i,k)
-                all_loc(j,i,kqnr)=ges_qnr(j,i,k)
-                all_loc(j,i,kqni)=ges_qni(j,i,k)
-                all_loc(j,i,kqnc)=ges_qnc(j,i,k)
-                if(dbz_exist.and.if_model_dbz)all_loc(j,i,kdbz)=ges_dbz(j,i,k)
-                all_loc(j,i,ktt)=ges_tten(j,i,k,it)
-             endif
+! --- CAPS ---
+                if ( l_use_dbz_caps) then
+                   l_hydrometeor_bkio=.false.    ! turn off
+                   all_loc(j,i,kqc)=ges_qc(j,i,k)
+                   all_loc(j,i,kqi)=ges_qi(j,i,k)
+!                   all_loc(j,i,kqni)=ges_qni(j,i,k)
+!                   all_loc(j,i,kqnc)=ges_qnc(j,i,k)
+                   all_loc(j,i,ktt)=ges_tten(j,i,k,it)
+
+!                set up the tiniy values for qr/qs/qg and convert log-transformed
+!                variable back to normal vaiable
+                   qr_tmp=zero
+                   qs_tmp=zero
+                   qg_tmp=zero
+
+                   if ( l_use_log_qx ) then
+
+                      if (ges_tsen(j,i,k,it) .gt. 274.15) then
+                         qr_min=2.9E-6_r_kind
+                         qr_thrshd=qr_min * one_tenth
+                         qs_min=0.1E-9_r_kind
+                         qs_thrshd=qs_min
+                         qg_min=3.1E-7_r_kind
+                         qg_thrshd=qg_min * one_tenth
+                      else if (ges_tsen(j,i,k,it) .le. 274.15 .and. ges_tsen(j,i,k,it) .ge. 272.15) then
+                         qr_min=2.0E-6_r_kind
+                         qr_thrshd=qr_min * one_tenth
+                         qs_min=1.3E-7_r_kind
+                         qs_thrshd=qs_min * one_tenth
+                         qg_min=3.1E-7_r_kind
+                         qg_thrshd=qg_min * one_tenth
+                      else if (ges_tsen(j,i,k,it) .lt. 272.15) then
+                         qr_min=0.1E-9_r_kind
+                         qr_thrshd=qr_min
+                         qs_min=6.3E-6_r_kind
+                         qs_thrshd=qs_min * one_tenth
+                         qg_min=3.1E-7_r_kind
+                         qg_thrshd=qg_min * one_tenth
+                      end if
+
+!                     convert log(qr/qs/qg) back to qr/qs/qg
+                      if (mype==0 .AND. i==3 .AND. j==3 .AND. k==3) then
+                         write(6,*)'wrwrfmass_netcdf: convert log(qr/qs/qg) back to qr/qs/qg.'
+                         write(6,*)'wrwrfmass_netcdf: then reset (qr/qs/qg) to 0.0 for some cases.'
+                      end if
+                      qr_tmp=exp(ges_qr(j,i,k))
+                      qs_tmp=exp(ges_qs(j,i,k))
+                      qg_tmp=exp(ges_qg(j,i,k))
+ 
+
+!                     if no update or very tiny value of qr/qs/qg, re-set/clear it off to zero
+                      if ( abs(qr_tmp - qr_min) .lt. (qr_min*r0_01) ) then
+                         qr_tmp=zero
+                      else if (qr_tmp .lt. qr_thrshd) then
+                         qr_tmp=zero
+                      end if
+
+                      if ( abs(qs_tmp - qs_min) .lt. (qs_min*r0_01) ) then
+                         qs_tmp=zero
+                      else if (qs_tmp .lt. qs_thrshd) then
+                         qs_tmp=zero
+                      end if
+
+                      if ( abs(qg_tmp - qg_min) .lt. (qg_min*r0_01) ) then
+                         qg_tmp=zero
+                      else if (qg_tmp .lt. qg_thrshd) then
+                         qg_tmp=zero
+                      end if
+
+                   else
+
+                      qr_min=zero
+                      qs_min=zero
+                      qg_min=zero
+
+                      if (mype==0 .AND. i==3 .AND. j==3 .AND. k==3) then
+                         write(6,*)'wrwrfmass_netcdf: only reset (qr/qs/qg) to 0.0 for negative analysis value. (regular qx)'
+                      end if
+
+                      qr_tmp=ges_qr(j,i,k)
+                      qs_tmp=ges_qs(j,i,k)
+                      qg_tmp=ges_qg(j,i,k)
+
+                      qr_tmp=max(qr_tmp,qr_min)
+                      qs_tmp=max(qs_tmp,qs_min)
+                      qg_tmp=max(qg_tmp,qg_min)
+
+                   end if         ! log_qx
+
+                   all_loc(j,i,kqr)=qr_tmp
+                   all_loc(j,i,kqs)=qs_tmp
+                   all_loc(j,i,kqg)=qg_tmp
+
+!             =========================================================================
+!             !
+!             re-initialisation of QNRAIN with analyzed qr and N0r(which is single-moment parameter)
+!             equation is used in subroutine init_MM of initlib3d.f90 in arps pacakge
+                   qnr_tmp = zero
+                   if ( cld_nt_updt .eq. 2 ) then
+                      T1D=ges_tsen(j,i,k,it)                                       ! sensible temperature (K)
+                      P1D=r100*(aeta1_ll(k)*(r10*ges_ps(j,i)-pt_ll)+pt_ll)         ! pressure hPa --> Pa
+                      Q1D=ges_q(j,i,k)/(one-ges_q(j,i,k))                          ! mixing ratio
+                      RHO=P1D/(rd*T1D*(one+D608*Q1D))                              ! air density in kg m^-3
+                      QR1D=qr_tmp
+                      CALL init_mm_qnr(RHO,QR1D,qnr_tmp)
+                      qnr_tmp = max(qnr_tmp, zero)
+
+                      if (mype==0 .AND. i==25 .AND. j==25 .AND. k==15) then
+                         write(6,*)'wrwrfmass_netcdf: re-init qnrain (number concentration) with analysis qrain and N0_rain. at (25,25,15) & 
+                                         qnr,rho,qr,t,qv,pres=',qnr_tmp, RHO, QR1D, T1D, Q1D, P1D
+                      end if
+
+                   else
+
+!                     log_transform to QNRAIN 
+                      if (l_use_log_nt) then
+                          qnr_tmp=exp(ges_qnr(j,i,k))
+                          if (qnr_tmp <= one ) qnr_tmp = zero
+                      else
+                          qnr_tmp=ges_qnr(j,i,k)
+                      end if
+
+                   end if
+
+                   all_loc(j,i,kqnr)=qnr_tmp
+                   all_loc(j,i,ktt)=ges_tten(j,i,k,it)
+! --- CAPS ---
+                else
+                   all_loc(j,i,kqc)=ges_qc(j,i,k)
+                   all_loc(j,i,kqi)=ges_qi(j,i,k)
+                   all_loc(j,i,kqr)=ges_qr(j,i,k)
+                   all_loc(j,i,kqs)=ges_qs(j,i,k)
+                   all_loc(j,i,kqg)=ges_qg(j,i,k)
+                   all_loc(j,i,kqnr)=ges_qnr(j,i,k)
+                   all_loc(j,i,kqni)=ges_qni(j,i,k)
+                   all_loc(j,i,kqnc)=ges_qnc(j,i,k)
+                   if(dbz_exist.and.if_model_dbz)all_loc(j,i,kdbz)=ges_dbz(j,i,k)
+                   all_loc(j,i,ktt)=ges_tten(j,i,k,it)
+                endif
+
+             end if
   
              if ( laeroana_gocart ) then
                 all_loc(j,i,kchem(1))=ges_sulf(j,i,k)
@@ -2396,6 +2583,7 @@ contains
     end do
 
     if(w_exist) then
+      if (.not.l_use_dbz_caps) then  ! CAPS update w and write output after qnr...
     ! Update w
       kw=i_w-1
       do k=1,nsig+1
@@ -2413,6 +2601,7 @@ contains
            write(lendian_out)temp1
         end if
       end do
+      end if
     endif ! for w_exist
 
     
@@ -2696,7 +2885,10 @@ contains
     endif  ! i_use_2mt4b>0
   !
   ! for saving cloud analysis results
+  ! Since CAPS use .or. for the conditional statement, temporary fix is set on l_hydrometeor_bkio
+    if(l_use_dbz_caps) l_hydrometeor_bkio=.true.    ! turn on
     if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
+       if(l_use_dbz_caps) l_hydrometeor_bkio=.false.    ! turn off
   ! Update qc
        kqc=i_qc-1
        do k=1,nsig
@@ -2714,7 +2906,6 @@ contains
              write(lendian_out)temp1
           end if
        end do
-  
   ! Update qr     
        kqr=i_qr-1
        do k=1,nsig
@@ -2804,7 +2995,28 @@ contains
              write(lendian_out)temp1
           end if
        end do
-   
+  
+! --- CAPS ---
+      if ( l_use_dbz_caps) then ! CAPS write w here
+  ! Update w
+       kw=i_w-1
+       do k=1,nsig+1
+          kw=kw+1
+          if(mype == 0) read(lendian_in)temp1
+          call strip(all_loc(:,:,kw),strp)
+          call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
+               tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
+          if(mype == 0) then
+             call fill_mass_grid2t(temp1,im,jm,tempb,2)
+             do i=1,iglobal
+                tempa(i)=tempa(i)-tempb(i)
+             end do
+             call unfill_mass_grid2t(tempa,im,jm,temp1)
+             write(lendian_out)temp1
+          end if
+       end do
+      else
+! --- CAPS --- 
   ! Update qni     
        kqni=i_qni-1
        do k=1,nsig
@@ -2860,6 +3072,7 @@ contains
                end if
             end do
        end if
+      end if
    
   ! Update tten     
        ktt=i_tt-1

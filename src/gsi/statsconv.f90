@@ -43,6 +43,7 @@ subroutine statsconv(mype,&
 !   2014-06-06  carley/zhu - add tcamt and lcbas
 !   2015-07-10  pondeca - add cldch
 !   2016-05-05  pondeca - add uwnd10m, vwnd10m
+!   2016-09-xx  G. Zhao - add obs "dbz" for CAPS radar DA
 !   2017-05-12  Y. Wang and X. Wang - add dbz, POC: xuguang.wang@ou.edu
 !
 !   input argument list:
@@ -74,6 +75,7 @@ subroutine statsconv(mype,&
 !     i_vwnd10m- index in awork array holding vwnd10m info
 !     i_swcp   - index in awork array holding swcp info
 !     i_lwcp   - index in awork array holding lwcp info
+!     i_dbz    - index in awork array holding dbz info
 !     i_ref    - size of second dimension of awork array
 !     bwork    - array containing information for statistics
 !     awork    - array containing information for data counts and gross checks
@@ -1218,7 +1220,7 @@ subroutine statsconv(mype,&
      close(iout_rw)
   end if
 
-! Summary report for radar reflectivity
+! Summary report for radar reflectivity (dbz)
   if(mype==mype_dbz) then
      if(first)then
         open(iout_dbz)

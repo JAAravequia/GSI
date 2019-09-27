@@ -86,6 +86,8 @@ subroutine update_guess(sval,sbias)
 !   2015-07-10  pondeca  - add cldch
 !   2016-04-28  eliu    - revise update for cloud water 
 !   2016-06-23  lippi   - Add update for vertical velocity (w).
+!   2016-10-xx  g.zhao  - remove minimum limit when updating cloud variables
+!                         (when do log transformation of qr/qs/qg)
 !   2018-05-01  yang    - modify the constrains to C and V in g-space, or using NLTF transfermation to C/V
 !
 !   input argument list:
@@ -131,6 +133,10 @@ subroutine update_guess(sval,sbias)
        gsd_update_th2,gsd_update_q2
   use qcmod, only: pvis,pcldch,vis_thres,cldch_thres 
   use obsmod, only: l_wcp_cwm
+! --- CAPS ---
+  use jfunc, only: jiter
+  use caps_radaruse_mod, only: l_use_log_qx, l_use_log_nt
+! --- CAPS ---
 
   implicit none
 
@@ -166,6 +172,7 @@ subroutine update_guess(sval,sbias)
 
   real(r_kind),dimension(lat2,lon2)     :: tinc_1st,qinc_1st
 
+  integer,parameter   :: USEZG = 1 ! CAPS
 !*******************************************************************************
 ! In 3dvar, nobs_bins=1 is smaller than nfldsig. This subroutine is
 ! written in a way that is more efficient in that case but might not
@@ -275,9 +282,55 @@ subroutine update_guess(sval,sbias)
            endif
            icloud=getindex(cloud,guess(ic))
            if(icloud>0) then
-                 ptr3dges = max(ptr3dges+ptr3dinc,zero)
-              cycle
-           else  
+              if (trim(guess(ic))=='qr' .or. & trim(guess(ic))=='qs' .or. & trim(guess(ic))=='qg') then
+                  if ( l_use_log_qx ) then
+!                      using log transformation for qr/qs/qg, no qcmin check
+                     !  write(6,*)'sub update_guess: no qcmin check for cloud variable:',trim(guess(ic)),'(mype=',mype,')'
+                      if(USEZG==1)then
+!                         if (sum(ptr3dinc) > 0) WRITE(*,*)"CCT: Updating ",trim(guess(ic)),'with inc: ', sum(ptr3dinc)  
+                         ptr3dges = ptr3dges + ptr3dinc !Rong Kong modified!
+                      else
+                        !print*,'maxval(ptr3dges)=',maxval(ptr3dges)
+                        !print*,'minval(ptr3dges)=',minval(ptr3dges)
+                         ptr3dges = exp(log(max(ptr3dges,1.0E-6)) + ptr3dinc) !Rong Kong
+                      endif
+                      cycle
+                  else
+!                     write(6,*)'sub update_guess: DO Qmin(1.0E-7) check for cloud variable:',trim(guess(ic)),'(mype=',mype,')',qmin
+!                     ptr3dges = max(ptr3dges+ptr3dinc,qmin)           ! ensure that qr/qs/qg is not zero (otherwise dbz obs operator fails.)
+!                      write(6,*)'sub update_guess: DO Qcmin(0.0) check for cloud variable:',trim(guess(ic)),'(mype=',mype,')',qcmin
+                      !----------VrPass treatment cliu----------------------
+                      if ( jiter==5 ) then
+                         write(6,*) 'no updated qr, qs or qg in the 4th outer-loop'
+                         ptr3dges = max(ptr3dges,qcmin)          !re-set qx on obs point to be non-zero tiny value in setupdbz
+                         cycle
+                      else
+                         if (sum(ptr3dinc) > 0) WRITE(*,*)"CCT: Updating ",trim(guess(ic)),'with inc: ', sum(ptr3dinc)
+                         ptr3dges = max(ptr3dges+ptr3dinc,qcmin) ! re-set qx on obs point to be non-zero tiny value in setupdbz
+                         cycle
+                      endif
+                      !-----------------------------------------------------------
+                  end if
+              else if (trim(guess(ic))=='qnr') then
+                  if ( l_use_log_nt ) then
+!                     using log transformation for qnr, no qcmin check
+                      write(6,*)'sub update_guess: no qcmin check for cloud number concentration variable:',trim(guess(ic)),'(mype=',mype,')'
+                      if(USEZG==1)then
+                        ptr3dges = ptr3dges + ptr3dinc
+                      else
+                        ptr3dges = exp(log(max(ptr3dges,1.0E-2)) + ptr3dinc) !Rong Kong
+                      endif
+                      cycle
+                  else
+                      write(6,*)'sub update_guess: DO Qcmin(0.0) check for cloud variable:',trim(guess(ic)),'(mype=',mype,')',qcmin
+                      ptr3dges = max(ptr3dges+ptr3dinc,qcmin)
+                      cycle
+                  end if
+              else
+                  ptr3dges = max(ptr3dges+ptr3dinc,qcmin)
+                  cycle
+              end if
+           else
               ptr3dges = ptr3dges + ptr3dinc
               cycle
            endif

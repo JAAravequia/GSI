@@ -22,6 +22,9 @@ module gridinfo
   !               Henry R. Winterbottom
   !   2017-05-12 Y. Wang and X. Wang - add more state variables in
   !                       cvars3d_supported for radar DA, POC: xuguang.wang@ou.edu
+  !   2019-03-20  Added subroutine getgridinfo_fv3 enabling analysis with
+  !               fv3 background.
+  !               C. Tong
   !
   ! attributes:
   !   language:  f95
@@ -36,7 +39,7 @@ module gridinfo
                        rearth,max_varname_length
   use kinds,     only: i_kind, r_kind, r_single, i_long, r_double
   use params,    only: datapath, nlevs, nlons, nlats,           &
-                       arw, nmm
+                       arw, nmm, fv3                   ! CAPS added fv3
   use mpisetup
   use netcdf_io
 
@@ -75,6 +78,7 @@ module gridinfo
   public :: cross2dot
   public :: dot2cross
   ! supported variable names in anavinfo
+  ! CAPS has different vars3d_supported for now(without dbz, qni, qnc). 
   character(len=max_varname_length),public, dimension(19) :: vars3d_supported = (/'u   ', 'v   ', 'tv  ', 'q   ', 'w   ', 'cw  ', 'ph  ', 'ql  ', 'qr  ', 'qs  ', 'qg  ', 'qi  ', 'qni ', 'qnr ', 'qnc ', 'dbz ', 'oz  ', 'tsen', 'prse' /)
   character(len=max_varname_length),public, dimension(2)  :: vars2d_supported = (/ 'ps ', 'sst' /)
 
@@ -86,6 +90,8 @@ contains
 
     if (arw) then
        call getgridinfo_arw(fileprefix)
+    elseif (fv3) then                      ! CAPS
+       call getgridinfo_fv3(fileprefix)
     else
        call getgridinfo_nmm(fileprefix)
     end if
@@ -366,6 +372,10 @@ contains
 
        write(6,*) 'Surface pressure (spressmn) min/max range:',             &
             & minval(spressmn),maxval(spressmn)
+       write(6,*) 'Longitude range (min/max): ', minval(lonsgrd*rad2deg),   &
+            & maxval(lonsgrd*rad2deg)
+       write(6,*) 'Latitude range (min/max): ', minval(latsgrd*rad2deg),    &
+            & maxval(latsgrd*rad2deg)
 
     !----------------------------------------------------------------------
 
@@ -410,6 +420,294 @@ contains
     end do ! do nn = 1, npts
 
   end subroutine getgridinfo_arw
+
+! --- CAPS ---
+  !=========================================================================
+
+  ! getgridinfo_fv3.f90: This subroutine will define, compute, and
+  ! return all attributes required from SAR-FV3 model grid, provided
+  ! the file name string; typically this subroutine will operate on
+  ! the 'ensemble mean file' since it returns the longitude, latitude,
+  ! and log(pressure) values which is currently defaulted to the
+  ! ensemble mean in the EnKF implication of J. Whitaker
+
+  !-------------------------------------------------------------------------
+
+  subroutine getgridinfo_fv3(fileprefix)
+    character(len=120), intent(in) :: fileprefix
+
+    ! Define variables ingested from external file
+    real,      dimension(:,:,:),  allocatable :: fv3_delp
+    real,      dimension(:),      allocatable :: eta1_ll,eta2_ll
+
+    ! Define variables returned by subroutine
+    real(r_kind),      dimension(:,:),    allocatable :: presslmn
+    real(r_kind),      dimension(:),      allocatable :: spressmn
+
+    ! Define variables computed within subroutine
+    character(len=500)                                :: filename
+    real,      dimension(:,:,:),  allocatable         :: workgrid
+    integer                                           :: nlevsin
+    integer                                           :: nlonsin
+    integer                                           :: nlatsin
+    integer                                           :: nn
+    integer                                           :: ierr
+
+    ! Define variables required for netcdf I/O
+    character(len=12)                                 :: varstringname
+    character(len=20), dimension(3)                   :: dimstring
+    integer,           dimension(3)                   :: dims
+
+    character(len=500)                                :: gdspecfile
+    character(len=500)                                :: akbkfile
+
+    ! Define counting variables
+    integer                                           :: i, j, k
+    integer                                           :: count
+
+    !======================================================================
+
+    ! Define local values and prepare for array dimension definitions
+    dimstring(1) = "xaxis_1"
+    dimstring(2) = "yaxis_2"
+    dimstring(3) = "zaxis_1"
+
+    ! Build the ensemble mean filename expected by routine
+    filename = trim(adjustl(datapath))//trim(adjustl(fileprefix))//"dynv.ensmean"
+    gdspecfile = trim(adjustl(datapath))//"fv3_grid_spec"
+    akbkfile = trim(adjustl(datapath))//"fv3_akbk"
+
+    ! Obtain unstaggered grid dimensions from ingested variable file
+    call netcdfdimension(filename,3,dimstring,dims)
+
+    ! Define array dimension structure type
+    dimensions = griddimensions(dims(1),dims(2),dims(3))
+
+    ! Compute all variables required by subsequent routines
+    npts = dimensions%xdim*dimensions%ydim
+    nlevsin = dimensions%zdim
+    nlonsin = dimensions%xdim
+    nlatsin = dimensions%ydim
+
+    !----------------------------------------------------------------------
+
+    ! Perform sanity and error checks for variable dimensions; proceed
+    ! accordingly
+    if (nlons .ne. nlonsin) then
+       write(6,*) 'Error reading input file in gridinfo...'
+       write(6,*) '      nlons ingested from file = ', nlonsin
+       write(6,*) '      nlons specified in namelist = ', nlons
+       write(6,*) 'Failed in subroutine getgridinfo_nmm; Aborting!'
+
+       ! Exit routine
+       call stop2(22)
+    end if ! if (nlons .ne. nlonsin)
+
+    if (nlats .ne. nlatsin) then
+       write(6,*) 'Error reading input file in gridinfo...'
+       write(6,*) '      nlats ingested from file = ', nlatsin
+       write(6,*) '      nlats specified in namelist = ', nlats
+       write(6,*) 'Failed in subroutine getgridinfo_nmm; Aborting!'
+
+       ! Exit routine
+       call stop2(22)
+    end if ! if (nlats .ne. nlatsin)
+
+    if (nlevs .ne. nlevsin) then
+       write(6,*) 'Error reading input file in gridinfo...'
+       write(6,*) '      nlevs ingested from file = ', nlevsin
+       write(6,*) '      nlevs specified in namelist = ', nlevs
+       write(6,*) 'Failed in subroutine getgridinfo_nmm; Aborting!'
+
+       ! Exit routine
+       call stop2(22)
+    end if ! if (nlevs .ne. nlevsin)end if ! if (nlevs .ne. nlevsin)
+
+    !----------------------------------------------------------------------
+    ! Compute local variable; number of model levels plus surface
+    ! (levels at which ens. mean log pressure defined for localization
+    ! via array logp)
+    nlevs_pres=dimensions%zdim+1
+
+    ! Allocate memory for global arrays
+    if(.not. allocated(lonsgrd)) allocate(lonsgrd(npts))
+    if(.not. allocated(latsgrd)) allocate(latsgrd(npts))
+    if(.not. allocated(logp))    allocate(logp(npts,nlevs_pres))
+
+    !======================================================================
+    ! Begin: Ingest all grid variables required for EnKF routines and
+    ! perform necessary conversions; the data is only ingested on the
+    ! master node and then subsequently passed to the slave nodes
+    !----------------------------------------------------------------------
+    if (nproc  .eq. 0) then ! only read data on root.
+       ! Allocate memory for all global arrays
+       if(.not. allocated(presslmn)) allocate(presslmn(npts,nlevs))
+       if(.not. allocated(spressmn)) allocate(spressmn(npts))
+       ! Allocate memory for all local arrays
+       if(.not. allocated(fv3_delp))                                       &
+            & allocate(fv3_delp(dimensions%xdim,dimensions%ydim,nlevs_pres))
+       if(.not. allocated(eta1_ll)) allocate(eta1_ll(nlevs_pres))
+       if(.not. allocated(eta2_ll)) allocate(eta2_ll(nlevs_pres))
+
+       ! Allocate memory for local variable grid
+       if(.not. allocated(workgrid)) allocate(workgrid(dimensions%xdim,  &
+            & dimensions%ydim,1))
+
+       ! Ingest variable from external file
+       varstringname = 'grid_lont'
+       call readnetcdfdata(gdspecfile,workgrid,varstringname,              &
+            & dimensions%xdim,dimensions%ydim,1)
+
+       ! Initialize counting variable
+       count = 1
+
+       ! Loop through meridional horizontal coordinate
+       do j = 1, dimensions%ydim
+          ! Loop through zonal horizontal coordinate
+          do i = 1, dimensions%xdim
+             ! Convert from degrees to radians and update the
+             ! global longitude array
+             lonsgrd(count) = (workgrid(i,j,1)-360.)*deg2rad
+             count = count + 1
+          end do ! do i = 1, dimensions%xdim
+       end do ! do j = 1, dimensions%ydim
+
+       ! Deallocate memory for local variable grid
+       if(allocated(workgrid)) deallocate(workgrid)
+
+       ! Allocate memory for local variable grid
+       if(.not. allocated(workgrid)) allocate(workgrid(dimensions%xdim,  &
+            & dimensions%ydim,1))
+
+       ! Ingest variable from external file
+       varstringname = 'grid_latt'
+       call readnetcdfdata(gdspecfile,workgrid,varstringname,              &
+            & dimensions%xdim,dimensions%ydim,1)
+
+       ! Initialize counting variable
+       count = 1
+
+       ! Loop through meridional horizontal coordinate
+       do j = 1, dimensions%ydim
+          ! Loop through zonal horizontal coordinate
+          do i = 1, dimensions%xdim
+             ! Convert from degrees to radians and update the
+             ! global latitude array
+             latsgrd(count) = workgrid(i,j,1)*deg2rad
+
+             count = count + 1
+          end do ! do i = 1, dimensions%xdim
+       end do ! do j = 1, dimensions%ydim
+
+       ! Deallocate memory for local variable grid
+       if(allocated(workgrid)) deallocate(workgrid)
+
+    !----------------------------------------------------------------------
+
+       ! Ingest the model vertical coord-related variables from FV3 output,
+       ! which are required for computing the pressure field
+       varstringname = 'ak'
+       call readnetcdfdata(akbkfile,eta1_ll,varstringname,              &
+            & 1,1,nlevs_pres)
+       eta1_ll=eta1_ll
+
+       varstringname = 'bk'
+       call readnetcdfdata(akbkfile,eta2_ll,varstringname,              &
+            & 1,1,nlevs_pres)
+
+       if(.not. allocated(workgrid)) allocate(workgrid(dimensions%xdim,  &
+            & dimensions%ydim,dimensions%zdim))
+       varstringname = 'delp'
+       call readnetcdfdata(filename,workgrid,varstringname,              &
+            & dimensions%xdim,dimensions%ydim,dimensions%zdim)
+       do k = 1, dimensions%zdim
+          fv3_delp(:,:,k)=workgrid(:,:,dimensions%zdim+1-k)
+       end do
+       fv3_delp(:,:,nlevs_pres)=eta1_ll(nlevs_pres)
+       do k = dimensions%zdim, 1, -1
+          fv3_delp(:,:,k)=fv3_delp(:,:,k)+fv3_delp(:,:,k+1)
+       end do
+       if(allocated(workgrid)) deallocate(workgrid)
+
+       ! Loop through vertical coordinate
+       do k = 1, dimensions%zdim
+          ! Initialize counting variable
+          count = 1
+          ! Loop through meridional horizontal coordinate
+          do j = 1, dimensions%ydim
+             ! Loop through zonal horizontal coordinate
+             do i = 1, dimensions%xdim
+                ! Compute the pressure within the respective layer
+                ! (dry hydrostatic pressure)
+                presslmn(count,k) = fv3_delp(i,j,k)
+
+                ! Rescale pressure from Pa to hPa
+                presslmn(count,k) = presslmn(count,k)/100.0
+
+                ! Compute the log of the pressure within the
+                ! respective layer
+                logp(count,k) = -log(presslmn(count,k))
+                if(k==1) spressmn(count)=presslmn(count,k)
+
+                count = count + 1
+             end do ! do i = 1, dimensions%xdim
+          end do ! do j = 1, dimensions%ydim
+       end do ! do k = 1, dimensions%zdim
+
+       ! Compute local variable
+       logp(:,nlevs_pres) = -log(spressmn(:))
+
+       write(6,*) 'Surface pressure (spressmn) min/max range:',             &
+            & minval(spressmn),maxval(spressmn)
+       write(6,*) 'Longitude range (min/max): ', minval(lonsgrd*rad2deg),   &
+            & maxval(lonsgrd*rad2deg)
+       write(6,*) 'Latitude range (min/max): ', minval(latsgrd*rad2deg),    &
+            & maxval(latsgrd*rad2deg)
+
+    !----------------------------------------------------------------------
+
+       ! Deallocate memory for all local arrays
+       if(allocated(fv3_delp))   deallocate(fv3_delp)
+       if(allocated(eta1_ll))    deallocate(eta1_ll)
+       if(allocated(eta2_ll))    deallocate(eta2_ll)
+       if(allocated(presslmn))   deallocate(presslmn)
+       if(allocated(spressmn))   deallocate(spressmn)
+
+    !----------------------------------------------------------------------
+
+    end if ! nproc == 0
+
+    !----------------------------------------------------------------------
+
+    ! End: Ingest all grid variables required for EnKF routines and
+    ! perform necessary conversions; the data is only ingested on the
+    ! master node and then subsequently passed to the slave nodes
+
+    !======================================================================
+
+    ! Broadcast all common variables these out to all nodes
+    call MPI_Bcast(logp,npts*nlevs_pres,mpi_real4,0,MPI_COMM_WORLD,ierr)
+    call MPI_Bcast(lonsgrd,npts,mpi_real4,0,MPI_COMM_WORLD,ierr)
+    call MPI_Bcast(latsgrd,npts,mpi_real4,0,MPI_COMM_WORLD,ierr)
+    call MPI_Bcast(ptop,1,mpi_real4,0,MPI_COMM_WORLD,ierr)
+
+    !----------------------------------------------------------------------
+
+    ! Allocate memory for local variable
+    if(.not. allocated(gridloc)) allocate(gridloc(3,npts))
+
+    ! Loop through each grid coordinate and perform the coordinate
+    ! transform for regular simulation domains
+
+    do nn = 1, npts
+       ! Compute local variables
+       gridloc(1,nn) = cos(latsgrd(nn))*cos(lonsgrd(nn))
+       gridloc(2,nn) = cos(latsgrd(nn))*sin(lonsgrd(nn))
+       gridloc(3,nn) = sin(latsgrd(nn))
+    end do ! do nn = 1, npts
+
+  end subroutine getgridinfo_fv3
+! --- CAPS ---
 
   !=========================================================================
 

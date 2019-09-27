@@ -51,6 +51,9 @@ subroutine prewgt_reg(mype)
 !                         that of the total levels of control vectors
 !   2013-10-19  todling - all guess variables in met-guess
 !   2014-02-03  todling - update interface to berror_read_wgt_reg
+!   2016-09-xx  g.zhao  - tuning background error stats for qr/qs/qg to use dbz
+!   2017-02-xx  g.zhao  - add temperature-dependent background error for cloud variables
+!   2018-10-23  C.Liu   - add w
 !
 !   input argument list:
 !     mype     - pe number
@@ -91,6 +94,16 @@ subroutine prewgt_reg(mype)
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_metguess_mod, only: gsi_metguess_bundle
   use mpeu_util, only: die
+! --- CAPS ---
+  use guess_grids, only: ges_tsen                      ! for t-depn't err vars
+  use guess_grids, only: nfldsig
+  use caps_radaruse_mod, only: be_sf,hscl_sf, vscl_sf, be_vp,hscl_vp, vscl_vp, &
+                               be_t, hscl_t,  vscl_t,  be_q, hscl_q,  vscl_q,&
+                               be_qr, be_qs, be_qg, hscl_qx, vscl_qx,&
+                               l_set_be_rw, l_set_be_dbz, l_use_log_qx,&
+                               l_plt_be_stats, l_be_T_dep,&
+                               l_use_rw_caps, l_use_dbz_caps, lvldbg
+! --- CAPS ---
 
   implicit none
 
@@ -115,6 +128,31 @@ subroutine prewgt_reg(mype)
   integer(i_kind) nrf3_oz,nrf2_sst,nrf3_cw,istatus
   integer(i_kind),allocatable,dimension(:) :: nrf3_loc,nrf2_loc
 
+! --- CAPS ---
+  integer(i_kind) nrf3_sf,nrf3_vp,nrf3_t,nrf3_q
+  integer(i_kind) :: nrf3_ql,nrf3_qi, nrf3_qr,nrf3_qs,nrf3_qg, nrf3_qnr, nrf3_w
+
+  real(r_kind),allocatable,dimension(:,:,:):: vz4plt
+
+  real(r_kind),allocatable,dimension(:):: vz_cld
+  real(r_kind),allocatable,dimension(:,:,:):: dsv_cld       ! lon2,nsig,lat2
+  real(r_kind),allocatable,dimension(:,:,:,:):: corz_cld    ! lon2,lat2,nsig,3(qr/qs/qg)
+
+  integer(i_kind) :: inerr_out              ! output of berror_var for NCL plotting
+  real(r_kind) :: SclHgt
+  real(r_kind), parameter :: Tbar=290.0_r_kind
+  real(r_kind), parameter :: three_eighths=3.0_r_kind/8.0_r_kind
+  real(r_kind) :: tsen
+  integer(i_kind) :: mid_mlat
+  integer(i_kind) :: mid_nsig
+
+  real(r_kind)      :: corz_sf, corz_vp, corz_t, corz_q
+  real(r_kind)      :: max_sf, min_sf, ave_sf
+  real(r_kind)      :: max_vp, min_vp, ave_vp
+
+  external          :: berror_qcld_tdep
+! --- CAPS ---
+
   real(r_kind) samp2,dl1,dl2,d
   real(r_kind) samp,hwl,cc
   real(r_kind),dimension(nsig):: rate,dlsig,rlsig
@@ -134,6 +172,7 @@ subroutine prewgt_reg(mype)
 
   real(r_kind),dimension(:,:,:),pointer::ges_oz=>NULL()
 
+!----------------------------------------------------------------------!
 ! Initialize local variables
 !  do j=1,nx
 !     do i=1,ny
@@ -154,6 +193,19 @@ subroutine prewgt_reg(mype)
   nrf3_oz  = getindex(cvars3d,'oz')
   nrf3_cw  = getindex(cvars3d,'cw')
   nrf2_sst = getindex(cvars2d,'sst')
+  nrf3_sf  = getindex(cvars3d,'sf')
+  nrf3_vp  = getindex(cvars3d,'vp')
+  nrf3_t   = getindex(cvars3d,'t')
+  nrf3_q   = getindex(cvars3d,'q')
+
+!   cloud fields
+  nrf3_ql  =getindex(cvars3d,'ql')
+  nrf3_qi  =getindex(cvars3d,'qi')
+  nrf3_qr  =getindex(cvars3d,'qr')
+  nrf3_qs  =getindex(cvars3d,'qs')
+  nrf3_qg  =getindex(cvars3d,'qg')
+  nrf3_qnr =getindex(cvars3d,'qnr')
+  nrf3_w   =getindex(cvars3d,'w')
 
 ! Read dimension of stats file
   inerr=22
@@ -164,6 +216,15 @@ subroutine prewgt_reg(mype)
   allocate ( corp(1:mlat,nc2d) )
   allocate ( hwll(0:mlat+1,1:nsig,1:nc3d),hwllp(0:mlat+1,nvars-nc3d) )
   allocate ( vz(1:nsig,0:mlat+1,1:nc3d) )
+
+! --- CAPS ---
+! Arrays used for temperature-dependent error variance when assimilation radar dbz obs
+  if (l_be_T_dep) then
+      allocate ( vz_cld(1:nsig) )                      ; vz_cld   = zero;
+      allocate ( dsv_cld(1:lon2, 1:nsig, 1:lat2) )     ; dsv_cld  = zero;
+      allocate ( corz_cld(1:lon2, 1:lat2, 1:nsig, 3) ) ; corz_cld = zero;
+  end if
+! --- CAPS ---
 
 ! Read in background error stats and interpolate in vertical to that specified in namelist
   call berror_read_wgt_reg(msig,mlat,corz,corp,hwll,hwllp,vz,rlsig,varq,qoption,varcw,cwoption,mype,inerr)
@@ -242,13 +303,155 @@ subroutine prewgt_reg(mype)
 ! parameters are used in an inverted form.  Invert
 ! the parameter values here.
   do i=1,nhscrf
+     if (l_set_be_rw .or. l_set_be_dbz ) hzscl(i) = one  ! CAPS
      hzscl(i)=one/hzscl(i)
   end do
 
 ! apply scaling to vertical length scales.  
 ! note:  parameter vs needs to be inverted
+  if (l_set_be_rw .or. l_set_be_dbz) vs = one ! CAPS
   vs=one/vs
   vz=vz*vs
+
+! --- CAPS ---
+!------------------------------------------------------------------------------!
+! special treatment for hwll(horizontal), vz(vertical scale length)
+!         and corz(bkgd err) of u/v/t/q when using radial wind observations of
+!         radar
+  if ( l_set_be_rw ) then
+      do n=1,nc3d
+          if (n==nrf3_q) then
+              if (mype==0) write(6,*)'PREWGT_REG: tuning BE for q (pe=',mype,')'
+              if (    be_q .gt. 0.0_r_kind ) corz(:,:,n) = corz(:,:,n) * be_q ! error stddev for Q
+              if (  hscl_q .gt. 0.0_r_kind ) hwll(:,:,n) = hscl_q
+              if (  vscl_q .gt. 0.0_r_kind ) vz(  :,:,n) = vscl_q
+          end if
+          if (n==nrf3_t) then
+              if (mype==0) write(6,*)'PREWGT_REG: tuning BE for t (pe=',mype,')'
+              if (    be_t .gt. 0.0_r_kind ) corz(:,:,n) = corz(:,:,n) * be_t ! error stddev for t
+              if (  hscl_t .gt. 0.0_r_kind ) hwll(:,:,n) = hscl_t
+              if (  vscl_t .gt. 0.0_r_kind ) vz(  :,:,n) = vscl_t
+          end if
+          if (n==nrf3_sf) then
+!             be_sf   = 0.2_r_kind    ! with vscl=0.3333_r_kind
+!             be_sf   = 0.2_r_kind / 4.5_r_kind   ! 1.5/4.5=0.3333
+!             hscl_sf = 20000.0_r_kind
+!             vscl_sf = 1.5_r_kind
+              max_sf  = maxval(corz(:,:,n))
+              min_sf  = minval(corz(:,:,n))
+              ave_sf  = sum(corz(:,:,n))/(mlat*nsig)
+              if (  be_sf .gt. 0.0_r_kind ) then
+                  corz_sf = ave_sf * be_sf
+                  corz(:,:,n) = corz_sf                ! error stddev for sf (compensate for change in scale)
+!                 corz(:,:,n) = corz(:,:,n) * be_sf    ! error stddev for sf
+                  if (mype==0) then
+                      write(6,'(1x,A15,I4,A50,4(1x,F15.2),1x,A12)')                         &
+                          '(PREWGT_REG:pe=',mype,') stream function err std max min ave:',  &
+                          max_sf, min_sf, ave_sf, corz_sf,' (m^2/s^2)'
+                      write(6,'(1x,A15,I4,A70,F15.6,A6,I3,1x,A6)')                          &
+                          '(PREWGT_REG:pe=',mype,                                           &
+                          ') inflate  the pre-fixed err_var of sf (streamfunction) by ',    &
+                          be_sf,'   n=', n,cvars3d(n)
+                  end if
+              end if
+
+              if (mype==0) &
+                  write(6,'(1x,A15,I4,A70,F9.1,F9.2,A6,I3,1x,A6)')                          &
+                  '(PREWGT_REG:pe=',mype,                                                   &
+                  ') re-set the length-scale(hor ver) of sf (stream function): ',           &
+                  hscl_sf, vscl_sf,'   n=', n,cvars3d(n)
+              if ( hscl_sf .gt. 0.0_r_kind ) hwll(:,:,n) = hscl_sf
+              if ( vscl_sf .gt. 0.0_r_kind ) vz(  :,:,n) = vscl_sf
+          end if
+          if (n==nrf3_vp) then
+!             be_vp   = 0.2_r_kind    ! with vscl=0.3333_r_kind
+!             be_vp   = 0.2_r_kind / 4.5_r_kind   ! 1.5/4.5=0.3333
+!             hscl_vp = 20000.0_r_kind
+!             vscl_vp = 1.5_r_kind
+              max_vp  = maxval(corz(:,:,n))
+              min_vp  = minval(corz(:,:,n))
+              ave_vp  = sum(corz(:,:,n))/(mlat*nsig)
+              if (  be_vp .gt. 0.0_r_kind ) then
+                  corz_vp = ave_vp * be_vp
+                  corz(:,:,n) = corz_vp                ! error stddev for vp (compensate for change in scale)
+!                 corz(:,:,n) = corz(:,:,n) * be_vp    ! error stddev for vp
+                  if (mype == 0) then
+                      write(6,'(1x,A15,I4,A50,4(1x,F15.2),1x,A12)')                           &
+                          '(PREWGT_REG:pe=',mype,') velocity potential err std max min ave:', &
+                          max_vp, min_vp, ave_vp, corz_vp,' (m^2/s^2)'
+                      write(6,'(1x,A15,I4,A70,F15.6,A6,I3,1x,A6)')                            &
+                          '(PREWGT_REG:pe=',mype,                                             &
+                          ') inflate  the pre-fixed err_var of vp (VelPotent) by ',           &
+                          be_vp,'   n=', n,cvars3d(n)
+                  end if
+              end if
+
+              if (mype == 0) &
+                  write(6,'(1x,A15,I4,A70,F9.1,F9.2,A6,I3,1x,A6)') &
+                  '(PREWGT_REG:pe=',mype, &
+                  ') re-set the length-scale(hor ver) of vp (VelPotent): ', &
+                  hscl_vp, vscl_vp,'   n=', n,cvars3d(n)
+              if ( hscl_vp .gt. 0.0_r_kind ) hwll(:,:,n) = hscl_vp
+              if ( vscl_vp .gt. 0.0_r_kind ) vz(  :,:,n) = vscl_vp
+
+          end if
+      end do
+  else
+      if (mype==0) write(6,'(1x,A15,I4,A80)')                                                &
+          '(PREWGT_REG:pe=',mype,                                                            &
+          ') DO NOT RE-SET the BACKGROUND ERROR for radar wind assimilation.'
+  end if
+
+!------------------------------------------------------------------------------!
+! special treatment for hwll(horizontal), vz(vertical scale length)
+!         and corz(bkgd err) of cloud hydrometers (qr/qs/qg) when using radar reflectivity observations
+  if ( l_set_be_dbz ) then
+      do n=1,nc3d
+          if (n==nrf3_qr ) then
+              if (mype==0) &
+                  write(6,'(1x,A60,I4)')'PREWGT_REG: user-defined namelist to tune BE for qr on pe:',mype
+              if (    be_qr .gt. 0.0_r_kind ) corz(:,:,n) = be_qr
+              if (  hscl_qx .gt. 0.0_r_kind ) hwll(:,:,n) = hscl_qx
+              if (  vscl_qx .gt. 0.0_r_kind ) vz(  :,:,n) = vscl_qx
+          end if
+          if (n==nrf3_qs ) then
+              if (mype==0) &
+                  write(6,'(1x,A60,I4)')'PREWGT_REG: user-defined namelist to tune BE for qs on pe:',mype
+              if (    be_qs .gt. 0.0_r_kind ) corz(:,:,n) = be_qs
+              if (  hscl_qx .gt. 0.0_r_kind ) hwll(:,:,n) = hscl_qx
+              if (  vscl_qx .gt. 0.0_r_kind ) vz(  :,:,n) = vscl_qx
+          end if
+          if (n==nrf3_qg ) then
+              if (mype==0) &
+                  write(6,'(1x,A60,I4)')'PREWGT_REG: user-defined namelist to tune BE for qg on pe:',mype
+              if (    be_qg .gt. 0.0_r_kind ) corz(:,:,n) = be_qg
+              if (  hscl_qx .gt. 0.0_r_kind ) hwll(:,:,n) = hscl_qx
+              if (  vscl_qx .gt. 0.0_r_kind ) vz(  :,:,n) = vscl_qx
+          end if
+          if (n==nrf3_qnr ) then
+              if (mype==0) &
+                  write(6,'(1x,A60,I4)')'PREWGT_REG: user-defined namelist to tune BE for qnr on pe:',mype
+                                              corz(:,:,n) = 100.0_r_kind
+              if (  hscl_qx .gt. 0.0_r_kind ) hwll(:,:,n) = hscl_qx
+              if (  vscl_qx .gt. 0.0_r_kind ) vz(  :,:,n) = vscl_qx
+          end if
+
+          if (n==nrf3_w ) then
+              if (mype==0) &
+                  write(6,'(1x,A60,I4)')'PREWGT_REG: user-defined namelist to tune BE for w on pe:',mype
+                                              corz(:,:,n) = 3.0_r_kind
+              if (  hscl_qx .gt. 0.0_r_kind ) hwll(:,:,n) = hscl_qx
+              if (  vscl_qx .gt. 0.0_r_kind ) vz(  :,:,n) = vscl_qx
+          end if
+      end do
+  else
+      if (mype==0) write(6,'(1x,A15,I4,A80)') &
+          '(PREWGT_REG:pe=',mype, &
+          ') DO NOT RE-SET the BACKGROUND ERROR for radar dbz assimilation.'
+  end if
+
+!------------------------------------------------------------------------------!
+! --- CAPS ---
 
   call rfdpar1(be,rate,ndeg)
   call rfdpar2(be,rate,turn,samp,ndeg)
@@ -289,6 +492,79 @@ subroutine prewgt_reg(mype)
               end do
            end do
         end do
+! --- CAPS ---
+     else if ( n==nrf3_qr .or. n==nrf3_qs .or. n==nrf3_qg ) then
+
+        if ( l_be_T_dep ) then
+            if (mype==0) &
+                write(6,*)' prewgt_reg(mype=',mype,')',' Temperature-dependent erro vars for Q_cld and as3d= ',as3d(n),' for var:',cvars3d(n)
+            loc=nrf3_loc(n)
+
+!           re-define vz_cld on model sigma grid for cloud variabels (not on stats grid)
+!           to match the re-dfined corz_cld, which is also defined on model grid
+!           because the error variables of cloud variable is modle/background temperature
+!           dependent.
+!           only initialization of alv in subroutine smoothzo
+            do j=llmin,llmax
+                call smoothzo(vz(1,j,n),samp,rate,n,j,dsv(1,1,j))
+            end do
+
+            do j=1,lat2
+                mid_nsig = INT((nsig+1)/2)
+!               vz_cld(1:mid_nsig) = three_eighths        ! ~3km
+!               vz_cld(1+mid_nsig:nsig) = half            ! ~3km
+                mid_mlat = INT((llmin+llmax)/2)
+                vz_cld(1:nsig) = vz(1:nsig,mid_mlat,n)    !
+!               vz_cld(1:nsig) = vscl_qx                  ! value from namelist for hydrometers
+!               vz_cld(1:nsig) = two                      ! two veritcal grids (wrong!)
+!               call smoothzo (vz_cld(1,j,n), samp,rate,n,j,dsv_cld(1,1,j))
+                call smoothzo1(vz_cld(1:nsig),samp,rate,dsv_cld(1:lon2,1:nsig,j))
+                do i=1,lon2
+                    do k=1,nsig
+                        tsen=ges_tsen(j,i,k,nfldsig)
+                        if (n==nrf3_qr) then
+                            call berror_qcld_tdep(mype,tsen,1,corz_cld(i,j,k,1))
+                            dssv(j,i,k,n)=dsv_cld(i,k,j) * corz_cld(i,j,k,1) * as3d(n)
+                        else if (n==nrf3_qs) then
+                            call berror_qcld_tdep(mype,tsen,2,corz_cld(i,j,k,2))
+                            dssv(j,i,k,n)=dsv_cld(i,k,j) * corz_cld(i,j,k,2) * as3d(n)
+                        else if (n==nrf3_qg) then
+                            call berror_qcld_tdep(mype,tsen,3,corz_cld(i,j,k,3))
+                            dssv(j,i,k,n)=dsv_cld(i,k,j) * corz_cld(i,j,k,3) * as3d(n)
+                        else
+                            write(6,*) &
+                                " prewgt_reg: T-dependent error only for rain/snwo/graupel --> wrong for ",n,cvars3d(n)
+                            call stop2(999)
+                        end if
+                    end do
+
+                end do
+            end do
+
+        else             ! if NOT T-dependent background error
+            loc=nrf3_loc(n)
+            do j=llmin,llmax
+                call smoothzo(vz(1,j,n),samp,rate,n,j,dsv(1,1,j))
+                do k=1,nsig
+                    do i=1,lon2
+                        dsv(i,k,j)=dsv(i,k,j)*corz(j,k,n)*as3d(n)
+                    end do
+                end do
+            end do
+
+            do j=1,lat2
+                do i=1,lon2
+                    l=int(rllat1(j,i))
+                    l2=min0(l+1,llmax)
+                    dl2=rllat1(j,i)-float(l)
+                    dl1=one-dl2
+                    do k=1,nsig
+                        dssv(j,i,k,n)=dl1*dsv(i,k,l)+dl2*dsv(i,k,l2)
+                    enddo
+                end do
+            end do
+        end if
+! --- CAPS ---
      else
         loc=nrf3_loc(n)
         do j=llmin,llmax
@@ -313,6 +589,41 @@ subroutine prewgt_reg(mype)
         end do
      endif
   end do
+
+! --- CAPS ---
+! output berror correlation length scales and variances
+  if ( l_plt_be_stats ) then
+      inerr_out=2117
+      if (mype .eq. 0) then
+          do n=1,nc3d
+              write(6,*)'---- pregwgt_reg(mype=',mype,'): cvars3d(n)=',n,cvars3d(n),'   output corz/hwll/vz for 3D berror.'
+          end do
+          open(inerr_out,file='./berror_prewgt_reg_vIntrp.dat',form='unformatted')
+          write(inerr_out)mlat,nsig,nc3d
+          write(inerr_out)cvars3d(1:nc3d)
+          write(inerr_out)(((hwll(j,k,n),j=0,mlat+1),k=1,nsig),n=1,nc3d)
+          write(6,*),' ---- prewgt_reg(mype=',mype,'   output vz normalized by dlsig to vertical grid units first!'
+          write(inerr_out)(((vz(k,j,n),j=0,mlat+1),k=1,nsig),n=1,nc3d)
+!     output the original vz which is not normalized by dlsig
+          if ( .not. allocated(vz4plt)) allocate (vz4plt(1:nsig,0:mlat+1,1:nc3d) )
+          do n=1,nc3d
+              do j=0,mlat+1
+                  do k=1,nsig
+                      vz4plt(k,j,n)=vz(k,j,n)/dlsig(k)
+                  end do
+              end do
+          end do
+          write(inerr_out)(((vz4plt(k,j,n),j=0,mlat+1),k=1,nsig),n=1,nc3d)
+          deallocate(vz4plt)
+          write(inerr_out)(((corz(j,k,n),j=1,mlat),k=1,nsig),n=1,nc3d)
+          if (l_be_T_dep) then
+              write(6,*),' ---- prewgt_reg(mype=',mype,':output temperature-dependent error for cloud hydrometers'
+              write(inerr_out) ((corz_cld(1,1,k,n),k=1,nsig),n=1,3)
+          end if
+          close(inerr_out)
+      end if
+  end if
+! --- CAPS ---
 
 ! Special case of dssv for qoption=2 and cw
   if (qoption==2) call compute_qvar3d
@@ -463,6 +774,11 @@ subroutine prewgt_reg(mype)
   deallocate(corz,corp,hwll,hwllp,vz)
   deallocate(nrf3_loc,nrf2_loc)
 
+! --- CAPS ---
+  if ( allocated(vz_cld  ) ) deallocate ( vz_cld )
+  if ( allocated(dsv_cld ) ) deallocate ( dsv_cld )
+  if ( allocated(corz_cld) ) deallocate ( corz_cld )
+! --- CAPS ---
 
 ! Load tables used in recursive filters
   if(nnnn1o>0) then
@@ -472,3 +788,173 @@ subroutine prewgt_reg(mype)
 
   return
 end subroutine prewgt_reg
+
+! --- CAPS ---
+subroutine berror_qcld_tdep(mype,tsen,i_cat,q_cld_err)
+! temperature dependent error variance
+!
+! 2016-10-xx g.zhao  CAPS/OU   based on Chengsi Liu and Rong Kong's work
+!
+  use kinds, only: r_kind,i_kind
+  use constants, only: pi
+  use caps_radaruse_mod, only: l_use_log_qx
+
+  implicit none
+
+  integer(i_kind), intent(in  ) :: mype            ! pe number
+  integer, intent(in  )         :: i_cat           ! cloud hydrometer category
+                                                   ! 1: rain water
+                                                   ! 2: snow
+                                                   ! 3: graupel / hail
+  real(r_kind), intent(in   )   :: tsen            ! temperature
+
+  real(r_kind), intent(  out)   :: q_cld_err       ! background error
+
+! define local variables
+! qr -- rain
+  real(r_kind)            :: Eqrl, Eqrh            ! error @ low-level and high-level
+  real(r_kind)            :: Tqrl, Tqrh            ! significant temperature points
+
+! qs -- snow
+  real(r_kind)            :: Eqsl, Eqsh            ! error @ low-level and high-level
+  real(r_kind)            :: Tqsl, Tqsh            ! significant temperature points
+
+! qg -- graupel
+  real(r_kind)            :: Eqgl, Eqgh            ! error @ low-level and high-level
+  real(r_kind)            :: Tqgl, Tqgh            ! significant temperature points
+
+!
+  real(r_kind) :: Eql, Eqh
+  real(r_kind) :: Tql, Tqh
+
+  real(r_kind) :: Delta_T, Delta_E, Mid_E
+  real(r_kind) :: dt, de
+  real(r_kind) :: a
+  integer(i_kind) :: nnqh1
+
+  logical   :: firstcalled
+  save firstcalled
+  data firstcalled/.true./
+
+  external stop2
+
+
+! BOP-------------------------------------------------------------------
+
+! significant temperature point for rain water
+! Tqrl=278.15_r_kind    ! CSLiu
+! Tqrl=273.15_r_kind    ! Mine4
+  Tqrl=272.65_r_kind    ! Mine0 / Mine5
+  Tqrh=268.15_r_kind    ! CSLiu
+
+! significant temperature point for snow
+! Tqsl=278.15_r_kind    ! CSLiu/Mine0
+! Tqsl=282.15_r_kind    ! Mine1
+  Tqsl=282.65_r_kind    ! Mine5
+! Tqsh=243.15_r_kind    ! CSLiu
+! Tqsh=275.15_r_kind    ! Mine0
+! Tqsh=278.15_r_kind    ! Mine4
+  Tqsh=280.15_r_kind    ! Mine1 / Mine5
+
+! significant temperature point for graupel
+! Tqgl=278.15_r_kind    ! CSLiu
+! Tqgl=280.15_r_kind    ! Mine0
+  Tqgl=281.15_r_kind    ! Mine1
+! Tqgh=243.15_r_kind    ! CSLiu
+! Tqgh=275.15_r_kind    ! Mine0
+  Tqgh=279.15_r_kind    ! Mine1
+
+  if ( l_use_log_qx ) then
+!
+!     Eqrl=0.2877_r_kind
+!     Eqrl=0.1133_r_kind
+      Eqrl=0.4055_r_kind
+      Eqrh=1.0E-6_r_kind
+
+!     Eqsl=0.2877_r_kind
+      Eqsl=1.0E-6_r_kind
+!     Eqsh=0.2877_r_kind
+!     Eqsh=0.1133_r_kind
+      Eqsh=0.4055_r_kind
+
+!     Eqgl=0.2231_r_kind
+!     Eqgl=0.1133_r_kind
+      Eqgl=0.2877_r_kind
+!     Eqgh=0.2231_r_kind
+!     Eqgh=0.4055_r_kind
+      Eqgh=0.2877_r_kind
+  else
+!     from Chengsi Liu and Rong Kong
+!     Tqrl=278.15_r_kind    ! CSLiu
+      Tqrl=272.65_r_kind    ! tuning 2
+!     Eqrl=8.0E-4_r_kind    ! CSLiu
+      Eqrl=1.2E-3_r_kind    ! tuning 2
+      Tqrh=268.15_r_kind    ! CSLiu
+      Eqrh=1.0E-10_r_kind
+
+!     Tqsl=278.15_r_kind    ! CSLiu
+      Tqsl=282.65_r_kind    ! CSLiu
+      Eqsl=1.0E-10_r_kind
+!     Tqsh=243.15_r_kind    ! CSLiu
+!     Tqsh=268.15_r_kind    ! tuning 1 --> Tqrh=268.15_r_kind    ! CSLiu
+      Tqsh=280.15_r_kind    ! tuning 2
+      Eqsh=1.2E-3_r_kind
+
+      Tqgl=278.15_r_kind    ! CSLiu
+!     Eqgl=3.0E-4_r_kind    ! CSLiu
+      Eqgl=6.0E-4_r_kind
+!     Tqgh=243.15_r_kind    ! CSLiu
+      Tqgh=268.15_r_kind    ! tuning 1 --> Tqrh=268.15_r_kind    ! CSLiu
+!     Eqgh=6.0E-4_r_kind    ! CSLiu
+      Eqgh=1.2E-3_r_kind
+  end if
+
+  if (i_cat .eq. 1) then
+      Tql = Tqrl
+      Tqh = Tqrh
+      Eql = Eqrl
+      Eqh = Eqrh
+  else if (i_cat .eq. 2) then
+      Tql = Tqsl
+      Tqh = Tqsh
+      Eql = Eqsl
+      Eqh = Eqsh
+  else if (i_cat .eq. 3) then
+      Tql = Tqgl
+      Tqh = Tqgh
+      Eql = Eqgl
+      Eqh = Eqgh
+  else
+      write(6,*) 'sub: berror_qcld_tdep:   unknown category id-->',i_cat
+      call stop2(999)
+  end if
+
+  if (firstcalled) then
+      if (mype==0) then
+          write(6,*)'berror_qcld_Tdep: use_logqx->',l_use_log_qx,' i_cat->',i_cat,' mype->',mype
+          write(6,*)'be_qcld_Tdep: rain   (Tlow,BElow,Thgh,BEhgh)',Tqrl,Eqrl,Tqrh,Eqrh
+          write(6,*)'be_qcld_Tdep: snow   (Tlow,BElow,Thgh,BEhgh)',Tqsl,Eqsl,Tqsh,Eqsh
+          write(6,*)'be_qcld_Tdep: graupel(Tlow,BElow,Thgh,BEhgh)',Tqgl,Eqgl,Tqgh,Eqgh
+      end if
+      firstcalled = .false.
+  end if
+
+  if ( tsen > Tql ) then
+      q_cld_err = Eql
+  else if ( tsen <= Tql .and. tsen >= Tqh ) then
+      Delta_T = Tql - Tqh
+      Delta_E = Eql - Eqh
+      Mid_E = (Eql + Eqh) * 0.5_r_kind
+      dt = tsen - Tqh
+      a =  pi * dt / Delta_T
+      de = -cos(a) * Delta_E * 0.5_r_kind
+      q_cld_err =  Mid_E + de
+  else
+      q_cld_err = Eqh
+  end if
+
+  return
+! EOP----------
+
+end subroutine berror_qcld_tdep
+! --- CAPS ---

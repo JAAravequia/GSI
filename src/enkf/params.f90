@@ -30,6 +30,7 @@ module params
 !                          modulated ensembles), nobsl_max (for ob selection
 !                          in LETKF and dfs_sort
 !                          (for using DFS in LETKF ob selection).
+!   2019-03-20  cTong    - added fv3 option 
 !
 ! attributes:
 !   language: f95
@@ -99,6 +100,10 @@ real(r_single),public ::  zhuberleft,zhuberright
 real(r_single),public ::  lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh,&
                lnsigcutoffsatnh,lnsigcutoffsattr,lnsigcutoffsatsh,&
                lnsigcutoffpsnh,lnsigcutoffpstr,lnsigcutoffpssh
+! --- CAPS ---
+real(r_single),public ::  corrlengthrdrnh,corrlengthrdrtr,corrlengthrdrsh, &
+               lnsigcutoffrdrnh,lnsigcutoffrdrtr,lnsigcutoffrdrsh
+! --- CAPS ---
 real(r_single),public :: analpertwtnh,analpertwtsh,analpertwttr,sprd_tol,saterrfact
 real(r_single),public :: analpertwtnh_rtpp,analpertwtsh_rtpp,analpertwttr_rtpp
 real(r_single),public ::  paoverpb_thresh,latbound,delat,p5delat,delatinv
@@ -161,6 +166,8 @@ logical,public :: nmm = .true.
 logical,public :: nmm_restart = .true.
 logical,public :: nmmb = .false.
 logical,public :: letkf_flag = .false.
+logical,public :: fv3 = .false. ! CAPS
+logical,public :: l_use_enkf_caps = .false. ! CAPS
 
 ! next two are no longer used, instead they are inferred from anavinfo
 logical,public :: massbal_adjust = .false. 
@@ -210,8 +217,11 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
                    getkf,getkf_inflation,denkf,modelspace_vloc,dfs_sort,write_spread_diag,&
                    covinflatenh,covinflatesh,covinflatetr,lnsigcovinfcutoff,&
-                   fso_cycling,fso_calculate,imp_physics,lupp
-namelist /nam_wrf/arw,nmm,nmm_restart
+                   fso_cycling,fso_calculate,imp_physics,lupp,&
+                   corrlengthrdrnh,corrlengthrdrsh,corrlengthrdrtr,&
+                   lnsigcutoffrdrnh,lnsigcutoffrdrsh,lnsigcutoffrdrtr,&
+                   l_use_enkf_caps ! CAPS flag
+namelist /nam_wrf/arw,nmm,nmm_restart,fv3 ! CAPS added fv3 options
 namelist /satobs_enkf/sattypes_rad,dsis
 namelist /ozobs_enkf/sattypes_oz
 
@@ -236,6 +246,10 @@ datestring = "0000000000" ! if 0000000000 will not be used.
 corrlengthnh = 2800_r_single
 corrlengthtr = 2800_r_single
 corrlengthsh = 2800_r_single
+! corrlength for radar (length for horizontal localization in km) ! CAPS
+corrlengthrdrnh = 10
+corrlengthrdrtr = 10
+corrlengthrdrsh = 10
 ! read in localization length scales from an external file.
 readin_localization = .false.
 ! min and max inflation.
@@ -257,6 +271,11 @@ lnsigcutoffsatsh = -999._r_single ! value for satellite radiances
 lnsigcutoffpsnh = -999._r_single  ! value for surface pressure
 lnsigcutoffpstr = -999._r_single  ! value for surface pressure
 lnsigcutoffpssh = -999._r_single  ! value for surface pressure
+! --- CAPS ---
+lnsigcutoffrdrnh = 0.2_r_single  ! value for radar
+lnsigcutoffrdrtr = 0.2_r_single  ! value for radar
+lnsigcutoffrdrsh = 0.2_r_single  ! value for radar
+! --- CAPS ---
 ! ob time localization
 obtimelnh = 1.e10_r_single
 obtimeltr = 1.e10_r_single
@@ -517,8 +536,9 @@ if (nproc == 0) then
       print *,'need to specify datapath in namelist!'
       call stop2(19)
    end if
-   if(regional .and. .not. arw .and. .not. nmm .and. .not. nmmb) then
-      print *, 'must select either arw, nmm or nmmb regional dynamical core'
+   ! if(regional .and. .not. arw .and. .not. nmm .and. .not. nmmb) then
+   if(regional .and. .not. arw .and. .not. nmm .and. .not. nmmb .and. .not. fv3) then
+      print *, 'must select either arw, fv3, nmm or nmmb regional dynamical core'
       call stop2(19)
    endif
    if (letkf_flag .and. univaroz) then
@@ -634,6 +654,14 @@ end if
 corrlengthnh = corrlengthnh * 1.e3_r_single/rearth
 corrlengthtr = corrlengthtr * 1.e3_r_single/rearth
 corrlengthsh = corrlengthsh * 1.e3_r_single/rearth
+! rescale covariance localization length for radar observations ! CAPS
+! note:(1) in namelist, the length is in unit of kilometer;
+!      (2) here it is converted to be in unit of meter,
+!      (3) then, it is re-scaled by radius of earth
+!          (actually it is non-dimensionalized).
+corrlengthrdrnh = corrlengthrdrnh * 1.e3_r_single/rearth
+corrlengthrdrtr = corrlengthrdrtr * 1.e3_r_single/rearth
+corrlengthrdrsh = corrlengthrdrsh * 1.e3_r_single/rearth
 
 ! this var is .false. until this routine is called.
 params_initialized = .true.

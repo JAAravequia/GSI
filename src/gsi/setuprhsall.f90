@@ -93,6 +93,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !   2015-07-10  pondeca - add cldch
 !   2015-10-01  guo   - full res obvsr: index to allow redistribution of obsdiags
 !   2016-05-05  pondeca - add uwnd10m, vwund10m
+!   2016-09-xx  g.zhao  - add "dbz" for CAPS radar DA option
 !   2017-05-12  Y. Wang and X. Wang - add dbz for reflectivity DA. POC: xuguang.wang@ou.edu
 !   2018-02-15  wu      - add code for fv3_regional 
 !   2018-01-01  Apodaca - add GOES/GLM lightning
@@ -175,6 +176,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   use m_obsdiags, only: obsdiags_sort
   use m_obsdiags, only: obsdiags_write
 
+  use caps_radaruse_mod, only: l_use_dbz_caps ! CAPS
+
   use mpeu_util, only: die,warn,perr
   use mpeu_util, only: basename
   implicit none
@@ -183,7 +186,6 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   integer(i_kind)                  ,intent(in   ) :: mype
   integer(i_kind),dimension(ndat,3),intent(in   ) :: ndata
   logical                          ,intent(in   ) :: init_pass, last_pass   ! state of "setup" processing
-
 
 ! Declare external calls for code analysis
   external:: compute_derived
@@ -329,7 +331,12 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   i_light=30
   i_dbz=31
   i_cldtot=32
-  i_ref =i_cldtot
+
+  if (l_use_dbz_caps) then ! CAPS
+     i_ref =i_dbz
+  else
+     i_ref =i_cldtot
+  end if
 
   allocate(awork1(7*nsig+100,i_ref))
   if(.not.rhs_allocated) call rhs_alloc(aworkdim2=size(awork1,2))
@@ -653,7 +660,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
                     if(ier/=0) call die('setuprhsall','read(), iostat =',ier)
                  endif
 !             skip this kind of data because they are not used in the var analysis
-              else if(obstype == 'gos_ctp' .or. &
+              else if(obstype == 'mta_cld' .or. obstype == 'gos_ctp' .or. & ! mta_cld was added CAPS
                       obstype == 'rad_ref' .or. obstype=='lghtn' .or. &
                       obstype == 'larccld' .or. obstype == 'larcglb') then
                  read(lunin,iostat=ier)
@@ -743,7 +750,8 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   if (light_diagsave) close(55)
 
   if(.not.(l_PBL_pseudo_SurfobsT  .or.  l_PBL_pseudo_SurfobsQ   .or. &
-           l_PBL_pseudo_SurfobsUV .or. (i_cloud_q_innovation==2)) ) then
+           l_PBL_pseudo_SurfobsUV .or. (i_cloud_q_innovation==2)) .or. &
+           l_use_dbz_caps ) then  ! CAPS  added l_use_dbz_caps flag
      call obsdiags_sort()
   endif
 

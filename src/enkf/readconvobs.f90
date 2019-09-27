@@ -23,6 +23,7 @@ module readconvobs
 !   2017-05-12  Y. Wang and X. Wang - add to read dbz and rw for radar
 !                       reflectivity and radial velocity assimilation. POC: xuguang.wang@ou.edu
 !   2017-12-13  shlyaeva - added netcdf diag read/write capability
+!   2019-03-21  cTong    - added CAPS radar DA capability
 !
 ! attributes:
 !   language: f95
@@ -31,7 +32,7 @@ module readconvobs
 
 use kinds, only: r_kind,i_kind,r_single,r_double
 use constants, only: one,zero,deg2rad
-use params, only: npefiles, netcdf_diag
+use params, only: npefiles, netcdf_diag, l_use_enkf_caps
 implicit none
 
 private
@@ -76,7 +77,7 @@ subroutine get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id
     integer(i_kind)  :: iunit, nchar, nreal, ii, mype, ios, idate, i, ipe, ioff0
     integer(i_kind),dimension(2) :: nn,nobst, nobsps, nobsq, nobsuv, nobsgps, &
          nobstcp,nobstcx,nobstcy,nobstcz,nobssst, nobsspd, nobsdw, nobsrw, nobspw, &
-         nobsdbz
+         nobsdbz, nobssrw ! CAPS added nobssrw
     character(8),allocatable,dimension(:):: cdiagbuf
     real(r_single),allocatable,dimension(:,:)::rdiagbuf
     real(r_kind) :: errorlimit,errorlimit2,error,pres,obmax
@@ -101,6 +102,7 @@ subroutine get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id
     nobspw = 0
     nobsgps = 0
     nobsdbz = 0
+    nobssrw = 0    ! CAPS
     nobstcp = 0; nobstcx = 0; nobstcy = 0; nobstcz = 0
     init_pass = .true.
     peloop: do ipe=0,npefiles
@@ -143,6 +145,10 @@ subroutine get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id
              error=rdiagbuf(20,i)*rdiagbuf(16,i)
              pres=rdiagbuf(6,i)
              obmax=abs(rdiagbuf(17,i)/rdiagbuf(20,i))
+           else if ( l_use_enkf_caps .and. obtype == 'dbz') then ! CAPS dbz here
+             error=rdiagbuf(16,i)
+             pres=rdiagbuf(6,i)
+             obmax=max(rdiagbuf(17,i),0.0)
            else
               if(obtype == ' ps' .or. obtype == 'tcp')then
                 pres=rdiagbuf(17,i)
@@ -178,6 +184,9 @@ subroutine get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id
           nobssst = nobssst + nn
           ! skipping sst obs since ENKF does not how how to handle them yet.
           !num_obs_tot = num_obs_tot + nn(2)
+       else if (obtype == 'srw') then            ! CAPS
+          nobssrw = nobssrw + nn
+          num_obs_tot = num_obs_tot + nn(2)
        else if (obtype == ' rw') then
           nobsrw = nobsrw + nn
           num_obs_tot = num_obs_tot + nn(2)
@@ -226,6 +235,7 @@ subroutine get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id
           write(6,100) 'spd',nobsspd(1),nobsspd(2)
           write(6,100) 'pw',nobspw(1),nobspw(2)
           write(6,100) 'dw',nobsdw(1),nobsdw(2)
+          write(6,100) 'srw',nobssrw(1),nobssrw(2)
           write(6,100) 'rw',nobsrw(1),nobsrw(2)
           write(6,100) 'dbz',nobsdbz(1),nobsdbz(2)
           write(6,100) 'tcp',nobstcp(1),nobstcp(2)
@@ -706,6 +716,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
            if (x_type(nob) == ' uv')  x_type(nob) = '  u'
            if (x_type(nob) == 'tcp')  x_type(nob) = ' ps'
            if (x_type(nob) == ' rw')  x_type(nob) = ' rw'
+           !if (x_type(nob) == ' rw')  x_type(nob) = '  u' ! CAPS
            if (x_type(nob) == 'dbz')  x_type(nob) = 'dbz'
 
            ! get Hx
@@ -772,6 +783,8 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
            ! for wind, also read v-component
            if (obtype == ' uv') then
+           ! if (obtype == ' uv' .or. obtype == ' rw') then ! CAPS/ CCT commanded out
+
               nob = nob + 1
               x_code(nob)  = Observation_Type(i)
 
@@ -1044,7 +1057,67 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
         obtype == 'tcp' .or. obtype == '  q' .or. obtype == 'spd' .or. &
         obtype == 'sst' .or. obtype == ' rw' .or. obtype == 'dbz' .or. &
         obtype == 'gps' .or. obtype == ' dw' .or. obtype == ' pw')  then
+! --- CAPS ---
+!   CAPS has different routine for dbz obs
+     if (l_use_enkf_caps .and. obtype == 'dbz' ) then
+       allocate(cdiagbuf(ii),rdiagbuf(nreal,ii))
+       read(iunit) cdiagbuf(1:ii),rdiagbuf(:,1:ii)
 
+       if(twofiles)then
+          allocate(cdiagbuf2(ii2), rdiagbuf2(nreal2,ii2))
+          read(iunit2) cdiagbuf2(1:ii2),rdiagbuf2(:,1:ii2)
+       end if
+
+       do n=1,ii
+          nobdiag = nobdiag + 1
+          if(rdiagbuf(12,n) < zero .or. rdiagbuf(16,n) < errorlimit .or. &
+             rdiagbuf(16,n) > errorlimit2)cycle
+          if(abs(rdiagbuf(17,n)) > 1.e9_r_kind  .or. &
+               rdiagbuf(6,n) < 0.001_r_kind .or. &
+               rdiagbuf(6,n) > 1200._r_kind) cycle
+          if(twofiles)then
+          if(rdiagbuf(1,n) /= rdiagbuf2(1,n) .or. abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5 .or. &
+             abs(rdiagbuf(4,n)-rdiagbuf2(4,n)) .gt. 1.e-5 .or. abs(rdiagbuf(8,n)-rdiagbuf2(8,n)) .gt. 1.e-5)then
+             write (6,*) obtype, ' conv ob data inconsistency '
+             write (6,*) (rdiagbuf(i,n),i=1,8)
+             write (6,*) (rdiagbuf2(i,n),i=1,8)
+             call stop2(-98)
+          end if
+          end if
+
+          nob = nob + 1
+          x_used(nobdiag) = 1
+          x_code(nob)    = rdiagbuf(1,n)
+          x_lat(nob)     = rdiagbuf(3,n)
+          x_lon(nob)     = rdiagbuf(4,n)
+          x_press(nob)   = rdiagbuf(6,n)
+          x_time(nob)    = rdiagbuf(8,n)
+          if (rdiagbuf(14,n) > 1.e-5_r_kind) then
+            x_errorig(nob) = (one/rdiagbuf(14,n))**2
+          else
+            x_errorig(nob) = 1.e10_r_kind
+          endif
+          x_err(nob) = (one/rdiagbuf(16,n))**2
+          x_obs(nob) = rdiagbuf(17,n)
+          hx_mean(nob)      = rdiagbuf(17,n)-rdiagbuf(18,n)
+          hx_mean_nobc(nob) = rdiagbuf(17,n)-rdiagbuf(19,n)
+          x_type(nob) = obtype
+          ! get Hx
+          if (nanal <= nanals) then
+            ! read full Hx from file
+            if (.not. lobsdiag_forenkf) then
+              hx(nob) = rdiagbuf(17,n) - rdiagbuf2(18,n)
+            else ! Linearized Hx not supported for dbz yet
+              write(*,*)'Current dbz DA code does NOT support lobsdiag_forenkf yet!'
+              write(*,*)'BREAK HERE...'
+              call stop2(94)
+            endif
+          endif
+       enddo
+       deallocate(cdiagbuf,rdiagbuf)
+       if(twofiles)deallocate(cdiagbuf2,rdiagbuf2)
+! --- CAPS --- 
+     else 
        allocate(cdiagbuf(ii),rdiagbuf(nreal,ii))
        read(iunit) cdiagbuf(1:ii),rdiagbuf(:,1:ii)
 
@@ -1127,6 +1200,13 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
           else
              hx_mean(nob)     = rdiagbuf(17,n)-rdiagbuf(18,n)
              hx_mean_nobc(nob) = rdiagbuf(17,n)-rdiagbuf(19,n)
+! --- CAPS ---
+!             if (obtype == ' rw') then
+!               hx_mean_nobc(nob) = rdiagbuf(17,n)-rdiagbuf(18,n)
+!             else
+!               hx_mean_nobc(nob) = rdiagbuf(17,n)-rdiagbuf(19,n)
+!             endif
+! --- CAPS ---
           endif
           ! ????? just repeating whatever was in the previous code; I don't know
           ! whether that's reasonable
@@ -1140,6 +1220,7 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
           if (obtype == ' uv')   x_type(nob) = '  u'
           if (obtype == 'tcp')   x_type(nob) = ' ps'
           if (obtype == ' rw')   x_type(nob) = ' rw'
+!          if (obtype == ' rw')   x_type(nob) = '  u' !CCT commanded out  CAPS
 
           ! get Hx
           if (nanal <= nanals) then
@@ -1212,6 +1293,8 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
           endif
 
           ! for wind, also read v-component
+!          if (obtype == ' uv' .or. obtype == ' rw') then !CCT commanded out
+!          if (obtype == ' uv') then                     !CCT modified     ! CAPS
           if (obtype == ' uv') then
              nob = nob + 1
              x_code(nob)  = rdiagbuf(1,n)
@@ -1291,7 +1374,7 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
        enddo
        deallocate(cdiagbuf,rdiagbuf)
        if (twofiles) deallocate(cdiagbuf2,rdiagbuf2)
-
+     end if ! CAPS end of l_use_enkf_caps flag
     else if (obtype == 'tcx' .or. obtype == 'tcy' .or. obtype == 'tcz') then
        allocate(cdiagbuf(ii),rdiagbuf(nreal,ii))
        read(iunit) cdiagbuf(1:ii),rdiagbuf(:,1:ii)
@@ -1336,6 +1419,7 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
        enddo
        deallocate(cdiagbuf,rdiagbuf)
        if (twofiles) deallocate(cdiagbuf2,rdiagbuf2)
+
     else
        print *,'warning - unknown ob type ',obtype
     endif

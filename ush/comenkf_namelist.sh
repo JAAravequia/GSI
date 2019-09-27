@@ -39,7 +39,7 @@ cat <<EOF > enkf.nml
   saterrfact          = 1.0,
   numiter             = 6,
   sprd_tol            = 1.e30,
-  paoverpb_thresh     = 0.99,
+  paoverpb_thresh     = 1.0,  
   reducedgrid         = .false.,
   nlevs               = $NLEVS,
   nanals              = $NMEM_ENKF,
@@ -127,5 +127,6 @@ cat <<EOF > enkf.nml
 &nam_wrf
   arw                 = $IF_ARW,
   nmm                 = $IF_NMM,
+  fv3                 = $IF_FV3,
  / 
 EOF

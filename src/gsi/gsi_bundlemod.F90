@@ -1848,6 +1848,9 @@ CONTAINS
     istatus=0
     call GSI_BundleGetPointer ( Bundle, fldname, ipnt, istatus, irank=irank, ival=ival )
     if (istatus==0) then
+        if ( associated(pntr) ) then   ! cTong
+            pntr => null()
+        end if
         select case (irank)
           case(1)
              pntr => Bundle%r1(ipnt)%qr8
@@ -1904,6 +1907,9 @@ CONTAINS
     istatus=0
     call GSI_BundleGetPointer ( Bundle, fldname, ipnt, istatus, irank=irank, ival=ival )
     if (istatus==0) then
+        if ( associated(pntr) ) then   ! cTong
+            pntr => null()
+        end if
         select case (irank)
           case(1)
              pntr => Bundle%r1(ipnt)%qr4
@@ -1956,6 +1962,9 @@ CONTAINS
     istatus=0
     call GSI_BundleGetPointer ( Bundle, fldname, ipnt, istatus, irank=irank )
     if (istatus==0.and.irank==2) then
+        if ( associated(pntr) ) then   ! cTong
+            pntr => null()
+        end if
         pntr => Bundle%r2(ipnt)%qr8
     else
         istatus=1
@@ -1997,6 +2006,9 @@ CONTAINS
     istatus=0
     call GSI_BundleGetPointer ( Bundle, fldname, ipnt, istatus, irank=irank )
     if (istatus==0.and.irank==2) then
+        if ( associated(pntr) ) then   ! cTong
+            pntr => null()
+        end if
         pntr => Bundle%r2(ipnt)%qr4
     else
         istatus=1
@@ -2037,6 +2049,9 @@ CONTAINS
     istatus=0
     call GSI_BundleGetPointer ( Bundle, fldname, ipnt, istatus, irank=irank )
     if (istatus==0.and.irank==3) then
+        if ( associated(pntr) ) then   ! cTong
+            pntr => null()
+        end if
         pntr => Bundle%r3(ipnt)%qr8
     else
         istatus=1
@@ -2077,6 +2092,9 @@ CONTAINS
     istatus=0
     call GSI_BundleGetPointer ( Bundle, fldname, ipnt, istatus, irank=irank )
     if (istatus==0.and.irank==3) then
+        if ( associated(pntr) ) then   ! cTong
+            pntr => null()
+        end if
         pntr => Bundle%r3(ipnt)%qr4
     else
         istatus=1

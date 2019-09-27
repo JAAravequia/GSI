@@ -2,13 +2,18 @@ module intdbzmod
 !$$$ module documentation block
 !           .      .    .                                       .
 ! module:   intdbzmod    module for intdbz and its tangent linear intdbz_tl
-!   prgmmr:
 !
 ! abstract: module for intdbz and its tangent linear intdbz_tl
 !
 ! program history log:
-! 2017-05-12 Y. Wang and X. Wang - add tangent linear of dbz operator to directly assimilate reflectivity
-!                                  for both ARW and NMMB models (Wang and Wang 2017 MWR). POC: xuguang.wang@ou.edu
+!   2005-05-13  Yanqiu zhu - wrap intrw and its tangent linear intrw_tl into one module 
+!   2005-11-16  Derber - remove interfaces
+!   2008-11-26  Todling - remove intrw_tl; add interface back
+!   2009-08-13  lueken - update documentation
+!   2016-09-xx  g.zhao - based on intrw and intq, build up intdbz for new obs dbz into GSIv3.5      
+!   2017-05-12  Y. Wang and X. Wang - add tangent linear of dbz operator to directly assimilate reflectivity
+!                                     for both ARW and NMMB models (Wang and Wang 2017 MWR). POC: xuguang.wang@ou.edu
+!   2019-02-19  ctong - modified to comply with new type structure
 !
 ! subroutines included:
 !   sub intdbz_
@@ -51,7 +56,7 @@ subroutine intdbz_(dbzhead,rval,sval)
 !   2004-08-02  treadon - add only to module use, add intent in/out
 !   2004-10-08  parrish - add nonlinear qc option
 !   2005-03-01  parrish - nonlinear qc change to account for inflated obs error
-!   2005-04-11  treadon - merge intdbz and intdbz_qc into single routine
+!   2005-04-11  treadon - merge inttr and inttr_qc into single routine
 !   2005-08-02  derber  - modify for variational qc parameters for each ob
 !   2005-09-28  derber  - consolidate location and weight arrays
 !   2006-07-28  derber  - modify to use new inner loop obs data structure
@@ -65,7 +70,23 @@ subroutine intdbz_(dbzhead,rval,sval)
 !   2010-05-13  todlng   - update to use gsi_bundle; update interface
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs         
 !   2014-12-03  derber  - modify so that use of obsdiags can be turned off
+!   2016-09-xx  G.Zhao   - intdbzmod is based on intqmod, and intrwmod
+!                        - using tangent linear dbz operator 
+!                        - working with log(qr/qs/qg) (no modification for intdbz)
 !
+!   input argument list:
+!     dbzhead   - obs type pointer to obs structure     
+!     sqr       - current qr solution increment
+!     sqs       - current qs solution increment
+!     sqg       - current qg solution increment
+!     rqr
+!     rqs
+!     rqg
+!
+!   output argument list:
+!     rqr        - qr results from dbz observation operator
+!     rqs        - qs results from dbz observation operator
+!     rqg        - qg results from dbz observation operator
 ! attributes:
 !   language: f90
 !   machine:  ibm RS/6000 SP
@@ -80,6 +101,7 @@ subroutine intdbz_(dbzhead,rval,sval)
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_4dvar, only: ladtest_obs
+  use caps_radaruse_mod, only: l_use_dbz_caps ! CAPS
 
   use control_vectors, only : dbz_exist
   implicit none
@@ -89,19 +111,20 @@ subroutine intdbz_(dbzhead,rval,sval)
   type(gsi_bundle),        intent(in   ) :: sval
   type(gsi_bundle),        intent(inout) :: rval
 
-! Declare local varibles
+! Declare local variables
   integer(i_kind) j1,j2,j3,j4,j5,j6,j7,j8,ier,istatus
 ! real(r_kind) penalty
 !  real(r_kind),pointer,dimension(:) :: xhat_dt_u,xhat_dt_v
 !  real(r_kind),pointer,dimension(:) :: dhat_dt_u,dhat_dt_v
-  real(r_kind) val,w1,w2,w3,w4,w5,w6,w7,w8,valqr,valqs,valqg,valdbz
+! CAPS : val is replaced with dbztl according to the old code. dbz introduced
+  real(r_kind) dbz,dbztl,w1,w2,w3,w4,w5,w6,w7,w8,valqr,valqs,valqg,valdbz 
   real(r_kind) cg_dbz,p0,grad,wnotgross,wgross,pg_dbz
   real(r_kind) qrtl,qstl, qgtl
   real(r_kind),pointer,dimension(:) :: sqr,sqs,sqg,sdbz
   real(r_kind),pointer,dimension(:) :: rqr,rqs,rqg,rdbz
   type(dbzNode), pointer :: dbzptr
 
-!  If no dbz data return
+!  If no dbz obs type data return
   if(.not. associated(dbzhead))return
 
 ! Retrieve pointers
@@ -124,8 +147,10 @@ subroutine intdbz_(dbzhead,rval,sval)
     end if
   end if
 
-  if(ier/=0)return
-
+  if(ier/=0)then
+     write(6,*)'intdbz:  gsi_bundlegetpointer to cloud hydrometer -- wrong'
+     return
+  end if
 
   !dbzptr => dbzhead
   dbzptr => dbzNode_typecast(dbzhead)
@@ -150,7 +175,7 @@ subroutine intdbz_(dbzhead,rval,sval)
 
 !    Forward mode l
      if( dbz_exist )then
-       val = w1* sdbz(j1)+w2* sdbz(j2)+w3* sdbz(j3)+w4* sdbz(j4)+ &
+       dbztl = w1* sdbz(j1)+w2* sdbz(j2)+w3* sdbz(j3)+w4* sdbz(j4)+ &
              w5* sdbz(j5)+w6* sdbz(j6)+w7* sdbz(j7)+w8* sdbz(j8)
      else
        qrtl = w1* sqr(j1)+w2* sqr(j2)+w3* sqr(j3)+w4* sqr(j4)+      &
@@ -162,23 +187,40 @@ subroutine intdbz_(dbzhead,rval,sval)
          qgtl  = w1* sqg(j1)+w2* sqg(j2)+w3* sqg(j3)+w4* sqg(j4)+  &
                  w5* sqg(j5)+w6* sqg(j6)+w7* sqg(j7)+w8* sqg(j8)
 
-         val   = (dbzptr%jqr)*qrtl + (dbzptr%jqs)*qstl + (dbzptr%jqg)*qgtl
+         dbztl   = (dbzptr%jqr)*qrtl + (dbzptr%jqs)*qstl + (dbzptr%jqg)*qgtl
        end if
   
      end if
 
      if(luse_obsdiag)then
         if (lsaveobsens) then
-           grad = val*dbzptr%raterr2*dbzptr%err2
+           grad = dbztl*dbzptr%raterr2*dbzptr%err2
            dbzptr%diags%obssen(jiter) = grad
         else
-           if (dbzptr%luse) dbzptr%diags%tldepart(jiter)=val
+           write(6,*)'intdbz: dbzptr%luse=',dbzptr%luse,'   jiter=',jiter
+           write(6,*)'intdbz: dbzhead%luse=',dbzhead%luse
+!          if (.not. associated(dbzhead%diags)) then
+!               write(6,*)'intdbz: not assocated dbzhead%diags ---- Wrong Wrong'
+!          end if
+!          write(6,*)'intdbz:
+!          dbzhead%diags%tld=',dbzhead%diags%tldepart(jiter)
+           write(6,*)'intdbz: dbzptr%diags%tld=',dbzptr%diags%tldepart(jiter)
+           write(6,*)'intdbz:  dbztl=',dbztl
+           if (dbzptr%luse) dbzptr%diags%tldepart(jiter)=dbztl
         endif
      endif
 
      if (l_do_adjoint) then
         if (.not. lsaveobsens) then
-           if( .not. ladtest_obs ) val=val-dbzptr%res
+           if( .not. ladtest_obs ) then
+              if ( l_use_dbz_caps) then ! CAPS uses ddiff
+                 dbz=dbztl-dbzptr%ddiff
+              else
+                 dbz=dbztl-dbzptr%res
+              end if
+           else
+              dbz=dbztl 
+           end if
 
 !          gradient of nonlinear operator
            if (nlnqc_iter .and. dbzptr%pg > tiny_r_kind .and. &
@@ -187,14 +229,14 @@ subroutine intdbz_(dbzhead,rval,sval)
               cg_dbz=cg_term/dbzptr%b
               wnotgross= one-pg_dbz
               wgross = pg_dbz*cg_dbz/wnotgross
-              p0   = wgross/(wgross+exp(-half*dbzptr%err2*val**2))
-              val = val*(one-p0)
+              p0   = wgross/(wgross+exp(-half*dbzptr%err2*dbz**2))
+              dbz = dbz*(one-p0)
            endif
 
            if( ladtest_obs)  then
-              grad = val
+              grad = dbz
            else
-              grad = val*dbzptr%raterr2*dbzptr%err2
+              grad = dbz*dbzptr%raterr2*dbzptr%err2
            end if
 
         endif

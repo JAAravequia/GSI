@@ -11,6 +11,7 @@ module gsi_rfv3io_mod
 !                           gsi_nemsio_mod as a pattern.
 !   2017-10-10  wu      - setup A grid and interpolation coeff in generate_anl_grid
 !   2018-02-22  wu      - add subroutines for read/write fv3_ncdf
+!   2019-03-13  cTong   - Port CAPS radar DA capability.
 !
 ! subroutines included:
 !   sub gsi_rfv3io_get_grid_specs
@@ -48,6 +49,10 @@ module gsi_rfv3io_mod
   integer(i_kind) gfile_tracers,gfile_sfcdata
   integer(i_kind) :: gfile
   save gfile
+! --- CAPS ---
+  character(len=*),parameter :: anadynvars='ana_dynvars'
+  character(len=*),parameter :: anatracers='ana_tracer'
+! --- CAPS ---
 
 
   integer(i_kind) nx,ny,nz
@@ -65,11 +70,13 @@ module gsi_rfv3io_mod
   public :: wrfv3_netcdf
 
   public :: mype_u,mype_v,mype_t,mype_q,mype_p,mype_oz,mype_ql
+  public :: mype_qi,mype_qr,mype_qs,mype_qg,mype_qnr,mype_w ! CAPS
   public :: k_slmsk,k_tsea,k_vfrac,k_vtype,k_stype,k_zorl,k_smc,k_stc
   public :: k_snwdph,k_f10m,mype_2d,n2d,k_orog,k_psfc
   public :: ijns,ijns2d,displss,displss2d,ijnz,displsz_g
 
   integer(i_kind) mype_u,mype_v,mype_t,mype_q,mype_p,mype_oz,mype_ql
+  integer(i_kind) mype_qi,mype_qr,mype_qs,mype_qg,mype_qnr,mype_w ! CAPS
   integer(i_kind) k_slmsk,k_tsea,k_vfrac,k_vtype,k_stype,k_zorl,k_smc,k_stc
   integer(i_kind) k_snwdph,k_f10m,mype_2d,n2d,k_orog,k_psfc
 
@@ -509,6 +516,12 @@ subroutine read_fv3_netcdf_guess
     use gsi_bundlemod, only: gsi_bundlegetpointer
     use mpeu_util, only: die
     use guess_grids, only: ntguessig
+! --- CAPS ---
+    use constants, only: zero, one_tenth
+    use mpimod, only: mype
+    use caps_radaruse_mod, only: l_use_log_qx, l_use_log_nt
+    use caps_radaruse_mod, only: l_use_dbz_caps
+! --- CAPS ---
 
     implicit none
 
@@ -523,6 +536,19 @@ subroutine read_fv3_netcdf_guess
 !   real(r_kind),dimension(:,:,:),pointer::ges_ql=>NULL()
     real(r_kind),dimension(:,:,:),pointer::ges_oz=>NULL()
     real(r_kind),dimension(:,:,:),pointer::ges_tv=>NULL()
+! --- CAPS ---
+    real(r_kind),dimension(:,:,:),pointer::ges_ql=>NULL()
+    real(r_kind),dimension(:,:,:),pointer::ges_qi=>NULL()
+    real(r_kind),dimension(:,:,:),pointer::ges_qr=>NULL()
+    real(r_kind),dimension(:,:,:),pointer::ges_qs=>NULL()
+    real(r_kind),dimension(:,:,:),pointer::ges_qg=>NULL()
+    real(r_kind),dimension(:,:,:),pointer::ges_qnr=>NULL()
+    real(r_kind),dimension(:,:,:),pointer::ges_w=>NULL()
+
+    real(r_kind) :: qr_min, qs_min, qg_min
+    real(r_kind) :: qr_thrshd, qs_thrshd, qg_thrshd
+! --- CAPS ---
+
 
 !    setup list for 2D surface fields
     k_f10m =1   !fact10
@@ -538,17 +564,37 @@ subroutine read_fv3_netcdf_guess
     k_orog =11  !terrain
     n2d=11
 
-    if(npe< 8) then
-       call die('read_fv3_netcdf_guess','not enough PEs to read in fv3 fields' )
-    endif
-    mype_u=0           
-    mype_v=1
-    mype_t=2
-    mype_p=3
-    mype_q=4
-    mype_ql=5
-    mype_oz=6
-    mype_2d=7 
+    if (l_use_dbz_caps) then ! CAPS
+       if(npe< 14) then
+          call die('read_fv3_netcdf_guess','not enough PEs to read in fv3 fields' )
+       endif
+       mype_u=0
+       mype_v=1
+       mype_t=2
+       mype_p=3
+       mype_q=4
+       mype_ql=5
+       mype_qi=6
+       mype_qr=7
+       mype_qs=8
+       mype_qg=9
+       mype_oz=10
+       mype_2d=11
+       mype_qnr=12
+       mype_w=13
+    else
+       if(npe< 8) then
+          call die('read_fv3_netcdf_guess','not enough PEs to read in fv3 fields' )
+       endif
+       mype_u=0           
+       mype_v=1
+       mype_t=2
+       mype_p=3
+       mype_q=4
+       mype_ql=5
+       mype_oz=6
+       mype_2d=7 
+    end if
       
     allocate(ijns(npe),ijns2d(npe),ijnz(npe) )
     allocate(displss(npe),displss2d(npe),displsz_g(npe) )
@@ -580,6 +626,17 @@ subroutine read_fv3_netcdf_guess
     call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q'  ,ges_q ,istatus );ier=ier+istatus
 !   call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql'  ,ges_ql ,istatus );ier=ier+istatus
     call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'oz'  ,ges_oz ,istatus );ier=ier+istatus
+! --- CAPS ---
+    if (l_use_dbz_caps) then
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql' ,ges_ql ,istatus );ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qi' ,ges_qi ,istatus );ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qr' ,ges_qr ,istatus );ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs' ,ges_qs ,istatus );ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qg' ,ges_qg ,istatus );ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnr',ges_qnr ,istatus );ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'w' , ges_w ,istatus );ier=ier+istatus
+    end if
+! --- CAPS ---
     if (ier/=0) call die(trim(myname),'cannot get pointers for fv3 met-fields, ier =',ier)
 
     call gsi_fv3ncdf_readuv(ges_u,ges_v)
@@ -593,12 +650,70 @@ subroutine read_fv3_netcdf_guess
     call gsi_fv3ncdf_read(tracers,'SPHUM','sphum',ges_q,mype_q)
 !   call gsi_fv3ncdf_read(tracers,'LIQ_WAT','liq_wat',ges_ql,mype_ql)
     call gsi_fv3ncdf_read(tracers,'O3MR','o3mr',ges_oz,mype_oz)
-
+! --- CAPS ---
+    if (l_use_dbz_caps) then
+       call gsi_fv3ncdf_read(dynvars,'W','w',ges_w,mype_w)
+       call gsi_fv3ncdf_read(tracers,'LIQ_WAT','liq_wat',ges_ql,mype_ql)
+       call gsi_fv3ncdf_read(tracers,'ICE_WAT','ice_wat',ges_qi,mype_qi)
+       call gsi_fv3ncdf_read(tracers,'RAINWAT','rainwat',ges_qr,mype_qr)
+       call gsi_fv3ncdf_read(tracers,'SNOWWAT','snowwat',ges_qs,mype_qs)
+       call gsi_fv3ncdf_read(tracers,'GRAUPEL','graupel',ges_qg,mype_qg)
+       call gsi_fv3ncdf_read(tracers,'RAIN_NC','rain_nc',ges_qnr,mype_qnr)
+    end if
+! --- CAPS ---
 !!  tsen2tv  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     do k=1,nsig
        do j=1,lon2
           do i=1,lat2
              ges_tv(i,j,k)=ges_tsen(i,j,k,it)*(one+fv*ges_q(i,j,k))
+!            Convert from qx to log(qx) if option is ON 
+             if (l_use_log_qx) then ! CAPS
+               if (ges_tsen(j,i,k,it) .gt. 274.15) then
+                 qr_min=2.9E-6_r_kind
+                 qr_thrshd=qr_min * one_tenth
+                 qs_min=0.1E-9_r_kind
+                 qs_thrshd=qs_min
+                 qg_min=3.1E-7_r_kind
+                 qg_thrshd=qg_min * one_tenth
+               else if (ges_tsen(j,i,k,it) .le. 274.15 .and. ges_tsen(j,i,k,it) .ge. 272.15) then
+                 qr_min=2.0E-6_r_kind
+                 qr_thrshd=qr_min * one_tenth
+                 qs_min=1.3E-7_r_kind
+                 qs_thrshd=qs_min * one_tenth
+                 qg_min=3.1E-7_r_kind
+                 qg_thrshd=qg_min * one_tenth
+               else if (ges_tsen(j,i,k,it) .lt. 272.15) then
+                 qr_min=0.1E-9_r_kind
+                 qr_thrshd=qr_min
+                 qs_min=6.3E-6_r_kind
+                 qs_thrshd=qs_min * one_tenth
+                 qg_min=3.1E-7_r_kind
+                 qg_thrshd=qg_min * one_tenth
+               end if
+               if ( ges_qr(j,i,k) .le. qr_thrshd )  ges_qr(j,i,k) = qr_min
+               if ( ges_qs(j,i,k) .le. qs_thrshd )  ges_qs(j,i,k) = qs_min
+               if ( ges_qg(j,i,k) .le. qg_thrshd )  ges_qg(j,i,k) = qg_min
+!              convert hydrometer variables (qr,qs and qg) to log
+               if(mype==0 .AND. i==3 .AND. j==3 .AND. k==3)then
+                   write(6,*)'read_fv3_netcdf_guess: ',     &
+                       ' reset zero of qr/qs/qg to specified values (~0dbz) ', &
+                       'before log transformation. (for dbz assimilation)'
+                   write(6,*)'read_fv3_netcdf_guess: convert qr/qs/qg to log.'
+               end if
+               ges_qr(j,i,k) = log(ges_qr(j,i,k))
+               ges_qs(j,i,k) = log(ges_qs(j,i,k))
+               ges_qg(j,i,k) = log(ges_qg(j,i,k))
+             else
+               qr_min=zero
+               qs_min=zero
+               qg_min=zero
+               if (mype==0 .AND. i==3 .AND. j==3 .AND. k==3) then
+                   write(6,*)'read_wrf_mass_guess: only reset (qr/qs/qg) to 0.0 for negative analysis value. (regular qx)'
+               end if
+               ges_qr(j,i,k) = max(ges_qr(j,i,k), qr_min)
+               ges_qs(j,i,k) = max(ges_qs(j,i,k), qs_min)
+               ges_qg(j,i,k) = max(ges_qg(j,i,k), qg_min)
+             end if
           enddo
        enddo
     enddo
@@ -1040,6 +1155,7 @@ subroutine wrfv3_netcdf
 ! abstract:  write FV3 analysis  in netcdf format
 !
 ! program history log:
+!   2019-04-18  cTong - port CAPS radar DA capabilities 
 !
 !   input argument list:
 !
@@ -1055,6 +1171,13 @@ subroutine wrfv3_netcdf
     use gsi_metguess_mod, only: gsi_metguess_bundle
     use gsi_bundlemod, only: gsi_bundlegetpointer
     use mpeu_util, only: die
+! --- CAPS ---
+    use gridmod, only: nsig,lon2,lat2
+    use mpimod, only: mype
+    use constants, only: zero,one_tenth,one,r0_01
+    use caps_radaruse_mod, only: l_use_log_qx, l_use_log_nt
+    use caps_radaruse_mod, only: l_use_dbz_caps
+! --- CAPS ---
     implicit none
 
 ! Declare local constants
@@ -1065,6 +1188,23 @@ subroutine wrfv3_netcdf
     real(r_kind),pointer,dimension(:,:,:):: ges_u   =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_v   =>NULL()
     real(r_kind),pointer,dimension(:,:,:):: ges_q   =>NULL()
+! --- CAPS ----
+    integer(i_kind) i,j,k
+! variables for log q conversion
+    real(r_kind) :: qr_min, qs_min, qg_min
+    real(r_kind) :: qr_thrshd, qs_thrshd, qg_thrshd
+    real(r_kind) :: qr_tmp, qs_tmp, qg_tmp
+    real(r_kind) :: qnr_tmp
+    real(r_kind),pointer,dimension(:,:,:):: ges_ql  =>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qi  =>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qr  =>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qs  =>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qg  =>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qnr =>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_w   =>NULL()
+! temporary arrays for dbz-related variables
+    real(r_kind),dimension(lat2,lon2,nsig):: tmparr_qr, tmparr_qs, tmparr_qg, tmparr_qnr
+! --- CAPS ----
 
     it=ntguessig
     ier=0
@@ -1072,15 +1212,126 @@ subroutine wrfv3_netcdf
     call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'u' , ges_u ,istatus);ier=ier+istatus
     call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'v' , ges_v ,istatus);ier=ier+istatus
     call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q'  ,ges_q ,istatus);ier=ier+istatus
+! --- CAPS ---
+    if (l_use_dbz_caps) then
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql' ,ges_ql,istatus);ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qi' ,ges_qi,istatus);ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qr' ,ges_qr,istatus);ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs' ,ges_qs,istatus);ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qg' ,ges_qg,istatus);ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnr',ges_qnr,istatus);ier=ier+istatus
+       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'w' , ges_w ,istatus);ier=ier+istatus
+    end if
+! --- CAPS ---
     if (ier/=0) call die('get ges','cannot get pointers for fv3 met-fields, ier =',ier)
 
-    add_saved=.true.
+! --- CAPS ---
+    if (l_use_dbz_caps) then
+! Initialized temp arrays with ges. Will be recalculated later if log(q) is used
+       tmparr_qr =ges_qr
+       tmparr_qs =ges_qs
+       tmparr_qg =ges_qg
+       tmparr_qnr=ges_qnr
+
+       if ( l_use_log_qx ) then
+         do k=1,nsig
+           do i=1,lon2
+             do j=1,lat2
+!              initialize hydrometeors as zero
+               qr_tmp=zero
+               qs_tmp=zero
+               qg_tmp=zero
+
+               if (ges_tsen(j,i,k,it) .gt. 274.15) then
+                   qr_min=2.9E-6_r_kind
+                   qr_thrshd=qr_min * one_tenth
+                   qs_min=0.1E-9_r_kind
+                   qs_thrshd=qs_min
+                   qg_min=3.1E-7_r_kind
+                   qg_thrshd=qg_min * one_tenth
+               else if (ges_tsen(j,i,k,it) .le. 274.15 .and. ges_tsen(j,i,k,it) .ge. 272.15) then
+                   qr_min=2.0E-6_r_kind
+                   qr_thrshd=qr_min * one_tenth
+                   qs_min=1.3E-7_r_kind
+                   qs_thrshd=qs_min * one_tenth
+                   qg_min=3.1E-7_r_kind
+                   qg_thrshd=qg_min * one_tenth
+               else if (ges_tsen(j,i,k,it) .lt. 272.15) then
+                   qr_min=0.1E-9_r_kind
+                   qr_thrshd=qr_min
+                   qs_min=6.3E-6_r_kind
+                   qs_thrshd=qs_min * one_tenth
+                   qg_min=3.1E-7_r_kind
+                   qg_thrshd=qg_min * one_tenth
+               end if
+
+!              convert log(qr/qs/qg) back to qr/qs/qg
+               if (mype==0 .AND. i==3 .AND. j==3 .AND. k==3) then
+                   write(6,*)'wrfv3_netcdf: convert log(qr/qs/qg) back to qr/qs/qg.'
+                   write(6,*)'wrfv3_netcdf: then reset (qr/qs/qg) to 0.0 for some cases.'
+               end if
+               qr_tmp=exp(ges_qr(j,i,k))
+               qs_tmp=exp(ges_qs(j,i,k))
+               qg_tmp=exp(ges_qg(j,i,k))
+
+!              if no update or very tiny value of qr/qs/qg, re-set/clear it off to zero
+               if ( abs(qr_tmp - qr_min) .lt. (qr_min*r0_01) ) then
+                   qr_tmp=zero
+               else if (qr_tmp .lt. qr_thrshd) then
+                   qr_tmp=zero
+               end if
+
+               if ( abs(qs_tmp - qs_min) .lt. (qs_min*r0_01) ) then
+                   qs_tmp=zero
+               else if (qs_tmp .lt. qs_thrshd) then
+                   qs_tmp=zero
+               end if
+
+               if ( abs(qg_tmp - qg_min) .lt. (qg_min*r0_01) ) then
+                   qg_tmp=zero
+               else if (qg_tmp .lt. qg_thrshd) then
+                   qg_tmp=zero
+               end if
+
+               IF (mype==0 .AND. qr_tmp<0) WRITE(*,*)'CCT: qr_tmp,qr_min,qr_thrshd=',qr_tmp,qr_min,qr_thrshd
+               tmparr_qr(j,i,k)=qr_tmp
+               tmparr_qs(j,i,k)=qs_tmp
+               tmparr_qg(j,i,k)=qg_tmp
+
+!              log_transform to QNRAIN 
+               if ( l_use_log_nt ) then
+                   qnr_tmp=exp(ges_qnr(j,i,k))
+                   if (qnr_tmp <= one ) qnr_tmp = zero
+                   tmparr_qnr(j,i,k)=qnr_tmp
+               end if
+             end do
+           end do
+         end do
+       end if
+
+!   write out ! CAPS uses ana+dynvars/tracers
+       call gsi_fv3ncdf_write(anadynvars,'T',ges_tsen(1,1,1,it),mype_t,add_saved)
+       call gsi_fv3ncdf_write(anatracers,'sphum',  ges_q ,mype_q ,add_saved)
+       call gsi_fv3ncdf_write(anatracers,'liq_wat',ges_ql,mype_ql,add_saved)
+       call gsi_fv3ncdf_write(anatracers,'ice_wat',ges_qi,mype_qi,add_saved)
+       call gsi_fv3ncdf_write(anatracers,'rainwat',tmparr_qr,mype_qr,add_saved)
+       call gsi_fv3ncdf_write(anatracers,'snowwat',tmparr_qs,mype_qs,add_saved)
+       call gsi_fv3ncdf_write(anatracers,'graupel',tmparr_qg,mype_qg,add_saved)
+       call gsi_fv3ncdf_write(anatracers,'rain_nc',tmparr_qnr,mype_qnr,add_saved)
+       call gsi_fv3ncdf_writeuv(ges_u,ges_v,mype_v,add_saved)
+       call gsi_fv3ncdf_writeps(anadynvars,'delp',ges_ps,mype_p,add_saved)
+    else
+
+       add_saved=.true.
 
 !   write out
-    call gsi_fv3ncdf_write(dynvars,'T',ges_tsen(1,1,1,it),mype_t,add_saved)
-    call gsi_fv3ncdf_write(tracers,'sphum',ges_q   ,mype_q,add_saved)
-    call gsi_fv3ncdf_writeuv(ges_u,ges_v,mype_v,add_saved)
-    call gsi_fv3ncdf_writeps(dynvars,'delp',ges_ps,mype_p,add_saved)
+       call gsi_fv3ncdf_write(dynvars,'T',ges_tsen(1,1,1,it),mype_t,add_saved)
+       call gsi_fv3ncdf_write(tracers,'sphum',ges_q   ,mype_q,add_saved)
+       call gsi_fv3ncdf_writeuv(ges_u,ges_v,mype_v,add_saved)
+       call gsi_fv3ncdf_writeps(dynvars,'delp',ges_ps,mype_p,add_saved)
+
+    end if
+
     
 end subroutine wrfv3_netcdf
 
@@ -1119,6 +1370,7 @@ subroutine gsi_fv3ncdf_writeuv(varu,varv,mype_io,add_saved)
     use netcdf, only: nf90_open,nf90_close,nf90_noerr
     use netcdf, only: nf90_write,nf90_inq_varid
     use netcdf, only: nf90_put_var,nf90_get_var
+    use caps_radaruse_mod, only: l_use_dbz_caps ! CAPS
 
     implicit none
 
@@ -1190,7 +1442,12 @@ subroutine gsi_fv3ncdf_writeuv(varu,varv,mype_io,add_saved)
        allocate( v(nlon_regional+1,nlat_regional))
        allocate( work_bu(nlon_regional,nlat_regional+1,nsig))
        allocate( work_bv(nlon_regional+1,nlat_regional,nsig))
-       call check( nf90_open(trim(dynvars ),nf90_write,gfile_loc) )
+       
+       if ( l_use_dbz_caps )then ! CAPS
+          call check( nf90_open(trim(anadynvars ),nf90_write,gfile_loc) )
+       else
+          call check( nf90_open(trim(dynvars ),nf90_write,gfile_loc) )
+       end if 
        call check( nf90_inq_varid(gfile_loc,'u',ugrd_VarId) )
        call check( nf90_inq_varid(gfile_loc,'v',vgrd_VarId) )
 
@@ -1225,7 +1482,11 @@ subroutine gsi_fv3ncdf_writeuv(varu,varv,mype_io,add_saved)
        endif
 
        deallocate(work_au,work_av,u,v)
-       print *,'write out u/v to ',trim(dynvars )
+       if ( l_use_dbz_caps )then ! CAPS
+          print *,'write out u/v to ',trim(anadynvars )
+       else
+          print *,'write out u/v to ',trim(dynvars )
+       end if 
        call check( nf90_put_var(gfile_loc,ugrd_VarId,work_bu) )
        call check( nf90_put_var(gfile_loc,vgrd_VarId,work_bv) )
        call check( nf90_close(gfile_loc) )
@@ -1324,6 +1585,7 @@ subroutine gsi_fv3ncdf_writeps(filename,varname,var,mype_io,add_saved)
              work_bi(:,:,k)=work_bi(:,:,k)+eta2_ll(kr)*workb2(:,:)
           enddo
        else
+          allocate( workb2(nlon_regional,nlat_regional)) ! added by cTong ! CAPS
           call fv3_ll_to_h(work_a,workb2,nlon,nlat,nlon_regional,nlat_regional,.true.)
           do k=1,nsig+1
              kr=nsig+2-k
@@ -1341,7 +1603,9 @@ subroutine gsi_fv3ncdf_writeps(filename,varname,var,mype_io,add_saved)
 
        call check( nf90_put_var(gfile_loc,VarId,work_b) )
        call check( nf90_close(gfile_loc) )
-       deallocate(worka2,workb2)
+
+       if(add_saved) deallocate(worka2)
+       deallocate(workb2)
        deallocate(work_b,work_a,work_bi)
 
     end if !mype_io

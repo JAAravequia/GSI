@@ -132,9 +132,11 @@ module obsmod
 !                                          POC: xuguang.wang@ou.edu
 !   2016-11-29 shlyaeva  - add lobsdiag_forenkf option for writing out linearized
 !                           H(x) for EnKF
+!   2016-11-xx  g.zhao   - implement CAPS radar DA (ladtest_obs for adjoint test of obs operator)
 !   2018-01-01  apodaca  - add GOES/GLM lightning observations
 !   2019-06-25  Hu       - add diag_radardbz for controling radar reflectivity
 !                               diag file
+!   
 ! 
 ! Subroutines Included:
 !   sub init_obsmod_dflts   - initialize obs related variables to default values
@@ -709,7 +711,7 @@ contains
     vr_dealisingopt=.false.
     if_vterminal=.false.
     if_vrobs_raw=.false.
-    if_model_dbz=.true.
+    if_model_dbz=.false.
     inflate_obserr=.false.
     whichradar="KKKK"
 

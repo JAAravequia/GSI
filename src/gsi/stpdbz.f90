@@ -1,14 +1,22 @@
 module stpdbzmod
-
 !$$$ module documentation block
 !           .      .    .                                       .
 ! module:   stpdbzmod    module for stpdbz and its tangent linear stpdbz_tl
-!  prgmmr:
 !
 ! abstract: module for stpdbz and its tangent linear stpdbz_tl
 !
 ! program history log:
+!   2005-05-19  Yanqiu zhu - wrap stprw and its tangent linear stprw_tl into one module
+!   2005-11-16  Derber - remove interfaces
+!   2008-12-02  Todling - remove stprw_tl
+!   2009-08-12  lueken - update documentation
+!   2010-05-13  todling - uniform interface across stp routines
+!   2016-09-xx  g.zhao - new ob dbz into GSIv3.5 (based on my stdpdbz in v3.3)
+!                      - stpdbzmod is based on stpqmod and stprw module
+!                      - using tangent linear dbz operator 
+!                      - working with log(qr/qs/qg) (no modification to stpdbz)
 !   2017-05-12  Y. Wang and X. Wang - add adjoint of reflectivity operator (Wang and Wang 2017 MWR), POC: xuguang.wang@ou.edu
+!   2019-02-19  ctong  - modified to comply with new type structure
 !
 ! subroutines included:
 !   sub stpdbz
@@ -33,13 +41,40 @@ subroutine stpdbz(dbzhead,rval,sval,out,sges,nstep)
 !                            stepsize with nonlinear qc added.
 !   prgmmr: derber           org: np23                date: 1991-02-26
 !
-! abstract: calculate penalty and contribution to stepsize from radar winds
+! abstract: calculate penalty and contribution to stepsize from radar reflectivity
 !
 ! program history log:
 !   1991-02-26  derber
 !   1999-11-22  yang
 !   2004-07-29  treadon - add only to module use, add intent in/out
 !   2004-10-07  parrish - add nonlinear qc option
+!   2005-04-11  treadon - merge stprw and stprw_qc into single routine
+!   2005-08-02  derber  - modify for variational qc parameters for each ob
+!   2005-09-28  derber  - consolidate location and weight arrays
+!   2007-03-19  tremolet - binning of observations
+!   2007-07-28  derber  - modify to use new inner loop obs data structure
+!                       - unify NL qc
+!   2007-02-15  rancic - add foto
+!   2007-06-04  derber  - use quad precision to get reproducability over number of processors  
+!   2008-06-02  safford - rm unused var and uses
+!   2008-12-03  todling - changed handling of ptr%time
+!   2010-01-04  zhang,b - bug fix: accumulate penalty for multiple obs bins
+!   2010-05-13  todling - update to use gsi_bundle
+!   2016-09-xx  G.Zhao  - dbz
+!
+!   input argument list:
+!     dbzhead
+!     rqr      - search direction for qr
+!     rqs     - search direction for qs
+!     rqg     - search direction for qg
+!     sqr      - analysis increment for qr
+!     sqs     - analysis increment for qs
+!     sqg     - analysis increment for qg
+!     sges     - step size estimates (nstep)
+!     nstep    - number of step sizes (== 0 means use outer iteration value)
+!
+!   output argument list     - output for step size calculation
+!     out(1:nstep)   - penalty from radar reflectivity sges(1:nstep)
 !
 ! attributes:
 !   language: f90
@@ -47,7 +82,6 @@ subroutine stpdbz(dbzhead,rval,sval,out,sges,nstep)
 !
 !$$$
   use kinds, only: r_kind,i_kind,r_quad
-  use qcmod, only: nlnqc_iter,varqc_iter
   use constants, only: half,one,two,tiny_r_kind,cg_term,zero_quad,r3600
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -57,6 +91,8 @@ subroutine stpdbz(dbzhead,rval,sval,out,sges,nstep)
   use m_dbzNode , only: dbzNode
   use m_dbzNode , only: dbzNode_typecast
   use m_dbzNode , only: dbzNode_nextcast
+  use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc !CAPS
+  use caps_radaruse_mod, only: l_use_dbz_caps  ! CAPS
 
   implicit none
 
@@ -157,38 +193,58 @@ subroutine stpdbz(dbzhead,rval,sval,out,sges,nstep)
 
                valdbz = valqr * dbzptr%jqr + valqs *  dbzptr%jqs +     &
                         valqg * dbzptr%jqg
-           
-               dbzcur = qrcur * dbzptr%jqr + qscur * dbzptr%jqs +      &
-                        qgcur * dbzptr%jqg - dbzptr%res
+               if (l_use_dbz_caps) then !CAPS uses ddiff
+                  dbzcur = qrcur * dbzptr%jqr + qscur * dbzptr%jqs +      &
+                           qgcur * dbzptr%jqg - dbzptr%ddiff
+               else
+                  dbzcur = qrcur * dbzptr%jqr + qscur * dbzptr%jqs +      &
+                           qgcur * dbzptr%jqg - dbzptr%res
+               end if
              end if  
 
            end if
 
 
            do kk=1,nstep
-              dbz=dbzcur+sges(kk)*valdbz
+              dbz=dbzcur+sges(kk)*valdbz            
               pen(kk)=dbz*dbz*dbzptr%err2
            end do
         else
-           pen(1)=dbzptr%res*dbzptr%res*dbzptr%err2
+           if (l_use_dbz_caps) then !CAPS uses ddiff
+              pen(1)=dbzptr%ddiff*dbzptr%ddiff*dbzptr%err2
+           else
+              pen(1)=dbzptr%res*dbzptr%res*dbzptr%err2
+           end if
         end if
 
 !  Modify penalty term if nonlinear QC
         if (nlnqc_iter .and. dbzptr%pg > tiny_r_kind .and.  &
                              dbzptr%b  > tiny_r_kind) then
-           pg_dbz=dbzptr%pg*varqc_iter
-           cg_dbz=cg_term/dbzptr%b
-           wnotgross= one-pg_dbz
-           wgross = pg_dbz*cg_dbz/wnotgross
-           do kk=1,max(1,nstep)
-              pen(kk)= -two*log((exp(-half*pen(kk)) + wgross)/(one+wgross))
-           end do
+           write(6,*) 'No nonlinear QC for dbz now.'
+
+           if (.not. l_use_dbz_caps ) then   ! CAPS blocked this
+              pg_dbz=dbzptr%pg*varqc_iter                     
+              cg_dbz=cg_term/dbzptr%b
+              wnotgross= one-pg_dbz
+              wgross = pg_dbz*cg_dbz/wnotgross
+              do kk=1,max(1,nstep)
+                 pen(kk)= -two*log((exp(-half*pen(kk)) + wgross)/(one+wgross))
+              end do
+           end if
         endif
 
         out(1) = out(1)+pen(1)*dbzptr%raterr2
         do kk=2,nstep
            out(kk) = out(kk)+(pen(kk)-pen(1))*dbzptr%raterr2
         end do
+
+        if (.not. l_use_dbz_caps ) then   ! CAPS blocked this
+           write(6,*)'stpdbz:   check penalty for dbz'
+           do kk=1,nstep
+              write(6,*)'step  penalty:',kk,out(kk)
+           end do
+        end if
+
      end if
 
      dbzptr => dbzNode_nextcast(dbzptr)

@@ -229,7 +229,7 @@ subroutine init_rf_z(z_len)
                      wrf_nmm_regional,nems_nmmb_regional,wrf_mass_regional,cmaq_regional, &
                      regional,fv3_regional
   use constants, only: half,one,rd_over_cp,zero,one_tenth,ten,two
-  use hybrid_ensemble_parameters, only: grd_ens
+  use hybrid_ensemble_parameters, only: grd_ens, s_ens_v
   use hybrid_ensemble_parameters, only: ps_bar
 
   implicit none
@@ -252,6 +252,7 @@ subroutine init_rf_z(z_len)
   allocate(fmatz(nxy,2,nsig,2),fmat0z(nxy,nsig,2))
   allocate(fmatz_tmp(2,nsig,2),fmat0z_tmp(nsig,2))
 !   for z_len < zero, use abs val z_len and assume localization scale is in units of ln(p)
+!  if(s_ens_v > zero) then ! In CAPS code, s_ens_v is used, rather than 'z_len'.
   if(maxval(z_len) > zero) then
 
 !  z_len is in grid units
@@ -1152,6 +1153,7 @@ end subroutine normal_new_factorization_rf_y
 !   2013-10-25  todling - nullify work pointer
 !   2015-01-22  Hu      - add namelist (i_en_perts_io) and functions to save and 
 !                         read ensemble perturbations in ensemble grid.
+!   2019-04-23  cTong   - add regional option to read in ensembles of FV3-SAR format 
 !
 !   input argument list:
 !
@@ -1299,7 +1301,7 @@ end subroutine normal_new_factorization_rf_y
 
        else
 
-          if(regional_ensemble_option < 1 .or. regional_ensemble_option > 4) then
+          if(regional_ensemble_option < 1 .or. regional_ensemble_option > 5) then
              if(mype==0) then
                 write(6,'(" IMPROPER CHOICE FOR ENSEMBLE INPUT IN SUBROUTINE LOAD_ENSEMBLE")')
                 write(6,'(" regional_ensemble_option = ",i5)') regional_ensemble_option
@@ -1313,6 +1315,8 @@ end subroutine normal_new_factorization_rf_y
                 write(6,'("                    ensembles are ARW netcdf format.")')
                 write(6,'("   regional_ensemble_option=4:")')
                 write(6,'("                    ensembles are NEMS NMMB format.")')
+                write(6,'("   regional_ensemble_option=5:")')             !CAPS
+                write(6,'("                    ensembles are FV3-SAR netcdf format.")')
              end if
              call stop2(999)
           end if
@@ -1354,6 +1358,12 @@ end subroutine normal_new_factorization_rf_y
 !     regional_ensemble_option = 4: ensembles are NEMS NMMB format.
 
                 call get_nmmb_ensperts
+
+             case(5) ! CAPS added
+
+!     regional_ensemble_option = 5: ensembles are FV3-SAR netcdf format.
+
+                call wrf_mass_enspert%get_fv3_mass_ensperts(en_perts,nelen,ps_bar)
 
           end select
 
@@ -4045,8 +4055,8 @@ subroutine hybens_localization_setup
    endif ! if ( readin_localization .or. readin_beta )
 
 100 format(I4)
-!101 format(F8.1,3x,F5.1,2(3x,F8.4))
-101 format(F8.1,3x,F8.3,F8.4,3x,F8.4)
+101 format(F8.1,3x,F5.1,2(3x,F8.4))
+!101 format(F8.1,3x,F8.3,F8.4,3x,F8.4)
 
    if ( .not. readin_beta ) then ! assign all levels to same value, sum = 1.0
       beta_s = beta_s0

@@ -185,6 +185,8 @@
 | RCT      | 004193 | RECEIPT TIME                                             |
 | YOB      | 005002 | LATITUDE                                                 |
 | XOB      | 006002 | LONGITUDE                                                |
+| JOB      | 005003 | GRID RELATIVE J INDEX                                    |
+| IOB      | 006003 | GRID RELATIVE I INDEX                                    |
 | ELV      | 010194 | STATION ELEVATION                                        |
 | SQN      | 050001 | REPORT SEQUENCE NUMBER                                   |
 | PROCN    | 050002 | PROCESS NUMBER FOR THIS MPI RUN (OBTAINED FROM SCRIPT)   |
@@ -423,6 +425,7 @@
 |          |                                                                   |
 | HEADR    | SID   XOB   YOB   DHR   ELV   TYP   T29   TSB   ITP   SQN         |
 | HEADR    | PROCN RPT   TCOR  <RSRDSQ>                                        |
+| HEADR    | IOB   JOB                                                         |
 | PLEVL    | CAT <PINFO> <QINFO> <TINFO> <ZINFO> <WINFO>  <DRINFO>             |
 | PLEVLG   | CAT <PINFO> <QINFO> <TINFO> <ZINFO> <PWINFO> <CTINFO>             |
 | BTLEVL   | CHNM  TMBR                                                        |
@@ -520,6 +523,8 @@
 | XDR      |    2 |      -18000 |  16 | DEG E                    |-------------|
 | YOB      |    2 |       -9000 |  15 | DEG N                    |-------------|
 | YDR      |    2 |       -9000 |  15 | DEG N                    |-------------|
+| IOB      |    2 |      -18000 |  16 | I INDEX                  |-------------|
+| JOB      |    2 |      -18000 |  16 | J INDEX                  |-------------|
 | RPT      |    3 |           0 |  16 | HOURS                    |-------------|
 | DHR      |    3 |      -24000 |  16 | HOURS                    |-------------|
 | TCOR     |    0 |           0 |   2 | CODE TABLE               |-------------|
@@ -713,5 +718,5 @@
 | PW2F_MOD |    1 |           0 |  10 | MM                       |-------------|
 | PW3F_MOD |    1 |           0 |  10 | MM                       |-------------|
 | PW4F_MOD |    1 |           0 |  10 | MM                       |-------------|
-| HREF     |    0 |         -64 |   7 | dB                       |-------------|
+| HREF     |    1 |        -640 |  11 | DECIBLES                 |-------------|
 `------------------------------------------------------------------------------'

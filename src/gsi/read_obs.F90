@@ -12,6 +12,7 @@ module read_obsmod
 !   2015-08-20  zhu  - add flexibility for enabling all-sky and using aerosol info in radiance 
 !                      assimilation. Use radiance_obstype_search from radiance_mod.  
 !   2017-05-12  Y. Wang and X. Wang - add dbz to be read in, POC: xuguang.wang@ou.edu
+!   2016-09-xx  g.zhao   - Add read radar reflectivtiy dbz (from MRMS grib2 in BUFR for CAPS)
 !
 ! subroutines included:
 !   sub gsi_inquire   -  inquire statement supporting fortran earlier than 2003
@@ -131,6 +132,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
 !   2014-10-01  ejones   - add gmi and amsr2
 !   2015-01-16  ejones   - add saphir
 !   2016-09-19  guo      - properly initialized nread, in case of for quick-return cases.
+!   2016-09-xx  G.Zhao   - skipping check BUFR dbz
 !   2017-11-16  dutta    - adding KOMPSAT5 bufr i.d for reading the data.
 !   2019-03-27  h. liu   - add abi
 !                           
@@ -156,6 +158,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   use convinfo, only: nconvtype,ictype,ioctype,icuse
   use chemmod, only : oneobtest_chem,oneob_type_chem,&
        code_pm25_ncbufr,code_pm25_anowbufr,code_pm10_ncbufr,code_pm10_anowbufr
+  use caps_radaruse_mod, only: l_use_dbz_caps
 
   implicit none
 
@@ -180,7 +183,9 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   if(trim(dtype) == 'tcp' .or. trim(filename) == 'tldplrso')return
   if(trim(filename) == 'mitmdat' .or. trim(filename) == 'mxtmdat')return
   if(trim(filename) == 'satmar')return
-  if(trim(dtype) == 'dbz' )return
+  if ( .not. l_use_dbz_caps) then ! CAPS
+     if(trim(dtype) == 'dbz' )return
+  end if
 
 ! Use routine as usual
 
@@ -653,6 +658,7 @@ subroutine read_obs(ndata,mype)
 !   2016-03-02  s.liu/carley - remove use_reflectivity and use i_gsdcldanal_type
 !   2016-04-28  J. Jung - added logic for RARS and direct broadcast data from NESDIS/UW.
 !   2016-05-05  pondeca - add 10-m u-wind and v-wind (uwnd10m, vwnd10m)
+!   2016-09-xx  g.zhao  - read mosaic dbz in BUFR (read_Radarref_mosaic2)
 !   2016-09-19  Guo     - replaced open(obs_input_common) with "call unformatted_open(obs_input_common)"
 !   2017-05-12  Y. Wang and X. Wang - add multi-interface to read in dBZ (nc) and radial velocity (ascii)
 !   2016-12-14  lippi   - Fixed bug of using observations twice when both
@@ -725,6 +731,7 @@ subroutine read_obs(ndata,mype)
     use gsi_unformatted, only: unformatted_open
 
     use mrmsmod,only: l_mrms_sparse_netcdf
+    use caps_radaruse_mod, only: l_use_dbz_caps
 
     implicit none
 
@@ -1031,6 +1038,7 @@ subroutine read_obs(ndata,mype)
           if (ii>npem1) ii=0
           if(mype==ii)then
              call gsi_inquire(lenbytes,lexist,trim(dfile(i)),mype)
+             if(mype == 0) write(6,*) lexist,trim(dfile(i)),dplat(i),dtype(i),minuse,read_rec1(i)
              call read_obs_check (lexist,trim(dfile(i)),dplat(i),dtype(i),minuse,read_rec1(i))
              
 !   If no data set starting record to be 999999.  Note if this is not large
@@ -1528,19 +1536,29 @@ subroutine read_obs(ndata,mype)
 
 !            Process radar reflectivity from MRMS
              else if (obstype == 'dbz' ) then
-                print *, "calling read_dbz"
-                if(trim(infile)=='dbzobs.nc')then
-                  call read_dbz_nc(nread,npuse,nouse,infile,lunout,obstype,sis,hgtl_full,nobs_sub1(1,i))
-                  string='READ_dBZ'
+                write (6,*), "calling read_dbz"
+                if ( l_use_dbz_caps ) then           !! CAPS
+!                 write(6,*) ''
+!                 call read_dbzpatch(nread,npuse,nouse,infile,obstype,lunout,sis)
+!                 string='READ_DBZPATCH'
+
+                  call read_radarref_mosaic2(nread,npuse,nouse,infile,obstype,lunout,twind,sis, &
+                                           nobs_sub1(1,i))
+                  string='READ_RADARREF_2'
                 else
-                  call read_dbz_mrms_detect_format(infile,l_mrms_sparse_netcdf)
-                  if(l_mrms_sparse_netcdf) then
-                     call read_dbz_mrms_sparse_netcdf(nread,npuse,nouse,infile,obstype,lunout,sis,nobs_sub1(1,i))
-                     string='READ_dbz_mrms_sparse_netcdf'
+                  if(trim(infile)=='dbzobs.nc')then
+                    call read_dbz_nc(nread,npuse,nouse,infile,lunout,obstype,sis,hgtl_full,nobs_sub1(1,i))
+                    string='READ_dBZ'
                   else
-                     call read_dbz_mrms_netcdf(nread,npuse,nouse,infile,obstype,lunout,sis,nobs_sub1(1,i))
-                     string='READ_dbz_mrms_netcdf'
-                  endif
+                    call read_dbz_mrms_detect_format(infile,l_mrms_sparse_netcdf)
+                    if(l_mrms_sparse_netcdf) then
+                       call read_dbz_mrms_sparse_netcdf(nread,npuse,nouse,infile,obstype,lunout,sis,nobs_sub1(1,i))
+                       string='READ_dbz_mrms_sparse_netcdf'
+                    else
+                       call read_dbz_mrms_netcdf(nread,npuse,nouse,infile,obstype,lunout,sis,nobs_sub1(1,i))
+                       string='READ_dbz_mrms_netcdf'
+                    endif
+                  end if
                 end if
 
 !            Process lagrangian data

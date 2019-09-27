@@ -73,6 +73,7 @@ contains
     use constants, only: zero
     use obsmod, only   : if_model_dbz
     use gsi_io, only: verbose
+    use caps_radaruse_mod, only: l_use_dbz_caps
   
     implicit none
   
@@ -123,7 +124,7 @@ contains
     associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
     end associate
     
-    print_verbose=.false.
+    print_verbose=.true.
     if(verbose) print_verbose=.true.
     wrf_real=104
     end_index=0
@@ -655,7 +656,7 @@ contains
           write(iunit)((field3v(i,j,k),i=1,nlon_regional),j=1,nlat_regional+1)   ! V
        end do
 
-       if(w_exist) then
+       if(w_exist .and. .not. l_use_dbz_caps) then ! CAPS do not write w to sigfxx
           rmse_var='W'
           call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
              start_index,end_index, WrfType, ierr    )
@@ -1018,7 +1019,10 @@ contains
           write(iunit)field2   !TH2
        endif
 
+       ! Since CAPS use .or. for the conditnioal statement, temporary fix is set on l_hydrometeor_bkio
+       if(l_use_dbz_caps) l_hydrometeor_bkio=.true.    ! turn on
        if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
+          if(l_use_dbz_caps) l_hydrometeor_bkio=.false.    ! turn off
           rmse_var='QCLOUD'
           call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
                start_index,end_index, WrfType, ierr    )
@@ -1153,51 +1157,75 @@ contains
              write(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional) ! Qnr    
           end do
 
-          rmse_var='QNICE'
-          call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering,    & 
-               start_index,end_index, WrfType, ierr    )
-          if(print_verbose)then
-             write(6,*)' rmse_var = ',trim(rmse_var),' ndim1=',ndim1
-             write(6,*)' WrfType = ',WrfType,' WRF_REAL=',WRF_REAL,'ierr  = ',ierr
-             write(6,*)' ordering = ',trim(ordering),' staggering = ',trim(staggering)
-             write(6,*)' start_index = ',start_index,' end_index = ',end_index
-          end if
-          call ext_ncd_read_field(dh1,DateStr1,TRIM(rmse_var),              &
-               field3,WRF_REAL,0,0,0,ordering,           &
-               staggering, dimnames ,               &
-               start_index,end_index,               & !dom
-               start_index,end_index,               & !mem
-               start_index,end_index,               & !pat
-               ierr                                 )
-          do k=1,nsig_regional
-             if(print_verbose) &
-                write(6,*)' k,max,min,mid Qni=',k,maxval(field3(:,:,k)),minval(field3(:,:,k)), &
-                      field3(nlon_regional/2,nlat_regional/2,k)
-             write(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional) ! Qni    
-          end do
+          if (l_use_dbz_caps) then ! CAPS do not use QNRAIN and QNICE
+             rmse_var='W'
+             call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering,&
+                  start_index,end_index, WrfType, ierr    )
+             if(print_verbose)then
+                write(6,*)' rmse_var = ',trim(rmse_var),' ndim1=',ndim1
+                write(6,*)' WrfType = ',WrfType,' WRF_REAL=',WRF_REAL,'ierr  = ',ierr
+                write(6,*)' ordering = ',trim(ordering),' staggering = ',trim(staggering)
+                write(6,*)' start_index = ',start_index,' end_index = ',end_index
+             end if
+            call ext_ncd_read_field(dh1,DateStr1,TRIM(rmse_var),              &
+                 field3w,WRF_REAL,0,0,0,ordering,           &
+                 staggering, dimnames ,               &
+                 start_index,end_index,               & !dom
+                 start_index,end_index,               & !mem
+                 start_index,end_index,               & !pat
+                 ierr                                 )
+            do k=1,nsig_regional+1
+               write(6,*)' k,max,min,mid W=',k,maxval(field3w(:,:,k)),minval(field3w(:,:,k)), &
+               field3w(nlon_regional/2,nlat_regional/2,k)
+               write(iunit)((field3w(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   !w
+            end do
+          else
+             rmse_var='QNICE'
+             call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering,    & 
+                  start_index,end_index, WrfType, ierr    )
+             if(print_verbose)then
+                write(6,*)' rmse_var = ',trim(rmse_var),' ndim1=',ndim1
+                write(6,*)' WrfType = ',WrfType,' WRF_REAL=',WRF_REAL,'ierr  = ',ierr
+                write(6,*)' ordering = ',trim(ordering),' staggering = ',trim(staggering)
+                write(6,*)' start_index = ',start_index,' end_index = ',end_index
+             end if
+             call ext_ncd_read_field(dh1,DateStr1,TRIM(rmse_var),              &
+                  field3,WRF_REAL,0,0,0,ordering,           &
+                  staggering, dimnames ,               &
+                  start_index,end_index,               & !dom
+                  start_index,end_index,               & !mem
+                  start_index,end_index,               & !pat
+                  ierr                                 )
+             do k=1,nsig_regional
+                if(print_verbose) &
+                   write(6,*)' k,max,min,mid Qni=',k,maxval(field3(:,:,k)),minval(field3(:,:,k)), &
+                         field3(nlon_regional/2,nlat_regional/2,k)
+                write(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional) ! Qni    
+             end do
 
-          rmse_var='QNCLOUD'
-          call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering,    & 
-               start_index,end_index, WrfType, ierr    )
-          if(print_verbose)then
-             write(6,*)' rmse_var = ',trim(rmse_var),' ndim1=',ndim1
-             write(6,*)' WrfType = ',WrfType,' WRF_REAL=',WRF_REAL,'ierr  = ',ierr
-             write(6,*)' ordering = ',trim(ordering),' staggering = ',trim(staggering)
-             write(6,*)' start_index = ',start_index,' end_index = ',end_index
+             rmse_var='QNCLOUD'
+             call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering,    & 
+                  start_index,end_index, WrfType, ierr    )
+             if(print_verbose)then
+                write(6,*)' rmse_var = ',trim(rmse_var),' ndim1=',ndim1
+                write(6,*)' WrfType = ',WrfType,' WRF_REAL=',WRF_REAL,'ierr  = ',ierr
+                write(6,*)' ordering = ',trim(ordering),' staggering = ',trim(staggering)
+                write(6,*)' start_index = ',start_index,' end_index = ',end_index
+             end if
+             call ext_ncd_read_field(dh1,DateStr1,TRIM(rmse_var),              &
+                  field3,WRF_REAL,0,0,0,ordering,           &
+                  staggering, dimnames ,               &
+                  start_index,end_index,               & !dom
+                  start_index,end_index,               & !mem
+                  start_index,end_index,               & !pat
+                  ierr                                 )
+             do k=1,nsig_regional
+                if(print_verbose) &
+                   write(6,*)' k,max,min,mid Qnc=',k,maxval(field3(:,:,k)),minval(field3(:,:,k)), &
+                         field3(nlon_regional/2,nlat_regional/2,k)
+                write(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional) ! Qnc
+             end do
           end if
-          call ext_ncd_read_field(dh1,DateStr1,TRIM(rmse_var),              &
-               field3,WRF_REAL,0,0,0,ordering,           &
-               staggering, dimnames ,               &
-               start_index,end_index,               & !dom
-               start_index,end_index,               & !mem
-               start_index,end_index,               & !pat
-               ierr                                 )
-          do k=1,nsig_regional
-             if(print_verbose) &
-                write(6,*)' k,max,min,mid Qnc=',k,maxval(field3(:,:,k)),minval(field3(:,:,k)), &
-                      field3(nlon_regional/2,nlat_regional/2,k)
-             write(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional) ! Qnc
-          end do
 
           if( dbz_exist .and. if_model_dbz ) then
              rmse_var='REFL_10CM'
@@ -2411,6 +2439,7 @@ contains
   !                               and nsoil (number of soil levels)
   !   2015-01-13  ladwig - add code for Qni and Qnc (cloud ice and water number
   !                               concentration)
+  !   2019-09-27  jpark  - update routines 3DV for CAPS radar 
   !
   !   input argument list:
   !
@@ -2438,6 +2467,7 @@ contains
     use control_vectors, only : w_exist, dbz_exist
     use obsmod, only   : if_model_dbz
     use gsi_io, only: verbose
+    use caps_radaruse_mod, only: l_use_dbz_caps
   
     implicit none
     class(convert_netcdf_class), intent(inout) :: this
@@ -2494,7 +2524,7 @@ contains
     end associate
 
 
-    print_verbose=.false.
+    print_verbose=.true.
     if(verbose) print_verbose=.true.
   
   ! binary stuff
@@ -2514,8 +2544,10 @@ contains
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs', ges_qs, istatus );ierr=ierr+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qg', ges_qg, istatus );ierr=ierr+istatus
        call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnr',ges_qnr,istatus );ierr=ierr+istatus
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qni',ges_qni,istatus );ierr=ierr+istatus
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnc',ges_qnc,istatus );ierr=ierr+istatus
+       if ( .not. l_use_dbz_caps) then   ! CAPS do not update these two variables for now
+          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qni',ges_qni,istatus );ierr=ierr+istatus
+          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnc',ges_qnc,istatus );ierr=ierr+istatus
+       end if
        if(dbz_exist) call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it),'dbz',ges_dbz,istatus );ierr=ierr+istatus
        if (ierr/=0) n_actual_clouds=0
     end if
@@ -2753,7 +2785,7 @@ contains
          start_index,end_index1,               & !pat
          ierr                                 )
 
-    if(w_exist)then
+    if(w_exist .and. .not. l_use_dbz_caps )then   ! CAPS update w later
     do k=1,nsig_regional+1
        read(iunit)((field3w(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   ! V
        write(6,*)' k,max,min,mid W=',k,maxval(field3w(:,:,k)),minval(field3w(:,:,k)), &
@@ -2989,8 +3021,11 @@ contains
             start_index,end_index1,               & !pat
             ierr                                 )
     endif
-  
+ 
+  ! Since CAPS use .or. for the conditnioal statement, temporary fix is set on l_hydrometeor_bkio
+    if(l_use_dbz_caps) l_hydrometeor_bkio=.true.    ! turn on
     if (l_hydrometeor_bkio .and. n_actual_clouds>0) then
+      if(l_use_dbz_caps) l_hydrometeor_bkio=.false.    ! turn off
       do k=1,nsig_regional
          read(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   !  Qc
          if(print_verbose) &
@@ -3152,60 +3187,88 @@ contains
            start_index,end_index1,               & !mem
            start_index,end_index1,               & !pat
            ierr                                 )
+
+
+      if ( l_use_dbz_caps ) then ! CAPS updates w here, not qni and qns
+         do k=1,nsig_regional+1
+            read(iunit)((field3w(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   ! V
+            write(6,*)' k,max,min,mid W=',k,maxval(field3w(:,:,k)),minval(field3w(:,:,k)), &
+               field3w(nlon_regional/2,nlat_regional/2,k)
+         end do
+         rmse_var='W'
+         call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
+              start_index,end_index1, WrfType, ierr    )
+         if(print_verbose)then
+            write(6,*)' rmse_var=',trim(rmse_var)
+            write(6,*)' ordering=',ordering
+            write(6,*)' WrfType,WRF_REAL=',WrfType,WRF_REAL
+            write(6,*)' ndim1=',ndim1
+            write(6,*)' staggering=',staggering
+            write(6,*)' start_index=',start_index
+            write(6,*)' end_index1=',end_index1
+         end if
+         call ext_ncd_write_field(dh1,DateStr1,TRIM(rmse_var),              &
+             field3w,WRF_REAL,0,0,0,ordering,           &
+             staggering, dimnames ,               &
+             start_index,end_index1,               & !dom
+             start_index,end_index1,               & !mem
+             start_index,end_index1,               & !pat
+             ierr                                 )
+      else    
+         do k=1,nsig_regional
+            read(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional) !  Qni
+            if(print_verbose) &
+               write(6,*)' k,max,min,mid Qni=',k,maxval(field3(:,:,k)),minval(field3(:,:,k)), &
+                 field3(nlon_regional/2,nlat_regional/2,k)
+         end do
+         rmse_var='QNICE'
+         call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
+              start_index,end_index1, WrfType, ierr    )
+         if(print_verbose)then
+            write(6,*)' rmse_var=',trim(rmse_var)
+            write(6,*)' ordering=',ordering
+            write(6,*)' WrfType,WRF_REAL=',WrfType,WRF_REAL
+            write(6,*)' ndim1=',ndim1
+            write(6,*)' staggering=',staggering
+            write(6,*)' start_index=',start_index
+            write(6,*)' end_index1=',end_index1
+         end if
+         where (field3 < tiny_single) field3 = tiny_single
+         call ext_ncd_write_field(dh1,DateStr1,TRIM(rmse_var),              &
+              field3,WRF_REAL,0,0,0,ordering,           &
+              staggering, dimnames ,               &
+              start_index,end_index1,               & !dom
+              start_index,end_index1,               & !mem
+              start_index,end_index1,               & !pat
+              ierr                                 )
   
-      do k=1,nsig_regional
-         read(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional) !  Qni
-         if(print_verbose) &
-            write(6,*)' k,max,min,mid Qni=',k,maxval(field3(:,:,k)),minval(field3(:,:,k)), &
-              field3(nlon_regional/2,nlat_regional/2,k)
-      end do
-      rmse_var='QNICE'
-      call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
-           start_index,end_index1, WrfType, ierr    )
-      if(print_verbose)then
-         write(6,*)' rmse_var=',trim(rmse_var)
-         write(6,*)' ordering=',ordering
-         write(6,*)' WrfType,WRF_REAL=',WrfType,WRF_REAL
-         write(6,*)' ndim1=',ndim1
-         write(6,*)' staggering=',staggering
-         write(6,*)' start_index=',start_index
-         write(6,*)' end_index1=',end_index1
+         do k=1,nsig_regional
+            read(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional) !  Qnc
+            if(print_verbose) &
+               write(6,*)' k,max,min,mid Qnc=',k,maxval(field3(:,:,k)),minval(field3(:,:,k)), &
+                 field3(nlon_regional/2,nlat_regional/2,k)
+         end do
+         rmse_var='QNCLOUD'
+         call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
+              start_index,end_index1, WrfType, ierr    )
+         if(print_verbose)then
+            write(6,*)' rmse_var=',trim(rmse_var)
+            write(6,*)' ordering=',ordering
+            write(6,*)' WrfType,WRF_REAL=',WrfType,WRF_REAL
+            write(6,*)' ndim1=',ndim1
+            write(6,*)' staggering=',staggering
+            write(6,*)' start_index=',start_index
+            write(6,*)' end_index1=',end_index1
+         end if
+         where (field3 < tiny_single) field3 = tiny_single
+         call ext_ncd_write_field(dh1,DateStr1,TRIM(rmse_var),              &
+              field3,WRF_REAL,0,0,0,ordering,           &
+              staggering, dimnames ,               &
+              start_index,end_index1,               & !dom
+              start_index,end_index1,               & !mem
+              start_index,end_index1,               & !pat
+              ierr                                 )
       end if
-      where (field3 < tiny_single) field3 = tiny_single
-      call ext_ncd_write_field(dh1,DateStr1,TRIM(rmse_var),              &
-           field3,WRF_REAL,0,0,0,ordering,           &
-           staggering, dimnames ,               &
-           start_index,end_index1,               & !dom
-           start_index,end_index1,               & !mem
-           start_index,end_index1,               & !pat
-           ierr                                 )
-  
-      do k=1,nsig_regional
-         read(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional) !  Qnc
-         if(print_verbose) &
-            write(6,*)' k,max,min,mid Qnc=',k,maxval(field3(:,:,k)),minval(field3(:,:,k)), &
-              field3(nlon_regional/2,nlat_regional/2,k)
-      end do
-      rmse_var='QNCLOUD'
-      call ext_ncd_get_var_info (dh1,trim(rmse_var),ndim1,ordering,staggering, &
-           start_index,end_index1, WrfType, ierr    )
-      if(print_verbose)then
-         write(6,*)' rmse_var=',trim(rmse_var)
-         write(6,*)' ordering=',ordering
-         write(6,*)' WrfType,WRF_REAL=',WrfType,WRF_REAL
-         write(6,*)' ndim1=',ndim1
-         write(6,*)' staggering=',staggering
-         write(6,*)' start_index=',start_index
-         write(6,*)' end_index1=',end_index1
-      end if
-      where (field3 < tiny_single) field3 = tiny_single
-      call ext_ncd_write_field(dh1,DateStr1,TRIM(rmse_var),              &
-           field3,WRF_REAL,0,0,0,ordering,           &
-           staggering, dimnames ,               &
-           start_index,end_index1,               & !dom
-           start_index,end_index1,               & !mem
-           start_index,end_index1,               & !pat
-           ierr                                 )
     end if ! l_hydrometeor_bkio
     
     if(dbz_exist .and. if_model_dbz)then
@@ -3234,8 +3297,12 @@ contains
            start_index,end_index1,               & !pat
            ierr                                 )
     end if
-  
+
+    ! Since CAPS use .or. for the conditnioal statement, temporary fix is set
+    ! on l_hydrometeor_bkio
+    if(l_use_dbz_caps) l_hydrometeor_bkio=.true.    ! turn on
     if( l_hydrometeor_bkio )then
+      if(l_use_dbz_caps) l_hydrometeor_bkio=.false.    ! turn off
       do k=1,nsig_regional
          read(iunit)((field3(i,j,k),i=1,nlon_regional),j=1,nlat_regional)   ! TTEN 
          if(print_verbose) &

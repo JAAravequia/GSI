@@ -156,6 +156,27 @@
        radiance_obstype_destroy
   use gsi_nstcouplermod, only: gsi_nstcoupler_init_nml
   use gsi_nstcouplermod, only: nst_gsi,nstinfo,zsea1,zsea2,fac_dtl,fac_tsl
+  ! --- CAPS ---
+  use radaremul_cst
+  use radaremul_iface
+  use caps_radaruse_mod, only: init_radaruse_caps
+  use caps_radaruse_mod, only: coef4dbzfwrd
+  use caps_radaruse_mod, only: oe_rw, oe_dbz, refl_lowbnd_rw, refl_lowbnd_dbz,      &
+                               be_sf, hscl_sf, vscl_sf, be_vp, hscl_vp, vscl_vp,    &
+                               be_t,  hscl_t,  vscl_t,  be_q,  hscl_q,  vscl_q,     &
+                               be_qr, be_qs, be_qg, hscl_qx, vscl_qx,               &
+                               l_decouple_sf_vp, l_decouple_sf_tps,                 &
+                               l_set_be_rw, l_set_be_dbz,                           &
+                               l_set_oerr_ratio_rw, l_set_oerr_ratio_dbz,           &
+                               l_use_rw_caps, l_use_dbz_caps,                       &
+                               rw_obs4wrd_bmwth, lvldbg,                            &
+                               l_correct_azmu, l_correct_tilt, i_correct_tilt,      &
+                               l_azm_east1st, l_use_log_qx,                         &
+                               l_plt_be_stats, l_be_T_dep, l_gpht2gmht,             &
+                               l_plt_diag_rw, l_chk_bmwth,                          &
+                               i_melt_snow, i_melt_graupel,                         &
+                               cld_cv, cld_nt_updt, l_use_log_nt,  i_w_updt
+  ! --- CAPS ---
 
   implicit none
 
@@ -378,6 +399,7 @@
 !  01-04-2018 Apodaca   add diag_light and lightinfo for GOES/GLM lightning
 !                           data assimilation
 !  08-25-2018 Collard   Introduce bias_zero_start
+!  01-xx-2018 g.zhao    add namelist variables for using CAPS radar obs data
 !  09-12-2018 Ladwig    added option l_precip_clear_only
 !  03-28-2019 Ladwig    merging additional options for cloud product assimilation
 !  03-11-2019 Collard   Introduce ec_amv_qc as temporary control of GOES-16/17 AMVS
@@ -390,6 +412,9 @@
 ! Declare variables.
   logical:: writediag,l_foto
   integer(i_kind) i,ngroup
+
+  integer:: iret_init_mphyopt   ! CAPS
+  integer:: iret_coef4dbzfwrd   ! CAPS
 
 
 ! Declare namelists with run-time gsi options.
@@ -564,6 +589,8 @@
 !     netcdf_diag - trigger netcdf diag-file output
 !
 !      l_wcp_cwm      - namelist logical whether to use swcp/lwcp operator that includes cwm
+!     l_use_rw_caps - option to assimilate radar radial wind obs of CAPS in GSI (.TRUE.: on; .FALSE.: off)
+!     l_use_dbz_caps - option to assimilate radar reflectivity obs of CAPS in GSI (.TRUE.: on; .FALSE.: off)
 !
 !     NOTE:  for now, if in regional mode, then iguess=-1 is forced internally.
 !            add use of guess file later for regional mode.
@@ -602,7 +629,8 @@
        rmesh_vr,zmesh_dbz,zmesh_vr, ntilt_radarfiles, whichradar,&
        radar_no_thinning,ens_hx_dbz_cut,static_gsi_nopcp_dbz,rmesh_dbz,&
        minobrangevr, maxtiltdbz, mintiltvr,mintiltdbz,if_vterminal,if_vrobs_raw,&
-       if_model_dbz,imp_physics,lupp,netcdf_diag,binary_diag,l_wcp_cwm
+       if_model_dbz,imp_physics,lupp,netcdf_diag,binary_diag,l_wcp_cwm,&
+       l_use_rw_caps,l_use_dbz_caps       ! CAPS
 
 ! GRIDOPTS (grid setup variables,including regional specific variables):
 !     jcap     - spectral resolution
@@ -857,6 +885,61 @@
 
   namelist/superob_radar/del_azimuth,del_elev,del_range,del_time,&
        elev_angle_max,minnum,range_max,l2superob_only
+
+! --- CAPS ----
+! RADAR_REF (radar reflectivity options)
+!     mphyopt          - microphysics scheme to use in the forward operator
+!     (only 108 is supported
+!                           for now)
+!     n0rain           - intercept parameter for rain (1/m**4)
+!     n0snow           - intercept parameter for snow (1/m**4)
+!     n0hail           - intercept parameter for hail (1/m**4)
+!     n0grpl           - intercept parameter for graupel (1/m**4)
+!     rhosnow          - assumed density for snow (kg/m**3)
+!     rhohail          - assumed density for hail (kg/m**3)
+!     rhogrpl          - assumed density for graupel (kg/m**3)
+!     rfopt            - reflectivity calculation method to use in the forward
+!     operator
+!     wavelen          - assumed radar wavelength (mm)
+
+  namelist/radar_ref/mphyopt,n0rain,n0snow,n0hail,n0grpl,rhosnow,rhohail,rhogrpl,rfopt,wavelen
+
+! RADARUSE_CAPS
+!     l_set_be_rw      - re-set background error statistics for using radar wind
+!     obs (.TRUE.: on  ; .FALSE.: off)
+!     l_set_be_dbz     - re-set background error statistics for using radar dbz
+!     obs (.TRUE.: on  ; .FALSE.: off)
+!     be_sf            - multiplying factor to tune the background error
+!     standard deviation of stream function
+!     hscl_vf          - horizontal background error correlation length scale of
+!     stream function
+!     hscl_vf          - vertical   background error correlation length scale of
+!     stream function
+!     l_decouple_sf_vp - de-couple the correlation/balance between s.f. and v.p.
+!     l_decouple_sf_tps- de-couple the correlation/balance between s.f. and
+!     temperature, ps
+!     rw_obs4wrd_bmwth - beam width impact on radar wind obs forward operator
+                         ! 1: GSI original (vrminmax)
+                         ! 2: simple vertical interpolation
+                         ! 3: weighted average of multiple-layers
+!     l_dbz4wrd_melt   - effect of melting snow in dbz obs forward operator
+!     l_use_log_qx     - use log transform to qx (qr/qs/qg)
+!
+  namelist/radaruse_caps/oe_rw,oe_dbz,l_set_be_rw,l_set_be_dbz,           &
+                         l_set_oerr_ratio_rw, l_set_oerr_ratio_dbz,       &
+                         be_sf,hscl_sf,vscl_sf,be_vp,hscl_vp,vscl_vp,     &
+                         be_q, hscl_q, vscl_q, be_t, hscl_t, vscl_t,      &
+                         be_qr, be_qs, be_qg, hscl_qx, vscl_qx,           &
+                         l_decouple_sf_vp,l_decouple_sf_tps,              &
+                         rw_obs4wrd_bmwth, lvldbg,                        &
+                         l_correct_azmu, l_correct_tilt, i_correct_tilt,  &
+                         l_azm_east1st, l_use_log_qx, l_plt_be_stats,     &
+                         l_be_T_dep, l_gpht2gmht,                         &
+                         refl_lowbnd_rw, refl_lowbnd_dbz,                 &
+                         l_plt_diag_rw, l_chk_bmwth,                      &
+                         i_melt_snow, i_melt_graupel,                     &
+                         cld_cv, cld_nt_updt, l_use_log_nt,  i_w_updt
+! --- CAPS ---
 
 ! LAG_DATA (lagrangian data assimilation related variables):
 !     lag_accur - Accuracy used to decide whether or not a balloon is on the grid
@@ -1186,6 +1269,7 @@
   call init_gfs_stratosphere
   call set_fgrid2agrid
   call gsi_nstcoupler_init_nml
+  call init_radaruse_caps   ! CAPS
  if(mype==0) write(6,*)' at 0 in gsimod, use_gfs_stratosphere,nems_nmmb_regional = ', &
                        use_gfs_stratosphere,nems_nmmb_regional
 
@@ -1209,6 +1293,7 @@
   read(5,obsqc)
   read(5,obs_input)
   read(5,superob_radar)
+  read(5,radar_ref)  ! CAPS
   read(5,lag_data)
   read(5,hybrid_ensemble)
   read(5,rapidrefresh_cldsurf)
@@ -1249,6 +1334,9 @@
 
   read(11,superob_radar,iostat=ios)
   if(ios/=0) call die(myname_,'read(superob_radar)',ios)
+
+  read(11,radar_ref,iostat=ios)                         ! CAPS
+  if(ios/=0) call die(myname_,'read(radar_ref)',ios)    ! CAPS
 
   read(11,lag_data,iostat=ios)
   if(ios/=0) call die(myname_,'read(lag_data)',ios)
@@ -1589,6 +1677,27 @@
 #endif 
   endif
 
+! --- CAPS ---
+! reading namelist for using radar obs of CAPS
+  if (l_use_rw_caps .or. l_use_dbz_caps) then
+#ifdef ibm_sp
+     read(5,radaruse_caps)
+#else
+     open(11,file='gsiparm.anl')
+     read(11,radaruse_caps,iostat=ios)
+     if(ios/=0) call die(myname_,'read(radaruse_caps)',ios)
+     close(11)
+#endif
+
+!    re-set some options based on some conditions
+!    log transform is only applied to dbz operator based on single-moment MP
+!    scheme
+     if (mphyopt  .gt. 7 .or. mphyopt  .lt. 2) l_use_log_qx = .FALSE.
+
+  endif
+! --- CAPS ---
+
+
 ! Write namelist output to standard out
   if(mype==0) then
      write(6,200)
@@ -1625,6 +1734,7 @@
      write(6,chem)
      if (oneobtest) write(6,singleob_test)
      write(6,nst)
+     if (l_use_rw_caps .or. l_use_dbz_caps) write(6,radaruse_caps) ! CAPS
   endif
 
 ! Set up directories (or pe specific filenames)
@@ -1665,6 +1775,26 @@
 
 ! Initialize values in aeroinfo
   call init_aero_vars
+
+! --- CAPS ---
+! Initialize values in the radar emulator
+  iret_init_mphyopt = -1
+  call init_mphyopt(mype,iret_init_mphyopt)
+! Check microphysics scheme if assimilating radar dBZ
+  if ( iret_init_mphyopt .ne. 0 .and. l_use_dbz_caps ) then
+      CALL die('init_mphyopt', 'Invalid microphysics option for dbz assimilation:', mphyopt)
+  end if
+
+! Initialize coefficients and power index numers used in the dbz obs operator
+! for single moment scheme
+  if (mphyopt  .ge. 2 .and. mphyopt  .le. 7) then
+      iret_coef4dbzfwrd = -1
+      call coef4dbzfwrd(mphyopt,iret_coef4dbzfwrd)
+      if ( iret_coef4dbzfwrd .ne. 0 ) then
+          CALL die('COEF4DBZFWRD', 'Invalid microphysics option for single moment MP scheme:', mphyopt)
+      end if
+  end if
+! --- CAPS ---
 
   end subroutine gsimain_initialize
 

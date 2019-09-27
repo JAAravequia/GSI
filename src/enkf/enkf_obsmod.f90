@@ -92,6 +92,7 @@ module enkf_obsmod
 !        for oz and it crashes EnKF compiled by GNU Fortran
 !     NOTE: this requires anavinfo file to be present at running directory
 !   2016-11-29  shlyaeva: Added the option of writing out ensemble spread in diag files
+!   2019-03-21  cTong added CAPS radar DA capability
 !
 ! attributes:
 !   language: f95
@@ -107,6 +108,8 @@ use params, only: &
       corrlengthtr, corrlengthsh, obtimelnh, obtimeltr, obtimelsh,&
       lnsigcutoffsatnh, lnsigcutoffsatsh, lnsigcutoffsattr,&
       varqc, huber, zhuberleft, zhuberright,&
+      lnsigcutoffrdrnh, lnsigcutoffrdrsh, lnsigcutoffrdrtr,& ! CAPS
+      corrlengthrdrnh, corrlengthrdrtr, corrlengthrdrsh,&    ! CAPS
       lnsigcutoffpsnh, lnsigcutoffpssh, lnsigcutoffpstr, neigv
 
 use state_vectors, only: init_anasv
@@ -133,6 +136,7 @@ integer(i_kind), public, allocatable, dimension(:) :: stattype, indxsat
 character(len=20), public, allocatable, dimension(:) :: obtype
 integer(i_kind), public ::  nobs_sat, nobs_oz, nobs_conv, nobstot
 integer(i_kind) :: nobs_convdiag, nobs_ozdiag, nobs_satdiag, nobstotdiag
+real(r_single), public, allocatable, dimension(:) :: biasprednorm,biasprednorminv ! CAPS
 
 ! for serial enkf, anal_ob is only used here and in loadbal. It is deallocated in loadbal.
 ! for letkf, anal_ob used on all tasks in letkf_update (bcast from root in loadbal), deallocated
@@ -148,12 +152,12 @@ subroutine readobs()
 ! all tasks.  Ob prior perturbations for each ensemble member
 ! are written to a temp file, since the entire array can be 
 ! very large.
-use radinfo, only: npred,jpch_rad,radinfo_read,pg_rad
+use radinfo, only: npred,jpch_rad,radinfo_read,pg_rad, predx ! CAPS added predx
 use convinfo, only: convinfo_read, init_convinfo, cvar_pg, nconvtype, ictype,&
                     ioctype
 use ozinfo, only: init_oz, ozinfo_read, pg_oz, jpch_oz, nusis_oz, nulev
 use covlocal, only: latval
-integer nob,j,ierr
+integer nob,n,j,ierr
 real(r_double) t1
 real(r_single) tdiff,tdiffmax,deglat,radlat,radlon
 ! read in conv data info
@@ -174,6 +178,21 @@ call radinfo_read()
 ! so bias coefficents have same units as radiance obs.
 ! (by computing RMS values over many analyses)
 if (nproc == 0) print*, 'npred  = ', npred
+
+! --- CAPS --- The following coluld bring problems for other run.. be careful.
+allocate(biasprednorm(npred),biasprednorminv(npred))
+biasprednorm=one
+biasprednorminv=zero
+do n=1,npred
+   if (nproc == 0) print *,n,'biasprednorm = ',biasprednorm(n)
+   if (biasprednorm(n) > 1.e-7_r_single) biasprednorminv(n)=one/biasprednorm(n)
+enddo
+! scale bias coefficients.
+do j=1,jpch_rad
+   predx(:,j) = biasprednorm(:)*predx(:,j)
+enddo
+! --- CAPS ---
+
 ! allocate array for bias correction increments, initialize to zero.
 allocate(deltapredx(npred,jpch_rad))
 deltapredx = zero
@@ -229,6 +248,13 @@ if (varqc .and. .not. huber) then
 endif
 ! compute number of usuable obs, average ob error for each satellite sensor/channel.
 if (nobs_sat > 0) then
+! --- CAPS ---
+  do nob=1,nobs_sat
+     do n=2,npred+1
+       biaspreds(n,nob)=biaspreds(n,nob)* biasprednorminv(n-1)
+     end do
+  end do
+! --- CAPS ---
   call channelstats()
 end if
 
@@ -252,10 +278,15 @@ do nob=1,nobstot
       lnsigl(nob) = latval(deglat,lnsigcutoffsatnh,lnsigcutoffsattr,lnsigcutoffsatsh)
    else if (obtype(nob)(1:3) == ' ps') then
       lnsigl(nob) = latval(deglat,lnsigcutoffpsnh,lnsigcutoffpstr,lnsigcutoffpssh)
+   else if (obtype(nob)(1:3) == 'dbz' .or. obtype(nob)(1:3) == ' rw') then
+      lnsigl(nob) = latval(deglat,lnsigcutoffrdrnh,lnsigcutoffrdrtr,lnsigcutoffrdrsh)
    else
       lnsigl(nob)=latval(deglat,lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh)
    end if
    corrlengthsq(nob)=latval(deglat,corrlengthnh,corrlengthtr,corrlengthsh)**2
+   if (obtype(nob)(1:3) == 'dbz' .or. obtype(nob)(1:3) == ' rw') then
+       corrlengthsq(nob)=latval(deglat,corrlengthrdrnh,corrlengthrdrtr,corrlengthrdrsh)**2
+   end if
    obtimel(nob)=latval(deglat,obtimelnh,obtimeltr,obtimelsh)
 end do
 
@@ -445,6 +476,8 @@ if (allocated(prpgerr)) deallocate(prpgerr)
 if (allocated(anal_ob)) deallocate(anal_ob)
 if (allocated(anal_ob_modens)) deallocate(anal_ob_modens)
 if (allocated(diagused)) deallocate(diagused)
+if (allocated(biasprednorm)) deallocate(biasprednorm)       ! CAPS
+if (allocated(biasprednorminv)) deallocate(biasprednorminv) ! CAPS
 end subroutine obsmod_cleanup
 
 
