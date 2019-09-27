@@ -89,6 +89,7 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
 !   2016-04-28  jung - added logic for RARS and direct broadcast from NESDIS/UW
 !   2016-10-20  collard - fix to allow monitoring and limited assimilation of spectra when key 
 !                         channels are missing.
+!   2019-09-27  T.-C. Wu- finalize read routines for tempest 
 !
 !   input argument list:
 !     mype     - mpi task id
@@ -222,9 +223,7 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   real(r_double),allocatable,dimension(:):: data1b8,data1b8x
   real(r_double),dimension(n1bhdr):: bfr1bhdr
   real(r_double),dimension(n2bhdr):: bfr2bhdr
-! TCW 05/17/2019: added scangle for tempest-d
   real(r_double)                  :: scangle
-! TCW 09/18/2019: added retwp for tempest-d
   real(r_double),dimension(2)     :: retwp
 
   real(r_kind) disterr,disterrmax,cdist,dlon00,dlat00
@@ -266,7 +265,6 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   amsub =    obstype == 'amsub'
   mhs   =    obstype == 'mhs'
   ssu   =    obstype == 'ssu'
-!AJK:  15 Mar 2019
   tempest =  obstype == 'tempest'     
 
 !  instrument specific variables
@@ -311,9 +309,6 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   if(jsatid == 'metop-b')kidsat=3
   if(jsatid == 'metop-c')kidsat=5
   if(jsatid == 'npp')kidsat=224
-!AJK:  15 Mar 2019
-!  if(jsatid == 'tempest')kidsat=777     
-! TCW 05/20/2019: changed jsatid to cubesat (dplat in gsiparm.nml) and kidsat to 1024
   if(jsatid == 'cubesat')kidsat=1024     
 
   radedge_min = 0
@@ -431,8 +426,6 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
      rlndsea(2) = 10._r_kind
      rlndsea(3) = 15._r_kind
      rlndsea(4) = 30._r_kind
-!AJK:  15 Mar 2019 - not sure about these values
-!AJK:  19 Apr 2019 - we set isfcalc=0 so this will not be used
   else if ( tempest )  then    
      nchanl=5
      if (isfcalc==1) then
@@ -488,13 +481,10 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
 ! Allocate arrays to hold all data for given satellite
   if(dval_use) maxinfo=maxinfo+2
   nreal = maxinfo + nstinfo
-! TCW 09/18/2019 to include two entries for storing IWP and LWP retrievals
-  if (tempest) nreal = nreal + 2  
+  if (tempest) nreal = nreal + 2 ! to include two entries for IWP/LWP retrieval 
   nele  = nreal   + nchanl
   hdr1b ='SAID FOVN YEAR MNTH DAYS HOUR MINU SECO CLAT CLON CLATH CLONH HOLS'
   hdr2b ='SAZA SOZA BEARAZ SOLAZI'
-!! TCW 05/20/2019: add print statement for checking
-!  write(6,*) 'read_bufrtovs: nele, itxmax, nchanl = ', nele, itxmax, nchanl
   allocate(data_all(nele,itxmax),data1b8(nchanl),data1b4(nchanl),nrec(itxmax))
 
 
@@ -510,12 +500,10 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
      elseif(llll == 2) then
         nrec_startx=nrec_start_ears
         infile2=trim(infile)//'ears' ! Set bufr subset names based on type of data to read
-! TCW 05/20/2019: add tempest in if so it will not be treated as ears
         if(tempest .or. amsua .and. kidsat >= 200 .and. kidsat <= 207) cycle ears_db_loop
      elseif(llll == 3) then
         nrec_startx=nrec_start_db
         infile2=trim(infile)//'_db'  ! Set bufr subset names based on type of data to read
-! TCW 05/20/2019: add tempest in if so it will not be treated as _db
         if(tempest .or. amsua .and. kidsat >= 200 .and. kidsat <= 207) cycle ears_db_loop
      end if
 
@@ -523,13 +511,9 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
      call closbf(lnbufr)
 
      open(lnbufr,file=trim(infile2),form='unformatted',status = 'old',iostat=ierr)
-!! TCW 05/20/2019: add print statement for checking
-!     write(6,*) 'read_bufrtovs: infile2 and ierr = ', infile2, ierr
      if(ierr /= 0) cycle ears_db_loop
 
      call openbf(lnbufr,'IN',lnbufr)
-!! TCW 05/20/2019: add print statement for checking
-!     write(6,*) 'read_bufrtovs: lnbufr = ', lnbufr
 
      if(llll >= 2 .and. (amsua .or. amsub .or. mhs))then
         quiet=.not.verbose
@@ -562,8 +546,6 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
    
 !    Loop to read bufr file
      irecx=0
-!! TCW 05/20/2019: add print statement for checking
-!     write(6,*) 'read_bufrtovs: ireadmg(lnbufr,subset,idate) = ', ireadmg(lnbufr,subset,idate)
      read_subset: do while(ireadmg(lnbufr,subset,idate)>=0)
         irecx=irecx+1
         if(irecx < nrec_startx) cycle read_subset
@@ -571,23 +553,15 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
         next=next+1
         if(next == npe_sub)next=0
         if(next/=mype_sub)cycle read_subset
-!! TCW 05/20/2019: add print statement for checking
-!        write(6,*) 'read_bufrtovs: ireadsb(lnbufr) = ', ireadsb(lnbufr)
         read_loop: do while (ireadsb(lnbufr)==0)
 
 !          Read header record.  (llll=1 is normal feed, 2=EARS data, 3=DB data)
            call ufbint(lnbufr,bfr1bhdr,n1bhdr,1,iret,hdr1b)
-!! TCW 05/20/2019: add print statement for checking
-!           write(6,*) 'read_bufrtovs: iret after ufbint = ', iret
 
 !          Extract satellite id.  If not the one we want, read next record
            ksatid=nint(bfr1bhdr(1))
-!! TCW 05/20/2019: add print statement for checking
-!           write(6,*) 'read_bufrtovs: ksatid, kidsat = ', ksatid, kidsat
            if(ksatid /= kidsat) cycle read_subset
            rsat=bfr1bhdr(1) 
-!! TCW 05/20/2019: add print statement for checking
-!           write(6,*) 'read_bufrtovs: rsat = ', rsat
 
 !          If msu, drop obs from first (1) and last (11) scan positions
            ifov = nint(bfr1bhdr(2))
@@ -596,13 +570,9 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
            else if ((ifov < radedge_min .OR. ifov > radedge_max )) then
               cycle read_loop
            end if
-!! TCW 05/20/2019: add print statement for checking
-!           write(6,*) 'read_bufrtovs: passed use_edges loop!'
 
            ! Check that ifov is not out of range of cbias dimension
            if (ifov < 1 .OR. ifov > 90) cycle read_loop
-!! TCW 05/20/2019: add print statement for checking
-!           write(6,*) 'read_bufrtovs: passed ifov loop!'
 
 !          Extract observation location and other required information
            if(abs(bfr1bhdr(11)) <= 90._r_kind .and. abs(bfr1bhdr(12)) <= r360)then
@@ -614,8 +584,6 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
            else
               cycle read_loop
            end if
-!! TCW 05/20/2019: add print statement for checking
-!           write(6,*) 'read_bufrtovs: passed dlat_earth and dlon_earth loop!'
            if(dlon_earth<zero)  dlon_earth = dlon_earth+r360
            if(dlon_earth>=r360) dlon_earth = dlon_earth-r360
            dlat_earth_deg = dlat_earth
@@ -657,17 +625,11 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
            t4dv= (real((nmind-iwinbgn),r_kind) + bfr1bhdr(8)*r60inv)*r60inv    ! add in seconds
            sstime= real(nmind,r_kind) + bfr1bhdr(8)*r60inv    ! add in seconds
            tdiff=(sstime-gstime)*r60inv
-!! TCW 05/20/2019: add print statement for checking
-!           write(6,*) 'read_bufrtovs: t4dv, sstime, gstime, tdiff = ', t4dv, sstime, gstime, tdiff
-!           write(6,*) 'read_bufrtovs: l4dvar, l4densvar = ', l4dvar, l4densvar
-!           write(6,*) 'read_bufrtovs: winlen, twind = ', winlen, twind
            if (l4dvar.or.l4densvar) then
               if (t4dv<zero .OR. t4dv>winlen) cycle read_loop
            else
               if(abs(tdiff) > twind) cycle read_loop
            endif
-!! TCW 05/20/2019: add print statement for checking
-!           write(6,*) 'read_bufrtovs: passed t4dv loop!'
 
            nread=nread+nchanl
 
@@ -678,8 +640,6 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
            endif
 
            terrain = 50._r_kind
-! TCW 05/16/2019: tempest-d bufr does not have HLOS
-!           if(llll == 1)terrain = 0.01_r_kind*abs(bfr1bhdr(13))                   
            if(llll == 1 .and. .not.tempest)terrain = 0.01_r_kind*abs(bfr1bhdr(13))                   
            crit1 = 0.01_r_kind + terrain + timedif
            if (llll >  1 ) crit1 = crit1 + r100 * float(llll)
@@ -688,8 +648,6 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
 
            call ufbint(lnbufr,bfr2bhdr,n2bhdr,1,iret,hdr2b)
 
-! TCW 05/17/2019: extract scan angle from tempest-d
-! TCW 09/18/2019: extract IWP and LWP retrievals from tempest-d bufr file
            if (tempest) then
              call ufbint(lnbufr,scangle,1,1,iret,'SANG')
              call ufbrep(lnbufr,retwp,1,2,iret,'ILWP') ! 1 is ice, 2 is liquid
@@ -703,7 +661,6 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
            if(hirs .and. ((jsatid == 'n16') .or. (jsatid == 'n17'))) &
               ifovmod=ifovmod+1
 
-! TCW 05/16/2019: use scangle for panglr for tempest-d
            if (tempest) then
              panglr=scangle*deg2rad
            else
@@ -718,7 +675,6 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
                  (amsub .and. ifovmod <= 45) .or.        &
                  (mhs   .and. ifovmod <= 45) .or.        &
                  (hirs  .and. ifovmod <= 28) )   lza=-lza
-! TCW 05/16/2019: set lzaest=lza for tempest-d
               if(tempest) lzaest=lza
            end if
 
@@ -823,7 +779,6 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
            else
 
 !             Set data quality predictor      
-!AJK:  15 Mar 2019 - not sure if Tempest will need this
               if (msu) then
                  if (newpc4pred) then
                     ch1 = data1b8(ich1)-ang_rad(ichan1)*cbias(ifov,ichan1)- &
@@ -1004,7 +959,6 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
               data_all(maxinfo+4,itx) = tz_tr           ! d(Tz)/d(Tr)
            endif
 
-! TCW 09/18/2019 store IWP and LWP retrievals in data_all array to be passed to setuprad (data_s)
            if (tempest) then 
               data_all(maxinfo+nstinfo+1,itx) = retwp(1) ! IWP (kg m^-2)
               data_all(maxinfo+nstinfo+2,itx) = retwp(2) ! LWP (kg m^-2)

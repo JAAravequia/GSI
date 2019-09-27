@@ -67,6 +67,7 @@ module qcmod
 !   2016-11-22  sienkiewicz - fix a couple of typos in HIRS qc
 !   2016-12-14  lippi   - add nml option vadwnd_l2rw_qc.
 !   2016-10-13  zhu     - modified qc_amsua for all-sky ATMS
+!   2019-09-27  T.-C. Wu- add qc_tempest for tempest-D
 !
 ! subroutines included:
 !   sub init_qcvars
@@ -3228,7 +3229,6 @@ subroutine qc_mhs(nchanl,ndat,nsig,is,sea,land,ice,snow,mhs,luse,   &
   return
 
 end subroutine qc_mhs
-! TCW 05/16/2019: add qc_tempestd subroutine
 !subroutine qc_tempest(nchanl,ndat,nsig,is,sea,land,ice,snow,tempest,luse,   &
 !                  zsges,tbc,tb_obs,ptau5,emissivity_k,ts,      &
 !                  id_qc,aivals,errf,varinv,dsi,fact1)
@@ -3247,7 +3247,7 @@ subroutine qc_tempest(nchanl,ndat,nsig,is,sea,land,ice,snow,tempest,luse(n),
 !
 ! program history log:
 !     2019-05-16  T.-C. Wu - used qc_mhs for tempest-d data as a first step
-!     2019-06-26  T.-C. Wu - updated to use csu1dvar iwp/lwp retrieval 
+!     2019-09-26  T.-C. Wu - updated to use csu1dvar iwp/lwp retrieval 
 !
 ! input argument list:
 !     nchanl       - number of channels per obs

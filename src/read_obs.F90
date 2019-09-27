@@ -310,10 +310,6 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
 !         kidsat = 288
        else if ( jsatid == 'meghat' ) then
          kidsat = 440
-!AJK:  15 Mar 2019 - added jsatid == 'tempest'
-!       else if ( jsatid == 'tempest' ) then
-!         kidsat = 1023
-!TCW 5/16/2019:  Jim F. uses SAID=1024 for tempest-d bufr file
        else if ( jsatid == 'cubesat' ) then
          kidsat = 1024
        else
@@ -659,6 +655,7 @@ subroutine read_obs(ndata,mype)
 !                         option vadwnd_l2rw_qc. 
 !   2017-08-31  Li      - move gsi_nstcoupler_init & gsi_nstcoupler_read to getsfc in sathin.F90
 !                       - move gsi_nstcoupler_final from create_sfc_grids to here
+!   2019-09-27  T.-C. Wu- enable tempest read
 !   
 !
 !   input argument list:
@@ -868,7 +865,6 @@ subroutine read_obs(ndata,mype)
                obstype == 'cris'      .or. obstype == 'cris-fsr'  .or.  &
                obstype == 'amsr2'     .or. obstype == 'tempest'   .or.  &
                obstype == 'gmi'       .or. obstype == 'saphir'   ) then
-!AJK:   15 Mar 2019 - added obstype == 'tempest' here
           ditype(i) = 'rad'
        else if (is_extOzone(dfile(i),obstype,dplat(i))) then
           ditype(i) = 'ozone'
@@ -980,7 +976,6 @@ subroutine read_obs(ndata,mype)
 !   Parallel read for SAPHIR not currently working. Leave parallel read off.
 !             else if(obstype == 'saphir')then
 !                parallel_read(i)= .true.
-!AJK:  15 Mar 2019 - added parallel_read for tempest
              else if(obstype == 'tempest' )then
                 parallel_read(i)= .true.
              end if
@@ -1008,9 +1003,6 @@ subroutine read_obs(ndata,mype)
                    dplat(i) == 'n20' .or. &
                    dplat(i) == 'metop-a' .or. dplat(i) == 'metop-b' .or. &
                    dplat(i) == 'metop-c') 
-
-!AJK:  15 Mar 2019  - not sure about this part above
-!AJK:  19 Apr 2019  - we decided not to include this for ADM-Aeolus
 
 !   Inquire data set to deterimine if input data available and size of dataset
           ii=ii+1
@@ -1552,9 +1544,6 @@ subroutine read_obs(ndata,mype)
                   obstype == 'mhs'   .or. obstype == 'hirs4' .or.  &
                   obstype == 'hirs3' .or. obstype == 'hirs2' .or.  &
                   obstype == 'ssu'   .or. obstype == 'tempest' )) then
-!AJK:  15 Mar 2019 - include tempest in read_bufrtovs
-! TCW 05/20/2019: add print statement for checking
-                write(6,*) 'read_obs: read_bufrtovs obstype = ', obstype, ' read_rec(i) = ', i, read_rec(i)
                 call read_bufrtovs(mype,val_dat,ithin,isfcalc,rmesh,platid,gstime,&
                      infile,lunout,obstype,nread,npuse,nouse,twind,sis, &
                      mype_root,mype_sub(mm1,i),npe_sub(i),mpi_comm_sub(i), nobs_sub1(1,i), &

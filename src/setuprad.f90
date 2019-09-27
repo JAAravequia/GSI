@@ -250,16 +250,12 @@
       isst_hires,isst_navy,idata_type,iclr_sky,itref,idtw,idtc,itz_tr
   use clw_mod, only: calc_clw, ret_amsua
   use qcmod, only: qc_ssmi,qc_seviri,qc_ssu,qc_avhrr,qc_goesimg,qc_msu,qc_irsnd,qc_amsua,qc_mhs,qc_atms
-!mz: 17 Mar 2019
   use qcmod, only: qc_tempest
-!mz: 17 Mar 2019
-!mz: 3 Sep 2019
   use guess_grids, only: nfldsig,ges_prsi, hrdifsig
   use gridmod, only: lat2,lon2
   use constants, only: tpwcon
   use gsi_bundlemod, only : gsi_bundlegetpointer
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
-!mz: 3 Sep 2019
   use qcmod, only: igood_qc,ifail_gross_qc,ifail_interchan_qc,ifail_crtm_qc,ifail_satinfo_qc,qc_noirjaco3,ifail_cloud_qc
   use qcmod, only: qc_gmi,qc_saphir,qc_amsr2
   use qcmod, only: setup_tzr_qc,ifail_scanedge_qc,ifail_outside_range
@@ -323,9 +319,7 @@
   real(r_kind) factch6    
 
   logical hirs2,msu,goessndr,hirs3,hirs4,hirs,amsua,amsub,airs,hsb,goes_img,ahi,mhs
-!mz: 17 Mar 2019
   logical tempest
-!mz: 17 Mar 2019
   logical avhrr,avhrr_navy,lextra,ssu,iasi,cris,seviri,atms
   logical ssmi,ssmis,amsre,amsre_low,amsre_mid,amsre_hig,amsr2,gmi,saphir
   logical ssmis_las,ssmis_uas,ssmis_env,ssmis_img
@@ -365,22 +359,17 @@
 ! real(r_kind) :: predchan6_save   
   real(r_kind),dimension(:,:), allocatable :: rsqrtinv
 
-!mz: 4 Sep 2019
   logical proceed
   real(r_kind),dimension(nsig+1):: piges
-!
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_ql
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_qi
-!
   real(r_kind),dimension(nsig):: qlges
   real(r_kind),dimension(nsig):: qiges
-!
   real(r_kind)    :: dp
   real(r_kind)    :: ql_intgr_ges
   real(r_kind)    :: qi_intgr_ges
   real(r_kind)    :: ql_intgr_obs
   real(r_kind)    :: qi_intgr_obs
-!mz: 4 Sep 2019
 
   integer(i_kind),dimension(nchanl):: ich,id_qc,ich_diag
   integer(i_kind),dimension(nobs_bins) :: n_alloc
@@ -440,9 +429,7 @@
   amsua      = obstype == 'amsua'
   amsub      = obstype == 'amsub'
   mhs        = obstype == 'mhs'
-!mz: 17 Mar 2019
   tempest    = obstype == 'tempest'
-!mz: 17 Mar 2019
   airs       = obstype == 'airs'
   hsb        = obstype == 'hsb'
   goes_img   = obstype == 'goes_img'
@@ -472,27 +459,19 @@
   microwave=amsua .or. amsub  .or. mhs .or. msu .or. hsb .or. &
             ssmi  .or. ssmis  .or. amsre .or. atms .or. &
             amsr2 .or. gmi  .or.  saphir .or. tempest
-!mz: 17 Mar 2019
-!!          amsr2 .or. gmi  .or.  saphir
 
   microwave_low =amsua  .or.  msu .or. ssmi .or. ssmis .or. amsre
 
-!mz: 3 Sep 2019
-! only for tempest
-
-    if(tempest) then
+  if(tempest) then
 
 ! Check to see if required guess fields are available
-  call check_vars_(proceed)
-  if(.not.proceed) return  ! not all vars available, simply return
+    call check_vars_(proceed)
+    if(.not.proceed) return  ! not all vars available, simply return
 
 ! If require guess vars available, extract from bundle ...
-  call init_vars_
+    call init_vars_
 
-    endif  !! if(tempest) then
-!mz: 3 Sep 2019
-
-
+  endif
 
 
 ! Determine cloud & aerosol usages in radiance assimilation
@@ -1241,14 +1220,14 @@
               zsges,tbc,tb_obs,ptau5,emissivity_k,ts,      &
               id_qc,aivals,errf,varinv,clw,tpwc)
 
-!mz: 17 Mar 2019
         else if (tempest) then
+
+! load IWP and LWP retrieval 
 
         qi_intgr_obs = data_s(nreal-1,n) ! IWP (kg m^-2)
         ql_intgr_obs = data_s(nreal,n) ! LWP (kg m^-2)
 
-!mz: 3 Sep 2019
-! load total column liquid and ice from guess (and retrievals)
+! load total column liquid and ice from guess 
 
      ! Interpolate pressure at interface values to obs location
        call tintrp2a1(ges_prsi,piges,slats,slons,dtime, &
@@ -1267,19 +1246,17 @@
              ql_intgr_ges = ql_intgr_ges + qlges(k) * dp * tpwcon ! kg m^-2
              qi_intgr_ges = qi_intgr_ges + qiges(k) * dp * tpwcon ! kg m^-2
              enddo  !! do k=1,nsig
-!
+
+! TCW 09/27/2019 working on qc_tempest subroutine
 !           call qc_tempest(nchanl,ndat,nsig,is,sea,land,ice,snow,tempest,luse(n),   &
 !                           zsges,tbc,tb_obs,ptau5,emissivity_k,ts,      &
 !                           id_qc,aivals,errf,varinv,clw,tpwc,           &
 !                           ql_intgr_ges,qi_intgr_ges,ql_intgr_obs,qi_intgr_obs)
 
-!mz: 3 Sep 2019
 !
 !           call qc_tempest(nchanl,ndat,nsig,is,sea,land,ice,snow,tempest,luse(n),   &
 !                           zsges,tbc,tb_obs,ptau5,emissivity_k,ts,      &
 !                           id_qc,aivals,errf,varinv,clw,tpwc)
-
-!mz: 17 Mar 2019
 
 !  ---------- ATMS -------------------
 !       QC ATMS data
@@ -1447,16 +1424,10 @@
            end if
         end do
 
-!!      if(amsua .or. atms .or. amsub .or. mhs .or. msu .or. hsb)then
-!mz: 17 Mar 2019
         if(amsua .or. atms .or. amsub .or. mhs .or. msu .or. hsb .or. tempest)then
-!mz: 17 Mar 2019
            if(amsua)nlev=6
            if(atms)nlev=7
-!mz: 17 Mar 2019
            if(amsub .or. mhs .or. tempest)nlev=5
-!mz: 17 Mar 2019
-!          if(amsub .or. mhs)nlev=5
            if(hsb)nlev=4
            if(msu)nlev=4
            kval=0
@@ -1466,10 +1437,7 @@
               if (varinv(i)<tiny_r_kind .and. ((iuse_rad(ich(i))>=1) .or. &
                   (passive_bc .and. channel_passive))) then
                  kval=max(i-1,kval)
-!mz: 17 Mar 2019
                  if(amsub .or. hsb .or. mhs .or. tempest)kval=nlev
-!mz: 17 Mar 2019
-!!               if(amsub .or. hsb .or. mhs)kval=nlev
                  if((amsua .or. atms) .and. i <= 3)kval = zero
               end if
            end do
@@ -2008,12 +1976,11 @@
               diagbuf(30) = data_s(itz_tr,n)
            endif
 
-! TCW 09/19/2019 include IWP and LWP retrievals in the diag file
            if (tempest) then
               diagbuf(25) = qi_intgr_obs ! IWP (kg m^-2)
               diagbuf(26) = ql_intgr_obs ! LWP (kg m^-2)
-              diagbuf(27) = qi_intgr_ges ! IWP (unit not known)
-              diagbuf(28) = ql_intgr_ges ! LWP (unit not known)
+              diagbuf(27) = qi_intgr_ges ! IWP (kg m^-2)
+              diagbuf(28) = ql_intgr_ges ! LWP (kg m^-2)
            endif
 
            if (lwrite_peakwt) then
@@ -2161,17 +2128,13 @@
 ! End of n-loop over obs
   end do
 
-!mz: 3 Sep 2019
-! only for tempest
 
-    if(tempest) then
+  if(tempest) then
 
 ! Release memory of local guess arrays
-  call final_vars_
+    call final_vars_
 
-    endif  !! if(tempest) then
-
-!mz: 3 Sep 2019
+  endif
 
 ! If retrieval, close open bufr sst file (output)
   if (retrieval.and.last_pass) call finish_sst_retrieval
@@ -2194,7 +2157,6 @@
 ! End of routine
   return
 
-!mz: 3 Sep 2019
   contains
 
   subroutine check_vars_ (proceed)
@@ -2268,8 +2230,6 @@
     if(allocated(ges_qi)) deallocate(ges_qi)
 
   end subroutine final_vars_
-
-!mz: 3 Sep 2019
 
 
  end subroutine setuprad

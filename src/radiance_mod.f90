@@ -390,7 +390,6 @@ contains
           rtype(i) == 'cris-fsr'    .or. rtype(i) == 'tempest') then
           drtype(i)='rads'
        end if
-! TCW 05/20/2019: added 'tempest' in rtype
     end do
  
 !   Determine total rad types
