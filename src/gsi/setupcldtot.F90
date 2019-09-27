@@ -6,7 +6,7 @@ module cldtot_setup
 
   character(len=*),parameter:: myname="cldtot_setup"
 contains
-#ifdef RR_CLOUDANALYSIS
+
 subroutine setupcldtot(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !$$$  subprogram documentation block
 !!                .      .    .                                       .
@@ -93,6 +93,7 @@ subroutine setupcldtot(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_di
   integer(i_kind)                                  ,intent(in   ) :: is	! ndat index
   logical                                          ,intent(in   ) :: conv_diagsave
 
+#ifdef RR_CLOUDANALYSIS
 ! Declare local parameters
   real(r_single) :: cloudqvis
 
@@ -1032,54 +1033,7 @@ subroutine setupcldtot(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_di
 
   end subroutine contents_netcdf_diag_mem_
 
-end subroutine setupcldtot
-
 #else
-
-subroutine setupcldtot(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
-!$$$  subprogram documentation block
-!!                .      .    .                                       .
-! subprogram:    setupcldtot      compute rhs of oi for pseudo moisture
-! observations from
-!                                 METAR and Satellite cloud observations
-!   prgmmr: Ladwag          org: GSD                date: 2019-06-01
-!
-! program history log:
-!   2016-04-06  Ladwig new setup routine for METAR ceilometer obs
-!
-!   input argument list:
-!     lunin    - unit from which to read observations
-!     mype     - mpi task id
-!     nele     - number of data elements per observation
-!     nobs     - number of observations
-!
-!   output argument list:
-!     bwork    - array containing information about obs-ges statistics
-!     awork    - array containing information for data counts and gross checks
-!
-! attributes:
-!   language: f90
-!   machine:  
-!
-!
-!
-!$$$
-! Declare passed variables
-  use kinds, only: r_kind,i_kind
-  use mpeu_util, only: die
-  use m_obsLList, only: obsLList
-  use m_obsdiagNode, only: obs_diags
-
-  implicit none
-
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
-
-  integer(i_kind)                ,intent(in   ) :: lunin,mype,nele,nobs
-  real(r_kind),dimension(:)      ,intent(inout) :: awork
-  real(r_kind),dimension(:,:,:,:),intent(inout) :: bwork
-  integer(i_kind)                ,intent(in   ) :: is	! ndat index
-  logical                        ,intent(in   ) :: conv_diagsave
 
   character(len=*),parameter:: myname_=myname//"::setupcldtot"
   integer(i_kind):: ier
@@ -1087,7 +1041,7 @@ subroutine setupcldtot(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_di
 ! Skip the record, and does nothing
   read(lunin,iostat=ier)
   if(ier/=0) call die(myname_,'unexpected empty blcok, iostat =',ier)
+#endif
 
 end subroutine setupcldtot
-#endif
 end module cldtot_setup
