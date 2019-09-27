@@ -89,6 +89,7 @@ module qcmod
 !   sub qc_gmi          - qc gmi data
 !   sub qc_amsr2        - qc amsr2 data
 !   sub qc_saphir       - qc saphir data
+!   sub qc_tempest      - qc tempest data
 !
 ! remarks: variable definitions below
 !   def dfact           - factor for duplicate obs at same location for conv. data
@@ -151,6 +152,7 @@ module qcmod
   public :: qc_gmi
   public :: qc_amsr2
   public :: qc_saphir
+  public :: qc_tempest
 ! set passed variables to public
   public :: npres_print,nlnqc_iter,varqc_iter,pbot,ptop,c_varqc,njqc,vqc
   public :: use_poq7,noiqc,vadfile,dfact1,dfact,erradar_inflate
@@ -3226,6 +3228,167 @@ subroutine qc_mhs(nchanl,ndat,nsig,is,sea,land,ice,snow,mhs,luse,   &
   return
 
 end subroutine qc_mhs
+! TCW 05/16/2019: add qc_tempestd subroutine
+!subroutine qc_tempest(nchanl,ndat,nsig,is,sea,land,ice,snow,tempest,luse,   &
+!                  zsges,tbc,tb_obs,ptau5,emissivity_k,ts,      &
+!                  id_qc,aivals,errf,varinv,dsi,fact1)
+subroutine qc_tempest(nchanl,ndat,nsig,is,sea,land,ice,snow,tempest,luse(n),
+                      zsges,tbc,tb_obs,ptau5,emissivity_k,ts,      &
+                      id_qc,aivals,errf,varinv,dsi,fact1,           &
+                      lwp_ges,iwp_ges,lwp_ret,iwp_ret)
+
+!$$$ subprogram documentation block
+!               .      .    .
+! subprogram:  qc_tempest      QC for tempest-d data
+!
+!   prgmmr: Ting-Chi Wu        org: CIRA/CSU          date: 2019-05-16
+!
+! abstract: set quality control criteria for tempest-d data            
+!
+! program history log:
+!     2019-05-16  T.-C. Wu - used qc_mhs for tempest-d data as a first step
+!     2019-06-26  T.-C. Wu - updated to use csu1dvar iwp/lwp retrieval 
+!
+! input argument list:
+!     nchanl       - number of channels per obs
+!     is           - integer counter for number of observation types to process
+!     sea          - logical, sea flag
+!     land         - logical, land flag
+!     ice          - logical, ice flag
+!     snow         - logical, snow flag
+!     tempest      - logical, tempest flag - true if tempest data
+!     luse         - logical use flag
+!     zsges        - elevation of guess
+!     tbc          - simulated - observed BT with bias correction
+!     tb_obs       - observed BT 
+!     ptau5        - transmittances as a function of level and channel
+!     emissivity_k - surface emissivity sensitivity
+!     ts           - skin temperature sensitivity
+!     id_qc        - qc index - see qcmod definition
+!     aivals       - array holding sums for various statistics as a function of
+!     obs type
+!     errf         - criteria of gross error
+!     varinv       - observation weight (modified obs var error inverse)
+!     lwp_ges      - liquid water path guess calculated from model forecast
+!     iwp_ges      - ice water path guess calculated from model forecast
+!     lwp_ret      - liquid water path retrieval from csu1dvar (bufr)
+!     iwp_ret      - ice water path retrieval from csu1dvar (bufr)
+!
+! output argument list:
+!     id_qc        - qc index - see qcmod definition
+!     aivals       - array holding sums for various statistics as a function of
+!     obs type
+!     errf         - criteria of gross error
+!     varinv       - observation weight (modified obs var error inverse)
+!     dsi          - scattering index quality control factor
+!     fact1        - fact1 quality control parameter
+!
+! attributes:
+!     language: f90
+!     machine:  JCSDA S4
+!
+!$$$ end documentation block
+ 
+  use kinds, only: r_kind, i_kind
+  implicit none
+
+! Declare passed variables
+
+  logical,                            intent(in   ) :: sea,land,ice,snow,tempest,luse
+  integer(i_kind),                    intent(in   ) :: ndat,nsig,nchanl,is
+  integer(i_kind),dimension(nchanl),  intent(inout) :: id_qc
+  real(r_kind),                       intent(in   ) :: zsges
+  real(r_kind),                       intent(inout) :: dsi,fact1
+  real(r_kind),dimension(40,ndat),    intent(inout) :: aivals
+  real(r_kind),dimension(nchanl),     intent(in   ) :: tbc,tb_obs,emissivity_k,ts
+  real(r_kind),dimension(nsig,nchanl),intent(in   ) :: ptau5
+  real(r_kind),dimension(nchanl),     intent(inout) :: errf,varinv
+
+  logical :: mhs
+!  if (tempest) mhs =.true. ! turn on mhs-specific gross_routine_qc for tempest
+  if (tempest) mhs =.false. ! turn off mhs-specific gross_routine_qc for tempest
+
+! For now, pass all channels of tempest-d to qc_mhs
+! qc_mhs only uses the first two channels for detecting cloudy pixels.
+! since the first two channels of tempest-d and mhs are "somewhat" similar,
+! as a first step, we will use qc_mhs for QC for tempest-d
+
+! MHS ch:       1 (89 GHz), 2 (157 GHz), 3 (183.3+/-1.0 GHz), 4 (183.3+/-3.0 GHz), 5 (190.3 GHz)
+! TEMPEST-D ch: 1 (87 GHz), 2 (164 GHz), 3 (174 GHz),         4 (178 GHz),         5 (181 GHz)
+
+  call qc_mhs(nchanl,ndat,nsig,is,sea,land,ice,snow,mhs,luse,   &
+              zsges,tbc,tb_obs,ptau5,emissivity_k,ts,      &
+              id_qc,aivals,errf,varinv,dsi,fact1)  
+
+  efact = one
+  vfact = one
+  if(sea)then
+     demisf = 0.015_r_kind
+     dtempf = half
+  else if(land)then
+     demisf = r0_03
+     dtempf = two
+  else if(ice)then
+     demisf = r0_02  !decrease due to more accurate emiss model AMSU-A+B
+     dtempf = one    !decrease due to more accurate emiss model AMSU-A+B
+  else if(snow)then
+     demisf = r0_02  !decrease due to more accurate emiss model AMSU-A+B
+     dtempf = two    !decrease due to more accurate emiss model AMSU-A+B
+  else
+     demisf = quarter
+     dtempf = five
+  end if
+!   For now increase for mhs since emissivity model not as good
+  if(mhs .and. .not. sea) then
+     demisf = three*demisf
+     dtempf = three*dtempf
+  end if
+  if(sea .or. ice .or. snow)then
+     ldiff = lwp_ret - lwp_ges
+     idiff = iwp_ret - iwp_ges
+     dsi = a * ldiff + b * idiff
+     if(luse .and. dsi >= one)aivals(11,is) = aivals(11,is) + one
+  end if
+  dsi=max(zero,dsi)
+  fact1=(iwp_ret>0.02 & lwp_ret >0.015)
+
+  if(fact1)then
+     vfact=zero
+!    QC1 in statsrad
+     if(luse)aivals(8,is) = aivals(8,is) + one
+     do i=1,nchanl
+        if(id_qc(i) == igood_qc)id_qc(i)=ifail_fact1_qc
+     end do
+     efact = (one-fact1*fact1)*efact
+     vfact = (one-fact1*fact1)*vfact
+!    Reduce q.c. bounds over higher topography
+     if (zsges > r2000) then
+!       QC2 in statsrad
+        if(luse)aivals(9,is) = aivals(9,is) + one
+        fact = r2000/zsges
+        efact = fact*efact
+        vfact = fact*vfact
+     end if
+  end if
+
+! Generate q.c. bounds and modified variances.
+  do i=1,nchanl
+!    Modify error based on transmittance at top of model
+     varinv(i)=vfact*varinv(i)*ptau5(nsig,i)
+     errf(i)=efact*errf(i)*ptau5(nsig,i)
+     if(varinv(i)>tiny_r_kind)then
+        dtbf=demisf*abs(emissivity_k(i))+dtempf*abs(ts(i))
+        term=dtbf*dtbf
+        if(term>tiny_r_kind)varinv(i)=varinv(i)/(one+varinv(i)*term)
+     end if
+  end do
+
+
+  return
+
+end subroutine qc_tempest
+
+
 subroutine qc_atms(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
                  zsges,cenlat,tb_obsbc1,cosza,clw,tbc,ptau5,emissivity_k,ts, &  
                  pred,predchan,id_qc,aivals,errf,errf0,clwp_amsua,varinv,cldeff_obs,factch6, &
