@@ -308,9 +308,11 @@
 
    my $new_rpt = <>;
    $new_rpt =~ s/^\s+|\s+$//g;
-
+   
    if( length($new_rpt ) > 0 ) {
-      $rpt = $new_rpt;
+      if( $new_rpt =~ '1' ) {
+         $rpt = 1;
+      }
    }
    my $my_rpt="export DO_DATA_RPT=\${DO_DATA_RPT:-$rpt}";
    print "my_rpt = $my_rpt\n";
