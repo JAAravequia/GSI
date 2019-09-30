@@ -294,6 +294,28 @@
    close $in;
    move "$oznmon_config.new", $oznmon_config;
 
+   sleep( 1 );
+
+   print "\n\n";
+
+   my $rpt = 0;
+   print "  The DO_DATA_RPT flag is used to set the validation and notification process\n";
+   print "  to off/on.  The default is off.\n";
+   print "  Return to accept default setting of 0 (off) or enter 1 to turn it on.\n";
+   print "\n";
+   print "  Default DO_DATA_RPT  $rpt \n";
+   print "     ?\n";
+
+   my $new_rpt = <>;
+   $new_rpt =~ s/^\s+|\s+$//g;
+
+   if( length($new_rpt ) > 0 ) {
+      $rpt = $new_rpt;
+   }
+   my $my_rpt="export DO_DATA_RPT=\${DO_DATA_RPT:-$rpt}";
+   print "my_rpt = $my_rpt\n";
+   print "\n\n";
+   sleep( 1 );
 
    # 
    #   Update the default account settings in the OznMon_user_settings script.
@@ -342,13 +364,15 @@
        elsif( $line =~ m/export HPSS_DIR/ ){
           $line = $hpss_dir;
        }
+       elsif( $line =~ m/export DO_DATA_RPT/ ){
+          $line = $my_rpt; 
+       }
        print OUT "$line\n";    
     }    
     close OUT;    
     close IN;
 
     move $outfile, $infile;
-
 
     print "\n";
     print "Making all executables\n";
