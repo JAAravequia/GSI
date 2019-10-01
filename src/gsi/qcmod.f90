@@ -3256,7 +3256,7 @@ subroutine qc_mhs(nchanl,ndat,nsig,is,sea,land,ice,snow,mhs,luse,   &
   return
 
 end subroutine qc_mhs
-subroutine qc_tempest(nchanl,ndat,nsig,is,sea,land,ice,snow,tempest,luse(n),
+subroutine qc_tempest(nchanl,ndat,nsig,is,sea,land,ice,snow,tempest,luse, &
                       zsges,tbc,tb_obs,ptau5,emissivity_k,ts,      &
                       id_qc,aivals,errf,varinv,dsi,fact1,           &
                       lwp_ges,iwp_ges,lwp_ret,iwp_ret)

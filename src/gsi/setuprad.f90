@@ -2537,8 +2537,6 @@
   endif
   end subroutine contents_netcdf_diag_
 
-  contains
-
   subroutine check_vars_ (proceed)
   logical,intent(inout) :: proceed
   integer(i_kind) ivar, istatus
