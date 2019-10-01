@@ -1,3 +1,196 @@
+module gfsreadmod
+
+contains
+subroutine general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+           icount,iflag,ilev,work,uvflag,vdflag,g_cf)  
+! !USES:
+  use kinds, only: r_kind,i_kind
+  use mpimod, only: npe,mpi_comm_world,ierror,mpi_rtype
+  use general_sub2grid_mod, only: sub2grid_info
+
+  implicit none
+! !INPUT PARAMETERS:
+
+  type(sub2grid_info),                intent(in   ) :: grd
+  integer(i_kind),                    intent(inout) :: icount
+  integer(i_kind),dimension(npe),     intent(inout) :: ilev,iflag
+  real(r_kind),dimension(grd%itotsub),intent(in   ) :: work
+  logical,                            intent(in   ) :: uvflag,vdflag
+
+! !OUTPUT PARAMETERS:
+
+  real(r_kind),dimension(grd%lat2,grd%lon2),         intent(  out) :: g_ps
+  real(r_kind),dimension(grd%lat2,grd%lon2),         intent(inout) :: g_z
+  real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),intent(  out) :: g_u,g_v,&
+       g_vor,g_div,g_cwmr,g_q,g_oz,g_tv
+  real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),intent(  out),optional :: g_cf 
+
+
+! !DESCRIPTION: Transfer contents of 2-d array global to 3-d subdomain array
+!
+! !REVISION HISTORY:
+!   2004-05-14  treadon
+!   2004-07-15  todling, protex-compliant prologue
+!   2014-12-03  derber     - introduce vdflag and optimize routines
+!
+! !REMARKS:
+!
+!   language: f90
+!   machine:  ibm rs/6000 sp; sgi origin 2000; compaq/hp
+!
+! !AUTHOR:
+!   treadon          org: np23                date: 2004-05-14
+!
+!EOP
+!-------------------------------------------------------------------------
+
+   integer(i_kind) i,j,k,ij,klev
+   real(r_kind),dimension(grd%lat2*grd%lon2,npe):: sub
+
+   call mpi_alltoallv(work,grd%sendcounts_s,grd%sdispls_s,mpi_rtype,&
+        sub,grd%recvcounts_s,grd%rdispls_s,mpi_rtype,&
+        mpi_comm_world,ierror)
+
+!$omp parallel do  schedule(dynamic,1) private(k,i,j,ij,klev)
+   do k=1,icount
+      if ( iflag(k) == 1 ) then
+         ij=0
+         do j=1,grd%lon2
+            do i=1,grd%lat2
+               ij=ij+1
+               g_z(i,j)=sub(ij,k)
+            enddo
+         enddo
+      elseif ( iflag(k) == 2 ) then
+         ij=0
+         do j=1,grd%lon2
+            do i=1,grd%lat2
+               ij=ij+1
+               g_ps(i,j)=sub(ij,k)
+            enddo
+         enddo
+      elseif ( iflag(k) == 3 ) then
+         klev=ilev(k)
+         ij=0
+         do j=1,grd%lon2
+            do i=1,grd%lat2
+               ij=ij+1
+               g_tv(i,j,klev)=sub(ij,k)
+            enddo
+         enddo
+      elseif ( iflag(k) == 4 ) then
+         klev=ilev(k)
+         if ( vdflag ) then
+           ij=0
+           do j=1,grd%lon2
+              do i=1,grd%lat2
+                 ij=ij+1
+                 g_vor(i,j,klev)=sub(ij,k)
+              enddo
+           enddo
+         endif
+         if ( .not. uvflag ) then
+           ij=0
+           do j=1,grd%lon2
+              do i=1,grd%lat2
+                 ij=ij+1
+                 g_u(i,j,klev)=sub(ij,k)
+              enddo
+           enddo
+         endif
+      elseif ( iflag(k) == 5 ) then
+         klev=ilev(k)
+         if ( vdflag ) then
+           ij=0
+           do j=1,grd%lon2
+              do i=1,grd%lat2
+                 ij=ij+1
+                 g_div(i,j,klev)=sub(ij,k)
+              enddo
+           enddo
+         endif
+         if ( .not. uvflag ) then
+           ij=0
+           do j=1,grd%lon2
+              do i=1,grd%lat2
+                 ij=ij+1
+                 g_v(i,j,klev)=sub(ij,k)
+              enddo
+           enddo
+         endif
+      elseif ( iflag(k) == 6 ) then
+         if ( .not. uvflag) then
+           write(6,*) 'error in general_reload  u '
+         endif
+         klev=ilev(k)
+         ij=0
+         do j=1,grd%lon2
+            do i=1,grd%lat2
+               ij=ij+1
+               g_u(i,j,klev)=sub(ij,k)
+            enddo
+         enddo
+      elseif ( iflag(k) == 7 ) then
+         if ( .not. uvflag) then
+           write(6,*) 'error in general_reload  v '
+         endif
+         klev=ilev(k)
+         ij=0
+         do j=1,grd%lon2
+            do i=1,grd%lat2
+               ij=ij+1
+               g_v(i,j,klev)=sub(ij,k)
+            enddo
+         enddo
+      elseif ( iflag(k) == 8 ) then
+         klev=ilev(k)
+         ij=0
+         do j=1,grd%lon2
+            do i=1,grd%lat2
+               ij=ij+1
+               g_q(i,j,klev)=sub(ij,k)
+            enddo
+         enddo
+      elseif ( iflag(k) == 9 ) then
+         klev=ilev(k)
+         ij=0
+         do j=1,grd%lon2
+            do i=1,grd%lat2
+               ij=ij+1
+               g_oz(i,j,klev)=sub(ij,k)
+            enddo
+         enddo
+      elseif ( iflag(k) == 10 ) then
+         klev=ilev(k)
+         ij=0
+         do j=1,grd%lon2
+            do i=1,grd%lat2
+               ij=ij+1
+               g_cwmr(i,j,klev)=sub(ij,k)
+            enddo
+         enddo
+      elseif ( iflag(k) == 11 .and. present(g_cf) ) then  
+         klev=ilev(k)
+         ij=0
+         do j=1,grd%lon2
+            do i=1,grd%lat2
+               ij=ij+1
+               g_cf(i,j,klev)=sub(ij,k)
+            enddo
+         enddo
+      endif
+   enddo ! do k=1,icount
+
+   icount=0
+   ilev=0
+   iflag=0
+
+   return
+
+end subroutine general_reload
+
+end module gfsreadmod
+
 subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
            gfs_bundle,init_head,iret_read)
 !$$$  subprogram documentation block
@@ -55,6 +248,7 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
                              sigio_rrdbti,sigio_rclose
    use ncepgfs_io, only: sigio_cnvtdv8,sighead
    use gsi_bundlemod, only: gsi_bundle,gsi_bundlegetpointer
+   use gfsreadmod
 
    implicit none
 
@@ -625,6 +819,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
    use constants, only: two,pi,half,deg2rad,r60,r3600
    use gsi_bundlemod, only: gsi_bundle
    use gsi_bundlemod, only: gsi_bundlegetpointer
+   use gfsreadmod
 
    implicit none
 
@@ -1384,196 +1579,6 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
    return
 
 end subroutine general_read_gfsatm_nems
-
-subroutine general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-           icount,iflag,ilev,work,uvflag,vdflag,g_cf)  
-
-! !USES:
-
-  use kinds, only: r_kind,i_kind
-  use mpimod, only: npe,mpi_comm_world,ierror,mpi_rtype
-  use general_sub2grid_mod, only: sub2grid_info
-  implicit none
-
-! !INPUT PARAMETERS:
-
-  type(sub2grid_info),                intent(in   ) :: grd
-  integer(i_kind),                    intent(inout) :: icount
-  integer(i_kind),dimension(npe),     intent(inout) :: ilev,iflag
-  real(r_kind),dimension(grd%itotsub),intent(in   ) :: work
-  logical,                            intent(in   ) :: uvflag,vdflag
-
-! !OUTPUT PARAMETERS:
-
-  real(r_kind),dimension(grd%lat2,grd%lon2),         intent(  out) :: g_ps
-  real(r_kind),dimension(grd%lat2,grd%lon2),         intent(inout) :: g_z
-  real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),intent(  out) :: g_u,g_v,&
-       g_vor,g_div,g_cwmr,g_q,g_oz,g_tv
-  real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),intent(  out),optional :: g_cf 
-
-
-! !DESCRIPTION: Transfer contents of 2-d array global to 3-d subdomain array
-!
-! !REVISION HISTORY:
-!   2004-05-14  treadon
-!   2004-07-15  todling, protex-compliant prologue
-!   2014-12-03  derber     - introduce vdflag and optimize routines
-!
-! !REMARKS:
-!
-!   language: f90
-!   machine:  ibm rs/6000 sp; sgi origin 2000; compaq/hp
-!
-! !AUTHOR:
-!   treadon          org: np23                date: 2004-05-14
-!
-!EOP
-!-------------------------------------------------------------------------
-
-   integer(i_kind) i,j,k,ij,klev
-   real(r_kind),dimension(grd%lat2*grd%lon2,npe):: sub
-
-   call mpi_alltoallv(work,grd%sendcounts_s,grd%sdispls_s,mpi_rtype,&
-        sub,grd%recvcounts_s,grd%rdispls_s,mpi_rtype,&
-        mpi_comm_world,ierror)
-
-!$omp parallel do  schedule(dynamic,1) private(k,i,j,ij,klev)
-   do k=1,icount
-      if ( iflag(k) == 1 ) then
-         ij=0
-         do j=1,grd%lon2
-            do i=1,grd%lat2
-               ij=ij+1
-               g_z(i,j)=sub(ij,k)
-            enddo
-         enddo
-      elseif ( iflag(k) == 2 ) then
-         ij=0
-         do j=1,grd%lon2
-            do i=1,grd%lat2
-               ij=ij+1
-               g_ps(i,j)=sub(ij,k)
-            enddo
-         enddo
-      elseif ( iflag(k) == 3 ) then
-         klev=ilev(k)
-         ij=0
-         do j=1,grd%lon2
-            do i=1,grd%lat2
-               ij=ij+1
-               g_tv(i,j,klev)=sub(ij,k)
-            enddo
-         enddo
-      elseif ( iflag(k) == 4 ) then
-         klev=ilev(k)
-         if ( vdflag ) then
-           ij=0
-           do j=1,grd%lon2
-              do i=1,grd%lat2
-                 ij=ij+1
-                 g_vor(i,j,klev)=sub(ij,k)
-              enddo
-           enddo
-         endif
-         if ( .not. uvflag ) then
-           ij=0
-           do j=1,grd%lon2
-              do i=1,grd%lat2
-                 ij=ij+1
-                 g_u(i,j,klev)=sub(ij,k)
-              enddo
-           enddo
-         endif
-      elseif ( iflag(k) == 5 ) then
-         klev=ilev(k)
-         if ( vdflag ) then
-           ij=0
-           do j=1,grd%lon2
-              do i=1,grd%lat2
-                 ij=ij+1
-                 g_div(i,j,klev)=sub(ij,k)
-              enddo
-           enddo
-         endif
-         if ( .not. uvflag ) then
-           ij=0
-           do j=1,grd%lon2
-              do i=1,grd%lat2
-                 ij=ij+1
-                 g_v(i,j,klev)=sub(ij,k)
-              enddo
-           enddo
-         endif
-      elseif ( iflag(k) == 6 ) then
-         if ( .not. uvflag) then
-           write(6,*) 'error in general_reload  u '
-         endif
-         klev=ilev(k)
-         ij=0
-         do j=1,grd%lon2
-            do i=1,grd%lat2
-               ij=ij+1
-               g_u(i,j,klev)=sub(ij,k)
-            enddo
-         enddo
-      elseif ( iflag(k) == 7 ) then
-         if ( .not. uvflag) then
-           write(6,*) 'error in general_reload  v '
-         endif
-         klev=ilev(k)
-         ij=0
-         do j=1,grd%lon2
-            do i=1,grd%lat2
-               ij=ij+1
-               g_v(i,j,klev)=sub(ij,k)
-            enddo
-         enddo
-      elseif ( iflag(k) == 8 ) then
-         klev=ilev(k)
-         ij=0
-         do j=1,grd%lon2
-            do i=1,grd%lat2
-               ij=ij+1
-               g_q(i,j,klev)=sub(ij,k)
-            enddo
-         enddo
-      elseif ( iflag(k) == 9 ) then
-         klev=ilev(k)
-         ij=0
-         do j=1,grd%lon2
-            do i=1,grd%lat2
-               ij=ij+1
-               g_oz(i,j,klev)=sub(ij,k)
-            enddo
-         enddo
-      elseif ( iflag(k) == 10 ) then
-         klev=ilev(k)
-         ij=0
-         do j=1,grd%lon2
-            do i=1,grd%lat2
-               ij=ij+1
-               g_cwmr(i,j,klev)=sub(ij,k)
-            enddo
-         enddo
-      elseif ( iflag(k) == 11 .and. present(g_cf) ) then  
-         klev=ilev(k)
-         ij=0
-         do j=1,grd%lon2
-            do i=1,grd%lat2
-               ij=ij+1
-               g_cf(i,j,klev)=sub(ij,k)
-            enddo
-         enddo
-      endif
-   enddo ! do k=1,icount
-
-   icount=0
-   ilev=0
-   iflag=0
-
-   return
-
-end subroutine general_reload
 
 subroutine general_fill_ns(grd,grid_in,grid_out)
 

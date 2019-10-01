@@ -790,7 +790,7 @@ subroutine setuplight(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,light_di
 
 !       Set (i,j) indices of guess gridpoint that bound obs location
 
-        call get_ij(mm1,dlat,dlon,light_ij,my_head%wij(1))
+        call get_ij(mm1,dlat,dlon,light_ij,my_head%wij)
 
         do k=1,nsig
            my_head%ij(1,k)=light_ij(1)+(k-1)*latlon11
@@ -799,28 +799,28 @@ subroutine setuplight(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,light_di
            my_head%ij(4,k)=light_ij(4)+(k-1)*latlon11
         enddo
 
-        call get_ij(mm1,dlat-one,dlon,light_ij,my_head%wij(1))
+        call get_ij(mm1,dlat-one,dlon,light_ij,my_head%wij)
 
         do k=1,nsig
            my_head%ij(5,k)=light_ij(1)+(k-1)*latlon11
            my_head%ij(7,k)=light_ij(3)+(k-1)*latlon11
         enddo
 
-        call get_ij(mm1,dlat+one,dlon,light_ij,my_head%wij(1))
+        call get_ij(mm1,dlat+one,dlon,light_ij,my_head%wij)
 
         do k=1,nsig
            my_head%ij(6,k)=light_ij(2)+(k-1)*latlon11
            my_head%ij(8,k)=light_ij(4)+(k-1)*latlon11
         enddo
 
-        call get_ij(mm1,dlat,dlon-one,light_ij,my_head%wij(1))
+        call get_ij(mm1,dlat,dlon-one,light_ij,my_head%wij)
 
         do k=1,nsig
            my_head%ij(9,k)=light_ij(1)+(k-1)*latlon11
            my_head%ij(10,k)=light_ij(2)+(k-1)*latlon11
         enddo
 
-        call get_ij(mm1,dlat,dlon+one,light_ij,my_head%wij(1))
+        call get_ij(mm1,dlat,dlon+one,light_ij,my_head%wij)
 
         do k=1,nsig
            my_head%ij(11,k)=light_ij(3)+(k-1)*latlon11

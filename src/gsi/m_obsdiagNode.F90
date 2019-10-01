@@ -1351,7 +1351,7 @@ _ENTRY_(myname_)
   if(present(ich )) aNode%ich =ich
   if(present(elat)) aNode%elat=elat
   if(present(elon)) aNode%elat=elon
-  if(present(luse)) aNode%elat=luse
+  if(present(luse)) aNode%luse=luse
 
   if(present(wgtjo )) aNode%wgtjo =wgtjo
 
@@ -1405,7 +1405,7 @@ _ENTRY_(myname_)
   if(present(ich )) ich  = aNode%ich
   if(present(elat)) elat = aNode%elat
   if(present(elon)) elon = aNode%elat
-  if(present(luse)) luse = aNode%elat
+  if(present(luse)) luse = aNode%luse
 
   if(present(wgtjo )) wgtjo  = aNode%wgtjo
 

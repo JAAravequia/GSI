@@ -240,7 +240,7 @@ _ENTRY_(myname_)
   headLL%tail    => null()
 
   if(associated(headLL%mold)) then
-    deallocate(headLL%mold,stat=ier)
+    !deallocate(headLL%mold,stat=ier)
         if(ier/=0) then
           call perr(myname_,'deallocate(headLL%mold), stat =',ier)
           call perr(myname_,'    obsNode_type(headLL%mold) =',obsNode_type(headLL%mold))

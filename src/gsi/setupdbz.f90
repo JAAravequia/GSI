@@ -575,7 +575,7 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
         my_head%elon= data(ilone,i)
 
 !       Set (i,j,k) indices of guess gridpoint that bound obs location
-        call get_ijk(mm1,dlat,dlon,dpres,my_head%ij(1),my_head%wij(1))   
+        call get_ijk(mm1,dlat,dlon,dpres,my_head%ij,my_head%wij)   
 
         my_head%raterr2 = ratio_errors**2
         my_head%res     = ddiff

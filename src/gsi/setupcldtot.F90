@@ -550,7 +550,7 @@ subroutine setupcldtot(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_di
                    ! Set (i,j,k) indices of guess gridpoint that bound obs location
                    mm1=mype+1
                    dpres=k
-                   call get_ijk(mm1,dlat,dlon,dpres,my_headq%ij(1),my_headq%wij(1))
+                   call get_ijk(mm1,dlat,dlon,dpres,my_headq%ij,my_headq%wij)
        
                    pressure=p_bk(k)*10.0_r_kind
                    cloudqvis= ruc_saturation(t_bk(k),pressure)
@@ -642,7 +642,7 @@ subroutine setupcldtot(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_di
          enddo !end k loop
      enddo ! end loop over obs
   
-     write(*,'(A,7i)') 'qobcount',mype,q_obcount,obcount,q_build_count, &
+     write(*,'(A,7I12)') 'qobcount',mype,q_obcount,obcount,q_build_count, &
                                   q_build0_count,q_clear_count,q_clear0_count
 
      deallocate(cld_cover_obs,pcp_type_obs)
