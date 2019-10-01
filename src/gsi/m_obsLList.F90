@@ -42,7 +42,7 @@ module m_obsLList
      integer(i_kind):: n_alloc    =0
 
      integer(i_kind):: my_obsType =0
-     class(obsNode),pointer:: mold          ! a mold for the nodes
+     class(obsNode),pointer:: mold => null() ! a mold for the nodes
 
      class(obsNode),pointer:: head => null()    ! 
      class(obsNode),pointer:: tail => null()
@@ -213,6 +213,7 @@ subroutine lreset_(headLL,mold,stat)
   integer(i_kind),optional,intent(out):: stat
 
   character(len=*),parameter:: myname_=MYNAME//"::lreset_"
+  character(len=:),allocatable:: mymold_
   integer(i_kind):: n
   integer(i_kind):: ier
 _ENTRY_(myname_)
@@ -240,10 +241,11 @@ _ENTRY_(myname_)
   headLL%tail    => null()
 
   if(associated(headLL%mold)) then
-    !deallocate(headLL%mold,stat=ier)
+    mymold_ = obsNode_type(headLL%mold)
+    deallocate(headLL%mold,stat=ier)
         if(ier/=0) then
           call perr(myname_,'deallocate(headLL%mold), stat =',ier)
-          call perr(myname_,'    obsNode_type(headLL%mold) =',obsNode_type(headLL%mold))
+          call perr(myname_,'    obsNode_type(headLL%mold) =',mymold_)
           if(.not.present(stat)) call die(myname_)
           stat=ier
           _EXIT_(myname_)
@@ -251,7 +253,7 @@ _ENTRY_(myname_)
         endif
   endif
 
-  headLL%mold => alloc_nodeCreate_(mold=mold)
+  allocate(headLL%mold, mold=mold)
 _EXIT_(myname_)
 return
 end subroutine lreset_
