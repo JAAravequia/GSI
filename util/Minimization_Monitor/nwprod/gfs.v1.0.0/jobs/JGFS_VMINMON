@@ -66,9 +66,14 @@ echo 'pdate = ${pdate}'
 export P_PDY=`echo ${cdate} | cut -c1-8`
 export p_cyc=`echo ${cdate} | cut -c9-10`
 
+export P_PDY=`echo ${cdate} | cut -c1-8`
+export p_cyc=`echo ${cdate} | cut -c9-10`
+
 #############################################
 # TANKverf - WHERE OUTPUT DATA WILL RESIDE
 #############################################
+TANK_USE_RUN=${TANK_USE_RUN:-1}
+
 export COM_IN=${COM_IN:-${COMROOT}/${NET}/${envir}}
 
 M_TANKverf=${M_TANKverf:-${COM_IN}}
@@ -93,16 +98,10 @@ postmsg "$jlogfile" "$msg"
 ########################################################
 # Execute the script.
 ${GMONSH:-$SCRgfs/exgfs_vrfminmon.sh.ecf} ${PDY} ${cyc}
-
 err=$?
+[[ $err -ne 0 ]] && exit $err
 
-########################################################
-
-if [[ ${err} -ne 0 ]]; then
-   msg="WARNING:  JOB DID NOT COMPLETE NORMALLY, error code $err"
-else
-   msg="JOB COMPLETED NORMALLY"
-fi
+msg="JOB COMPLETED NORMALLY"
 postmsg "$jlogfile" "$msg"
 
 ################################

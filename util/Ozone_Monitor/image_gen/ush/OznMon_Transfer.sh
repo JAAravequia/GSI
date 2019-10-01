@@ -16,6 +16,7 @@ function usage {
 }
 
 echo start OznMon_Transfer.sh
+set -ax
 
 nargs=$#
 
@@ -46,7 +47,6 @@ fi
 
 echo "OZNMON_SUFFIX, RUN = $OZNMON_SUFFIX, $RUN"
 
-set -ax
 
 #--------------------------------------------------------------------
 #  Check for my monitoring use.  Abort if running on prod machine.
@@ -112,7 +112,7 @@ fi
 transfer_script=${OZN_IG_SCRIPTS}/transfer.sh
 job=${OZNMON_SUFFIX}_ozn_transfer
 
-if [[ $MY_MACHINE = "ibm" ]]; then
+if [[ $MY_MACHINE = "wcoss" ]]; then
 
    JOB_QUEUE="transfer"
    echo "PROJECT = $PROJECT"

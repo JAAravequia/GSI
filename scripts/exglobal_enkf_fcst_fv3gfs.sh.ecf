@@ -67,6 +67,7 @@ RERUN_EFCSGRP=${RERUN_EFCSGRP:-"YES"}
 
 # Ops related stuff
 SENDECF=${SENDECF:-"NO"}
+SENDDBN=${SENDDBN:-"NO"}
 
 ################################################################################
 # Preprocessing

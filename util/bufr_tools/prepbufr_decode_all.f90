@@ -57,31 +57,15 @@ program prepbufr_decode_all
 !       call ufbint(unit_in,oer,mxmn,mxlv,iret,oestr)
 !       call ufbint(unit_in,qcf,mxmn,mxlv,iret,qcstr)
        rstation_id=hdr(1)
-!       write(*,*)
-!       if ( -5.0 .lt. hdr(7) .and. hdr(7) .lt. 5.0 ) then
-!       if ( 80.0 .lt. hdr(7) .and. hdr(7) .lt. 85. ) then
-!       if ( -20.0 .lt. hdr(7) .and. hdr(7) .lt. 20. ) then
-!       if ( 1 .le. ntb .and. ntb .le. 21 ) then
-!          write(*,'(3a,i10)') 'subset=',subset,' cycle time =',idate
-!          write(*,'(2(I10,2x),a14,2x,9(f14.1,2x))') ntb,iret,c_sid,(hdr(i),i=2,9)
-!          write(*,'(2(I10,2x),f6.1,2x,10(f15.2,2x))') ntb,iret,rstation_id,(hdr(i),i=2,11)
-!          write(*,'(5(I10,2x),9(f20.6,2x))') nmsg,ntb,nint(hdr(1)),nint(hdr(2)),nint(hdr(3)),(hdr(i),i=4,12)
-!        write(*,'(2(I15,2x),13(f15.4,2x))') nmsg,ntb,(hdr(i),i=1,13)
-!        write(*,'(10(f15.4,2x))') (obs(i),i=1,5), (tb(j),j=1,5)
-        write(*,'(2(I15,2x),13(f15.4,2x))') nmsg,ntb,(hdr(i),i=1,10)
-!        write(*,'(9(f20.6,2x))') (obs(i),i=1,9)
-        write(*,'(8(f20.6,2x))') (obs(i),i=1,8)
-!          if (ntb .eq. 21) then
-!            write(*,*) 'stop running the code!'
-!            stop
-!          endif
+!       if(int(hdr(5))==120 .or. int(hdr(5))==220) then
+          write(*,*)
+          write(*,'(2I10,a15,8f15.1)') ntb,iret,c_sid,(hdr(i),i=2,8)
+          DO k=1,iret
+            write(*,'(i3,a10,9f15.1)') k,'obs=',(obs(i,k),i=1,9)
+            write(*,'(i3,a10,9f15.1)') k,'oer=',(oer(i,k),i=1,7)
+            write(*,'(i3,a10,9f15.1)') k,'qcf=',(qcf(i,k),i=1,7)
+          ENDDO
 !       endif
-!       endif
-!       DO k=1,iret
-!         write(*,'(i3,a10,9f14.1)') k,'obs=',(obs(i,k),i=1,9)
-!         write(*,'(i3,a10,9f14.1)') k,'oer=',(oer(i,k),i=1,7)
-!         write(*,'(i3,a10,9f14.1)') k,'qcf=',(qcf(i,k),i=1,7)
-!       ENDDO
      enddo sb_report
    enddo msg_report
  call closbf(unit_in)

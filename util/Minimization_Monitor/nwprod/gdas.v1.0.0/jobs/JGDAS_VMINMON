@@ -27,7 +27,7 @@ cd $DATA
 ########################################################### 
 # obtain unique process id (pid) and make temp directories
 ###########################################################
-export MINMON_SUFFIX=${MINMON_SUFFIX:-${RUN}}
+export MINMON_SUFFIX=${MINMON_SUFFIX:-${NET}}
 export m_job=${m_job:-${MINMON_SUFFIX}_mmDE}
 
 
@@ -86,6 +86,7 @@ export COMIN=${COMIN:-$COM_IN/${RUN}.${PDY}/${cyc}}
 mkdir -p -m 775 $M_TANKverf
 
 
+
 ########################################
 # Set necessary environment variables
 ########################################
@@ -101,14 +102,9 @@ postmsg "$jlogfile" "$msg"
 ${GMONSH:-$SCRgfs/exgdas_vrfminmon.sh.ecf} ${PDY} ${cyc}
 
 err=$?
+[[ $err -ne 0 ]] && exit $err
 
-########################################################
-
-if [[ ${err} -ne 0 ]]; then
-   msg="WARNING:  JOB DID NOT COMPLETE NORMALLY, error code $err"
-else
-   msg="JOB COMPLETED NORMALLY"
-fi
+msg="JOB COMPLETED NORMALLY"
 postmsg "$jlogfile" "$msg"
 
 ################################

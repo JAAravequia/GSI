@@ -164,7 +164,7 @@ if [ $SENDDBN = "YES" ]; then
    if [ $FHMIN -eq 6 -o $FHMIN -eq 9 ]; then
        fhrchar=$(printf %03i $FHMIN)
        for imem in $(seq 1 $NMEM_ENKF); do
-	   memchar="mem"$(printf %03i $imem)
+           memchar="mem"$(printf %03i $imem)
            $DBNROOT/bin/dbn_alert MODEL GFS_ENKF $job $COMOUT/$memchar/${PREFIX}atmf${fhrchar}${ENKF_SUFFIX}${SUFFIX}
        done
    fi

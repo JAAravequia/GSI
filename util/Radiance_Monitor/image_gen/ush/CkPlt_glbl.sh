@@ -42,6 +42,7 @@ this_dir=`dirname $0`
 RADMON_SUFFIX=$1
 
 echo RADMON_SUFFIX    = ${RADMON_SUFFIX}
+RUN=${RUN:-gdas}
 
 #--------------------------------------------------------------------
 #  Set plot_time if it is included as an argument.
@@ -105,27 +106,6 @@ export PLOT=1
 
 
 #--------------------------------------------------------------------
-# Check status of plot jobs. If any are still running then exit
-# this script. If none are running then remove any old job records 
-# in the $LOADLQ directory.
-#
-# Also need to check verf jobs for suffix. Don't want to run until
-# all verf jobs have been completed.
-#--------------------------------------------------------------------
-
-if [[ $MY_MACHINE = "wcoss" ]]; then
-   running=`bjobs -l | grep plot_${RADMON_SUFFIX} | wc -l` 
-else
-   running=`showq -n -u ${LOGNAME} | grep plot_${RADMON_SUFFIX} | wc -l`
-fi
-
-if [[ $running -ne 0 ]]; then
-   echo "Plot jobs still running for $RADMON_SUFFIX, must exit"
-   exit
-fi
-
-
-#--------------------------------------------------------------------
 #  Create tmpdir and LOGdir
 #--------------------------------------------------------------------
 
@@ -145,14 +125,13 @@ mkdir -p $LOGdir
 # set PDATE to it.  Otherwise, determie the last cycle processed 
 # (into *.ieee_d files) and use that as the PDATE.
 #--------------------------------------------------------------------
-export PRODATE=`${IG_SCRIPTS}/find_cycle.pl 1 ${TANKDIR}`
+export PRODATE=`${IG_SCRIPTS}/find_cycle.pl --cyc 1 --dir ${TANKDIR} --run ${RUN}`
 
 if [[ $plot_time != "" ]]; then
    export PDATE=$plot_time
 else
    export PDATE=$PRODATE
 fi
-#export START_DATE=`$NDATE -720 $PDATE`
 echo $PRODATE  $PDATE
 
 export NUM_CYCLES=${NUM_CYCLES:-121}
@@ -289,15 +268,15 @@ if [[ ${PLOT_HORIZ} -eq 1 ]] ; then
    jobname="plot_horiz_${RADMON_SUFFIX}"
    logfile="${LOGdir}/horiz.log"
 
-   if [[ $MY_MACHINE = "wcoss" ]]; then
+   if [[ $MY_MACHINE = "wcoss" || $MY_MACHINE = "wcoss_d" ]]; then
       $SUB -P $PROJECT -q $JOB_QUEUE -o ${logfile} -M 80 -W 0:45 -cwd ${PWD} \
            -R affinity[core] -J ${jobname} ${IG_SCRIPTS}/mk_horiz_plots.sh
    elif [[ $MY_MACHINE = "cray" ]]; then
       $SUB -P $PROJECT -q $JOB_QUEUE -o ${logfile} -M 80 -W 0:45 -cwd ${PWD} \
            -J ${jobname} ${IG_SCRIPTS}/mk_horiz_plots.sh
-   else
-      $SUB -A $ACCOUNT -l procs=1,walltime=0:20:00 -N ${jobname} \
-           -V -j oe -o ${logfile} $IG_SCRIPTS/mk_horiz_plots.sh
+   elif [[ $MY_MACHINE = "theia" ]]; then
+      $SUB --account $ACCOUNT -o ${logfile} -D . -J ${jobname} --time 50 \
+	   ${IG_SCRIPTS}/mk_horiz_plots.sh
    fi
 fi
 
@@ -325,6 +304,42 @@ if [[ $DO_DATA_RPT -eq 1 || $DO_DIAG_RPT -eq 1 ]]; then
    fi
 fi
 
+#----------------------------------------------------------------------
+#  Conditionally queue transfer to run
+# 
+#	None:  The $run_time is a one-hour delay to the Transfer job
+#  	       to ensure the plots are all finished prior to transfer.
+#----------------------------------------------------------------------
+if [[ $RUN_TRANSFER -eq 1 ]]; then
+
+   if [[ $MY_MACHINE = "wcoss" ]]; then
+      cmin=`date +%M`		# minute (MM)
+      ctime=`date +%G%m%d%H`	# YYYYMMDDHH
+      rtime=`$NDATE +1 $ctime`	# ctime + 1 hour
+
+      rhr=`echo $rtime|cut -c9-10`
+      run_time="$rhr:$cmin"	# HH:MM format for lsf (bsub command) 		
+
+      transfer_log=${LOGdir}/Transfer_${RADMON_SUFFIX}.log
+      TRANSFER_QUEUE=transfer
+
+      jobname=transfer_${RADMON_SUFFIX}
+      job="${IG_SCRIPTS}/Transfer.sh --nosrc --area $RAD_AREA ${RADMON_SUFFIX}"
+
+      if [[ $TANK_USE_RUN -eq 1 ]]; then
+         job="${job} --run $RUN"
+      fi
+      echo "job = $job"
+
+      $SUB -P $PROJECT -q $TRANSFER_QUEUE -o ${transfer_log} -M 80 -W 0:45 -R affinity[core] -J ${jobname} -cwd ${PWD} -b $run_time ${job}
+
+   else
+      ${IG_SCRIPTS}/Transfer.sh ${RADMON_SUFFIX} --nosrc \
+          1>/ptmpp1/Edward.Safford/logs/Transfer_${RADMON_SUFFIX}.log \
+          2>/ptmpp1/Edward.Safford/logs/Transfer_${RADMON_SUFFIX}.err
+   fi
+fi
+
 #--------------------------------------------------------------------
 # Clean up and exit
 #--------------------------------------------------------------------
@@ -332,5 +347,5 @@ cd $tmpdir
 cd ../
 rm -rf $tmpdir
 
-echo end CkPlt_glbl.sh
+echo "exiting CkPlt_glbl.sh"
 exit
