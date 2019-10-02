@@ -150,7 +150,8 @@ PROGRAM read_diag_rad
    end do
 
 !   allocate(diagbufchan(ipchan+npred+1,nchanl))
-   allocate(diagbufchan(ipchan+npred+2,nchanl))
+!   allocate(diagbufchan(ipchan+npred+2,nchanl))
+   allocate(diagbufchan(ipchan+npred+3,nchanl))
    allocate(diagbuf(ireal))
 
 100  continue

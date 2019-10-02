@@ -295,9 +295,14 @@ module qcmod
 !  Reject because factch1617 > limit in subroutine qc_amsua over open water
   integer(i_kind),parameter:: ifail_factch1617_qc=54
 
-! QC_MHS          
+! QC_MHS and QC_TEMPEST         
 !  Reject because fact1 > limit in subroutine qc_mhs
+!  Reject because pixels appear to be cloudy in subroutine qc_tempest
   integer(i_kind),parameter:: ifail_fact1_qc=50
+
+! QC_TEMPEST
+! Reject because data is over land in subroutine qc_tempest
+  integer(i_kind), parameter:: ifail_land_qc=65
 
 ! QC_SSU          
 
@@ -3363,76 +3368,80 @@ subroutine qc_tempest(nchanl,ndat,nsig,is,sea,land,ice,snow,tempest,luse, &
      dtempf = three*dtempf
   end if
 
-!! If TEMPEST-D lwp/iwp_ret exists, use them to screen out cloudy pixles.
-!  if (present(lwp_ret)) then
-!
-!     iwp_threshold = 0.02
-!     lwp_threshold = 0.015
-!
-!     if(sea .or. ice .or. snow)then
-!       do i = 1, nchanl
-!          if (iwp_ret > iwp_threshold .or. iwp_ges > iwp_threshold) then
-!             varinv(i) = zero 
-!             if(id_qc(i) == igood_qc)id_qc(i)=ifail_gross_routine_qc
-!          else if (lwp_ret > lwp_threshold .or. lwp_ges > lwp_threshold) then
-!             varinv(i) = zero 
-!             if(id_qc(i) == igood_qc)id_qc(i)=ifail_gross_routine_qc
-!          end if 
-!       enddo
-!
-!       if(luse .and. dsi >= 1.0 )aivals(10,is) = aivals(10,is) + one 
-!
-!     else
-!     
-!       do i = 1, nchanl
-!          varinv(i) = zero
-!          if(id_qc(i) == igood_qc)id_qc(i)=ifail_gross_routine_qc
-!       enddo
-!
-!       if(luse .and. dsi >= 1.0 )aivals(11,is) = aivals(11,is) + one 
-!
-!     endif
-!
-!! Otherwise, use MHS QC for tempest-D. MHS QC only uses the first two channels to detect cloudy pixels. 
-!  else
-!
-!  ! The first two channels of tempest-d and mhs are "somewhat" similar (see below)
-!  !
-!  ! MHS ch:       1 (89 GHz), 2 (157 GHz), 3 (183.3+/-1.0 GHz), 4 (183.3+/-3.0 GHz), 5 (190.3 GHz)
-!  ! TEMPEST-D ch: 1 (87 GHz), 2 (164 GHz), 3 (174 GHz),         4 (178 GHz),         5 (181 GHz)
-!
-!    if(sea .or. ice .or. snow)then
-!       dsi=9.0_r_kind
-!       if(tb_obs(2) < h300)then
-!          dsi=0.13_r_kind*(tbc(1)-33.58_r_kind*tbc(2)/(h300-tb_obs(2)))
-!          if(luse .and. dsi >= one)aivals(10,is) = aivals(10,is) + one
-!       end if
-!    else
-!       dsi=0.85_r_kind*tbc(1)-tbc(2)
-!       if(luse .and. dsi >= one)aivals(11,is) = aivals(11,is) + one
-!    end if
-!    dsi=max(zero,dsi)
-!    fact1=((tbc(1)-7.5_r_kind*dsi)/r10)**2+(dsi)**2
-!
-!    if(fact1 > one)then
-!       vfact=zero
-!       if(luse)aivals(8,is) = aivals(8,is) + one
-!       do i=1,nchanl
-!          if(id_qc(i) == igood_qc)id_qc(i)=ifail_fact1_qc
-!       end do
-!    else
-!       do i=3,nchanl
-!          if (abs(tbc(i)) >= two) then
-!             varinv(i) = zero
-!             if(id_qc(i) == igood_qc)id_qc(i)=ifail_gross_routine_qc
-!          end if
-!       end do
-!       efact = (one-fact1*fact1)*efact
-!       vfact = (one-fact1*fact1)*vfact
-!
-!    endif
-!
-!  endif
+
+! If TEMPEST-D lwp/iwp_ret exists, use them to screen out cloudy pixles.
+  if (present(lwp_ret) .and. lwp_ret < 999.) then
+
+     iwp_threshold = 0.02
+     lwp_threshold = 0.015
+     write(*,*) 'qc_tempest: lwp_ret is present, use threshold for screening'
+
+     if(sea .or. ice .or. snow)then
+       if (iwp_ret > iwp_threshold .or. iwp_ges > iwp_threshold) then
+          if(luse)aivals(10,is) = aivals(10,is) + one
+          do i = 1, nchanl
+             varinv(i) = zero 
+             if(id_qc(i) == igood_qc)id_qc(i)=ifail_fact1_qc
+          enddo
+       else if (lwp_ret > lwp_threshold .or. lwp_ges > lwp_threshold) then
+          if(luse)aivals(10,is) = aivals(10,is) + one
+          do i = 1, nchanl
+             varinv(i) = zero 
+             if(id_qc(i) == igood_qc)id_qc(i)=ifail_fact1_qc
+          enddo
+       end if 
+
+     else
+       ! screen out data over land for now
+       if(luse)aivals(11,is) = aivals(11,is) + one 
+       do i = 1, nchanl
+          varinv(i) = zero
+          if(id_qc(i) == igood_qc)id_qc(i)=ifail_land_qc
+       enddo
+
+     endif
+
+! Otherwise, use MHS screening for tempest-D. 
+  else
+
+  ! MHS screening uses TB of the first 2 channels to detect cloudy pixels
+  ! The first two channels of tempest-d are "somewhat" similar to those of mhs (see below)
+  !
+  ! MHS ch:       1 (89 GHz), 2 (157 GHz), 3 (183.3+/-1.0 GHz), 4 (183.3+/-3.0 GHz), 5 (190.3 GHz)
+  ! TEMPEST-D ch: 1 (87 GHz), 2 (164 GHz), 3 (174 GHz),         4 (178 GHz),         5 (181 GHz)
+
+    if(sea .or. ice .or. snow)then
+       dsi=9.0_r_kind
+       if(tb_obs(2) < h300)then
+          dsi=0.13_r_kind*(tbc(1)-33.58_r_kind*tbc(2)/(h300-tb_obs(2)))
+          if(luse .and. dsi >= one)aivals(10,is) = aivals(10,is) + one
+       end if
+    else
+       dsi=0.85_r_kind*tbc(1)-tbc(2)
+       if(luse .and. dsi >= one)aivals(11,is) = aivals(11,is) + one
+    end if
+    dsi=max(zero,dsi)
+    fact1=((tbc(1)-7.5_r_kind*dsi)/r10)**2+(dsi)**2
+
+    if(fact1 > one)then
+       vfact=zero
+       if(luse)aivals(8,is) = aivals(8,is) + one
+       do i=1,nchanl
+          if(id_qc(i) == igood_qc)id_qc(i)=ifail_fact1_qc
+       end do
+    else
+       do i=3,nchanl
+          if (abs(tbc(i)) >= two) then
+             varinv(i) = zero
+             if(id_qc(i) == igood_qc)id_qc(i)=ifail_gross_routine_qc
+          end if
+       end do
+       efact = (one-fact1*fact1)*efact
+       vfact = (one-fact1*fact1)*vfact
+
+    endif
+
+  endif
 
 !    Reduce q.c. bounds over higher topography
   if (zsges > r2000) then

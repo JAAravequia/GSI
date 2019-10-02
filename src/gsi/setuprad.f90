@@ -1214,31 +1214,28 @@
 
         else if (tempest) then
 
-! qc_tempest_opt 1: use MHS QC procedure for TEMPEST-D
-! qc_tempest_opt 2: use TEMPEST-D CSU1DVAR retrieval to detect cloudy pixels
+! qc_tempest_opt 1: use MHS screening procedure for TEMPEST-D
+! qc_tempest_opt 2: use TEMPEST-D CSU1DVAR retrieval to screen out cloudy pixels
 
+          ! qc_tempest_opt = 1 ! hard-wired to use MHS screening for TEMPEST-D for now!
           qc_tempest_opt = 2 ! hard-wired to use TEMPEST-D QC for now!
 
           if (qc_tempest_opt == 2) then 
 
-
-! load IWP and LWP retrieval 
+             ! load IWP and LWP retrieval 
 
              qi_intgr_obs = data_s(nreal-1,n) ! IWP (kg m^-2)
              ql_intgr_obs = data_s(nreal,n) ! LWP (kg m^-2)
 
-! load total column liquid and ice from guess 
-
-             ! Interpolate pressure at interface values to obs location
+             ! load total column liquid and ice from guess 
              call tintrp2a1(ges_prsi,piges,slats,slons,dtime, &
                   hrdifsig,nsig+1,mype,nfldsig)
              call tintrp2a1(ges_ql,qlges,slats,slons,dtime, &
                   hrdifsig,nsig,mype,nfldsig)
              call tintrp2a1(ges_qi,qiges,slats,slons,dtime, &
                   hrdifsig,nsig,mype,nfldsig)
-!
-! vertically integrated liquid and ice water content
-!
+
+             ! vertically integrated liquid and ice water content
              ql_intgr_ges=0.
              qi_intgr_ges=0.
 
@@ -1249,17 +1246,18 @@
              enddo  !! do k=1,nsig
 
 
-!           call qc_tempest(nchanl,ndat,nsig,is,sea,land,ice,snow,tempest,luse(n),   &
-!                           zsges,tbc,tb_obs,ptau5,emissivity_k,ts,      &
-!                           id_qc,aivals,errf,varinv,clw,tpwc,           &
-!                           ql_intgr_ges,qi_intgr_ges,ql_intgr_obs,qi_intgr_obs)
-!
-!          else
+             ! call qc_tempest and provide iwp/lwp retrieval and guess values
+             call qc_tempest(nchanl,ndat,nsig,is,sea,land,ice,snow,tempest,luse(n),   &
+                             zsges,tbc,tb_obs,ptau5,emissivity_k,ts,      &
+                             id_qc,aivals,errf,varinv,clw,tpwc,           &
+                             ql_intgr_ges,qi_intgr_ges,ql_intgr_obs,qi_intgr_obs)
 
-!
-!           call qc_tempest(nchanl,ndat,nsig,is,sea,land,ice,snow,tempest,luse(n),   &
-!                           zsges,tbc,tb_obs,ptau5,emissivity_k,ts,      &
-!                           id_qc,aivals,errf,varinv,clw,tpwc)
+          else
+
+             ! otherwise, call qc_tempest without providing iwp/lwp values
+             call qc_tempest(nchanl,ndat,nsig,is,sea,land,ice,snow,tempest,luse(n),   &
+                             zsges,tbc,tb_obs,ptau5,emissivity_k,ts,      &
+                             id_qc,aivals,errf,varinv,clw,tpwc)
 
           endif
 
@@ -2163,7 +2161,7 @@
               diagbuf(30) = data_s(itz_tr,n)
            endif
 
-           if (tempest) then
+           if (tempest .and. qc_tempest_opt==2) then
               diagbuf(25) = qi_intgr_obs ! IWP (kg m^-2)
               diagbuf(26) = ql_intgr_obs ! LWP (kg m^-2)
               diagbuf(27) = qi_intgr_ges ! IWP (kg m^-2)
