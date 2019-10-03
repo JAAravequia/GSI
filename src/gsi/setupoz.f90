@@ -1312,6 +1312,10 @@ subroutine setupozlev(lunin,mype,stats_oz,nlevs,nreal,nobs,&
        airnd = data(iairnd,i)
        uvnd = data(iuvnd,i)
        visnd = data(ivisnd,i)
+     else
+       airnd = zero
+       uvnd = zero
+       visnd = zero
      endif
 
 !    Pressure level of data (dpres) converted to grid coordinate
