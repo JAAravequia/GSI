@@ -64,7 +64,7 @@ LAGDATA_INVOBS=${LAGDATA_INVOBS:-""}
 HYBRID_ENSEMBLE_INVOBS=${HYBRID_ENSEMBLE_INVOBS:-""}
 RAPIDREFRESH_CLDSURF_INVOBS=${RAPIDREFRESH_CLDSURF_INVOBS:-""}
 CHEM_INVOBS=${CHEM_INVOBS:-""}
-#export USE_RADSTAT="YES"
+export USE_RADSTAT="NO"
 
 ################################################################################
 #  Preprocessing
