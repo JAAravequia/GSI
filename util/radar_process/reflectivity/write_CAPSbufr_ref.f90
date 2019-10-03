@@ -9,6 +9,8 @@
 !           CAPS reflectivity DA
 !   
 ! program history log:
+!   2019-03-15  cTong   Added i,j to the bufr file. (i,j) are only needed to
+!                       plot reflectivity for verification purposes.
 !
 !   input argument list:
 !
@@ -23,8 +25,8 @@
     use kinds, only: r_kind,i_kind
     implicit none
 
-    REAL(r_kind) :: ref3d_column(maxlvl+4,nlon*nlat)   ! 3D reflectivity in column
-    real(r_kind) :: hdr(7),obs(1,35)
+    REAL(r_kind) :: ref3d_column(maxlvl+2,nlon*nlat)   ! 3D reflectivity in column
+    real(r_kind) :: hdr(5),obs(1,35)
     character(80):: hdrstr='SID XOB YOB DHR TYP IOB JOB'
     character(80):: obsstr='HREF'
 
@@ -56,14 +58,12 @@
       hdr(3)=ref3d_column(2,n)
       hdr(4)=0.
       hdr(5)=500.
-      hdr(6)=ref3d_column(3,n)
-      hdr(7)=ref3d_column(4,n)
 
       do k=1,maxlvl
-        obs(1,k)=ref3d_column(4+k,n)
+        obs(1,k)=ref3d_column(2+k,n)
       enddo
       call openmb(lendian_in,subset,idate)
-      call ufbint(lendian_in,hdr,7,   1,iret,hdrstr)
+      call ufbint(lendian_in,hdr,5,   1,iret,hdrstr)
       call ufbint(lendian_in,obs,1,maxlvl,iret,obsstr)
       call writsb(lendian_in,ibfmsg,iret)
     enddo

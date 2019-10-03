@@ -507,7 +507,7 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,radardbz_diagsave,init_p
   end if
 
 ! CAPS uses conv_diagsave, but master uses radardbz_diagsave. the latter is used.
-! However, parameters were slightly different freom each other.
+! However, parameters were slightly different from each other.
 !
 ! If requested, save select data for output to diagnostic file
   if(radardbz_diagsave)then
@@ -524,7 +524,8 @@ subroutine setupdbz(lunin,mype,bwork,awork,nele,nobs,is,radardbz_diagsave,init_p
         nreal=27
      end if
      if (lobsdiagsave) nreal=nreal+4*miter+1
-     allocate(cdiagbuf(nobs),rdiagbuf(nreal,nobs))
+     if (.not.allocated(cdiagbuf)) allocate(cdiagbuf(nobs))
+     if (.not.allocated(rdiagbuf)) allocate(rdiagbuf(nreal,nobs))
   end if
   mm1=mype+1
   scale=one

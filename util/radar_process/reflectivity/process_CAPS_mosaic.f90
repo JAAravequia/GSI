@@ -525,13 +525,20 @@ program process_CAPS_mosaic
                if(tversion == 1) kk=mypeLocal
                if(ref1 > rthresh_ref .and. ref2 > rthresh_ref .and.  &
                   ref3 > rthresh_ref .and. ref4 > rthresh_ref ) then
-                  ref3d(i,j,kk)=(ref1*w1+ref2*w2+ref3*w3+ref4*w4)/float(var_scale)
+                  if(mod(levelheight(kk),lev_keep) == 0) then
+                     print*, 'JYS storm keep', levelheight(kk)
+                     ref3d(i,j,kk)=(ref1*w1+ref2*w2+ref3*w3+ref4*w4)/float(var_scale)
+                  else
+                     print*, 'JYS storm skip', levelheight(kk)
+                     ref3d(i,j,kk)=-999.0  ! YJ: Set to no observation to reduce the number of obs
+                  endif
                elseif(ref1 > rthresh_miss .and. ref2 > rthresh_miss .and.  &
                   ref3 > rthresh_miss .and. ref4 > rthresh_miss ) then
-                  if(mod(levelheight(kk),lev_keep) == 0) then
-                     print*, 'JYS clear air heigh', levelheight(kk)
+                  if(mod(levelheight(kk),lev_keep*2) == 0) then
+                     print*, 'JYS clear air keep', levelheight(kk)
                      ref3d(i,j,kk)=-99.0   ! clear
                   else
+                     print*, 'JYS clear air skip', levelheight(kk)
                      ref3d(i,j,kk)=-999.0  ! YJ: Set to no observation to reduce the number of obs
                   endif
                else
@@ -592,7 +599,7 @@ program process_CAPS_mosaic
 
   if(mype==0 .and. 1==1) then
 !
-    allocate(ref3d_column(maxlvl+4,nlon*nlat))
+    allocate(ref3d_column(maxlvl+2,nlon*nlat))
 
     ref3d_column=-999.0
 
@@ -645,13 +652,8 @@ program process_CAPS_mosaic
                     ref3d_column(4,numref)=float(j)/10.0_r_kind
                    
                     DO k=1,maxlvl
-! Individual/region-confined obs can be specified here by i, j index -------------
-                      IF(i>=134 .and. i<=434 .and. j>=92 .and. j<=392) THEN
-                        ref3d_column(4+k,numref)=ref0(i,j,k)
-                      ELSE
-                        ref3d_column(4+k,numref)= -64.0
-                      END IF
-! End of specification for single obs test ---------------------------------------
+                        ref3d_column(2+k,numref)=ref0(i,j,k)
+
                         if ( ref0(i,j,k) .gt. dbz_max ) then
                             dbz_max = ref0(i,j,k)
                             i_max=i
@@ -669,10 +671,6 @@ program process_CAPS_mosaic
                 endif
             ENDDO
         ENDDO
-        print*,'ref0(104,27,:)=',ref0(104,27,:)
-        print*,'nlat=',nlat,'nlon=',nlon
-        print*,'ref0(219,205,:)=',ref0(219,205,:)
-        print*,'nlat=',nlat,'nlon=',nlon
 
     else   !l_psot
 
@@ -738,10 +736,8 @@ program process_CAPS_mosaic
         end if
         ref3d_column(1,numref)=rlon_min
         ref3d_column(2,numref)=rlat_min
-        ref3d_column(3,numref)=i_min
-        ref3d_column(4,numref)=j_min
         k = NINT(olvl)
-        ref3d_column(4+k,numref)=odbz
+        ref3d_column(2+k,numref)=odbz
 
         if (l_latlon_psot) then
             write(6,*) 'for single obs  @ given olat(deg) olon(deg) olvl:',olat,olon,olvl

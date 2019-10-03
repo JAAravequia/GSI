@@ -1807,8 +1807,8 @@ contains
   !                               concentration)
   !   2017-03-23  Hu     - add code to use hybrid vertical coodinate in WRF MASS
   !                        core
-  !   2018-02-xx  g.zhao - add code of treatments for logarithmic q conversion
-  !   2018-10-23  C.Liu  - add w analysis output 
+  !   2019-04-18  cTong  - add code of treatments for logarithmic q conversion
+  !   2019-05-30  cTong  - add w analysis output 
   !
   !   input argument list:
   !     mype     - pe number
@@ -1964,7 +1964,6 @@ contains
     num_mass_fields=num_mass_fields_base
 !    The 9 3D cloud analysis fields are: ql,qi,qr,qs,qg,qnr,qni,qnc,tt
     if ( l_use_dbz_caps ) then ! CAPS
-     write (6,*) 'variable choice work', n_actual_clouds
 !!CCT command-out
 !    if(l_cloud_analysis .or. n_actual_clouds>0) num_mass_fields=num_mass_fields + 9*lm   !CCT command-out
 !    The 8 3D cloud analysis fields are: ql,qi,qr,qs,qg,qnr,w,tt (1 extra vert. lv for w)    !CCT modified  
@@ -2006,10 +2005,13 @@ contains
     i_q=i_t+lm
     i_u=i_q+lm
     i_v=i_u+lm
+
     if(w_exist)then
       if ( .not. l_use_dbz_caps) then ! CAPS use different index for w
          i_w=i_v+lm
          i_sst=i_w+lm+1
+      else
+         i_sst=i_v+lm
       end if
     else
       i_sst=i_v+lm
@@ -2035,6 +2037,7 @@ contains
     else
        i_q2=i_skt
     endif
+
   
   ! for hydrometeors
   ! Since CAPS use .or. for the conditnioal statement, temporary fix is set on l_hydrometeor_bkio
@@ -2087,6 +2090,7 @@ contains
   
   
     endif
+
     
     allocate(temp1(im*jm),temp1u((im+1)*jm),temp1v(im*(jm+1)))
     if(mype==0) then
@@ -2138,7 +2142,7 @@ contains
         write(6,*)'wrwrfmassa_binary: getpointer failed, cannot retrieve ps,u,v,q'
         call stop2(999)
     endif
-    
+
   ! Create all_loc from ges_*
     if(mype == 0) write(6,*)' at 3 in wrwrfmassa'
     all_loc=zero_single
@@ -2200,7 +2204,7 @@ contains
        iv=1
        kchem(iv) = i_chem(iv)-1
     endif
-  
+   
     q_integral=one
     q_integralc4h=zero_single
     do k=1,nsig
