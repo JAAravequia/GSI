@@ -83,9 +83,11 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 ! Declare local variables
   character(len=14) :: myname
 ! set c_station_id and set station id to "veia100t" for now
-  character(len=8) :: c_station_id='veia100t'
-  character(len=8) :: c_prvstg='veia100t'
-  character(len=8) :: c_sprvstg='veia100t'
+
+  character(len=8) :: c_prvstg='veiacams'
+  character(len=8) :: c_sprvstg='veiacams'
+  character(len=25):: filename
+  character(len=8) :: c_station_id='veiasite'
 
   integer(i_kind) :: nreal,i,lunin
   integer(i_kind) :: visqm
@@ -94,12 +96,13 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
   integer(i_kind) :: nc,k,ilat,ilon,nchanl
   integer(i_kind) :: idate,iout,maxobs,icount,ierr
   integer(i_kind) :: stnelev4
+  integer(i_kind) :: sunangle,veiaqc 
   real(r_kind) :: dlat,dlon,dlat_earth,dlon_earth,toff,t4dv
   real(r_kind) :: dlat_earth_deg,dlon_earth_deg
   real(r_kind) :: visoe,tdiff,tempvis,visout
   real(r_kind) :: rminobs,pob,dlnpob,obval
   real(r_kind) :: stnelev
-  real(r_kind)  :: rlon4,rlat4,obval4,veiaflag
+  real(r_kind)  :: rlon4,rlat4,obvalmi,nid
   real(r_kind) :: usage,tsavg,ff10,sfcr,zz
   real(r_kind),allocatable,dimension(:,:):: cdata_all,cdata_out
 
@@ -107,7 +110,7 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
   integer(i_kind) :: invalidkx, invalidob, n_outside
   integer(i_kind) :: ivisdate(5),nid,y4m2d2,h2m2s2
 
-  real(r_double) :: udbl,vdbl
+  real(r_double) :: udbl,vdbl,rrnid
   logical :: outside
   logical lhilbert
   logical  linvalidkx, linvalidob
@@ -121,8 +124,7 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
   ! hardwired kx for webcams
   integer(i_kind) :: kx=222_i_kind   
 
-!  equivalence to handle character names
-  equivalence(rstation_id,c_station_id)
+  equivalence(rstation_id, c_station_id)
   equivalence(r_prvstg,c_prvstg)
   equivalence(r_sprvstg,c_sprvstg)
 
@@ -165,12 +167,12 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
   ! Find number of reports
   maxobs = 0
   readloop: do 
-      read(lunin,90,end=101) nid,rlat4,rlon4,stnelev4,y4m2d2,h2m2s2,obval4,veiaflag 
+      read(lunin,90,end=101) filename,nid,rlat4,rlon4,stnelev4,y4m2d2,h2m2s2,obvalmi,sunangle,veiaqc
       maxobs=maxobs+1
   end do readloop
 101 continue
-90 format(I3,1X,F7.4,1X,F9.4,1X,I4,1X,I8,1X,I6,1X,F5.2,F4.1)
-  if(print_verbose)write(6,*)myname,': maxobs=',maxobs
+90 format(A25,I4,5X,F7.4,4X,F9.4,3X,I4,3X,I8,3X,I6,5X,F5.2,8x,I2,3x,I3)
+   write(6,*)myname,': maxobs=',maxobs
 
   if (maxobs == 0) then
      write(6,*)myname,': No reports found.  returning to read_obs.F90...'
@@ -190,11 +192,25 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 
   rewind(lunin)
   loop_readobs: do icount=1,maxobs
-      read(lunin,90) nid,rlat4,rlon4,stnelev4,y4m2d2,h2m2s2,obval4,veiaflag 
-
-! convert obval4 from mile to meter, then use obval thereafter
+      read(lunin,90,end=101) filename,nid,rlat4,rlon4,stnelev4,y4m2d2,h2m2s2,obvalmi,sunangle,veiaqc
+!--------------------------------------------------------------------
+! Mike M. viscams provider the following information:
+!  1) if the sunangle>105,i.e.,the sun is 15 degree below the horizontal level, the observation quality is not good.
+!  2) veiaqc is a metrics of the quality, from 1-100
+!  3) if visibility value > 5 miles, just assign it as 5 miles
+!09/26/2019---for current stage, use the following as dening criteron 
+! !!!! IMPORTANT :  wrong:  usage should not be set here
+!--------------------------------------------------------------------
+!      usage=1._r_kind
+!      if (sunangle>105 .and. veiaqc<50 .and. obvalmi>4.5) usage=-130._r_kind
+!      write(6,*)myname,': sunangle, veiaqc, usage',sunangle,veiaqc, usage
+!--------------------------------------------------------------------
+      rrnid=nid
+      write(c_station_id,'(f8.1)') rrnid
+       
+! convert obvalmi from mile to meter, then use obval thereafter
 !............................................................
-      obval=obval4*1600.
+      obval=obvalmi*1600.
       stnelev=real(stnelev4)
       iout=iout+1
 
@@ -253,13 +269,9 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 !      write (6,*) myname,'4 get_usagerj t4dv,tdiff', t4dv,tdiff  
 
 
-! Set usage variable as zero
+! Set usage variable    ! need to check late
       usage = zero
-
       if(icuse(nc) <= 0)usage=100._r_kind
-      if(icuse(nc) <= 0)usage=100._r_kind
-      if(veiaflag < zero )usage=100._r_kind
-      if(veiaflag > 0.0) usage= zero
 
       udbl=0._r_double
       vdbl=0._r_double
@@ -323,7 +335,7 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
       cdata_all(6,iout)=t4dv                    ! time
       cdata_all(7,iout)=nc                      ! type
       cdata_all(8,iout)=visoe*three             ! max error
-      cdata_all(9,iout)=visqm                   ! quality mark
+      cdata_all(9,iout)=visqm                   ! quality mark   !RY: need modifiy?
       cdata_all(10,iout)=usage                  ! usage parameter
       if (lhilbert) thisobtype_usage=10         ! save INDEX of where usage is stored 
                                                 !for hilbertcurve cross validation (if requested)
@@ -333,8 +345,8 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
       cdata_all(14,iout)=stnelev                ! station elevation (m)
       cdata_all(15,iout)=stnelev                ! observation height (m) use station elevatio
       cdata_all(16,iout)=zz                     ! terrain height at ob location
-      cdata_all(17,iout)=r_prvstg          ! provider name
-      cdata_all(18,iout)=r_sprvstg         ! subprovider name
+      cdata_all(17,iout)=r_prvstg               ! provider name
+      cdata_all(18,iout)=r_sprvstg              ! subprovider name
 
       if(lhilbert) &
         call apply_hilbertcurve(maxobs,obstype,cdata_all(thisobtype_usage,1:maxobs))
@@ -355,7 +367,7 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon,ndata
   write(lunout) cdata_out
 !******************************************
-!  ALARMING!! only for test
+!  ONLY FOR TEST 
 !  write(6,*)  'read_viscams: WANT TO check the header:', obstype,sis,nreal,nchanl,ilat,ilon,ndata
 !  write(6,*)  'read_viscams: WANT TO print all data???', cdata_out
 
