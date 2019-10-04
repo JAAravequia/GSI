@@ -33,7 +33,7 @@ def compiling_check( mybuild ):
        'bufr_encode_sample.x', 'prepbufr_append_retrieve.x', 'prepbufr_append_surface.x', \
        'prepbufr_append_upperair.x', 'prepbufr_decode_all.x', 'prepbufr_encode_surface.x', \
        'prepbufr_encode_upperair.x', 'prepbufr_inventory.x','enspreproc.x', 'initialens.x', \
-       'process_NSSL_mosaic.x', 'read_diag_conv.x', 'read_diag_rad.x' ] \
+       'process_NSSL_mosaic.x', 'process_CAPS_mosaic.x', 'read_diag_conv.x', 'read_diag_rad.x' ] \
        ]
    results = "|" 
 
