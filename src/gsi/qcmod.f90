@@ -3370,38 +3370,27 @@ subroutine qc_tempest(nchanl,ndat,nsig,is,sea,land,ice,snow,tempest,luse, &
 
 
 ! If TEMPEST-D lwp/iwp_ret exists, use them to screen out cloudy pixles.
-  if (present(lwp_ret) .and. lwp_ret < 999.) then
+  if (present(lwp_ret) .and. (sea .or. ice .or. snow)) then
 
      iwp_threshold = 0.02
      lwp_threshold = 0.015
-     write(*,*) 'qc_tempest: lwp_ret is present, use threshold for screening'
+     write(*,*) 'qc_tempest: lwp_ret is present and over water, use threshold for screening'
 
-     if(sea .or. ice .or. snow)then
-       if (iwp_ret > iwp_threshold .or. iwp_ges > iwp_threshold) then
-          if(luse)aivals(10,is) = aivals(10,is) + one
-          do i = 1, nchanl
-             varinv(i) = zero 
-             if(id_qc(i) == igood_qc)id_qc(i)=ifail_fact1_qc
-          enddo
-       else if (lwp_ret > lwp_threshold .or. lwp_ges > lwp_threshold) then
-          if(luse)aivals(10,is) = aivals(10,is) + one
-          do i = 1, nchanl
-             varinv(i) = zero 
-             if(id_qc(i) == igood_qc)id_qc(i)=ifail_fact1_qc
-          enddo
-       end if 
+     if (iwp_ret > iwp_threshold .or. iwp_ges > iwp_threshold) then
+        if(luse)aivals(10,is) = aivals(10,is) + one
+        do i = 1, nchanl
+           varinv(i) = zero 
+           if(id_qc(i) == igood_qc)id_qc(i)=ifail_fact1_qc
+        enddo
+     else if (lwp_ret > lwp_threshold .or. lwp_ges > lwp_threshold) then
+        if(luse)aivals(10,is) = aivals(10,is) + one
+        do i = 1, nchanl
+           varinv(i) = zero 
+           if(id_qc(i) == igood_qc)id_qc(i)=ifail_fact1_qc
+        enddo
+     end if 
 
-     else
-       ! screen out data over land for now
-       if(luse)aivals(11,is) = aivals(11,is) + one 
-       do i = 1, nchanl
-          varinv(i) = zero
-          if(id_qc(i) == igood_qc)id_qc(i)=ifail_land_qc
-       enddo
-
-     endif
-
-! Otherwise, use MHS screening for tempest-D. 
+! Otherwise, use MHS screening for tempest-D else where. 
   else
 
   ! MHS screening uses TB of the first 2 channels to detect cloudy pixels
@@ -3416,6 +3405,7 @@ subroutine qc_tempest(nchanl,ndat,nsig,is,sea,land,ice,snow,tempest,luse, &
           dsi=0.13_r_kind*(tbc(1)-33.58_r_kind*tbc(2)/(h300-tb_obs(2)))
           if(luse .and. dsi >= one)aivals(10,is) = aivals(10,is) + one
        end if
+       write(*,*) 'qc_tempest: you should never see this!'
     else
        dsi=0.85_r_kind*tbc(1)-tbc(2)
        if(luse .and. dsi >= one)aivals(11,is) = aivals(11,is) + one

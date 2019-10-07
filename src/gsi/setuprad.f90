@@ -1217,8 +1217,8 @@
 ! qc_tempest_opt 1: use MHS screening procedure for TEMPEST-D
 ! qc_tempest_opt 2: use TEMPEST-D CSU1DVAR retrieval to screen out cloudy pixels
 
-          ! qc_tempest_opt = 1 ! hard-wired to use MHS screening for TEMPEST-D for now!
-          qc_tempest_opt = 2 ! hard-wired to use TEMPEST-D QC for now!
+          qc_tempest_opt = 1 ! hard-wired to use MHS screening for TEMPEST-D for now!
+          !qc_tempest_opt = 2 ! hard-wired to use TEMPEST-D QC for now!
 
           if (qc_tempest_opt == 2) then 
 
@@ -2161,11 +2161,18 @@
               diagbuf(30) = data_s(itz_tr,n)
            endif
 
-           if (tempest .and. qc_tempest_opt==2) then
-              diagbuf(25) = qi_intgr_obs ! IWP (kg m^-2)
-              diagbuf(26) = ql_intgr_obs ! LWP (kg m^-2)
-              diagbuf(27) = qi_intgr_ges ! IWP (kg m^-2)
-              diagbuf(28) = ql_intgr_ges ! LWP (kg m^-2)
+           if (tempest) then
+              if (qc_tempest_opt==1) then
+                diagbuf(25) = r_missing
+                diagbuf(26) = r_missing
+                diagbuf(27) = r_missing
+                diagbuf(28) = r_missing
+              elseif (qc_tempest_opt==2) then
+                diagbuf(25) = qi_intgr_obs ! IWP (kg m^-2)
+                diagbuf(26) = ql_intgr_obs ! LWP (kg m^-2)
+                diagbuf(27) = qi_intgr_ges ! IWP (kg m^-2)
+                diagbuf(28) = ql_intgr_ges ! LWP (kg m^-2)
+              endif
            endif
 
            if (lwrite_peakwt) then
