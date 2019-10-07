@@ -1457,7 +1457,7 @@ contains
              ! call qc_tempest and provide iwp/lwp retrieval and guess values
              call qc_tempest(nchanl,ndat,nsig,is,sea,land,ice,snow,tempest,luse(n),   &
                              zsges,tbc,tb_obs,ptau5,emissivity_k,ts,      &
-                             id_qc,aivals,errf,varinv,clw,tpwc,           &
+                             id_qc,aivals,errf,varinv,clw_obs,tpwc_obs,           &
                              ql_intgr_ges,qi_intgr_ges,ql_intgr_obs,qi_intgr_obs)
 
           else
@@ -1465,7 +1465,7 @@ contains
              ! otherwise, call qc_tempest without providing iwp/lwp values
              call qc_tempest(nchanl,ndat,nsig,is,sea,land,ice,snow,tempest,luse(n),   &
                              zsges,tbc,tb_obs,ptau5,emissivity_k,ts,      &
-                             id_qc,aivals,errf,varinv,clw,tpwc)
+                             id_qc,aivals,errf,varinv,clw_obs,tpwc_obs)
 
           endif
 
