@@ -513,7 +513,7 @@ subroutine read_seviri(mype,val_sev,ithin,rmesh,jsatid,&
 
 ! Deallocate local arrays
   deallocate(data_all,nrec)
-  deallocate(hdr,datasev2,datasev1,datasev3)
+  deallocate(hdr,datasev2,datasev1,datasev3,datasev)
 
 ! Deallocate satthin arrays
   call destroygrids
