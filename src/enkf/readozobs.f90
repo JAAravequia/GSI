@@ -20,7 +20,7 @@ module readozobs
 !   2016-11-29 shlyaeva - updated read routine to calculate linearized H(x)
 !                         added write_ozvobs_data to output ensemble spread
 !   2017-12-13  shlyaeva - added netcdf diag read/write capability
-!   2019-08-15  martin   - added JEDI UFO netcdf read capabillity
+!   2019-08-15  martin & shlyaeva - added JEDI UFO netcdf read capabillity
 !
 ! attributes:
 !   language: f95
@@ -39,6 +39,7 @@ contains
 
 ! get number of ozone observations
 subroutine get_num_ozobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
+   use readiodaobs, only: get_numobs_ioda
    implicit none
    character(len=500), intent(in)  :: obspath
    character(len=10),  intent(in)  :: datestring
@@ -48,7 +49,7 @@ subroutine get_num_ozobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
    if (netcdf_diag) then
       call get_num_ozobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
    else if (jedi_ufo) then
-      call get_num_ozobs_ufo(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
+      call get_numobs_ioda("ozone", num_obs_tot,num_obs_totdiag)
    else
       call get_num_ozobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
    endif
@@ -233,10 +234,6 @@ subroutine get_num_ozobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     print *,num_obs_tot,' ozone obs'
     print *,num_obs_totdiag, ' total ozone obs in diag file'
 end subroutine get_num_ozobs_nc
-
-! get number of observations from JEDI UFO netcdf file
-subroutine get_num_ozobs_ufo(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
-end subroutine get_num_ozobs_ufo
 
 ! read ozone observation data
 subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
@@ -787,6 +784,27 @@ subroutine get_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mea
 ! read ozone observation data from JEDI UFO netcdf file
 subroutine get_ozobs_data_ufo(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_code, x_errorig, x_type, x_used, id, nanal, nmem)
+  use params, only: neigv
+  implicit none
+  character*500, intent(in) :: obspath
+  character*10, intent(in)  :: datestring
+
+  integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
+  real(r_single), dimension(nobs_max), intent(inout)      :: hx_mean, hx_mean_nobc, hx
+  ! hx_modens holds modulated ensemble in ob space (zero size and not referenced
+  ! if neigv=0)
+  real(r_single), dimension(neigv,nobs_max), intent(inout) :: hx_modens
+  real(r_single), dimension(nobs_max), intent(inout)      :: x_obs
+  real(r_single), dimension(nobs_max), intent(inout)      :: x_err, x_errorig
+  real(r_single), dimension(nobs_max), intent(inout)      :: x_lon, x_lat
+  real(r_single), dimension(nobs_max), intent(inout)      :: x_press, x_time
+  integer(i_kind), dimension(nobs_max), intent(inout)     :: x_code
+  character(len=20), dimension(nobs_max), intent(inout)   :: x_type
+  integer(i_kind), dimension(nobs_maxdiag), intent(inout) :: x_used
+
+  character(len=8), intent(in) :: id
+  integer(i_kind), intent(in)  :: nanal, nmem
+
 end subroutine get_ozobs_data_ufo
 
 ! write spread diagnostics

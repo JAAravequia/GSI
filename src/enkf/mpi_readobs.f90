@@ -26,6 +26,7 @@ module mpi_readobs
 !   2009-02-23  Initial version.
 !   2016-11-29  shlyaeva: Added the option of writing out ensemble spread in
 !               diag files
+!   2019-10-07  shlyaeva: add option to use ioda files
 !
 ! attributes:
 !   language: f95
@@ -33,7 +34,7 @@ module mpi_readobs
 !$$$
   
 use kinds, only: r_kind, r_single, i_kind
-use params, only: ntasks_io, nanals_per_iotask, nanal1, nanal2
+use params, only: ntasks_io, nanals_per_iotask, nanal1, nanal2, jedi_ufo
 use radinfo, only: npred
 use readconvobs
 use readsatobs
@@ -53,6 +54,8 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
                       oberr, oblon, oblat, obpress, &
                       obtime, oberrorig, obcode, obtype, &
                       biaspreds, diagused,  anal_ob, anal_ob_modens, indxsat, nanals, neigv)
+ use readiodaobs
+ implicit none
     character*500, intent(in) :: obspath
     character*10, intent(in) :: datestring
     character(len=10) :: id,id2
@@ -75,6 +78,9 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     isatproc=max(0,min(2,numproc-2))
 ! get total number of conventional and sat obs for ensmean.
     id = 'ensmean'
+    if (jedi_ufo) then
+      call initialize_ioda()
+    endif
     if(nproc == 0)call get_num_convobs(obspath,datestring,nobs_conv,nobs_convdiag,id)
     if(nproc == iozproc)call get_num_ozobs(obspath,datestring,nobs_oz,nobs_ozdiag,id)
     if(nproc == isatproc)call get_num_satobs(obspath,datestring,nobs_sat,nobs_satdiag,id)
@@ -180,6 +186,11 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
         diagused(nobs_convdiag+nobs_ozdiag+1:nobs_totdiag),&
         id,nanal,nmem)
     end if ! read obs.
+
+    if (jedi_ufo) then
+      call finalize_ioda()
+    endif
+
 
 !   call mpi_barrier(mpi_comm_world,ierr)  ! synch tasks.
 

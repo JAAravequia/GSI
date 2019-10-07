@@ -24,7 +24,7 @@ module readsatobs
 !   2016-11-29 shlyaeva - updated read routine to calculate linearized H(x)
 !                         added write_ozvobs_data to output ensemble spread
 !   2017-12-13  shlyaeva - added netcdf diag read/write capability
-!   2019-08-15  martin   - added JEDI UFO netcdf read capabillity
+!   2019-08-15  martin & shlyaeva  - added JEDI UFO netcdf read capabillity
 !
 ! attributes:
 !   language: f95
@@ -47,6 +47,7 @@ contains
 
 ! get number of radiance observations
 subroutine get_num_satobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
+    use readiodaobs, only: get_numobs_ioda
     implicit none
     character(len=500), intent(in)  :: obspath
     character(len=10),  intent(in)  :: id, datestring
@@ -55,7 +56,7 @@ subroutine get_num_satobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     if (netcdf_diag) then
        call get_num_satobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     else if (jedi_ufo) then
-       call get_num_satobs_ufo(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
+       call get_numobs_ioda("radiance", num_obs_tot, num_obs_totdiag)
     else
        call get_num_satobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     endif
@@ -289,10 +290,6 @@ subroutine get_num_satobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     enddo ! satellite
 
 end subroutine get_num_satobs_nc
-
-! get number of radiance observations from JEDI UFO netcdf file
-subroutine get_num_satobs_ufo(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
-end subroutine get_num_satobs_ufo
 
 ! read radiance data
 subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
@@ -1031,6 +1028,30 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
 ! read radiance data from JEDI UFO netcdf file
 subroutine get_satobs_data_ufo(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal, nmem)
+  use params, only: neigv
+  use radinfo, only: npred
+  implicit none
+  character*500, intent(in)     :: obspath
+  character(len=10), intent(in) ::  datestring
+
+  integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
+
+  real(r_single), dimension(nobs_max), intent(inout) :: hx_mean,hx_mean_nobc, hx
+  ! hx_modens holds modulated ensemble in ob space (zero size and not referenced
+  ! if neigv=0)
+  real(r_single), dimension(neigv, nobs_max), intent(inout) :: hx_modens
+  real(r_single), dimension(nobs_max), intent(inout) :: x_obs
+  real(r_single), dimension(nobs_max), intent(inout) :: x_err, x_errorig
+  real(r_single), dimension(nobs_max), intent(inout) :: x_lon, x_lat
+  real(r_single), dimension(nobs_max), intent(inout) :: x_press, x_time
+  integer(i_kind), dimension(nobs_max), intent(inout) :: x_channum, x_indx
+  character(len=20), dimension(nobs_max), intent(inout) :: x_type
+  real(r_single), dimension(npred+1,nobs_max), intent(inout) :: x_biaspred
+  integer(i_kind), dimension(nobs_maxdiag), intent(inout) :: x_used
+
+  character(len=10), intent(in) :: id
+  integer, intent(in)           :: nanal, nmem
+
 end subroutine get_satobs_data_ufo
 
 ! write spread diagnostics

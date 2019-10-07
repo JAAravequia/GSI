@@ -191,6 +191,7 @@ logical,public :: lobsdiag_forenkf = .false.
 logical,public :: netcdf_diag = .false.
 ! if true, read JEDI UFO innovations and metadata
 logical,public :: jedi_ufo = .false.
+character(len=120),public :: jedi_yaml = ""
 
 namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    covinflatemax,covinflatemin,deterministic,sortinc,&
@@ -213,7 +214,7 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
                    getkf,getkf_inflation,denkf,modelspace_vloc,dfs_sort,write_spread_diag,&
                    covinflatenh,covinflatesh,covinflatetr,lnsigcovinfcutoff,&
-                   fso_cycling,fso_calculate,imp_physics,lupp, jedi_ufo
+                   fso_cycling,fso_calculate,imp_physics,lupp, jedi_ufo, jedi_yaml
 namelist /nam_wrf/arw,nmm,nmm_restart
 namelist /satobs_enkf/sattypes_rad,dsis
 namelist /ozobs_enkf/sattypes_oz
@@ -398,6 +399,24 @@ latboundpm=latbound-p5delat
 latboundmp=-latbound+p5delat
 latboundmm=-latbound-p5delat
 delatinv=1.0_r_single/delat
+
+! using Jacobian for ensemble perturbations in obs space not supported
+! with JEDI files currently
+if (lobsdiag_forenkf .and. jedi_ufo) then
+  if (nproc .eq. 0) print *, 'JEDI UFO files do not provide Jacobian currently; ', &
+                             'lobsdiag_forenkf and jedi_ufo options are incompatible'
+  call stop2(19)
+endif
+
+! check that yaml file is provided for JEDI files
+if (jedi_ufo) then
+  inquire(file=trim(jedi_yaml),exist=fexist)
+  if ( .not. fexist ) then
+     if (nproc .eq. 0) print *, 'error: JEDI yaml file ', trim(jedi_yaml),  &
+                                'does not exist'
+     call stop2(19)
+  endif
+endif
 
 ! if modelspace_vloc, use modulated ensemble to compute Kalman gain (but use
 ! this gain to update only original ensemble). 
