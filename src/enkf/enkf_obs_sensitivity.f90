@@ -28,9 +28,7 @@ module enkf_obs_sensitivity
 !
 !$$$ end documentation block
 ! -----------------------------------------------------------------------------
-use mpimod, only: mpi_comm_world
-use mpisetup, only: mpi_real4,mpi_sum,mpi_comm_io,mpi_in_place,numproc,nproc,&
-                mpi_integer,mpi_wtime,mpi_status,mpi_real8,mpi_max,mpi_realkind
+use mpisetup
 use kinds, only: r_single,r_kind,r_double,i_kind
 use params, only: fso_calculate,latbound,nlevs,nanals,datestring, &
                   lnsigcutoffsatnh,lnsigcutoffsattr,lnsigcutoffsatsh, &
