@@ -8,7 +8,7 @@ exp=$jobname
 # Set path/file for gsi executable
 #basedir=/scratch1/portfolios/NCEPDEV/da/save/Michael.Lueken
 #gsiexec=$gsiexec
-#gsiexec=$basedir/EXP-port/src/global_gsi
+#gsiexec=$basedir/EXP-port/src/global_gsi.x
 
 
 # Set the JCAP resolution which you want.
@@ -22,10 +22,7 @@ tmpdir=$tmpdir/$tmpregdir/${exp}
 savdir=$savdir/out${JCAP}/${exp}
 
 # Specify GSI fixed field and data directories.
-#fixgsi=$fixgsi
-#fixgsi=$basedir/EXP-port/fix
-#fixcrtm=$fixcrtm
-#fixcrtm=$basedir/nwprod/lib/sorc/CRTM_REL-2.2.3/Big_Endian
+fixcrtm=${fixcrtm:-$CRTM_FIX}
 
 #datobs=$datobs
 #datobs=/scratch1/portfolios/NCEPDEV/da/noscrub/Michael.Lueken/CASES/sigmap/$adate
