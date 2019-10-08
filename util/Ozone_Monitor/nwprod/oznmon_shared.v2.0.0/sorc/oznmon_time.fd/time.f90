@@ -1,6 +1,7 @@
 program main
-  use read_diag
+  use read_ozndiag
   use valid
+  use kinds, only: i_kind
 
   implicit none
   integer ntype,mregion,mls2_levs,mls3_levs
@@ -11,7 +12,8 @@ program main
   character(10),dimension(ntype):: ges_vars
   character(20) satname,stringd,satsis
   character(10) dum,satype,dplat
-  character(40) string,diag_oz,grad_file,ctl_file
+  character(40) string,grad_file,ctl_file
+  character(500) diag_oz
   character(40) bad_pen_file, bad_cnt_file
   character(40),dimension(mregion):: region
 
@@ -32,6 +34,8 @@ program main
   logical validate, valid_penalty, valid_count
   character(60) penformat,cntformat
 
+  integer( i_kind )                :: istatus
+
 
 ! Variables for reading ozone data
   type(diag_header_fix_list )         :: header_fix
@@ -43,8 +47,9 @@ program main
 ! Namelist with defaults
   logical               :: new_hdr            = .false.
   character(10)         :: ptype              = "ges"
+  logical               :: netcdf              = .false.
   namelist /input/ satname,iyy,imm,idd,ihh,idhh,incr,&
-       nregion,region,rlonmin,rlonmax,rlatmin,rlatmax,validate,new_hdr,ptype
+       nregion,region,rlonmin,rlonmax,rlatmin,rlatmax,validate,new_hdr,ptype,netcdf
 
   data luname,lungrd,lunctl,lndiag,lupen,lucnt / 5, 100, 51, 21, 52, 53 /
   data rmiss /-999./
@@ -94,20 +99,22 @@ program main
   write(6,*)'ctl_file =',ctl_file
   write(6,*)'bad_pen_file =', bad_pen_file
   write(6,*)'bad_cnt_file =', bad_cnt_file
+  write(6,*)'netcdf       =', netcdf
 
-! Open unit to diagnostic file.  Read portion of header to 
-! see if file exists
-  open(lndiag,file=diag_oz,form='unformatted')
-! open(lndiag,file='omi_aura.txt',status='old')
-  read(lndiag,err=900,end=900) dum
-  print*, 'dum=', dum
-  rewind lndiag
+  call set_netcdf_read( netcdf )
+  call open_ozndiag( diag_oz, lndiag, istatus )
+  write(6,*) 'istatus from open_ozndiag = ', istatus
+
 
 ! File exists.  Read header
-  write(6,*)'call read_diag_header'
-  call read_diag_header( lndiag, header_fix, header_nlev, new_hdr )
-  write(6,*)'after read_diag_header, new_hdr = ', new_hdr 
+  write(6,*)'call read_ozndiag_header'
+  call read_ozndiag_header( lndiag, header_fix, header_nlev, new_hdr, istatus )
+  write(6,*)'after read_ozndiag_header, new_hdr = ', new_hdr 
+  write(6,*) 'istatus from read_ozndiag_header = ', istatus
   
+!  call close_ozndiag( diag_oz, lndiag )
+!  goto 950
+
 ! Extract observation type, satellite id, and number of levels
   satype = header_fix%obstype
   satsis = header_fix%isis
@@ -194,7 +201,7 @@ program main
   loopd:  do while (iflag == 0)
 
 !    Read a record.  If read flag, iflag does not equal zero, exit loopd
-     call read_diag_data( lndiag, header_fix, data_fix, data_nlev, data_extra, iread, iflag )
+     call read_ozndiag_data( lndiag, header_fix, data_fix, data_nlev, data_extra, iread, iflag )
      if( iflag /= 0 ) exit loopd
      nobs=nobs+iread
 
@@ -267,7 +274,9 @@ program main
   enddo loopd !  End of loop over diagnostic file
 
 
-  close(lndiag)
+!  close(lndiag)
+  call close_ozndiag( diag_oz, lndiag )
+
   print*, 'read in ', nobs, ' observations in total',cnt(12,1),cnt(12,4),sum(omg_cor),sum(penalty)
   write(6,*)' '
   write(6,*)' '
