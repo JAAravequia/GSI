@@ -106,14 +106,20 @@ subroutine get_numobs_ioda(obstype, num_obs_tot, num_obs_totdiag)
 
   character(len=*), intent(in)  :: obstype
   integer(i_kind),  intent(out) :: num_obs_tot, num_obs_totdiag
-  integer :: iobstype, nlocs
+  character(len=100) :: obsname
+
+  integer :: iobstype, nlocs, nvars
 
   num_obs_tot = 0
   num_obs_totdiag = 0
   do iobstype = 1, size(obsspaces)
-    nlocs = obsspace_get_nlocs(obsspaces(iobstype))
-    num_obs_tot = num_obs_tot + nlocs
-    num_obs_totdiag = num_obs_totdiag + nlocs
+    call obsspace_obsname(obsspaces(iobstype), obsname)
+    if (trim(obsname) == trim(obstype)) then
+      nlocs = obsspace_get_nlocs(obsspaces(iobstype))
+      nvars = obsspace_get_nvars(obsspaces(iobstype))
+      num_obs_tot = num_obs_tot + nlocs*nvars
+      num_obs_totdiag = num_obs_totdiag + nlocs*nvars
+    endif
   enddo
 
 end subroutine get_numobs_ioda

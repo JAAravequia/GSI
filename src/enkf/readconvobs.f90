@@ -59,7 +59,7 @@ subroutine get_num_convobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
    if (netcdf_diag) then
       call get_num_convobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
    else if (jedi_ufo) then
-      call get_numobs_ioda("conv", num_obs_tot,num_obs_totdiag)
+      call get_numobs_ioda("conventional", num_obs_tot,num_obs_totdiag)
    else
       call get_num_convobs_bin(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
    endif
