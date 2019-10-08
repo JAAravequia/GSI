@@ -203,12 +203,6 @@ project(GSI)
 #       FORCE)
 
 
-  # FFLAGS depend on the compiler
-  get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
-  set(CFLAGS "-I. -DFortranByte=char -DFortranInt=int -DFortranLlong='long long' -O3  -Dfunder")
-  set (CMAKE_Fortran_INC_FLAGS "-I ./ -I ${CORE_INCS} -I ${NETCDF_INCLUDES} ")
-  set (CFLAGS_N "-I. -DFortranByte=char -DFortranInt=int -DFortranLlong='long long'  -O3  -Dfunder")
-
 
   if(BUILD_CORELIBS )
     message("setting values for corelibs")
@@ -222,15 +216,6 @@ project(GSI)
     set(BUILD_W3EMC "ON" CACHE STRING "Build the EMC library" )
     set(BUILD_NCO "ON" CACHE STRING "Build the NCO library" )
   endif()
-  find_package( BACIO )
-  find_package( BUFR )
-  find_package( SIGIO )
-  find_package( NEMSIO )
-  find_package( CRTM )
-  find_package( SP )
-  find_package( SFCIO )
-  find_package( W3EMC )
-  find_package( W3NCO )
 
   if(BUILD_NCDIAG)
     set(NCDIAG_INCS "${PROJECT_BINARY_DIR}/libsrc/ncdiag/include")
@@ -247,6 +232,15 @@ project(GSI)
   find_package( SFCIO )
   find_package( W3EMC )
   find_package( W3NCO )
+  set(CORE_LIBRARIES ${BACIO_LIBd} ${BUFR_LIBd} ${CRTM_LIB} ${NEMSIO_LIB} ${SFCIO_LIB} ${SIGIO_LIB} ${SP_LIBd} ${W3EMC_LIBd} ${W3NCO_LIBd} ${BACIO_LIBd} )
+  set(CORE_INCS ${CRTM_INC} ${NEMSIO_INC} ${SFCIO_INC} ${SIGIO_INC} ${W3EMC_INCd} )
+
+  # FFLAGS depend on the compiler
+  get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
+  set(CFLAGS "-I. -DFortranByte=char -DFortranInt=int -DFortranLlong='long long' -O3  -Dfunder")
+  set (CMAKE_Fortran_INC_FLAGS "-I ./ -I ${CORE_INCS} -I ${NETCDF_INCLUDES} ")
+  set (CFLAGS_N "-I. -DFortranByte=char -DFortranInt=int -DFortranLlong='long long'  -O3  -Dfunder")
+
 
   if(BUILD_GSDCLOUD_ARW)
     set(GSDCLOUD_DIR "${CMAKE_SOURCE_DIR}/libsrc/GSD/gsdcloud")

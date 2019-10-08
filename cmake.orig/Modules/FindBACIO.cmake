@@ -10,9 +10,9 @@ if(DEFINED ENV{BACIO_VER})
 endif()
 if(NOT BUILD_BACIO )
   if(DEFINED ENV{BACIO_LIB4})
-    set(BACIO_LIBRARY $ENV{BACIO_LIB4} )
+    set(BACIO_LIB4 $ENV{BACIO_LIB4} )
   else()
-    find_library( BACIO_LIBRARY 
+    find_library( BACIO_LIB4 
       NAMES libbacio.a libbacio_4.a libbacio_v${BACIO_VER}_4.a 
       HINTS $ENV{COREPATH}/lib /usr/local/jcsda/nwprod_gdas_2014/lib	
           ${COREPATH}/bacio/v${BACIO_VER}
@@ -22,10 +22,10 @@ if(NOT BUILD_BACIO )
         lib
        ${NO_DEFAULT_PATH}
       )
-    message("Found BACIO library ${BACIO_LIBRARY}")
+    message("Found BACIO library ${BACIO_LIB4}")
   endif()
 endif()
-if( NOT BACIO_LIBRARY ) # didn't find the library, so build it from source
+if( NOT BACIO_LIB4 ) # didn't find the library, so build it from source
     message("Could not find BACIO library, so building from libsrc")
     if( DEFINED ENV{BACIO_SRC} )
       set( BACIO_DIR $ENV{BACIO_SRC} CACHE STRING "BACIO Source Directory" )
@@ -37,19 +37,19 @@ if( NOT BACIO_LIBRARY ) # didn't find the library, so build it from source
     set( bacio "bacio${libsuffix}")
     set( BUILD_BACIO "ON" CACHE INTERNAL "Build Bacio library" )
     add_subdirectory(${CMAKE_SOURCE_DIR}/libsrc/bacio)
-    set( BACIO_LIBRARY ${bacio} )
+    set( BACIO_LIB4 ${bacio} )
     if( CORE_BUILT )
-      list( APPEND CORE_BUILT ${BACIO_LIBRARY} )
+      list( APPEND CORE_BUILT ${BACIO_LIB4} )
     else()
-      set( CORE_BUILT ${BACIO_LIBRARY} )
+      set( CORE_BUILT ${BACIO_LIB4} )
     endif()
-else( NOT BACIO_LIBRARY )
+else( NOT BACIO_LIB4 )
   if( CORE_LIBRARIES )
-    list( APPEND CORE_LIBRARIES ${BACIO_LIBRARY} )
+    list( APPEND CORE_LIBRARIES ${BACIO_LIB4} )
   else()
-    set( CORE_LIBRARIES ${BACIO_LIBRARY} )
+    set( CORE_LIBRARIES ${BACIO_LIB4} )
   endif()
-endif( NOT BACIO_LIBRARY )
+endif( NOT BACIO_LIB4 )
 
-set( BACIO_LIBRARY_PATH ${BACIO_LIBRARY} CACHE STRING "BACIO Library Location" )
+set( BACIO_LIB4_PATH ${BACIO_LIB4} CACHE STRING "BACIO Library Location" )
 

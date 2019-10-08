@@ -37,7 +37,7 @@ set (CORE_DEPS " ")
 set( NO_DEFAULT_PATH )
 if(NOT  BUILD_EMC  )
   if(DEFINED ENV{W3EMC_LIBd} )
-    set(W3EMC_LIBRARY $ENV{W3EMC_LIBd} )
+    set(W3EMC_LIB4 $ENV{W3EMC_LIBd} )
     set(W3EMCINC $ENV{W3EMC_INCd} )
   else()
   find_path( W3EMCINC 
@@ -49,7 +49,7 @@ if(NOT  BUILD_EMC  )
       ${COREPATH}/w3emc/v${W3EMC_VER}/incmod/w3emc_v${W3EMC_VER}_d
       ${COREPATH}/w3emc/v${W3EMC_VER}/intel/w3emc_v${W3EMC_VER}_d
   )
-  find_library( W3EMC_LIBRARY 
+  find_library( W3EMC_LIB4 
     NAMES libw3emc_4.a libw3emc_i4r8.a libw3emc_v${W3EMC_VER}_d.a
     HINTS 
       $ENV{COREPATH}/lib 
@@ -59,11 +59,11 @@ if(NOT  BUILD_EMC  )
     PATH_SUFFIXES
         lib
     )
-    message("Found W3EMC library ${W3EMC_LIBRARY}")
+    message("Found W3EMC library ${W3EMC_LIB4}")
   endif()
 else()
     set( libsuffix "_v${W3EMC_VER}${debug_suffix}" )
-    set( W3EMC_LIBRARY "${LIBRARY_OUTPUT_PATH}/libw3emc${libsuffix}.a" CACHE STRING "W3EMC Library" )
+    set( W3EMC_LIB4 "${LIBRARY_OUTPUT_PATH}/libw3emc${libsuffix}.a" CACHE STRING "W3EMC Library" )
     set( w3emc "w3emc${libsuffix}")
     if( DEFINED ENV{W3EMC_SRC} )
       set( W3EMC_DIR $ENV{W3EMC_SRC} CACHE STRING "W3EMC Source Directory" )
@@ -75,9 +75,9 @@ else()
 endif()
 if(NOT  BUILD_NCO )
   if(DEFINED ENV{W3NCO_LIBd} )
-    set(W3NCO_LIBRARY $ENV{W3NCO_LIBd} )
+    set(W3NCO_LIBd $ENV{W3NCO_LIBd} )
   else()
-  find_library( W3NCO_LIBRARY 
+  find_library( W3NCO_LIBd 
     NAMES libw3nco_v${W3NCO_VER}_d.a libw3nco_d.a  libw3nco_i4r8.a 
     HINTS 
        $ENV{COREPATH}/lib 
@@ -87,7 +87,7 @@ if(NOT  BUILD_NCO )
     PATH_SUFFIXES
         lib
      ${NO_DEFAULT_PATH})
-    message("Found W3NCO library ${W3NCO_LIBRARY}")
+    message("Found W3NCO library ${W3NCO_LIBd}")
   endif()
 else()
     if( DEFINED ENV{W3NCO_SRC} )
@@ -98,14 +98,14 @@ else()
       endif()
     endif()
     set( libsuffix "_v${W3NCO_VER}${debug_suffix}" )
-    set( W3NCO_LIBRARY "${LIBRARY_OUTPUT_PATH}/libw3nco${libsuffix}.a" CACHE STRING "W3NCO Library" )
+    set( W3NCO_LIBd "${LIBRARY_OUTPUT_PATH}/libw3nco${libsuffix}.a" CACHE STRING "W3NCO Library" )
     set( w3nco "w3nco${libsuffix}")
 endif()
 if(NOT  BUILD_BUFR  )
   if(DEFINED ENV{BUFR_LIBd} )
-    set(BUFR_LIBRARY $ENV{BUFR_LIBd} )
+    set(BUFR_LIB4 $ENV{BUFR_LIBd} )
   else()
-  find_library( BUFR_LIBRARY 
+  find_library( BUFR_LIB4 
     NAMES libbufr.a libbufr_d_64.a libbufr_i4r8.a libbufr_v${BUFR_VER}_d_64.a
     HINTS 
       $ENV{COREPATH}/lib 
@@ -116,7 +116,7 @@ if(NOT  BUILD_BUFR  )
         lib
      ${NO_DEFAULT_PATH})
     set( bufr "bufr_v${BUFR_VER}")
-    message("Found BUFR library ${BUFR_LIBRARY}")
+    message("Found BUFR library ${BUFR_LIB4}")
   endif()
 else()
     if( DEFINED ENV{BUFR_SRC} )
@@ -127,16 +127,16 @@ else()
       endif()
     endif()
     set( libsuffix "_v${BUFR_VER}${debug_suffix}" )
-    set( BUFR_LIBRARY "${LIBRARY_OUTPUT_PATH}/libbufr${libsuffix}.a" CACHE STRING "BUFR Library" )
+    set( BUFR_LIB4 "${LIBRARY_OUTPUT_PATH}/libbufr${libsuffix}.a" CACHE STRING "BUFR Library" )
     set( bufr "bufr${libsuffix}")
 endif()
 if(NOT  BUILD_SFCIO )
   if(DEFINED ENV{SFCIO_LIB4} )
-    set(SFCIO_LIBRARY $ENV{SFCIO_LIB4} )
-    set(SFCIOINC $ENV{SFCIO_INC4} )
+    set(SFCIO_LIB $ENV{SFCIO_LIB4} )
+    set(SFCIO_INC $ENV{SFCIO_INC4} )
   else()
-  findInc( sfcio SFCIO_VER SFCIOINC )
-  find_library( SFCIO_LIBRARY 
+  findInc( sfcio SFCIO_VER SFCIO_INC )
+  find_library( SFCIO_LIB 
     NAMES libsfcio.a libsfcio_4.a libsfcio_i4r4.a libsfcio_v${SFCIO_VER}_4.a
     HINTS 
       $ENV{COREPATH}/lib 
@@ -147,7 +147,7 @@ if(NOT  BUILD_SFCIO )
         lib
        ${NO_DEFAULT_PATH})
     set( sfcio "sfcio_v${SFCIO_VER}_4")
-    message("Found SFCIO library ${SFCIO_LIBRARY}")
+    message("Found SFCIO library ${SFCIO_LIB}")
   endif()
 else()
     if( DEFINED ENV{SFCIO_SRC} )
@@ -158,17 +158,17 @@ else()
       endif()
     endif()
     set( libsuffix "_v${SFCIO_VER}${debug_suffix}" )
-    set( SFCIO_LIBRARY "${LIBRARY_OUTPUT_PATH}/libsfcio${libsuffix}.a" CACHE STRING "SFCIO Library" )
+    set( SFCIO_LIB "${LIBRARY_OUTPUT_PATH}/libsfcio${libsuffix}.a" CACHE STRING "SFCIO Library" )
     set( sfcio "sfcio${libsuffix}")
 endif()
 if(NOT  BUILD_SIGIO )
   if(DEFINED ENV{SIGIO_LIB4} )
-    set(SIGIO_LIBRARY $ENV{SIGIO_LIB4} )
-    set(SIGIOINC $ENV{SIGIO_INC4} )
+    set(SIGIO_LIB $ENV{SIGIO_LIB4} )
+    set(SIGIO_INC $ENV{SIGIO_INC4} )
   else()
-  findInc( sigio SIGIO_VER SIGIOINC )
-  message("SIGIOINC is ${SIGIOINC}")
-  find_library( SIGIO_LIBRARY 
+  findInc( sigio SIGIO_VER SIGIO_INC )
+  message("SIGIO_INC is ${SIGIO_INC}")
+  find_library( SIGIO_LIB 
     NAMES libsigio.a libsigio_4.a libsigio_i4r4.a libsigio_v${SIGIO_VER}_4.a
     HINTS 
      $ENV{COREPATH}/lib 
@@ -179,7 +179,7 @@ if(NOT  BUILD_SIGIO )
         lib
        ${NO_DEFAULT_PATH})
     set( sigio "sigio_v${SIGIO_VER}_4")
-    message("Found SIGIO library ${SIGIO_LIBRARY}")
+    message("Found SIGIO library ${SIGIO_LIB}")
   endif()
 else()
     if( DEFINED ENV{SIGIO_SRC} )
@@ -190,17 +190,17 @@ else()
       endif()
     endif()
     set( libsuffix "_v${SIGIO_VER}${debug_suffix}" )
-    set( SIGIO_LIBRARY "${LIBRARY_OUTPUT_PATH}/libsigio${libsuffix}.a" CACHE STRING "SIGIO Library" )
+    set( SIGIO_LIB "${LIBRARY_OUTPUT_PATH}/libsigio${libsuffix}.a" CACHE STRING "SIGIO Library" )
     set( sigio "sigio${libsuffix}")
     set( CORE_DEPS "${CORE_DEPS} ${baseName}" )
 endif()
 if(NOT  BUILD_NEMSIO )
   if(DEFINED ENV{NEMSIO_LIB} )
-    set(NEMSIO_LIBRARY $ENV{NEMSIO_LIB} )
-    set(NEMSIOINC $ENV{NEMSIO_INC} )
+    set(NEMSIO_LIB $ENV{NEMSIO_LIB} )
+    set(NEMSIO_INC $ENV{NEMSIO_INC} )
   else()
-  findInc( nemsio NEMSIO_VER NEMSIOINC )
-  find_library( NEMSIO_LIBRARY 
+  findInc( nemsio NEMSIO_VER NEMSIO_INC )
+  find_library( NEMSIO_LIB 
     NAMES libnemsio.a libnemsio_v${NEMSIO_VER}.a
     HINTS 
       $ENV{COREPATH}/lib 
@@ -211,7 +211,7 @@ if(NOT  BUILD_NEMSIO )
         lib
        ${NO_DEFAULT_PATH})
     set( nemsio "nemsio_v${NEMSIO_VER}")
-    message("Found NEMSIO library ${NEMSIO_LIBRARY}")
+    message("Found NEMSIO library ${NEMSIO_LIB}")
   endif()
 else()
     if( DEFINED ENV{NEMSIO_SRC} )
@@ -222,14 +222,14 @@ else()
       endif()
     endif()
     set( libsuffix "_v${NEMSIO_VER}${debug_suffix}" )
-    set( NEMSIO_LIBRARY "${LIBRARY_OUTPUT_PATH}/libnemsio${libsuffix}.a" CACHE STRING "NEMSIO Library" )
+    set( NEMSIO_LIB "${LIBRARY_OUTPUT_PATH}/libnemsio${libsuffix}.a" CACHE STRING "NEMSIO Library" )
     set( nemsio "nemsio${libsuffix}")
 endif()
 if(NOT  BUILD_SP )
   if(DEFINED ENV{SP_LIBd} )
-    set(SP_LIBRARY $ENV{SP_LIBd} )
+    set(SP_LIBd $ENV{SP_LIBd} )
   else()
-  find_library( SP_LIBRARY 
+  find_library( SP_LIBd 
     NAMES libsp_d.a libsp_i4r8.a libsp_v${SP_VER}_d.a
     HINTS 
       $ENV{COREPATH}/lib 
@@ -240,7 +240,7 @@ if(NOT  BUILD_SP )
         lib
        ${NO_DEFAULT_PATH})
     set( sp "sp_v${SP_VER}_d")
-    message("Found SP library ${SP_LIBRARY}")
+    message("Found SP library ${SP_LIBd}")
   endif()
 else()
     if( DEFINED ENV{SP_SRC} )
@@ -251,37 +251,37 @@ else()
       endif()
     endif()
     set( libsuffix "_v${SP_VER}${debug_suffix}" )
-    set( SP_LIBRARY "${LIBRARY_OUTPUT_PATH}/libsp${libsuffix}.a" CACHE STRING "SP Library" )
+    set( SP_LIBd "${LIBRARY_OUTPUT_PATH}/libsp${libsuffix}.a" CACHE STRING "SP Library" )
     set( sp "sp${libsuffix}")
 endif()
 
 if( CORE_LIBRARIES )
-  list( APPEND CORE_LIBRARIES ${SFCIO_LIBRARY} ${SIGIO_LIBRARY} 
-                  ${NEMSIO_LIBRARY} ${SP_LIBRARY} ${W3NCO_LIBRARY} ${BUFR_LIBRARY}  
-                  ${W3EMC_LIBRARY} CACHE INTERNAL "List of Core libs" )
-  list( APPEND CORE_INCS ${INCLUDE_OUTPUT_PATH} ${SFCIOINC} ${SIGIOINC} ${NEMSIOINC} ${W3EMCINC}  )
+  list( APPEND CORE_LIBRARIES ${SFCIO_LIB} ${SIGIO_LIB} 
+                  ${NEMSIO_LIB} ${SP_LIBd} ${W3NCO_LIBd} ${BUFR_LIB4}  
+                  ${W3EMC_LIB4} CACHE INTERNAL "List of Core libs" )
+  list( APPEND CORE_INCS ${INCLUDE_OUTPUT_PATH} ${SFCIO_INC} ${SIGIO_INC} ${NEMSIO_INC} ${W3EMCINC}  )
 else()
-  set( CORE_LIBRARIES ${SFCIO_LIBRARY} ${SIGIO_LIBRARY} 
-                  ${NEMSIO_LIBRARY} ${SP_LIBRARY} ${W3NCO_LIBRARY} ${BUFR_LIBRARY}  
-                  ${W3EMC_LIBRARY} CACHE INTERNAL "List of Core libs" )
-  set( CORE_INCS ${INCLUDE_OUTPUT_PATH} ${SFCIOINC} ${SIGIOINC} ${NEMSIOINC} ${W3EMCINC}  )
+  set( CORE_LIBRARIES ${SFCIO_LIB} ${SIGIO_LIB} 
+                  ${NEMSIO_LIB} ${SP_LIBd} ${W3NCO_LIBd} ${BUFR_LIB4}  
+                  ${W3EMC_LIB4} CACHE INTERNAL "List of Core libs" )
+  set( CORE_INCS ${INCLUDE_OUTPUT_PATH} ${SFCIO_INC} ${SIGIO_INC} ${NEMSIO_INC} ${W3EMCINC}  )
 endif()
 
-set( BUFR_LIBRARY_PATH ${BUFR_LIBRARY} CACHE STRING "BUFR Library Location" )
+set( BUFR_LIB4_PATH ${BUFR_LIB4} CACHE STRING "BUFR Library Location" )
 
-set( SFCIO_LIBRARY_PATH ${SFCIO_LIBRARY} CACHE STRING "SFCIO Library Location" )
-set( SFCIO_INCLUDE_PATH ${SFCIOINC} CACHE STRING "SFCIO Include Location" )
+set( SFCIO_LIB_PATH ${SFCIO_LIB} CACHE STRING "SFCIO Library Location" )
+set( SFCIO_INCLUDE_PATH ${SFCIO_INC} CACHE STRING "SFCIO Include Location" )
 
-set( SIGIO_LIBRARY_PATH ${SIGIO_LIBRARY} CACHE STRING "SIGIO Library Location" )
-set( SIGIO_INCLUDE_PATH ${SIGIOINC} CACHE STRING "SIGIO Include Location" )
+set( SIGIO_LIB_PATH ${SIGIO_LIB} CACHE STRING "SIGIO Library Location" )
+set( SIGIO_INCLUDE_PATH ${SIGIO_INC} CACHE STRING "SIGIO Include Location" )
 
-set( W3NCO_LIBRARY_PATH ${W3NCO_LIBRARY} CACHE STRING "W3NCO Library Location" )
+set( W3NCO_LIBd_PATH ${W3NCO_LIBd} CACHE STRING "W3NCO Library Location" )
 
-set( W3EMC_LIBRARY_PATH ${W3EMC_LIBRARY} CACHE STRING "W3EMC Library Location" )
+set( W3EMC_LIB4_PATH ${W3EMC_LIB4} CACHE STRING "W3EMC Library Location" )
 set( W3EMC_INCLUDE_PATH ${W3EMCINC} CACHE STRING "W3EMC Include Location" )
 
-set( NEMSIO_LIBRARY_PATH ${NEMSIO_LIBRARY} CACHE STRING "NEMSIO Library Location" )
-set( NEMSIO_INCLUDE_PATH ${NEMSIOINC} CACHE STRING "NEMSIO Include Location" )
+set( NEMSIO_LIB_PATH ${NEMSIO_LIB} CACHE STRING "NEMSIO Library Location" )
+set( NEMSIO_INCLUDE_PATH ${NEMSIO_INC} CACHE STRING "NEMSIO Include Location" )
 
-set( SP_LIBRARY_PATH ${SP_LIBRARY} CACHE STRING "SP Library Location" )
+set( SP_LIBd_PATH ${SP_LIBd} CACHE STRING "SP Library Location" )
 
