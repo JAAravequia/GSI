@@ -81,13 +81,13 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
   real(r_kind),parameter:: r360 = 360.0_r_kind
 
 ! Declare local variables
-  character(len=14) :: myname
+  character(len=12) :: myname
 ! set c_station_id and set station id to "veia100t" for now
 
   character(len=8) :: c_prvstg='veiacams'
   character(len=8) :: c_sprvstg='veiacams'
   character(len=25):: filename
-  character(len=8) :: c_station_id='veiasite'
+  character(len=8) :: c_station_id='VEIA1000'
 
   integer(i_kind) :: nreal,i,lunin
   integer(i_kind) :: visqm
@@ -95,20 +95,20 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
   integer(i_kind) :: idomsfc
   integer(i_kind) :: nc,k,ilat,ilon,nchanl
   integer(i_kind) :: idate,iout,maxobs,icount,ierr
-  integer(i_kind) :: stnelev4
+  integer(i_kind) :: stnelev4, nid
   integer(i_kind) :: sunangle,veiaqc 
   real(r_kind) :: dlat,dlon,dlat_earth,dlon_earth,toff,t4dv
   real(r_kind) :: dlat_earth_deg,dlon_earth_deg
   real(r_kind) :: visoe,tdiff,tempvis,visout
   real(r_kind) :: rminobs,pob,dlnpob,obval
   real(r_kind) :: stnelev
-  real(r_kind)  :: rlon4,rlat4,obvalmi,nid
+  real(r_kind)  :: rlon4,rlat4,obvalmi,rnid
   real(r_kind) :: usage,tsavg,ff10,sfcr,zz
   real(r_kind),allocatable,dimension(:,:):: cdata_all,cdata_out
 
   integer(i_kind) :: thisobtype_usage   
   integer(i_kind) :: invalidkx, invalidob, n_outside
-  integer(i_kind) :: ivisdate(5),nid,y4m2d2,h2m2s2
+  integer(i_kind) :: ivisdate(5),y4m2d2,h2m2s2
 
   real(r_double) :: udbl,vdbl,rrnid
   logical :: outside
@@ -122,9 +122,13 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
   real(r_double) :: r_sprvstg
 
   ! hardwired kx for webcams
-  integer(i_kind) :: kx=222_i_kind   
+  integer(i_kind) :: kx=999_i_kind   
 
-  equivalence(rstation_id, c_station_id)
+!-----------------------------------------------------
+! RY: 10/7/2019: seems in Theia, this following does not work.  Don't know why.
+!------
+   equivalence(rstation_id, c_station_id)
+
   equivalence(r_prvstg,c_prvstg)
   equivalence(r_sprvstg,c_sprvstg)
 
@@ -171,7 +175,6 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
       maxobs=maxobs+1
   end do readloop
 101 continue
-90 format(A25,I4,5X,F7.4,4X,F9.4,3X,I4,3X,I8,3X,I6,5X,F5.2,8x,I2,3x,I3)
    write(6,*)myname,': maxobs=',maxobs
 
   if (maxobs == 0) then
@@ -185,6 +188,7 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
   if (lhilbert) call init_hilbertcurve(maxobs)
   if (twodvar_regional) call init_ndfdgrid
   allocate(cdata_all(nreal,maxobs))
+  cdata_all=zero
   iout=0
   invalidkx=0
   invalidob=0
@@ -193,6 +197,7 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
   rewind(lunin)
   loop_readobs: do icount=1,maxobs
       read(lunin,90,end=101) filename,nid,rlat4,rlon4,stnelev4,y4m2d2,h2m2s2,obvalmi,sunangle,veiaqc
+90 format(A25,I4,5X,F7.4,4X,F9.4,3X,I4,3X,I8,3X,I6,5X,F5.2,8x,I2,3x,I3)
 !--------------------------------------------------------------------
 ! Mike M. viscams provider the following information:
 !  1) if the sunangle>105,i.e.,the sun is 15 degree below the horizontal level, the observation quality is not good.
@@ -205,8 +210,14 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 !      if (sunangle>105 .and. veiaqc<50 .and. obvalmi>4.5) usage=-130._r_kind
 !      write(6,*)myname,': sunangle, veiaqc, usage',sunangle,veiaqc, usage
 !--------------------------------------------------------------------
-      rrnid=nid
-      write(c_station_id,'(f8.1)') rrnid
+!      write(c_station_id,'(I8)') nid
+!--------------------------------------------------------------------
+
+       rnid=float(nid)
+       rrnid=dble(rnid)
+       write(c_station_id,'(f8.4)') rrnid
+
+!      write(6,*)myname,': rnid,dble(nid)=', rnid,rrnid,'c_station_id=', c_station_id
        
 ! convert obvalmi from mile to meter, then use obval thereafter
 !............................................................
@@ -214,13 +225,15 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
       stnelev=real(stnelev4)
       iout=iout+1
 
-      if (kx /= 222) then
-         linvalidkx=.true.
-         invalidkx=invalidkx+1
-         write(6,*)myname,': Invalid report type: icount,kx ',icount,kx
-      else
-         linvalidkx=.false.
-      endif
+!RY:  what is the function of those code
+!-------------------------------------------
+       if (kx /= 999) then
+          linvalidkx=.true.
+          invalidkx=invalidkx+1
+          write(6,*)myname,': Invalid report type: icount,kx ',icount,kx
+       else
+          linvalidkx=.false.
+       endif
 
       if (obval > r0_1_bmiss) then
          linvalidob=.true.
@@ -229,13 +242,14 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
       else
          linvalidob=.false.
       endif
+
       dlat_earth_deg=real(rlat4,kind=r_kind)
       dlon_earth_deg=real(rlon4,kind=r_kind)
       if(abs(dlat_earth_deg)>r90 .or. abs(dlon_earth_deg)>r360) cycle loop_readobs
       if (dlon_earth_deg == r360) dlon_earth_deg=dlon_earth_deg-r360
       if (dlon_earth_deg < zero)  dlon_earth_deg=dlon_earth_deg+r360
 
-      write(6,*)myname,'dlon_earth_deg dlat_earth_deg', dlon_earth_deg,dlat_earth_deg
+!!!!      write(6,*)myname,'dlon_earth_deg dlat_earth_deg', dlon_earth_deg,dlat_earth_deg
       dlon_earth=dlon_earth_deg*deg2rad
       dlat_earth=dlat_earth_deg*deg2rad
       outside=.false. !need this on account of global gsi
@@ -249,6 +263,7 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
          call grdcrd1(dlat,rlats,nlat,1)
          call grdcrd1(dlon,rlons,nlon,1)
       endif
+         write(6,*)myname,': OUTSIDE ', outside 
       if (linvalidkx .or. linvalidob .or. outside)  cycle loop_readobs
 
       !   date arrary
@@ -332,6 +347,8 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
       endif
 
       cdata_all(5,iout)=rstation_id             ! station id
+
+! RY     cdata_all(5,iout)=rrnid                   ! station id
       cdata_all(6,iout)=t4dv                    ! time
       cdata_all(7,iout)=nc                      ! type
       cdata_all(8,iout)=visoe*three             ! max error
