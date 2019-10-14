@@ -296,6 +296,7 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal, nmem)
   use radinfo, only: npred
   use params, only: neigv
+  use readiodaobs, only: get_obs_data_ioda
   implicit none
 
   character*500, intent(in)     :: obspath
@@ -322,8 +323,10 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
     call get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal, nmem)
   else if (jedi_ufo) then
-    call get_satobs_data_ufo(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
-           x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal, nmem)
+    call get_obs_data_ioda("radiance", nobs_max, nobs_maxdiag,            &
+                           hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
+                           x_lon, x_lat, x_press, x_time, x_channum,      &
+                           x_errorig, x_type, x_used)
   else
     call get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal, nmem)
@@ -1024,35 +1027,6 @@ subroutine get_satobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, hx_me
   end if
 
  end subroutine get_satobs_data_nc
-
-! read radiance data from JEDI UFO netcdf file
-subroutine get_satobs_data_ufo(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
-           x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal, nmem)
-  use params, only: neigv
-  use radinfo, only: npred
-  implicit none
-  character*500, intent(in)     :: obspath
-  character(len=10), intent(in) ::  datestring
-
-  integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
-
-  real(r_single), dimension(nobs_max), intent(inout) :: hx_mean,hx_mean_nobc, hx
-  ! hx_modens holds modulated ensemble in ob space (zero size and not referenced
-  ! if neigv=0)
-  real(r_single), dimension(neigv, nobs_max), intent(inout) :: hx_modens
-  real(r_single), dimension(nobs_max), intent(inout) :: x_obs
-  real(r_single), dimension(nobs_max), intent(inout) :: x_err, x_errorig
-  real(r_single), dimension(nobs_max), intent(inout) :: x_lon, x_lat
-  real(r_single), dimension(nobs_max), intent(inout) :: x_press, x_time
-  integer(i_kind), dimension(nobs_max), intent(inout) :: x_channum, x_indx
-  character(len=20), dimension(nobs_max), intent(inout) :: x_type
-  real(r_single), dimension(npred+1,nobs_max), intent(inout) :: x_biaspred
-  integer(i_kind), dimension(nobs_maxdiag), intent(inout) :: x_used
-
-  character(len=10), intent(in) :: id
-  integer, intent(in)           :: nanal, nmem
-
-end subroutine get_satobs_data_ufo
 
 ! write spread diagnostics
 subroutine write_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)

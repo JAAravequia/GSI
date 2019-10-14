@@ -410,6 +410,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             x_lon, x_lat, x_press, x_time, x_code,         &
                             x_errorig, x_type, x_used, id, nanal, nmem)
   use params, only: neigv
+  use readiodaobs, only: get_obs_data_ioda
   implicit none
 
   character*500,   intent(in) :: obspath
@@ -438,10 +439,10 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             x_lon, x_lat, x_press, x_time, x_code,         &
                             x_errorig, x_type, x_used, id, nanal, nmem)
   else if (jedi_ufo) then
-    call get_convobs_data_ufo(obspath, datestring, nobs_max, nobs_maxdiag,   &
-                            hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err,       &
-                            x_lon, x_lat, x_press, x_time, x_code,         &
-                            x_errorig, x_type, x_used, id, nanal, nmem)
+    call get_obs_data_ioda('conventional', nobs_max, nobs_maxdiag,        &
+                           hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
+                           x_lon, x_lat, x_press, x_time, x_code,         &
+                           x_errorig, x_type, x_used)
   else
     call get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
                             hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err,       &
@@ -901,37 +902,6 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
   endif
 
 end subroutine get_convobs_data_nc
-
-! read conventional observations from JEDI UFO netcdf file
-subroutine get_convobs_data_ufo(obspath, datestring, nobs_max, nobs_maxdiag,   &
-                            hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err,       &
-                            x_lon, x_lat, x_press, x_time, x_code,         &
-                            x_errorig, x_type, x_used, id, nanal, nmem)
-  use params, only: neigv
-  implicit none
-
-  character*500,   intent(in) :: obspath
-  character*10,    intent(in) :: datestring
-  integer(i_kind), intent(in) :: nobs_max, nobs_maxdiag
-
-  real(r_single), dimension(nobs_max), intent(out)    :: hx_mean
-  real(r_single), dimension(nobs_max), intent(out)    :: hx_mean_nobc
-  real(r_single), dimension(nobs_max), intent(out)    :: hx
-  ! hx_modens holds modulated ensemble in ob space (zero size and not referenced
-  ! if neigv=0)
-  real(r_single), dimension(neigv,nobs_max), intent(out) :: hx_modens
-  real(r_single), dimension(nobs_max), intent(out)    :: x_obs
-  real(r_single), dimension(nobs_max), intent(out)    :: x_err, x_errorig
-  real(r_single), dimension(nobs_max), intent(out)    :: x_lon, x_lat
-  real(r_single), dimension(nobs_max), intent(out)    :: x_press, x_time
-  integer(i_kind), dimension(nobs_max), intent(out)   :: x_code
-  character(len=20), dimension(nobs_max), intent(out) :: x_type
-  integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
-
-  character(len=10), intent(in) :: id
-  integer, intent(in)           :: nanal, nmem
-
-end subroutine get_convobs_data_ufo
 
 ! read conventional observation from binary files
 subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
