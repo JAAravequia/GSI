@@ -244,7 +244,7 @@ end subroutine fill_array_obsdata_int
 subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
                              hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
                              x_lon, x_lat, x_press, x_time, x_code,   &
-                             x_errorig, x_type, x_used)
+                             x_errorig, x_type, x_used, x_indx)
   use obsspace_mod
   use oops_variables_mod
   use kinds
@@ -265,18 +265,30 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
   integer(i_kind), dimension(nobs_max), intent(out)   :: x_code
   character(len=20), dimension(nobs_max), intent(out) :: x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
+  integer(i_kind), dimension(nobs_max), intent(out), optional   :: x_indx  !< only used for radiances
 
   integer :: iobss, iloc, ivar
   integer :: nlocs, nvars
   integer :: i1, i2
   integer :: i1_all, i2_all
+  integer, dimension(1) :: var_index
   character(len=100) :: obsname
   type(oops_variables) :: vars
-  real(r_single), dimension(:), allocatable  :: values
-  integer(i_kind), dimension(:), allocatable :: intvalues
-  logical, dimension(:), allocatable :: used_obs
-  type(datetime), dimension(:), allocatable  :: abs_time
+  real(r_single), dimension(:), allocatable    :: values
+  integer(i_kind), dimension(:), allocatable   :: intvalues
+  character(len=20), dimension(:), allocatable :: chvalues
+  logical, dimension(:), allocatable           :: used_obs
+  type(datetime), dimension(:), allocatable    :: abs_time
   type(duration) :: dtime
+  character(100) :: currvar
+  integer :: channel, bar_index
+
+  character(len=60), dimension(7), parameter :: varnames_conv = &
+    (/'air_temperature', 'virtual_temperature', 'specific_humidity', &
+      'eastward_wind', 'northward_wind', 'surface_pressure',         &
+      'bending_angle'/)
+  character(len=3), dimension(7), parameter :: obtypes_enkf =   &
+    (/'  t', '  t', '  q', '  u', '  v', ' ps', 'gps'/)
 
   i1 = 1
   i1_all = 1
@@ -347,18 +359,45 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
       elseif (obstype == "ozone") then
         x_code(i1:i2) = 700
       elseif (obstype == "radiance") then
-        !> TODO: fill in channels indices
-        x_code(i1:i2) = 0
+        do iloc = 1, nlocs
+          do ivar = 1, nvars
+            intvalues(nlocs*(ivar-1) + iloc) = ivar
+          enddo
+        enddo
+        x_code(i1:i2) = pack(intvalues, used_obs)
+      endif
+      if (obstype == "conventional") then
+        allocate(chvalues(nvars*nlocs))
+        do ivar = 1, nvars
+          var_index = findloc(varnames_conv, trim(vars%variable(ivar)))
+          do iloc = 1, nlocs
+            chvalues(nlocs*(ivar-1) + iloc) = obtypes_enkf(var_index(1))
+          enddo
+        enddo
+        x_type(i1:i2) = pack(chvalues, used_obs)
+        deallocate(chvalues)
+      elseif (obstype == "ozone") then
+        x_type(i1:i2) = ' oz'
+      elseif (obstype == "radiance") then
+        !> TODO: fill in obstype as satellite name
+        x_type(i1:i2) = ' rad'
+      endif
+      if (present(x_indx)) then
+        do ivar = 1, nvars
+          currvar = vars%variable(ivar)
+          bar_index = index(currvar,"_",back=.true.)        !final "_" before channel
+          read(currvar(bar_index+1:len_trim(currvar)), *) channel
+          do iloc = 1, nlocs
+            intvalues(nlocs*(ivar-1) + iloc) = channel
+          enddo
+        enddo
+        x_indx(i1:i2) = pack(intvalues, used_obs)
       endif
       i1 = i1 + count(used_obs)
       i1_all = i1_all + nvars*nlocs
       deallocate(values, intvalues, used_obs)
     endif
   enddo
-!  if (nproc == 0) print *, 'filled in lons: ', x_lon
-!  if (nproc == 0) print *, 'filled in time: ', x_time
-!  if (nproc == 0) print *, 'obs values: ', x_obs
-!  if (nproc == 0) print *, 'use flag: ', x_used
 
 end subroutine get_obs_data_ioda
 

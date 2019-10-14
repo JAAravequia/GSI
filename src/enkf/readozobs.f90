@@ -796,9 +796,9 @@ implicit none
   integer(i_kind), dimension(nobs_maxdiag), intent(in) :: x_used
   character(len=8), intent(in) :: id, id2, gesid2
 
-  if (netcdf_diag .or. jedi_ufo) then
+  if (netcdf_diag) then
     call write_ozobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, gesid2)
-  else
+  else if (.not. jedi_ufo) then
     call write_ozobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, x_fit, x_sprd, x_used, id, id2, gesid2)
   endif
 end subroutine write_ozobs_data
