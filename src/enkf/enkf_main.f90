@@ -75,10 +75,13 @@ program enkf_main
  ! reads namelist parameters.
  use params, only : read_namelist,cleanup_namelist,letkf_flag,readin_localization,lupd_satbiasc,&
                     numiter, nanals, lupd_obspace_serial, write_spread_diag,   &
-                    lobsdiag_forenkf, netcdf_diag, fso_cycling, ntasks_io
+                    lobsdiag_forenkf, netcdf_diag, fso_cycling, ntasks_io,     &
+                    jedi_ufo
  ! mpi functions and variables.
  use mpisetup, only:  mpi_initialize, mpi_initialize_io, mpi_cleanup, nproc, &
                        mpi_wtime, mpi_comm_world
+ ! ioda init/finalize
+ use readiodaobs, only: initialize_ioda, finalize_ioda
  ! obs and ob priors, associated metadata.
  use enkf_obsmod, only : readobs, write_obsstats, obfit_prior, obsprd_prior, &
                     nobs_sat, obfit_post, obsprd_post, obsmod_cleanup
@@ -125,6 +128,10 @@ program enkf_main
 
  ! initialize MPI communicator for IO tasks.
  call mpi_initialize_io(ntasks_io)
+
+ if (jedi_ufo) then
+   call initialize_ioda()
+ endif
 
  ! Initialize derived radinfo variables
  call init_rad_vars()
@@ -278,5 +285,9 @@ program enkf_main
  ! finalize MPI.
  if (nproc==0) call w3tage('ENKF_ANL')
  call mpi_cleanup()
+
+ if (jedi_ufo) then
+   call finalize_ioda()
+ endif
 
 end program enkf_main

@@ -79,7 +79,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
 ! get total number of conventional and sat obs for ensmean.
     id = 'ensmean'
     if (jedi_ufo) then
-      call initialize_ioda()
+      call construct_obsspaces_ioda()
     endif
     if(nproc == 0)call get_num_convobs(obspath,datestring,nobs_conv,nobs_convdiag,id)
     if(nproc == iozproc)call get_num_ozobs(obspath,datestring,nobs_oz,nobs_ozdiag,id)
@@ -188,7 +188,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     end if ! read obs.
 
     if (jedi_ufo) then
-      call finalize_ioda()
+      call destruct_obsspaces_ioda()
     endif
 
 

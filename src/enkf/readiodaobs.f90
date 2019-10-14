@@ -25,7 +25,8 @@ use, intrinsic :: iso_c_binding
 use datetime_mod
 implicit none
 
-public :: initialize_ioda, finalize_ioda, get_numobs_ioda, get_obs_data_ioda
+public :: initialize_ioda, finalize_ioda, construct_obsspaces_ioda,  &
+          destruct_obsspaces_ioda, get_numobs_ioda, get_obs_data_ioda
 
 private
 type(c_ptr), allocatable, dimension(:) :: obsspaces
@@ -33,14 +34,22 @@ type(datetime) :: wincenter
 
 contains
 
-! get number of conventional observations from JEDI UFO netcdf file
+! initialize ioda
 subroutine initialize_ioda()
+  use fckit_module
+  use liboops_mod
+  implicit none
+
+  call liboops_initialise()
+  call fckit_main%init()
+end subroutine initialize_ioda
+
+! construct all ioda ObsSpaces (reads all the data into ObsSpace
+subroutine construct_obsspaces_ioda()
   use fckit_configuration_module
   use fckit_pathname_module, only : fckit_pathname
-  use fckit_module
   use datetime_mod
   use duration_mod
-  use liboops_mod
   use obsspace_mod
   use params, only: jedi_yaml
   implicit none
@@ -55,9 +64,6 @@ subroutine initialize_ioda()
   type(duration) :: winlen, winlenhalf
 
   integer :: iobss
-
-  call liboops_initialise()
-  call fckit_main%init()
 
   !> initialize winbgn, winend, get config
   config = fckit_YAMLConfiguration(fckit_pathname(jedi_yaml))
@@ -80,12 +86,10 @@ subroutine initialize_ioda()
     obsspaces(iobss) = obsspace_construct(obsconfig, winbgn, winend)
   enddo
 
-end subroutine initialize_ioda
+end subroutine construct_obsspaces_ioda
 
-! finalize ioda
-subroutine finalize_ioda()
-  use fckit_module
-  use liboops_mod
+! destruct all ioda ObsSpaces
+subroutine destruct_obsspaces_ioda()
   use obsspace_mod
   implicit none
 
@@ -96,6 +100,14 @@ subroutine finalize_ioda()
     call obsspace_destruct(obsspaces(iobss))
   enddo
   deallocate(obsspaces)
+
+end subroutine destruct_obsspaces_ioda
+
+! finalize ioda
+subroutine finalize_ioda()
+  use fckit_module
+  use liboops_mod
+  implicit none
 
   call fckit_main%final()
   call liboops_finalise()
@@ -121,12 +133,15 @@ subroutine get_numobs_ioda(obstype, num_obs_tot, num_obs_totdiag)
   num_obs_totdiag = 0
   do iobss = 1, size(obsspaces)
     call obsspace_obsname(obsspaces(iobss), obsname)
+    !> only count nobs if this ObsSpace is of the same type (conventional, ozone
+    !  or radiance
     if (trim(obsname) == trim(obstype)) then
       nlocs = obsspace_get_nlocs(obsspaces(iobss))
       vars = obsspace_obsvariables(obsspaces(iobss))
       nvars = vars%nvars()
       allocate(values(nlocs))
       do ivar = 1, nvars
+        !> get the use flag to count nunber if used observations
         if (obstype == "conventional" .or. obstype == "ozone") then
           !> for ozone and conventional, GsiUseFlag is saved (1 if used, otherwise
           !  if not)
@@ -340,10 +355,10 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
       deallocate(values, intvalues, used_obs)
     endif
   enddo
-  if (nproc == 0) print *, 'filled in lons: ', x_lon
-  if (nproc == 0) print *, 'filled in time: ', x_time
-  if (nproc == 0) print *, 'obs values: ', x_obs
-  if (nproc == 0) print *, 'use flag: ', x_used
+!  if (nproc == 0) print *, 'filled in lons: ', x_lon
+!  if (nproc == 0) print *, 'filled in time: ', x_time
+!  if (nproc == 0) print *, 'obs values: ', x_obs
+!  if (nproc == 0) print *, 'use flag: ', x_used
 
 end subroutine get_obs_data_ioda
 
