@@ -30,6 +30,7 @@ public :: initialize_ioda, finalize_ioda, construct_obsspaces_ioda,  &
 
 private
 type(c_ptr), allocatable, dimension(:) :: obsspaces
+character(100), allocatable :: obstypes(:)
 type(datetime) :: wincenter
 
 contains
@@ -60,6 +61,7 @@ subroutine construct_obsspaces_ioda()
 
   character(kind=c_char,len=:), allocatable :: winbgnstr
   character(kind=c_char,len=:), allocatable :: winendstr
+  character(kind=c_char,len=:), allocatable :: obstype
   type(datetime) :: winbgn, winend
   type(duration) :: winlen, winlenhalf
 
@@ -79,12 +81,20 @@ subroutine construct_obsspaces_ioda()
   !> allocate all ObsSpaces
   call config%get_or_die("Observations.ObsTypes", obsconfigs)
   if (allocated(obsspaces))    deallocate(obsspaces)
+  if (allocated(obstypes))     deallocate(obstypes)
   allocate(obsspaces(size(obsconfigs)))
+  allocate(obstypes(size(obsconfigs)))
   do iobss = 1, size(obsconfigs)
     call obsconfigs(iobss)%get_or_die("ObsSpace", obsconfig)
     !> construct obsspace
     obsspaces(iobss) = obsspace_construct(obsconfig, winbgn, winend)
+    !> save obs type
+    call obsconfig%get_or_die("EnKF obstype", obstype)
+    obstypes(iobss) = obstype
   enddo
+  deallocate(winbgnstr)
+  deallocate(winendstr)
+  deallocate(obstype)
 
 end subroutine construct_obsspaces_ioda
 
@@ -100,6 +110,7 @@ subroutine destruct_obsspaces_ioda()
     call obsspace_destruct(obsspaces(iobss))
   enddo
   deallocate(obsspaces)
+  deallocate(obstypes)
 
 end subroutine destruct_obsspaces_ioda
 
@@ -123,7 +134,6 @@ subroutine get_numobs_ioda(obstype, num_obs_tot, num_obs_totdiag)
 
   character(len=*), intent(in)  :: obstype
   integer(i_kind),  intent(out) :: num_obs_tot, num_obs_totdiag
-  character(len=100) :: obsname
 
   integer :: iobss, ivar, nlocs, nvars
   type(oops_variables) :: vars
@@ -132,10 +142,9 @@ subroutine get_numobs_ioda(obstype, num_obs_tot, num_obs_totdiag)
   num_obs_tot = 0
   num_obs_totdiag = 0
   do iobss = 1, size(obsspaces)
-    call obsspace_obsname(obsspaces(iobss), obsname)
     !> only count nobs if this ObsSpace is of the same type (conventional, ozone
     !  or radiance
-    if (trim(obsname) == trim(obstype)) then
+    if (trim(obstypes(iobss)) == trim(obstype)) then
       nlocs = obsspace_get_nlocs(obsspaces(iobss))
       vars = obsspace_obsvariables(obsspaces(iobss))
       nvars = vars%nvars()
@@ -272,7 +281,6 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
   integer :: i1, i2
   integer :: i1_all, i2_all
   integer, dimension(1) :: var_index
-  character(len=100) :: obsname
   type(oops_variables) :: vars
   real(r_single), dimension(:), allocatable    :: values
   integer(i_kind), dimension(:), allocatable   :: intvalues
@@ -282,6 +290,7 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
   type(duration) :: dtime
   character(100) :: currvar
   integer :: channel, bar_index
+  character(len=100) :: obsname
 
   character(len=60), dimension(7), parameter :: varnames_conv = &
     (/'air_temperature', 'virtual_temperature', 'specific_humidity', &
@@ -293,8 +302,7 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
   i1 = 1
   i1_all = 1
   do iobss = 1, size(obsspaces)
-    call obsspace_obsname(obsspaces(iobss), obsname)
-    if (trim(obsname) == trim(obstype)) then
+    if (trim(obstypes(iobss)) == trim(obstype)) then
       nlocs = obsspace_get_nlocs(obsspaces(iobss))
       vars = obsspace_obsvariables(obsspaces(iobss))
       nvars = vars%nvars()
@@ -380,7 +388,8 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
         x_type(i1:i2) = ' oz'
       elseif (obstype == "radiance") then
         !> TODO: fill in obstype as satellite name
-        x_type(i1:i2) = ' rad'
+        call obsspace_obsname(obsspaces(iobss), obsname)
+        x_type(i1:i2) = obsname
       endif
       if (present(x_indx)) then
         do ivar = 1, nvars
