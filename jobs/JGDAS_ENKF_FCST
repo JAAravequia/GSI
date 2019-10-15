@@ -83,7 +83,7 @@ export CASE=$CASE_ENKF
 
 # COMOUT is used in exglobal script
 # TO DO: Map NCO's directory into these variables
-export COMOUT="$ROTDIR/enkf.$CDUMP.$PDY/$cyc"
+export COMOUT="$ROTDIR/enkf$CDUMP.$PDY/$cyc"
 
 
 # Forecast length for EnKF forecast

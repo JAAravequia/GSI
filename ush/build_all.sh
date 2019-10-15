@@ -9,7 +9,7 @@ target=$1
 dir_root=${2:-$pwd}
 
 BUILD_GSI=${BUILD_GSI:-"YES"}
-BUILD_ENKF=${BUILD_ENKF:-"YES"}
+BUILD_ENKF=${BUILD_ENKF:-"NO"}
 BUILD_UTILS=${BUILD_UTILS:-"NO"}
 BUILD_RADMON=${BUILD_RADMON:-"NO"}
 BUILD_OZNMON=${BUILD_OZNMON:-"NO"}
@@ -61,7 +61,7 @@ fi
 # Next build EnKF utilities
 if [ $BUILD_UTILS = "YES" ]; then
 
-    clean=YES
+    clean=NO
     $dir_root/ush/build_enkf_utils.sh $target $pwd $clean
 
 fi
@@ -69,15 +69,14 @@ fi
 # Next build Radiance Monitor
 if [ $BUILD_RADMON = "YES" ]; then
 
-    clean=YES
+    clean=NO
     $dir_root/ush/build_radmon.sh $target $pwd $clean $BUILD_RADMON_VER
 
 fi
-
 # Next build Ozone Monitor
 if [ $BUILD_OZNMON = "YES" ]; then
     
-    clean=YES
+    clean=NO
     $dir_root/ush/build_oznmon.sh $target $pwd $clean $BUILD_OZNMON_VER
 
 fi

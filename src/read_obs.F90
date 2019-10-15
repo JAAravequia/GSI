@@ -168,6 +168,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   integer(i_kind) :: ireadsb,ireadmg,kx,nc,said
   real(r_double) :: satid,rtype
   character(8) subset
+  integer(i_kind) :: idat8(8),jdat8(8),kdat8(8),refmin,refminbgn,refminend
 
   satid=1      ! debug executable wants default value ???
   idate=0
@@ -179,17 +180,85 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
   if(trim(filename) == 'mitmdat' .or. trim(filename) == 'mxtmdat')return
   if(trim(filename) == 'satmar')return
 
-! Use routine as usual
   if(lexist)then
       lnbufr = 15
       open(lnbufr,file=trim(filename),form='unformatted',status ='unknown')
-      call openbf(lnbufr,'IN',lnbufr)
-      call datelen(10)
-      call readmg(lnbufr,subset,idate,iret)
+      if    (trim(filename)=='l2rwf90_tm00') then
+         write(6,*) trim(filename)," is not bufr format radial wind obs in order to skip super-obbing."
+         idat8(1)=int(iadatebgn/1000000)
+         idat8(2)=int((iadatebgn-idat8(1)*1000000)/10000)
+         idat8(3)=int((iadatebgn-idat8(1)*1000000-idat8(2)*10000)/100)
+         idat8(4)=int((iadatebgn-idat8(1)*1000000-idat8(2)*10000-idat8(3)*100)/1)-0
+         idat8(5)=0
+         idat8(6)=0
+         idat8(7)=0
+         idat8(8)=0
+         call w3fs21(idat8(1:5),refmin)
+         iret=0
+      elseif(trim(filename)=='l2rwf90_tm01') then
+         write(6,*) trim(filename)," is not bufr format radial wind obs in order to skip super-obbing."
+         idat8(1)=int(iadatebgn/1000000)
+         idat8(2)=int((iadatebgn-idat8(1)*1000000)/10000)
+         idat8(3)=int((iadatebgn-idat8(1)*1000000-idat8(2)*10000)/100)
+         idat8(4)=int((iadatebgn-idat8(1)*1000000-idat8(2)*10000-idat8(3)*100)/1)-1
+         idat8(5)=0
+         idat8(6)=0
+         idat8(7)=0
+         idat8(8)=0
+         call w3fs21(idat8(1:5),refmin)
+         iret=0
+      elseif(trim(filename)=='l2rwf90_tm02') then
+         write(6,*) trim(filename)," is not bufr format radial wind obs in order to skip super-obbing."
+         idat8(1)=int(iadatebgn/1000000)
+         idat8(2)=int((iadatebgn-idat8(1)*1000000)/10000)
+         idat8(3)=int((iadatebgn-idat8(1)*1000000-idat8(2)*10000)/100)
+         idat8(4)=int((iadatebgn-idat8(1)*1000000-idat8(2)*10000-idat8(3)*100)/1)-2
+         idat8(5)=0
+         idat8(6)=0
+         idat8(7)=0
+         idat8(8)=0
+         call w3fs21(idat8(1:5),refmin)
+         iret=0
+      elseif(trim(filename)=='l2rwf90_tm03') then
+         write(6,*) trim(filename)," is not bufr format radial wind obs in order to skip super-obbing."
+         idat8(1)=int(iadatebgn/1000000)
+         idat8(2)=int((iadatebgn-idat8(1)*1000000)/10000)
+         idat8(3)=int((iadatebgn-idat8(1)*1000000-idat8(2)*10000)/100)
+         idat8(4)=int((iadatebgn-idat8(1)*1000000-idat8(2)*10000-idat8(3)*100)/1)-3
+         idat8(5)=0
+         idat8(6)=0
+         idat8(7)=0
+         idat8(8)=0
+         call w3fs21(idat8(1:5),refmin)
+         iret=0
+      else ! take care of the other obs normally. 
+         call openbf(lnbufr,'IN',lnbufr)
+         call datelen(10)
+         call readmg(lnbufr,subset,idate,iret)
+      end if
+      write(6,*) "lippi:",filename,idate
       if(iret == 0)then
-
+         jdat8(1)=int(iadatebgn/1000000)
+         jdat8(2)=int((iadatebgn-jdat8(1)*1000000)/10000)
+         jdat8(3)=int((iadatebgn-jdat8(1)*1000000-jdat8(2)*10000)/100)
+         jdat8(4)=int((iadatebgn-jdat8(1)*1000000-jdat8(2)*10000-jdat8(3)*100)/1)
+         jdat8(5)=0
+         jdat8(6)=0
+         jdat8(7)=0
+         jdat8(8)=0
+         call w3fs21(idat8(1:5),refminbgn)
+         kdat8(1)=int(iadateend/1000000)
+         kdat8(2)=int((iadateend-kdat8(1)*1000000)/10000)
+         kdat8(3)=int((iadateend-kdat8(1)*1000000-kdat8(2)*10000)/100)
+         kdat8(4)=int((iadateend-kdat8(1)*1000000-kdat8(2)*10000-kdat8(3)*100)/1)
+         kdat8(5)=0
+         kdat8(6)=0
+         kdat8(7)=0
+         kdat8(8)=0
+         call w3fs21(kdat8(1:5),refminend)
 !        Extract date and check for consistency with analysis date
-         if (idate<iadatebgn.or.idate>iadateend) then
+!         if (idate<iadatebgn.or.idate>iadateend) then
+         if (refmin<refminbgn.or.refmin>refminend) then !change to compare the reference minute since 1-1-78
             if(offtime_data) then
               write(6,*)'***read_obs_check analysis and data file date differ, but use anyway'
             else
@@ -197,9 +266,9 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
                  'incompatable analysis and observation date/time',trim(filename),trim(dtype)
                lexist=.false.
             end if
-            write(6,*)'Analysis start  :',iadatebgn
-            write(6,*)'Analysis end    :',iadateend
-            write(6,*)'Observation time:',idate
+            write(6,*)'Analysis start  :',iadatebgn,refminbgn
+            write(6,*)'Analysis end    :',iadateend,refminend
+            write(6,*)'Observation time:',idate,refmin
         endif
       else
          write(6,*)'***read_obs_check*** iret/=0 for reading date for ',trim(filename),dtype,jsatid,iret

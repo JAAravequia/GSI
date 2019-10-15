@@ -105,7 +105,7 @@ mkdir -m 775 -p $COMOUT
 # COMIN_GES and COMIN_GES_ENS are used in exglobal script
 # TO DO: Map NCO's directory into these variables
 export COMIN_GES="$ROTDIR/$GDUMP.$gPDY/$gcyc"
-export COMIN_GES_ENS="$ROTDIR/enkf.gdas.$gPDY/$gcyc"
+export COMIN_GES_ENS="$ROTDIR/enkfgdas.$gPDY/$gcyc"
 
 
 export ATMGES="$COMIN_GES/${GPREFIX}atmf006${GSUFFIX}"

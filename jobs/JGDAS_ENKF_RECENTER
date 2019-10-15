@@ -113,9 +113,9 @@ fi
 # COMIN, COMIN_ENS and COMIN_GES_ENS are used in exglobal script
 # TO DO: Map NCO's directory into these variables
 export COMIN="$ROTDIR/$CDUMP.$PDY/$cyc"
-export COMIN_ENS="$ROTDIR/enkf.$CDUMP_ENKF.$PDY/$cyc"
-export COMOUT_ENS="$ROTDIR/enkf.$CDUMP.$PDY/$cyc"
-export COMIN_GES_ENS="$ROTDIR/enkf.$CDUMP.$gPDY/$gcyc"
+export COMIN_ENS="$ROTDIR/enkf$CDUMP_ENKF.$PDY/$cyc"
+export COMOUT_ENS="$ROTDIR/enkf$CDUMP.$PDY/$cyc"
+export COMIN_GES_ENS="$ROTDIR/enkf$CDUMP.$gPDY/$gcyc"
 
 
 ###############################################################

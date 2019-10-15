@@ -2407,6 +2407,7 @@ subroutine read_radar_l2rw_novadqc(ndata,nodata,lunout,obstype,sis,nobs)
   use constants, only: zero,half,one,two,deg2rad,rearth,rad2deg,r1000,r100,r400
   use qcmod, only: erradar_inflate
   use oneobmod, only: oneobtest,learthrel_rw
+  use obsmod,only: ndat,dfile
   use gsi_4dvar, only: l4dvar,l4densvar,iwinbgn,winlen,time_4dvar,thin4d
   use gridmod, only: regional,nlat,nlon,tll2xy,rlats,rlons,rotate_wind_ll2xy,nsig
   use convinfo, only: nconvtype,ncmiter,ncgroup,ncnumgrp,icuse,ioctype
@@ -2416,7 +2417,7 @@ subroutine read_radar_l2rw_novadqc(ndata,nodata,lunout,obstype,sis,nobs)
   implicit none
 
 ! Declare passed variables
-  character(len=*),intent(in   ) :: obstype!,infile
+  character(len=*),intent(in   ) :: obstype
   character(len=20),intent(in  ) :: sis
 !  real(r_kind)    ,intent(in   ) :: twind
   integer(i_kind) ,intent(in   ) :: lunout
@@ -2425,6 +2426,7 @@ subroutine read_radar_l2rw_novadqc(ndata,nodata,lunout,obstype,sis,nobs)
 !  real(r_kind),dimension(nlat,nlon,nsig),intent(in):: hgtl_full
 
 ! Declare local parameters
+  character(len=20) :: infile
   integer(i_kind),parameter:: maxlevs=1500
   integer(i_kind),parameter:: maxdat=22
   real(r_kind),parameter:: r4_r_kind = 4.0_r_kind
@@ -2445,6 +2447,7 @@ subroutine read_radar_l2rw_novadqc(ndata,nodata,lunout,obstype,sis,nobs)
 
   character(30) outmessage
  
+  integer(i_kind) j
   integer(i_kind) lnbufr,i,k,maxobs
   integer(i_kind) nmrecs,ibadazm,ibadwnd,ibaddist,ibadheight,kthin
   integer(i_kind) ibadstaheight,ibaderror,notgood,iheightbelowsta,ibadfit
@@ -2552,15 +2555,30 @@ subroutine read_radar_l2rw_novadqc(ndata,nodata,lunout,obstype,sis,nobs)
 
   if(loop==0) outmessage='level 2 superobs:'
 
+
+do i=1,ndat
 ! Open sequential file containing superobs
-  open(lnbufr,file='radar_supobs_from_level2',form='unformatted')
+!  open(lnbufr,file='radar_supobs_from_level2',form='unformatted')
+  !lippi here
+  if(trim(adjustl(dfile(i)))=='l2rwf90_tm00' .or. &
+     trim(adjustl(dfile(i)))=='l2rwf90_tm01' .or. &
+     trim(adjustl(dfile(i)))=='l2rwf90_tm02' .or. &
+     trim(adjustl(dfile(i)))=='l2rwf90_tm03'        ) then
+     infile=trim(adjustl(dfile(i)))
+  end if
+  open(lnbufr,file=infile,form='unformatted')
   rewind lnbufr
 
 ! Loop to read superobs data file
   do
-     read(lnbufr,iostat=iret)this_staid,this_stalat,this_stalon,this_stahgt, &
+     read(lnbufr,iostat=iret) this_staid,this_stalat,this_stalon,this_stahgt, &
         thistime,thislat,thislon,thishgt,thisvr,corrected_azimuth,thiserr,corrected_tilt
+        if(trim(adjustl(this_staid)) == "KIND") write(6,*) this_staid,this_stalat,this_stalon,thislat,thislon
+        if(trim(adjustl(this_staid)) == "KIND") write(6,*) "lippi done" 
+        if(trim(adjustl(this_staid)) == "KIND") exit
      if(iret/=0) exit
+     !lippi
+     !write(6,*) "this_staid,thisvr,thiserr:",this_staid,thisvr,thiserr
      nsuper2_in=nsuper2_in+1
 
      dlat_earth=this_stalat    !station lat (degrees)
@@ -2569,6 +2587,7 @@ subroutine read_radar_l2rw_novadqc(ndata,nodata,lunout,obstype,sis,nobs)
      if (dlon_earth<zero ) dlon_earth=dlon_earth+r360
      dlat_earth = dlat_earth * deg2rad
      dlon_earth = dlon_earth * deg2rad
+     if(trim(adjustl(this_staid)) == "KIND") write(6,*) "here 1"
 
      if(regional)then
         call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
@@ -2583,6 +2602,9 @@ subroutine read_radar_l2rw_novadqc(ndata,nodata,lunout,obstype,sis,nobs)
         call grdcrd1(dlat,rlats,nlat,1)
         call grdcrd1(dlon,rlons,nlon,1)
      endif
+     if(trim(adjustl(this_staid)) == "KIND") write(6,*) "here 2"
+     if(trim(adjustl(this_staid)) == "KIND") write(6,*) "stalat: ",dlat_earth
+     if(trim(adjustl(this_staid)) == "KIND") write(6,*) "stalon: ",dlon_earth
 
      clon=cos(dlon_earth)
      slon=sin(dlon_earth)
@@ -2594,6 +2616,7 @@ subroutine read_radar_l2rw_novadqc(ndata,nodata,lunout,obstype,sis,nobs)
      t4dvo=toff+thistime
      timemax=max(timemax,t4dvo)
      timemin=min(timemin,t4dvo)
+     if(trim(adjustl(this_staid)) == "KIND") write(6,*) "here 3"
 
 !    Exclude data if it does not fall within time window
      if (l4dvar.or.l4densvar) then
@@ -2620,6 +2643,11 @@ subroutine read_radar_l2rw_novadqc(ndata,nodata,lunout,obstype,sis,nobs)
         call grdcrd1(dlat,rlats,nlat,1)
         call grdcrd1(dlon,rlons,nlon,1)
      endif
+     if(trim(adjustl(this_staid)) == "KIND") write(6,*) "obslat: ",dlat_earth
+     if(trim(adjustl(this_staid)) == "KIND") write(6,*) "obslon: ",dlon_earth
+     if(trim(adjustl(this_staid)) == "KIND") write(6,*) "here 4"
+     if(trim(adjustl(this_staid)) == "KIND") write(6,*) "here 5"
+     exit
 
      clonh=cos(dlon_earth)
      slonh=sin(dlon_earth)
@@ -2628,14 +2656,17 @@ subroutine read_radar_l2rw_novadqc(ndata,nodata,lunout,obstype,sis,nobs)
      cdist=slat*slath+clat*clath*(slon*slonh+clon*clonh)
      cdist=max(-one,min(cdist,one))
      dist=eradkm*acos(cdist)
+     
      if(.not. oneobtest) then
         irrr=nint(dist*1000*xscalei)
+        if(trim(adjustl(this_staid)) == "KIND") write(6,*) "irrr",dist,irrr,max_rrr
         if(irrr<=0 .or. irrr>max_rrr) cycle
      end if 
 !    Extract radial wind data
      height= thishgt
      rwnd  = thisvr
      azm_earth = corrected_azimuth
+     if(trim(adjustl(this_staid)) == "KIND") write(6,*) "here 6"
 
      if(regional) then
         if(oneobtest .and. learthrel_rw) then ! for non rotated winds!!!
@@ -2652,6 +2683,7 @@ subroutine read_radar_l2rw_novadqc(ndata,nodata,lunout,obstype,sis,nobs)
      else
         azm=azm_earth
      end if
+     if(trim(adjustl(this_staid)) == "KIND") write(6,*) "here 7"
 
      if(.not. oneobtest) then
         iaaa=azm/(r360/(r8*irrr))
@@ -2664,6 +2696,7 @@ subroutine read_radar_l2rw_novadqc(ndata,nodata,lunout,obstype,sis,nobs)
 
      error = erradar_inflate*thiserr
      errmax=max(error,errmax)
+     if(trim(adjustl(this_staid)) == "KIND") write(6,*) "here 8"
 
      if(thiserr>zero) errmin=min(error,errmin)
 !    Perform limited qc based on azimuth angle, radial wind
@@ -2697,6 +2730,16 @@ subroutine read_radar_l2rw_novadqc(ndata,nodata,lunout,obstype,sis,nobs)
         cycle
      else
 
+     end if
+     if(trim(adjustl(this_staid)) == "KIND") write(6,*) "here 9"
+     if(trim(adjustl(this_staid)) == "KIND") then
+        write(6,*) "nsuper2_in: ",nsuper2_in
+        write(6,*) "this_staid: ",this_staid
+        write(6,*) "rwnd      : ",rwnd,thisvr
+        write(6,*) "thiserr   : ",thiserr,error
+        write(6,*) "good      : ",good
+        write(6,*) "notgood0  : ",notgood0
+        write(6,*) ""
      end if
 
 !    If data is good, load into output array
@@ -2735,8 +2778,8 @@ subroutine read_radar_l2rw_novadqc(ndata,nodata,lunout,obstype,sis,nobs)
         cdata(21)=thiserr
         cdata(22)=two
 
-        do i=1,maxdat
-           cdata_all(i,ndata)=cdata(i)
+        do j=1,maxdat
+           cdata_all(j,ndata)=cdata(j)
         end do
 
      else
@@ -2746,6 +2789,7 @@ subroutine read_radar_l2rw_novadqc(ndata,nodata,lunout,obstype,sis,nobs)
   end do
 
   close(lnbufr) ! A simple unformatted fortran file should not be mixed with bufr I/O
+end do !loop over l2rwf90
   write(6,*)'READ_RADAR_L2RW_NOVADQC:  ',trim(outmessage),' reached eof on 2 superob radar file'
   write(6,*)'READ_RADAR_L2RW_NOVADQC: nsuper2_in,nsuper2_kept=',nsuper2_in,nsuper2_kept
   write(6,*)'READ_RADAR_L2RW_NOVADQC: # bad azimuths=',ibadazm

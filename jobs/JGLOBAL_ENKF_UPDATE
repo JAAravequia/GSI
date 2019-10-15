@@ -92,8 +92,8 @@ export GSUFFIX=".nemsio"
 
 # COMIN_GES_ENS and COMOUT_ANL_ENS are used in exglobal script
 # TO DO: Map NCO's directory into these variables
-export COMIN_GES_ENS="$ROTDIR/enkf.gdas.$gPDY/$gcyc"
-export COMOUT_ANL_ENS="$ROTDIR/enkf.$CDUMP.$PDY/$cyc"
+export COMIN_GES_ENS="$ROTDIR/enkfgdas.$gPDY/$gcyc"
+export COMOUT_ANL_ENS="$ROTDIR/enkf$CDUMP.$PDY/$cyc"
 
 
 ###############################################################

@@ -43,6 +43,8 @@ elif [ $target = dell -o $target = wcoss_d ]; then
 else
     source $dir_modules/modulefile.global_gsi.$target
 fi
+module load intel
+module load craype
 module list
 
 cd $dir_root/src

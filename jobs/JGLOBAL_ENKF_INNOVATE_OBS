@@ -97,9 +97,9 @@ export GSUFFIX=".nemsio"
 # COMIN_GES, COMIN_GES_ENS and COMOUT are used in exglobal script
 # TO DO: Map NCO's directory into these variables
 COMIN_GES_CTL="$ROTDIR/gdas.$gPDY/$gcyc"
-export COMIN_GES_ENS="$ROTDIR/enkf.gdas.$gPDY/$gcyc"
+export COMIN_GES_ENS="$ROTDIR/enkfgdas.$gPDY/$gcyc"
 export COMIN_GES=$COMIN_GES_ENS
-export COMOUT="$ROTDIR/enkf.$CDUMP.$PDY/$cyc"
+export COMOUT="$ROTDIR/enkf$CDUMP.$PDY/$cyc"
 
 
 export ATMGES_ENSMEAN="$COMIN_GES_ENS/${GPREFIX}atmf006.ensmean$GSUFFIX"
@@ -146,7 +146,7 @@ status=$?
 
 
 # Double check the status of members in ENSGRP
-EOMGGRP=$ROTDIR/enkf.${CDUMP}.$PDY/$cyc/eomg.grp${ENSGRP}
+EOMGGRP=$ROTDIR/enkf${CDUMP}.$PDY/$cyc/eomg.grp${ENSGRP}
 npass=0
 if [ -f $EOMGGRP ]; then
     npass=$(grep "PASS" $EOMGGRP | wc -l)

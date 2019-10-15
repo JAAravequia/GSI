@@ -85,8 +85,8 @@ export SUFFIX=".nemsio"
 
 # COMIN, COMOUT are used in exglobal script
 # TO DO: Map NCO's directory into these variables
-export COMIN="$ROTDIR/enkf.$CDUMP.$PDY/$cyc"
-export COMOUT="$ROTDIR/enkf.$CDUMP.$PDY/$cyc"
+export COMIN="$ROTDIR/enkf$CDUMP.$PDY/$cyc"
+export COMOUT="$ROTDIR/enkf$CDUMP.$PDY/$cyc"
 
 
 export LEVS=$((LEVS-1))

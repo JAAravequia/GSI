@@ -110,25 +110,18 @@ OPREFIX=${OPREFIX:-""}
 OSUFFIX=${OSUFFIX:-""}
 PREPQC=${PREPQC:-${COMIN_OBS}/${OPREFIX}prepbufr${OSUFFIX}}
 gdas_gfs=`echo $OPREFIX | cut -f 1 -d "."`
+#PATH1="/gpfs/hps2/ptmp/Donald.E.Lippi/fv3gfs_dl2rw/2018091100/NEXRAD-2018091100-2018091800/"
+#nexrad_L2RWBUFR="${PATH1}/${gdas_gfs}.$PDY/$cyc/${OPREFIX}drw.nexrad.bufr${OSUFFIX}"
 
-export ndate=/u/Donald.E.Lippi/bin/ndate
-valtime_tm00=${PDY}${cyc}
-valtime_tm01=`${ndate} -1 $valtime_tm00`
-valtime_tm02=`${ndate} -2 $valtime_tm00`
-valtime_tm03=`${ndate} -3 $valtime_tm00`
-tm00=`echo $valtime_tm00 | cut -c 9-10`
-tm01=`echo $valtime_tm01 | cut -c 9-10`
-tm02=`echo $valtime_tm02 | cut -c 9-10`
-tm03=`echo $valtime_tm03 | cut -c 9-10`
-
-PATH1="/gpfs/hps3/emc/meso/noscrub/Donald.E.Lippi/fv3gfs_dl2rw/2018092300/NEXRAD-2018092300-2018100700"
-nexrad_L2RWF90_tm00="${PATH1}/nexrad_1p00_13km/simf90/nexrad_${valtime_tm00}_fv3.t${tm00}z_drw.bin"
-nexrad_L2RWF90_tm01="${PATH1}/nexrad_1p00_13km/simf90/nexrad_${valtime_tm01}_fv3.t${tm01}z_drw.bin"
-nexrad_L2RWF90_tm02="${PATH1}/nexrad_1p00_13km/simf90/nexrad_${valtime_tm02}_fv3.t${tm02}z_drw.bin"
-nexrad_L2RWF90_tm03="${PATH1}/nexrad_1p00_13km/simf90/nexrad_${valtime_tm03}_fv3.t${tm03}z_drw.bin"
-
-
-
+#####REAL VS SIMULATED EXPERIMENTS########################################################
+PATH1="/gpfs/hps3/emc/meso/save/Donald.E.Lippi/rw_tools/"
+#nexrad_L2RWBUFR="${PATH1}/simbufr/perfect_1p00_250/nexrad_2019051906_fv3.t06z_drw.bufr"
+nexrad_L2RWBUFR="${PATH1}/simbufr/perturbed_1p00_250/nexrad_2019051906_fv3.t06z_drw.bufr"
+#nexrad_L2RWBUFR="${PATH1}/simbufr/perturbed_2p00_250/nexrad_2019051906_fv3.t06z_drw.bufr"
+#nexrad_L2RWBUFR="${PATH1}/simbufr/perturbed_1p41_250/nexrad_2019051906_fv3.t06z_drw.bufr"
+#nexrad_L2RWBUFR="${PATH1}/simbufr/perturbed_1p00_1000/nexrad_2019051906_fv3.t06z_drw.bufr"
+#nexrad_L2RWBUFR="${PATH1}/simbufr/perturbed_1p00_5000/nexrad_2019051906_fv3.t06z_drw.bufr"
+###########################################################################################
 PREPQCPF=${PREPQCPF:-${COMIN_OBS}/${OPREFIX}prepbufr.acft_profiles${OSUFFIX}}
 NSSTBF=${NSSTBF:-${COMIN_OBS}/${OPREFIX}nsstbufr${OSUFFIX}}
 SATWND=${SATWND:-${COMIN_OBS}/${OPREFIX}satwnd.tm00.bufr_d${OSUFFIX}}
@@ -390,7 +383,13 @@ rm errtable atms_beamwidth.txt
 rm cloudy_radiance_info.txt
 
 rm prepbufr prepbufr_profl
-rm l2rwf90_tm00 l2rwf90_tm01 l2rwf90_tm02 l2rwf90_tm03
+rm l2rwbufr_1
+rm l2rwbufr_2
+rm l2rwbufr_3
+rm l2rwbufr_4
+rm l2rwbufr_5
+rm l2rwbufr_6
+rm l2rwbufr_7
 rm gpsrobufr
 rm tcvitl
 rm gsndrbufr gsnd1bufr
@@ -519,10 +518,15 @@ $NLN $AHIBF            ahibufr
 fi
 DOL2RW="YES" && DONST="NO"
 [[ $DONST = "YES" ]] && $NLN $NSSTBF nsstbufr
-[[ $DOL2RW = "YES" ]] && $NLN $nexrad_L2RWF90_tm00 l2rwf90_tm00
-[[ $DOL2RW = "YES" ]] && $NLN $nexrad_L2RWF90_tm01 l2rwf90_tm01
-[[ $DOL2RW = "YES" ]] && $NLN $nexrad_L2RWF90_tm02 l2rwf90_tm02
-[[ $DOL2RW = "YES" ]] && $NLN $nexrad_L2RWF90_tm03 l2rwf90_tm03
+if [[ $DOL2RW = "YES" ]]; then
+   $NLN $nexrad_L2RWBUFRm3 l2rwbufr_1
+   $NLN $nexrad_L2RWBUFRm2 l2rwbufr_2
+   $NLN $nexrad_L2RWBUFRm1 l2rwbufr_3
+   $NLN $nexrad_L2RWBUFRm0 l2rwbufr_4
+   $NLN $nexrad_L2RWBUFRp1 l2rwbufr_5
+   $NLN $nexrad_L2RWBUFRp2 l2rwbufr_6
+   $NLN $nexrad_L2RWBUFRp3 l2rwbufr_7
+fi
 
 ##############################################################
 # Required bias guess files
@@ -752,14 +756,17 @@ cat > gsiparm.anl << EOF
   $OBSINPUT
 /
 OBS_INPUT::
-!  dfile          dtype       dplat       dsis                dval    dthin dsfcalc
-   l2rwf90_tm00   rw          null        l2rw                0.0     0     0
-   l2rwf90_tm01   rw          null        l2rw                0.0     0     0
-   l2rwf90_tm02   rw          null        l2rw                0.0     0     0
-   l2rwf90_tm03   rw          null        l2rw                0.0     0     0
+!  dfile         dtype       dplat       dsis                dval    dthin dsfcalc
+   l2rwbufr_1    rw          null        l2rw                0.0     0     0
+   l2rwbufr_2    rw          null        l2rw                0.0     0     0
+   l2rwbufr_3    rw          null        l2rw                0.0     0     0
+   l2rwbufr_4    rw          null        l2rw                0.0     0     0
+   l2rwbufr_5    rw          null        l2rw                0.0     0     0
+   l2rwbufr_6    rw          null        l2rw                0.0     0     0
+   l2rwbufr_7    rw          null        l2rw                0.0     0     0
 ::
 &SUPEROB_RADAR
-   del_azimuth=5,del_elev=.25,del_range=5000.,del_time=.125,elev_angle_max=20.,minnum=50,range_max=100000.,
+   del_azimuth=5,del_elev=.25,del_range=5000.,del_time=.125,elev_angle_max=20.,minnum=2,range_max=100000.,
    l2superob_only=.false.,
   $SUPERRAD
 /
@@ -769,8 +776,7 @@ OBS_INPUT::
 &HYBRID_ENSEMBLE
   l_hyb_ens=$l_hyb_ens,
   generate_ens=.false.,
-  !beta_s0=0.125,readin_beta=.false., !commented line to force 3DVar in hyb mode. There is no berror 1538
-  beta_s0=1.000,readin_beta=.false.,  !so we need to trick GSI in this way to have "NODA"
+  beta_s0=0.125,readin_beta=.false.,
   s_ens_h=800.,s_ens_v=-0.8,readin_localization=.true.,
   aniso_a_en=.false.,oz_univ_static=.false.,uv_hyb_ens=.true.,
   ensemble_path='./ensemble_data/',
