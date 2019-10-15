@@ -8,9 +8,14 @@ module readiodaobs
 ! abstract: read data from IODA files (output by JEDI UFO)
 !
 ! Public Subroutines:
-!  initialize _ioda: initialize ioda (reads all the files)
-!  finalize_ioda: finalizes ioda (closes all files)
-!
+!  initialize_ioda: initialize ioda (fckit and liboops)
+!  finalize_ioda: finalizes ioda (fckit and liboops)
+!  construct_obsspaces_ioda: reads all ioda files and constructs ObsSpaces
+!  destruct_obsspaces_ioda: destructs all ioda ObsSpaces
+!  get_numobs_ioda: counts number of observations for a specific type
+!                   (conventional, ozone, or radiance)
+!  get_obs_data_ioda: reads observation data for a specific type
+!                   (conventional, ozone, or radiance)!
 ! Public Variables: None
 !
 ! program history log:
@@ -21,24 +26,26 @@ module readiodaobs
 !
 !$$$
 
-use, intrinsic :: iso_c_binding
-use datetime_mod
+use iso_c_binding, only: c_ptr
+use datetime_mod, only: datetime
 implicit none
 
 public :: initialize_ioda, finalize_ioda, construct_obsspaces_ioda,  &
           destruct_obsspaces_ioda, get_numobs_ioda, get_obs_data_ioda
 
 private
-type(c_ptr), allocatable, dimension(:) :: obsspaces
-character(100), allocatable :: obstypes(:)
-type(datetime) :: wincenter
+
+type(c_ptr), allocatable, dimension(:) :: obsspaces  !< pointers to all ObsSpaces
+character(100), allocatable :: obstypes(:)  !< types of all ObsSpaces
+                                            ! (conventional, ozone or radiance)
+type(datetime) :: wincenter  !< center of the assimilation window (for computing x_time)
 
 contains
 
 ! initialize ioda
 subroutine initialize_ioda()
-  use fckit_module
-  use liboops_mod
+  use fckit_module, only: fckit_main
+  use liboops_mod,  only: liboops_initialise
   implicit none
 
   call liboops_initialise()
@@ -47,12 +54,16 @@ end subroutine initialize_ioda
 
 ! construct all ioda ObsSpaces (reads all the data into ObsSpace
 subroutine construct_obsspaces_ioda()
-  use fckit_configuration_module
+  use fckit_configuration_module, only: fckit_configuration, &
+                                        fckit_YAMLConfiguration
   use fckit_pathname_module, only : fckit_pathname
-  use datetime_mod
-  use duration_mod
-  use obsspace_mod
+  use datetime_mod, only: datetime, datetime_create, datetime_diff, &
+                          datetime_update
+  use duration_mod, only: duration, duration_seconds, assignment(=)
+  use obsspace_mod, only: obsspace_construct
   use params, only: jedi_yaml
+  use kinds, only: i_kind
+  use iso_c_binding, only: c_char
   implicit none
 
   type(fckit_configuration) :: config
@@ -65,7 +76,7 @@ subroutine construct_obsspaces_ioda()
   type(datetime) :: winbgn, winend
   type(duration) :: winlen, winlenhalf
 
-  integer :: iobss
+  integer(i_kind) :: iobss
 
   !> initialize winbgn, winend, get config
   config = fckit_YAMLConfiguration(fckit_pathname(jedi_yaml))
@@ -100,7 +111,7 @@ end subroutine construct_obsspaces_ioda
 
 ! destruct all ioda ObsSpaces
 subroutine destruct_obsspaces_ioda()
-  use obsspace_mod
+  use obsspace_mod, only: obsspace_destruct
   implicit none
 
   integer :: iobss
@@ -116,8 +127,8 @@ end subroutine destruct_obsspaces_ioda
 
 ! finalize ioda
 subroutine finalize_ioda()
-  use fckit_module
-  use liboops_mod
+  use fckit_module, only: fckit_main
+  use liboops_mod,  only: liboops_finalise
   implicit none
 
   call fckit_main%final()
@@ -127,15 +138,16 @@ end subroutine finalize_ioda
 
 ! get number of observations from JEDI IODA files (type from yaml)
 subroutine get_numobs_ioda(obstype, num_obs_tot, num_obs_totdiag)
-  use obsspace_mod
-  use oops_variables_mod
+  use obsspace_mod, only: obsspace_get_nlocs, obsspace_obsvariables, &
+                          obsspace_get_db
+  use oops_variables_mod, only: oops_variables
   use kinds, only: i_kind
   implicit none
 
   character(len=*), intent(in)  :: obstype
   integer(i_kind),  intent(out) :: num_obs_tot, num_obs_totdiag
 
-  integer :: iobss, ivar, nlocs, nvars
+  integer(i_kind) :: iobss, ivar, nlocs, nvars
   type(oops_variables) :: vars
   integer(i_kind), dimension(:), allocatable :: values
 
@@ -177,16 +189,18 @@ end subroutine get_numobs_ioda
 
 !> fill in an array with metadata (repeat for each variable)
 subroutine fill_array_metadata(obsspace, varname, x_arr)
-use obsspace_mod
-use oops_variables_mod
-use kinds
+use obsspace_mod, only: obsspace_get_nlocs, obsspace_obsvariables, &
+                        obsspace_get_db
+use oops_variables_mod, only: oops_variables
+use iso_c_binding, only: c_double
+use kinds, only: r_single, i_kind
 implicit none
 type(c_ptr) :: obsspace
 character(len=*), intent(in)  :: varname
 real(r_single), dimension(*)  :: x_arr
 real(c_double), dimension(:), allocatable :: values
 
-integer :: nlocs, nvars, ivar
+integer(i_kind) :: nlocs, nvars, ivar
 type(oops_variables) :: vars
 
 nlocs = obsspace_get_nlocs(obsspace)
@@ -203,16 +217,18 @@ end subroutine fill_array_metadata
 
 !> fill in an array with obs-data (different for each variable)
 subroutine fill_array_obsdata(obsspace, groupname, x_arr)
-use obsspace_mod
-use oops_variables_mod
-use kinds
+use obsspace_mod, only: obsspace_get_nlocs, obsspace_obsvariables, &
+                        obsspace_get_db
+use oops_variables_mod, only: oops_variables
+use iso_c_binding, only: c_double
+use kinds, only: r_single, i_kind
 implicit none
 type(c_ptr) :: obsspace
 character(len=*), intent(in)  :: groupname
 real(r_single), dimension(*)  :: x_arr
 real(c_double), dimension(:), allocatable :: values
 
-integer :: nlocs, nvars, ivar
+integer(i_kind) :: nlocs, nvars, ivar
 type(oops_variables) :: vars
 
 nlocs = obsspace_get_nlocs(obsspace)
@@ -229,16 +245,18 @@ end subroutine fill_array_obsdata
 
 !> fill in an array with obs-data (different for each variable), integer
 subroutine fill_array_obsdata_int(obsspace, groupname, x_arr)
-use obsspace_mod
-use oops_variables_mod
-use kinds
+use obsspace_mod, only: obsspace_get_nlocs, obsspace_obsvariables, &
+                        obsspace_get_db
+use oops_variables_mod, only: oops_variables
+use iso_c_binding, only: c_int
+use kinds, only: i_kind
 implicit none
 type(c_ptr) :: obsspace
 character(len=*), intent(in)  :: groupname
 integer(i_kind), dimension(*) :: x_arr
 integer(c_int), dimension(:), allocatable :: values
 
-integer :: nlocs, nvars, ivar
+integer(i_kind) :: nlocs, nvars, ivar
 type(oops_variables) :: vars
 
 nlocs = obsspace_get_nlocs(obsspace)
@@ -258,12 +276,12 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
                              hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
                              x_lon, x_lat, x_press, x_time, x_code,   &
                              x_errorig, x_type, x_used, x_indx)
-  use obsspace_mod
-  use oops_variables_mod
-  use kinds
-  use mpisetup
-  use datetime_mod
-  use duration_mod
+  use obsspace_mod, only: obsspace_get_nlocs, obsspace_obsvariables, &
+                          obsspace_get_db, obsspace_obsname
+  use oops_variables_mod, only: oops_variables
+  use kinds, only: r_single, i_kind
+  use datetime_mod, only: datetime, datetime_diff
+  use duration_mod, only: duration, duration_seconds
   implicit none
 
   character(len=*), intent(in)  :: obstype
@@ -280,11 +298,11 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
   integer(i_kind), dimension(nobs_max), intent(out), optional   :: x_indx  !< only used for radiances
 
-  integer :: iobss, iloc, ivar
-  integer :: nlocs, nvars
-  integer :: i1, i2
-  integer :: i1_all, i2_all
-  integer, dimension(1) :: var_index
+  integer(i_kind) :: iobss, iloc, ivar
+  integer(i_kind) :: nlocs, nvars
+  integer(i_kind) :: i1, i2         !< start and end indices for the "used" obs in current ObsSpace
+  integer(i_kind) :: i1_all, i2_all !< start and end indices for all obs in current ObsSpace
+  integer(i_kind), dimension(1) :: var_index
   type(oops_variables) :: vars
   real(r_single), dimension(:), allocatable    :: values
   integer(i_kind), dimension(:), allocatable   :: intvalues
@@ -293,7 +311,7 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
   type(datetime), dimension(:), allocatable    :: abs_time
   type(duration) :: dtime
   character(100) :: currvar
-  integer :: channel, bar_index
+  integer(i_kind) :: channel, bar_index
   character(len=100) :: obsname
 
   character(len=60), dimension(7), parameter :: varnames_conv = &
@@ -332,7 +350,6 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
         x_used(i1_all:i2_all) = 0
         where(intvalues == 0) x_used(i1_all:i2_all) = 1
       endif
-
       used_obs = (x_used(i1_all:i2_all) == 1)
       i2 = i1 + count(used_obs)
 
@@ -346,13 +363,17 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
         call fill_array_metadata(obsspaces(iobss), "air_pressure", values)
         x_press(i1:i2) = pack(values, used_obs)
       elseif (obstype == "radiance") then
+        !> TODO: radiance files should hold pressure
         x_press(i1:i2) = 99999.0
       endif
+      !> fill in time (ObsSpaces hold datetime in Datetime objects; need to
+      !compute delta between datetime(obs) and datetime(middle of assim window)
       allocate(abs_time(nlocs))
       call obsspace_get_db(obsspaces(iobss), "MetaData", "datetime", abs_time)
       do iloc = 1, nlocs
         call datetime_diff(abs_time(iloc), wincenter, dtime)
         do ivar = 1, nvars
+          !> x_time is in hours; converting seconds to hours
           values(nlocs*(ivar-1) + iloc) = duration_seconds(dtime) / 3600.0
         enddo
       enddo
@@ -380,11 +401,15 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
       x_err(i1:i2) = pack(values, used_obs)
       call fill_array_obsdata(obsspaces(iobss), "ObsError", values)
       x_errorig(i1:i2) = pack(values, used_obs)
+      !> x_code for conventional is the code from file (120 for radiosondes,
+      !  etc)
       if (obstype == "conventional") then
         call fill_array_obsdata_int(obsspaces(iobss), "ObsType", intvalues)
         x_code(i1:i2) = pack(intvalues, used_obs)
+      !> for ozone use bogus 700 (as in read_ozobs_data_nc)
       elseif (obstype == "ozone") then
         x_code(i1:i2) = 700
+      !> for radiances fill in channel indices
       elseif (obstype == "radiance") then
         do iloc = 1, nlocs
           do ivar = 1, nvars
@@ -393,6 +418,8 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
         enddo
         x_code(i1:i2) = pack(intvalues, used_obs)
       endif
+      !> x_type for conventional uses short names of variables (like in
+      !  read_convobs_data_bin and _nc
       if (obstype == "conventional") then
         allocate(chvalues(nvars*nlocs))
         do ivar = 1, nvars
@@ -403,17 +430,22 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
         enddo
         x_type(i1:i2) = pack(chvalues, used_obs)
         deallocate(chvalues)
+      !> for ozone is always 'oz'
       elseif (obstype == "ozone") then
         x_type(i1:i2) = ' oz'
+      !> for radiances read ObsSpace.name from yaml (should have short
+      !  sat/instrument name
       elseif (obstype == "radiance") then
         !> TODO: fill in obstype as satellite name
         call obsspace_obsname(obsspaces(iobss), obsname)
         x_type(i1:i2) = obsname
       endif
+      !> for radiance data also fill in x_indx, contains channel numbers (like
+      !  the ones from satinfo)
       if (present(x_indx)) then
         do ivar = 1, nvars
           currvar = vars%variable(ivar)
-          bar_index = index(currvar,"_",back=.true.)        !final "_" before channel
+          bar_index = index(currvar,"_",back=.true.) ! find final "_" before channel number
           read(currvar(bar_index+1:len_trim(currvar)), *) channel
           do iloc = 1, nlocs
             intvalues(nlocs*(ivar-1) + iloc) = channel
