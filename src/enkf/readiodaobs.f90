@@ -150,6 +150,10 @@ subroutine get_numobs_ioda(obstype, num_obs_tot, num_obs_totdiag)
       nvars = vars%nvars()
       allocate(values(nlocs))
       do ivar = 1, nvars
+        !> TODO: read Effective QC:
+        ! call obsspace_get_db(obsspaces(iobss), "EffectiveQC", &
+        !                      vars%variable(ivar), values)
+        ! num_obs_tot = num_obs_tot + count(values == 0)
         !> get the use flag to count nunber if used observations
         if (obstype == "conventional" .or. obstype == "ozone") then
           !> for ozone and conventional, GsiUseFlag is saved (1 if used, otherwise
@@ -310,6 +314,12 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
       i2_all = i1_all + nvars*nlocs
 
       !> read flags (whether to use the obs)
+      !> TODO: read Effective QC:
+      ! call obsspace_get_db(obsspaces(iobss), "EffectiveQC", &
+      !                      vars%variable(ivar), values)
+      ! num_obs_tot = num_obs_tot + count(values == 0)
+      ! x_used(i1_all:i2_all) = 0
+      !  where(intvalues == 0) x_used(i1_all:i2_all) = 1
       if (obstype == "conventional" .or. obstype == "ozone") then
         !> for ozone and conventional, GsiUseFlag is saved (1 if used, otherwise
         !  if not)
@@ -350,13 +360,22 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
       deallocate(abs_time)
       call fill_array_obsdata(obsspaces(iobss), "ObsValue", values)
       x_obs(i1:i2) = pack(values, used_obs)
+! TODO: uncomment
+!      call fill_array_obsdata(obsspaces(iobss), "HofX", values)
       call fill_array_obsdata(obsspaces(iobss), "GsiHofXBc", values)
       hx_mean(i1:i2) = pack(values, used_obs)
+! TODO: uncomment
+!      call fill_array_obsdata(obsspaces(iobss), "ObsBias", values)
+!      hx_mean_nobc(i1:i2) = hx_mean(i1:i2) - pack(values, used_obs)
       call fill_array_obsdata(obsspaces(iobss), "GsiHofX", values)
       hx_mean_nobc(i1:i2) = pack(values, used_obs)
       ! TODO: has to read different values for the members below!
+! TODO: uncomment and add member at the end of HofX
+!      call fill_array_obsdata(obsspaces(iobss), "HofX", values)
       call fill_array_obsdata(obsspaces(iobss), "GsiHofX", values)
       hx(i1:i2) = pack(values, used_obs)
+! TODO: uncomment
+!      call fill_array_obsdata(obsspaces(iobss), "EffectiveError", values)
       call fill_array_obsdata(obsspaces(iobss), "GsiFinalObsError", values)
       x_err(i1:i2) = pack(values, used_obs)
       call fill_array_obsdata(obsspaces(iobss), "ObsError", values)
