@@ -4,7 +4,7 @@ case $machine in
 
 	Hera)
 	   sub_cmd="sub_hera"
-           memnode=83
+           memnode=96
            numcore=40
     ;;
 	WCOSS)
@@ -217,7 +217,7 @@ case $regtest in
         fi
 
         if [ "$debug" = ".true." ] ; then
-           topts[1]="1:30:00"
+           topts[1]="2:00:00"
         fi
 
         scaling[1]=10; scaling[2]=8; scaling[3]=4
