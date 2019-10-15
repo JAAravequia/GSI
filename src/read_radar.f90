@@ -2423,7 +2423,7 @@ subroutine read_radar_l2rw_novadqc(ndata,nodata,lunout,obstype,sis,nobs)
   integer(i_kind) ,intent(in   ) :: lunout
   integer(i_kind) ,intent(inout) :: ndata,nodata!,nread
   integer(i_kind),dimension(npe) ,intent(inout) :: nobs
-!  real(r_kind),dimension(nlat,nlon,nsig),intent(in):: hgtl_full
+
 
 ! Declare local parameters
   character(len=20) :: infile

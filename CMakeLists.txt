@@ -39,7 +39,7 @@ project(GSI)
   option(BUILD_NMMB "Build the Enkf with NMMB module " OFF)               #OFF
   option(BUILD_WRF "Build the Enkf with WRF module " OFF)                 #OFF
   option(BUILD_UTIL "Build the Enkf utilities " OFF)                      #OFF
-  option(BUILD_NCDIAG "Build the NCDIAG libraries" OFF)                   #OFF
+  option(BUILD_NCDIAG "Build the NCDIAG libraries" ON)                    #OFF
   option(BUILD_REG_TESTING "Build the Regression Testing Suite" ON)       #ON
   option(BUILD_UNIT_TESTING "Build the Unit Testing Suite" OFF)           #OFF
   cmake_minimum_required(VERSION 2.8)
