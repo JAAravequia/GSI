@@ -173,23 +173,23 @@ module read_diag
       endif
       allocate( header_nlev( header_fix%nlevs ) )
       nlevs_last = header_fix%nlevs
-      allocate (pob(header_fix%nlevs))
-      allocate (grs(header_fix%nlevs))
-      allocate (err(header_fix%nlevs))
-      allocate (iouse(header_fix%nlevs))
     endif
 
     if(isis /= "ompslp_npp")then
     !--- read header (level part)
     
-    read(ftin)  pob,grs,err,iouse
-    do k=1,header_fix%nlevs
+      allocate (pob(header_fix%nlevs))
+      allocate (grs(header_fix%nlevs))
+      allocate (err(header_fix%nlevs))
+      allocate (iouse(header_fix%nlevs))
+      read(ftin)  pob,grs,err,iouse
+      do k=1,header_fix%nlevs
        header_nlev(k)%pob = pob(k)
        header_nlev(k)%grs = grs(k)
        header_nlev(k)%err = err(k)
        header_nlev(k)%iouse = iouse(k)
-    end do
-    deallocate (pob,grs,err,iouse)
+      end do
+      deallocate (pob,grs,err,iouse)
 !   print*,'header_nlev%pob=', header_nlev%pob
 !   print*,'header_nlev%grs=', header_nlev%grs
 !   print*,'header_nlev%err=', header_nlev%err
