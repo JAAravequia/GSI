@@ -186,6 +186,8 @@ program process_CAPS_mosaic
   iskip=1; jskip=1             !YJ
   lev_keep = 250               !YJ
 
+  modlopt = 1
+
   pi      = acos(-1.0_r_kind)
   deg2rad = pi/180.0_r_kind
   rad2deg = 1.0_r_kind/deg2rad
@@ -526,19 +528,15 @@ program process_CAPS_mosaic
                if(ref1 > rthresh_ref .and. ref2 > rthresh_ref .and.  &
                   ref3 > rthresh_ref .and. ref4 > rthresh_ref ) then
                   if(mod(levelheight(kk),lev_keep) == 0) then
-                     print*, 'JYS storm keep', levelheight(kk)
                      ref3d(i,j,kk)=(ref1*w1+ref2*w2+ref3*w3+ref4*w4)/float(var_scale)
                   else
-                     print*, 'JYS storm skip', levelheight(kk)
                      ref3d(i,j,kk)=-999.0  ! YJ: Set to no observation to reduce the number of obs
                   endif
                elseif(ref1 > rthresh_miss .and. ref2 > rthresh_miss .and.  &
                   ref3 > rthresh_miss .and. ref4 > rthresh_miss ) then
                   if(mod(levelheight(kk),lev_keep*2) == 0) then
-                     print*, 'JYS clear air keep', levelheight(kk)
                      ref3d(i,j,kk)=-99.0   ! clear
                   else
-                     print*, 'JYS clear air skip', levelheight(kk)
                      ref3d(i,j,kk)=-999.0  ! YJ: Set to no observation to reduce the number of obs
                   endif
                else

@@ -293,7 +293,6 @@ subroutine read_grib2_sngle(filename,ntot,height,var)
 !           write(*,*) 'observation level (m)=',gfld%ipdtmpl(12)
 !           write(*,*) 'map projection=',gfld%igdtnum
            height=gfld%ipdtmpl(12)
- print*, 'YJ height = ', height
            if (gfld%igdtnum.eq.0) then ! Lat/Lon grid aka Cylindrical
                                        ! Equidistant
               nx = gfld%igdtmpl(8)
@@ -310,16 +309,12 @@ subroutine read_grib2_sngle(filename,ntot,height,var)
                stop 1235
            endif
 
-print*, 'YJ calling gf_free'
            call gf_free(gfld)
 
-print*, 'YJ is unpacking GRIB2'
          ! Continue to unpack GRIB2 field.
            NUM_FIELDS: do n = 1, numfields
            ! e.g. U and V would =2, otherwise its usually =1
-print*, 'YJ: numfields =', n
              call gf_getfld(cgrib,lengrib,n,.true.,expand,gfld,ierr)
- print*, 'YJ called gf_getfld'
              if (ierr.ne.0) then
                write(*,*) ' ERROR extracting field gf_getfld = ',ierr
                cycle
@@ -339,7 +334,6 @@ print*, 'YJ: numfields =', n
                var(j)=gfld%fld(j)
              enddo
 !             write(*,*) 'height,max,min',height,maxval(var),minval(var)
-             write(*,*) 'YJ end of read'
 
              call gf_free(gfld)
            enddo NUM_FIELDS
