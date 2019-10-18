@@ -627,7 +627,6 @@ program process_CAPS_mosaic
 !                   if(abs(ref0(i,j,k)) < 888.0 ) numlvl=numlvl+1
 !                    if( ref0(i,j,k) >= -64.0 .and. ref0(i,j,k) < 100.0 ) numlvl=numlvl+1
                     if( ref0(i,j,k) >= 0.0 .and. ref0(i,j,k) < 100.0 ) numlvl=numlvl+1
-                    if(i==1178 .and. j==701) WRITE(*,*)'CCT: ',k,ref0(i,j,k)
                 ENDDO
 
                 if(numlvl > 0 ) then

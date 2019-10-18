@@ -27,7 +27,7 @@
 
     REAL(r_kind) :: ref3d_column(maxlvl+2,nlon*nlat)   ! 3D reflectivity in column
     real(r_kind) :: hdr(5),obs(1,35)
-    character(80):: hdrstr='SID XOB YOB DHR TYP IOB JOB'
+    character(80):: hdrstr='SID XOB YOB DHR TYP'
     character(80):: obsstr='HREF'
 
     REAL(i_kind),PARAMETER ::  MXBF = 160000_i_kind
