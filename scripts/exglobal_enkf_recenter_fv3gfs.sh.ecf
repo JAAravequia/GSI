@@ -50,6 +50,7 @@ ERRSCRIPT=${ERRSCRIPT:-'eval [[ $err = 0 ]]'}
 NCP=${NCP:-"/bin/cp -p"}
 NLN=${NLN:-"/bin/ln -sf"}
 NEMSIOGET=${NEMSIOGET:-${NWPROD}/exec/nemsio_get}
+NCLEN=${NCLEN:-$HOMEgfs/ush/getncdimlen}
 
 # Scripts
 
@@ -57,7 +58,8 @@ NEMSIOGET=${NEMSIOGET:-${NWPROD}/exec/nemsio_get}
 GETATMENSMEANEXEC=${GETATMENSMEANEXEC:-$HOMEgsi/exec/getsigensmeanp_smooth.x}
 GETSFCENSMEANEXEC=${GETSFCENSMEANEXEC:-$HOMEgsi/exec/getsfcensmeanp.x}
 RECENATMEXEC=${RECENATMEXEC:-$HOMEgsi/exec/recentersigp.x}
-CALCINCEXEC=${CALCINCEXEC:-$HOMEgsi/exec/calc_increment_ens.x}
+CALCINCNEMSEXEC=${CALCINCNEMSEXEC:-$HOMEgsi/exec/calc_increment_ens.x}
+CALCINCNCEXEC=${CALCINCEXEC:-$HOMEgsi/exec/calc_increment_ens_ncio.x}
 
 # Files.
 OPREFIX=${OPREFIX:-""}
@@ -74,9 +76,11 @@ imp_physics=${imp_physics:-99}
 INCREMENTS_TO_ZERO=${INCREMENTS_TO_ZERO:-"'NONE'"}
 DOIAU=${DOIAU_ENKF:-"NO"}
 IAUFHRS_ENKF=${IAUFHRS_ENKF:-6}
+GFS_NCIO=${GFS_NCIO:-"YES"}
 
 # global_chgres stuff
-CHGRESEXEC=${CHGRESEXEC:-$HOMEgfs/exec/chgres_recenter.exe}
+CHGRESNEMS=${CHGRESNEMS:-$HOMEgfs/exec/chgres_recenter.exe}
+CHGRESNC=${CHGRESNC:-$HOMEgfs/exec/chgres_nc_gauss.exe}
 NTHREADS_CHGRES=${NTHREADS_CHGRES:-24}
 APRUN_CHGRES=${APRUN_CHGRES:-""}
 
@@ -161,10 +165,17 @@ export ERR=$rc
 export err=$ERR
 $ERRSCRIPT || exit 2
 
-LONB_ENKF=${LONB_ENKF:-$($NEMSIOGET atmanl_ensmean dimx | awk '{print $2}')}
-LATB_ENKF=${LATB_ENKF:-$($NEMSIOGET atmanl_ensmean dimy | awk '{print $2}')}
-LEVS_ENKF=${LEVS_ENKF:-$($NEMSIOGET atmanl_ensmean dimz | awk '{print $2}')}
-JCAP_ENKF=${JCAP_ENKF:-$($NEMSIOGET atmanl_ensmean jcap | awk '{print $2}')}
+if [ $GFS_NCIO = "YES" ]; then
+   LONB_ENKF=${LONB_ENKF:-$($NCLEN atmanl_ensmean grid_xt)} # get LONB
+   LATB_ENKF=${LATB_ENKF:-$($NCLEN atmanl_ensmean grid_yt)} # get LATB
+   LEVS_ENKF=${LEVS_ENKF:-$($NCLEN atmanl_ensmean pfull)} # get LEVS
+   JCAP_ENKF=${JCAP_ENKF:--9999} # there is no jcap in these files
+else
+   LONB_ENKF=${LONB_ENKF:-$($NEMSIOGET atmanl_ensmean dimx | awk '{print $2}')}
+   LATB_ENKF=${LATB_ENKF:-$($NEMSIOGET atmanl_ensmean dimy | awk '{print $2}')}
+   LEVS_ENKF=${LEVS_ENKF:-$($NEMSIOGET atmanl_ensmean dimz | awk '{print $2}')}
+   JCAP_ENKF=${JCAP_ENKF:-$($NEMSIOGET atmanl_ensmean jcap | awk '{print $2}')}
+fi
 [ $JCAP_ENKF -eq -9999 -a $LATB_ENKF -ne -9999 ] && JCAP_ENKF=$((LATB_ENKF-2))
 [ $LONB_ENKF -eq -9999 -o $LATB_ENKF -eq -9999 -o $LEVS_ENKF -eq -9999 -o $JCAP_ENKF -eq -9999 ] && exit -9999
 
@@ -176,9 +187,15 @@ if [ $RECENTER_ENKF = "YES" ]; then
    ATMANL_GSI=${ATMANL_GSI:-$COMIN/${APREFIX}atmanl$ASUFFIX}
    ATMANL_GSI_ENSRES=${ATMANL_GSI_ENSRES:-$COMIN/${APREFIX}atmanl.ensres$ASUFFIX}
 
-   LONB=${LONB:-$($NEMSIOGET $ATMANL_GSI dimx | awk '{print $2}')}
-   LATB=${LATB:-$($NEMSIOGET $ATMANL_GSI dimy | awk '{print $2}')}
-   JCAP=${JCAP:-$($NEMSIOGET $ATMANL_GSI jcap | awk '{print $2}')}
+   if [ $GFS_NCIO = "YES" ]; then
+      LONB=${LONB:-$($NCLEN $ATMANL_GSI grid_xt)} # get LONB
+      LATB=${LATB:-$($NCLEN $ATMANL_GSI grid_yt)} # get LATB
+      JCAP=${JCAP:--9999} # there is no jcap in these files
+   else
+      LONB=${LONB:-$($NEMSIOGET $ATMANL_GSI dimx | awk '{print $2}')}
+      LATB=${LATB:-$($NEMSIOGET $ATMANL_GSI dimy | awk '{print $2}')}
+      JCAP=${JCAP:-$($NEMSIOGET $ATMANL_GSI jcap | awk '{print $2}')}
+   fi
    [ $JCAP -eq -9999 -a $LATB -ne -9999 ] && JCAP=$((LATB-2))
 
    # If GSI EnVar analysis is at ensemble resolution, no chgres is required
@@ -190,14 +207,22 @@ if [ $RECENTER_ENKF = "YES" ]; then
 
       $NLN $ATMANL_GSI        atmanl_gsi
       $NLN $ATMANL_GSI_ENSRES atmanl_gsi_ensres
-
       SIGLEVEL=${SIGLEVEL:-${FIXgsm}/global_hyblev.l${LEVS}.txt}
+      if [ $GFS_NCIO = "YES" ]; then
+         $NLN $CHGRESNC chgres.x
+         chgresnml=chgres_nc_gauss.nml
+         nmltitle=chgres
+      else
+         $NLN $CHGRESNEMS chgres.x
+         chgresnml=fort.43
+         nmltitle=nam
+      fi
 
       export OMP_NUM_THREADS=$NTHREADS_CHGRES
 
-      rm -f fort.43
-      cat > fort.43 << EOF
-&nam_setup
+      rm -f $chgresnml
+      cat > $chgresnml << EOF
+&${nmltitle}_setup
   i_output=$LONB_ENKF
   j_output=$LATB_ENKF
   input_file="atmanl_gsi"
@@ -206,8 +231,8 @@ if [ $RECENTER_ENKF = "YES" ]; then
   vcoord_file="$SIGLEVEL"
 /
 EOF
-
-      $APRUN_CHGRES $CHGRESEXEC
+      cat $chgresnml
+      $APRUN_CHGRES ./chgres.x
       rc=$?
 
       export ERR=$rc
@@ -254,6 +279,11 @@ else
 fi
 
 export OMP_NUM_THREADS=$NTHREADS_CALCINC
+if [ $GFS_NCIO = "YES" ]; then
+   CALCINCEXEC=$CALCINCNCEXEC
+else
+   CALCINCEXEC=$CALCINCNEMSEXEC
+fi
 $NCP $CALCINCEXEC $DATA
 
 rm calc_increment.nml

@@ -46,19 +46,20 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_get_dim, nc_diag_read_close
   use gsi_4dvar, only: nobs_bins,hr_obsbin,min_offset
   use qcmod, only: npres_print,ptop,pbot,dfact,dfact1,qc_satwnds,njqc,vqc
+  use qcmod, only: nvqc
   use oneobmod, only: oneobtest,oneob_type,magoberr,maginnov 
   use gridmod, only: get_ijk,nsig,twodvar_regional,regional,wrf_nmm_regional,&
       rotate_wind_xy2ll,pt_ll
   use guess_grids, only: nfldsig,hrdifsig,geop_hgtl,sfcmod_gfs
   use guess_grids, only: tropprs,sfcmod_mm5
   use guess_grids, only: ges_lnprsl,comp_fact10,pbl_height
-  use constants, only: zero,half,one,tiny_r_kind,two,cg_term, &
+  use constants, only: zero,half,one,tiny_r_kind,two, &
            three,rd,grav,four,five,huge_single,r1000,wgtlim,r10,r400
   use constants, only: grav_ratio,flattening,deg2rad, &
        grav_equator,somigliana,semi_major_axis,eccentricity
   use jfunc, only: jiter,last,jiterstart,miter
   use convinfo, only: nconvtype,cermin,cermax,cgross,cvar_b,cvar_pg,ictype
-  use convinfo, only: icsubtype
+  use convinfo, only: icsubtype,ibeta,ikapa
   use converr_uv, only: ptabl_uv
   use converr, only: ptabl
   use rapidrefresh_cldsurf_mod, only: l_PBL_pseudo_SurfobsUV, pblH_ration,pps_press_incr
@@ -189,6 +190,8 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
 !                       . Remove my_node with corrected typecast().
 !   2018-04-09  pondeca -  introduce duplogic to correctly handle the characterization of
 !                          duplicate obs in twodvar_regional applications
+!   2019-09-20  Su      -  remove current VQC part and add subroutine call on VQC
+!   2019-09-25  Su      -  put hibert curve on aircraft data 
 !
 !
 ! REMARKS:
@@ -225,9 +228,9 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
   real(r_double) rstation_id
   real(r_kind) qcu,qcv,trop5,tfact,fact
   real(r_kind) scale,ratio,obserror,obserrlm
-  real(r_kind) residual,ressw,ress,val,val2,valqc2,dudiff,dvdiff
+  real(r_kind) residual,ressw,ress,val,vals,val2,valqc2,dudiff,dvdiff
   real(r_kind) valqc,valu,valv,dx10,rlow,rhgh,drpx,prsfc,var_jb
-  real(r_kind) cg_w,wgross,wnotgross,wgt,arg,exp_arg,term,rat_err2,qcgross
+  real(r_kind) cg_t,cvar,wgt,term,rat_err2,qcgross
   real(r_kind) presw,factw,dpres,ugesin,vgesin,rwgt,dpressave
   real(r_kind) sfcchk,prsln2,error,dtime,dlon,dlat,r0_001,rsig,thirty,rsigp
   real(r_kind) ratio_errors,goverrd,spdges,spdob,ten,psges,zsges
@@ -259,6 +262,7 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
   integer(i_kind) ihgt,ier2,iuse,ilate,ilone
   integer(i_kind) izz,iprvd,isprvd
   integer(i_kind) idomsfc,isfcr,iskint,iff10
+  integer(i_kind) ibb,ikk,ihil
 
   integer(i_kind) num_bad_ikx
 
@@ -291,6 +295,7 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
   real(r_kind) :: thisPBL_height,ratio_PBL_height,prest,prestsfc,dudiffsfc,dvdiffsfc
   real(r_kind) :: hr_offset
 
+
   equivalence(rstation_id,station_id)
   equivalence(r_prvstg,c_prvstg)
   equivalence(r_sprvstg,c_sprvstg)
@@ -319,6 +324,7 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
 
   read(lunin)data,luse,ioid
 
+
 !    index information for data array (see reading routine)
   ier=1       ! index of obs error
   ilon=2      ! index of grid relative obs location (x)
@@ -345,8 +351,9 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
   isprvd=23   ! index of observation subprovider
   icat=24     ! index of data level category
   ijb=25      ! index of non linear qc parameter
-  iptrbu=26   ! index of u perturbation
-  iptrbv=27   ! index of v perturbation
+  ihil=26     ! index of  hilbert curve weight
+  iptrbu=27   ! index of u perturbation
+  iptrbv=28   ! index of v perturbation
 
   mm1=mype+1
   scale=one
@@ -1123,38 +1130,29 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
  
      valu     = error*dudiff
      valv     = error*dvdiff
-
+     if(nvqc .and. ibeta(ikx) >0  ) ratio_errors=0.8_r_kind*ratio_errors
+     ratio_errors=ratio_errors*sqrt(data(ihil,i))       ! hilbert weight
 !    Compute penalty terms (linear & nonlinear qc).
      if(luse(i))then
         val      = valu*valu+valv*valv
-        exp_arg  = -half*val
-        rat_err2 = ratio_errors**2
-        if(njqc  .and. var_jb>tiny_r_kind .and. var_jb<10.0_r_kind .and. error >tiny_r_kind) then
-           if(exp_arg  == zero) then
-              wgt=one
-           else
-              wgt=sqrt(dudiff*dudiff+dvdiff*dvdiff)*error/sqrt(two*var_jb)
-              wgt=tanh(wgt)/wgt
-           endif
-           term=-two*var_jb*rat_err2*log(cosh((sqrt(val))/sqrt(two*var_jb)))
-           rwgt = wgt/wgtlim
-           valqc = -two*term
-        else if (vqc .and. cvar_pg(ikx) > tiny_r_kind .and. error > tiny_r_kind) then
-           arg  = exp(exp_arg)
-           wnotgross= one-cvar_pg(ikx)
-           cg_w=cvar_b(ikx)
-           wgross = cg_term*cvar_pg(ikx)/(cg_w*wnotgross)
-           term =log((arg+wgross)/(one+wgross))
-           wgt  = one-wgross/(arg+wgross)
-           rwgt = wgt/wgtlim
-           valqc = -two*rat_err2*term
+        vals=sqrt(val)
+        if(vqc) then
+           cg_t=cvar_b(ikx)
+           cvar=cvar_pg(ikx)
         else
-           term = exp_arg
-           wgt  = one 
-           rwgt = wgt/wgtlim
-           valqc = -two*rat_err2*term
+           cg_t=zero
+           cvar=zero
         endif
-
+        if(nvqc) then
+           ibb=ibeta(ikx)
+           ikk=ikapa(ikx)
+        else
+           ibb=0
+           ikk=0
+        endif
+        call vqc_setup(vals,ratio_errors,error,cvar,&
+                      cg_t,ibb,ikk,var_jb,rat_err2,wgt,valqc)
+        rwgt = wgt/wgtlim
 
 !       Accumulate statistics for obs belonging to this task
         if (muse(i)) then
@@ -1231,7 +1229,10 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
         my_head%b=cvar_b(ikx)
         my_head%pg=cvar_pg(ikx)
         my_head%jb=var_jb
+        my_head%ib=ibeta(ikx)
+        my_head%ik=ikapa(ikx)
         my_head%luse=luse(i)
+!        if( i==3) print *,'SETUPW',my_head%ures,my_head%vres,my_head%err2
 
         if (luse_obsdiag) then
         endif ! (luse_obsdiag)
@@ -1353,6 +1354,8 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
            my_head%b=cvar_b(ikx)
            my_head%pg=cvar_pg(ikx)
            my_head%jb=var_jb
+           my_head%ib=ibeta(ikx)
+           my_head%ik=ikapa(ikx)
            my_head%luse=luse(i)
 
            if (luse_obsdiag) then
@@ -1576,7 +1579,7 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
         rdiagbuf(8,ii)  = dtime-time_offset  ! obs time (hours relative to analysis time)
 
         rdiagbuf(9,ii)  = data(iqc,i)        ! input prepbufr qc or event mark
-        rdiagbuf(10,ii) = var_jb             ! non linear qc parameter
+        rdiagbuf(10,ii) = data(ihil,i)       ! hilbert curve weight 
         rdiagbuf(11,ii) = data(iuse,i)       ! read_prepbufr data usage flag
         if(muse(i)) then
            rdiagbuf(12,ii) = one             ! analysis usage flag (1=use, -1=not used)

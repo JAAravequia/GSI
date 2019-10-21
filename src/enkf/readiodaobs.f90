@@ -75,7 +75,6 @@ subroutine construct_obsspaces_ioda()
   character(kind=c_char,len=:), allocatable :: obstype
   type(datetime) :: winbgn, winend
   type(duration) :: winlen, winlenhalf
-
   integer(i_kind) :: iobss
 
   !> initialize winbgn, winend, get config
@@ -84,11 +83,13 @@ subroutine construct_obsspaces_ioda()
   call config%get_or_die("window_end", winendstr)
   call datetime_create(winbgnstr, winbgn)
   call datetime_create(winendstr, winend)
+
   !> find center of the window (to save in module)
   call datetime_diff(winend, winbgn, winlen)
   winlenhalf = duration_seconds(winlen) / 2
-  wincenter = winbgn
+  call datetime_create(winbgnstr, wincenter)
   call datetime_update(wincenter, winlenhalf)
+
   !> allocate all ObsSpaces
   call config%get_or_die("Observations.ObsTypes", obsconfigs)
   if (allocated(obsspaces))    deallocate(obsspaces)
@@ -357,16 +358,23 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
       hx_mean_nobc(i1:i2) = hx_mean(i1:i2) - pack(values, used_obs)
       !> read ensemble member H(x) if needed
       if (nanal <= nanals) then
-        write(member,'(I)') nanal
-        varname="HofX_" // trim(member)
+        write(member,'(I4)') nanal
+        varname="HofX_" //adjustl(member)
         print *, nproc, ', reading ', trim(varname)
         call fill_array_obsdata(obsspaces(iobss), trim(varname), values)
         hx(i1:i2) = pack(values, used_obs)
+      else
+        hx(i1:i2) = 0.0_r_single
       endif
       call fill_array_obsdata(obsspaces(iobss), "EffectiveError", values)
       x_err(i1:i2) = pack(values, used_obs)
       call fill_array_obsdata(obsspaces(iobss), "ObsError", values)
       x_errorig(i1:i2) = pack(values, used_obs)
+      !> need variances, not stdev
+      do iloc = i1, i2
+        x_err(iloc) = x_err(iloc)**2
+        x_errorig(iloc) = x_errorig(iloc)**2
+      enddo
       !> x_code for conventional is the code from file (120 for radiosondes,
       !  etc)
       if (obstype == "conventional") then

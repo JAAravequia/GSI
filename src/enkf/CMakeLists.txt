@@ -58,7 +58,7 @@ if(BUILD_ENKF)
   
   add_definitions(${MPI_Fortran_FLAGS})
   
-  include_directories(${CMAKE_CURRENT_BINARY_DIR} "${PROJECT_BINARY_DIR}/include/wrf" "${PROJECT_BINARY_DIR}/include/global"  ${CMAKE_CURRENT_BINARY_DIR}/.. ${MPI_Fortran_INCLUDE_DIRS} ${MPI_Fortran_INCLUDE_PATH} ${CORE_INCS} ${NETCDF_INCLUDES} ${NCDIAG_INCS} /scratch2/BMC/gsienkf/Anna.V.Shlyaeva/jedi/module/)
+  include_directories(${CMAKE_CURRENT_BINARY_DIR} "${PROJECT_BINARY_DIR}/include/wrf" "${PROJECT_BINARY_DIR}/include/global"  ${CMAKE_CURRENT_BINARY_DIR}/.. ${MPI_Fortran_INCLUDE_DIRS} ${MPI_Fortran_INCLUDE_PATH} ${CORE_INCS} ${NETCDF_INCLUDES} ${NCDIAG_INCS} ${FV3GFS_NCIO_INCS} /scratch2/BMC/gsienkf/Anna.V.Shlyaeva/jedi/module/)
   link_directories(${MPI_Fortran_LIBRARIES})
 
   set_source_files_properties( ${ENKF_SRCS} PROPERTIES COMPILE_FLAGS ${ENKF_Fortran_FLAGS} )
@@ -74,7 +74,7 @@ if(BUILD_ENKF)
   add_executable(${ENKFEXEC} enkf_main.f90)
   target_link_libraries(${ENKFEXEC} enkflib enkfdeplib ${GSILIB} ${GSISHAREDLIB} ${CORE_LIBRARIES}
   ${MPI_Fortran_LIBRARIES} ${LAPACK_LIBRARIES} ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES}  ${HDF5_Fortran_HL_LIBRARIES}
-  ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS} ${CORE_BUILT} ${CORE_LIBRARIES} ${CORE_BUILT} ${NCDIAG_LIBRARIES}
+  ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS} ${CORE_BUILT} ${CORE_LIBRARIES} ${CORE_BUILT} ${NCDIAG_LIBRARIES} ${FV3GFS_NCIO_LIBRARIES}
   /scratch2/BMC/gsienkf/Anna.V.Shlyaeva/jedi/lib/libioda.so /scratch2/BMC/gsienkf/Anna.V.Shlyaeva/jedi/lib/libfckit.so
   /scratch2/BMC/gsienkf/Anna.V.Shlyaeva/jedi/lib/liboops.so  ${EXTRA_LINKER_FLAGS})
   install(TARGETS ${ENKFEXEC} enkfdeplib enkflib 

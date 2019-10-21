@@ -115,7 +115,7 @@ subroutine setupbend(obsLL,odiagLL, &
   use mpeu_util, only: die,perr,tell,getindex
   use kinds, only: r_kind,i_kind
   use m_gpsStats, only: gps_allhead,gps_alltail
-  use obsmod , only: nprof_gps,grids_dim,lobsdiag_allocated,&
+  use obsmod , only: nprof_gps,lobsdiag_allocated,&
       lobsdiagsave,nobskeep,&
       time_offset,lobsdiag_forenkf
   use m_obsNode, only: obsNode
@@ -138,7 +138,7 @@ subroutine setupbend(obsLL,odiagLL, &
   use guess_grids, only: nsig_ext,gpstop
   use gridmod, only: nsig
   use gridmod, only: get_ij,latlon11
-  use constants, only: fv,n_a,n_b,n_c,deg2rad,tiny_r_kind,r0_01
+  use constants, only: fv,n_a,n_b,n_c,deg2rad,tiny_r_kind,r0_01,r18,r61,r63,r10000
   use constants, only: zero,half,one,two,eccentricity,semi_major_axis,&
       grav_equator,somigliana,flattening,grav_ratio,grav,rd,eps,three,four,five
   use lagmod, only: setq, setq_TL
@@ -187,21 +187,20 @@ subroutine setupbend(obsLL,odiagLL, &
   real(r_kind),parameter:: eight = 8.0_r_kind
   real(r_kind),parameter:: nine = 9.0_r_kind
   real(r_kind),parameter:: eleven = 11.0_r_kind
-  real(r_kind),parameter:: ds=10000.0_r_kind
   real(r_kind),parameter:: r12=12.0_r_kind
-  real(r_kind),parameter:: r18=18.0_r_kind
   real(r_kind),parameter:: r20=20.0_r_kind
   real(r_kind),parameter:: r40=40.0_r_kind
   real(r_kind),parameter:: r1em3 = 1.0e-3_r_kind
   real(r_kind),parameter:: r1em6 = 1.0e-6_r_kind
   character(len=*),parameter :: myname='setupbend'
   real(r_kind),parameter:: crit_grad = 157.0_r_kind
+  real(r_kind),parameter:: r790000=790000.0_r_kind
 
 ! Declare local variables
-
+  integer(i_kind):: grids_dim
   real(r_kind) cutoff,cutoff1,cutoff2,cutoff3,cutoff4,cutoff12,cutoff23,cutoff34
-  real(r_kind) sin2,zsges
-  real(r_kind),dimension(grids_dim):: ddnj,grid_s,ref_rad_s
+  real(r_kind) sin2,zsges,ds,ns
+  real(r_kind),dimension(:),allocatable:: ddnj,grid_s,ref_rad_s
 
   real(r_kind) rsig,rsig_up,ddbend,tmean,qmean
   real(r_kind) termg,termr,termrg,hob,dbend,grad_mod
@@ -280,6 +279,7 @@ subroutine setupbend(obsLL,odiagLL, &
 !750-755 => COSMIC-2 Equatorial
 !724-729 => COSMIC-2 Polar
 !825 => KOMPSAT-5
+!5   => MetOpC
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
@@ -316,8 +316,12 @@ subroutine setupbend(obsLL,odiagLL, &
   nobs_out=0
   hob_s_top=one
   mm1=mype+1
-  nsigstart=min(23,nsig) 
-
+  ns=nsig/2
+  nsigstart=nint(ns)
+  ns=(r61/r63)*nsig+r18
+  grids_dim=nint(ns)  ! grid points for integration of GPS bend
+  ds=r10000
+  allocate(ddnj(grids_dim),grid_s(grids_dim),ref_rad_s(grids_dim)) 
 
 ! Allocate arrays for output to diagnostic file
   mreal=22
@@ -580,10 +584,12 @@ subroutine setupbend(obsLL,odiagLL, &
          repe_gps=one
 
 !        UKMET-type processing
-         if((data(isatid,i)==41).or.(data(isatid,i)==722).or.&
-           (data(isatid,i)==723).or.(data(isatid,i)==4).or.(data(isatid,i)==42).or.&
-           (data(isatid,i)==3).or.(data(isatid,i)==821.or.(data(isatid,i)==421)).or.&
-           (data(isatid,i)==440).or.(data(isatid,i)==43)) then
+         if((data(isatid,i)==41) .or.(data(isatid,i)==722).or. &
+            (data(isatid,i)==723).or.(data(isatid,i)==4)  .or. & 
+            (data(isatid,i)==42) .or.(data(isatid,i)==3)  .or. &
+            (data(isatid,i)==821).or.(data(isatid,i)==421).or. &
+            (data(isatid,i)==440).or.(data(isatid,i)==43) .or. &
+            (data(isatid,i)==5)) then
                     
            if((data(ilate,i)> r40).or.(data(ilate,i)< -r40)) then
               if(alt>r12) then
@@ -769,7 +775,8 @@ subroutine setupbend(obsLL,odiagLL, &
          endif
 
 !       Remove MetOP/GRAS data below 8 km
-         if((alt <= eight) .and. ((data(isatid,i)==4) .or. (data(isatid,i)==3))) then
+         if( (alt <= eight) .and. & 
+            ((data(isatid,i)==4).or.(data(isatid,i)==3).or.(data(isatid,i)==5))) then
            qcfail(i)=.true.
            data(ier,i) = zero
            ratio_errors(i) = zero
@@ -1151,7 +1158,7 @@ subroutine setupbend(obsLL,odiagLL, &
         end if ! (in_curbin .and. muse=1)
      endif ! (last_pass)
   end do ! i=1,nobs
-
+  deallocate(ddnj,grid_s,ref_rad_s)
   ! Release memory of local guess arrays
   call final_vars_
 

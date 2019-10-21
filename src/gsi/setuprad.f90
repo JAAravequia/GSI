@@ -214,6 +214,7 @@ contains
 !   2019-03-13  eliu    - add components to handle precipitation-affected radiances 
 !   2019-03-13  eliu    - add calculation of scattering index for MHS/ATMS 
 !   2019-03-27  h. liu  - add ABI assimilation
+!   2019-08-20  zhu     - add flexibility to allow radiances being assimilated without bias correction
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
@@ -283,9 +284,9 @@ contains
       ifrac_sea,ifrac_lnd,ifrac_ice,ifrac_sno,itsavg, &
       izz,idomsfc,isfcr,iff10,ilone,ilate, &
       isst_hires,isst_navy,idata_type,iclr_sky,itref,idtw,idtc,itz_tr
+  use qcmod, only: qc_ssmi,qc_geocsr,qc_ssu,qc_avhrr,qc_goesimg,qc_msu,qc_irsnd,qc_amsua,qc_mhs,qc_atms
   use crtm_interface, only: ilzen_ang2,iscan_ang2,iszen_ang2,isazi_ang2
   use clw_mod, only: calc_clw, ret_amsua, gmi_37pol_diff
-  use qcmod, only: qc_ssmi,qc_seviri,qc_abi,qc_ssu,qc_avhrr,qc_goesimg,qc_msu,qc_irsnd,qc_amsua,qc_mhs,qc_atms
   use qcmod, only: igood_qc,ifail_gross_qc,ifail_interchan_qc,ifail_crtm_qc,ifail_satinfo_qc,qc_noirjaco3,ifail_cloud_qc
   use qcmod, only: ifail_cao_qc,cao_check  
   use qcmod, only: ifail_iland_det, ifail_isnow_det, ifail_iice_det, ifail_iwater_det, ifail_imix_det, &
@@ -548,6 +549,7 @@ contains
 
         ich(jc)=j
         do i=1,npred
+           if (iuse_rad(j)==4) predx(i,j)=zero
            predchan(i,jc)=predx(i,j)
         end do
 !
@@ -997,9 +999,11 @@ contains
                  pred(npred-j+1,i)=pred(npred,i)**j
               end do
               cbias(nadir,mm)=zero
-              do j=1,angord
-                 cbias(nadir,mm)=cbias(nadir,mm)+predchan(npred-j+1,i)*pred(npred-j+1,i)
-              end do
+              if (iuse_rad(mm)/=4) then
+                 do j=1,angord
+                    cbias(nadir,mm)=cbias(nadir,mm)+predchan(npred-j+1,i)*pred(npred-j+1,i)
+                 end do
+              end if
            end do
         end if
 
@@ -1164,6 +1168,12 @@ contains
               end do
            end if
 
+!          if (iuse_rad(mm)==4) then
+!             do j = 1,npred
+!                pred(j,i)=zero
+!             end do
+!          end if
+
            do j = 1,npred
               predbias(j,i) = predchan(j,i)*pred(j,i)
            end do
@@ -1173,6 +1183,7 @@ contains
            if (retrieval) then
               call spline_cub(fbias(:,mm),tsavg5,ys_bias_sst)
               predbias(npred+2,i) = ys_bias_sst
+              if (iuse_rad(mm)==4) predbias(npred+2,i) = zero 
            endif
 
 !          tbc    = obs - guess after bias correction
@@ -1423,20 +1434,10 @@ contains
               aivals,errf,varinv)
            
 
-!  ---------- SEVIRI  -------------------
-!       SEVIRI Q C
+!  ---------- SEVIRI, AHI,ABI  -------------------
+!       SEVIRI, AHI,ABI Q C
 
-        else if (seviri) then
-
-           cld = 100-data_s(iclr_sky,n)
-
-           call qc_seviri(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse(n), &
-              zsges,tzbgr,tbc,tnoise,temp,wmix,emissivity_k,ts,id_qc,aivals,errf,varinv)
-!
-!  ---------- ABI  -------------------
-!       ABI Q C
-
-        else if (abi) then
+        else if (seviri .or. abi .or. ahi) then
            do i=1,nchanl
               m=ich(i)
               if (varinv(i) < tiny_r_kind) then
@@ -1454,18 +1455,21 @@ contains
               tb_obs_sdv(i) = data_s(i+32,n)
            end do
 
-           call qc_abi(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse(n), &
+           call qc_geocsr(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse(n), &
               zsges,trop5,tzbgr,tsavg5,tb_obs_sdv,tbc,tb_obs,tnoise,ptau5,prsltmp,tvp,temp,wmix,emissivity_k,ts,   &
-              id_qc,aivals,errf,varinv,varinv_use,cld,cldp,kmax)
+              id_qc,aivals,errf,varinv,varinv_use,cld,cldp,kmax,abi,ahi,seviri)
 
            cld = 100-data_s(iclr_sky,n)
 
 !          if rclrsky < 98%, toss data for lowest water-vapor and surface channels
            if(data_s(iclr_sky,n)<98.0_r_kind) then
               do i=1,nchanl
-                 if(i/=2 .and. i/=3) then
+                 if((abi .or. ahi) .and. i/=2 .and. i/=3) then
                     varinv(i)=zero
                     varinv_use(i)=zero
+                 end if
+                 if(seviri .and. i/=2) then
+                    varinv(i)=zero
                  end if
               end do
            end if
@@ -1473,7 +1477,7 @@ contains
 !
 !          additional qc for surface and  chn7.3: use split window chns to remove opaque clouds
            do i = 1,nchanl
-              if(i/=2 .and. i/=3) then
+              if( (abi .or. ahi ).and. i/=2 .and. i/=3 ) then
                 if( varinv(i) > tiny_r_kind .and. &
                    (tb_obs(7)-tb_obs(8))-(tsim(7)-tsim(8)) <= -0.75_r_kind) then
                     varinv(i)=zero
@@ -2307,6 +2311,7 @@ contains
            if (.not.microwave) then
               diagbuf(25)  = cld                              ! cloud fraction (%)
               diagbuf(26)  = cldp                             ! cloud top pressure (hPa)
+              if (abi) diagbuf(26) = data_s(32,n)             ! cldfrc from bufr
            else
               if((radmod%lcloud_fwd .and. sea) .or. gmi .or. amsr2) then
                    diagbuf(25)  = clw_obs                     ! clw (kg/m**2) from retrievals
@@ -2361,7 +2366,7 @@ contains
               else
                  diagbufchan(6,i)=emissivity(ich_diag(i))             ! surface emissivity
               endif
-              if(abi) diagbufchan(6,i)=data_s(32+i,n)                 ! temporarily store BT stdev
+              if(abi .or. ahi .or. seviri) diagbufchan(6,i)=data_s(32+i,n)  ! temporarily store BT stdev
               diagbufchan(7,i)=tlapchn(ich_diag(i))                   ! stability index
               if (radmod%lcloud_fwd) then
                  if (radmod%lcloud_fwd .and. gmi .and. cld_rbc_idx(ich_diag(i)) == zero) then
@@ -2511,6 +2516,7 @@ contains
                  call nc_diag_metadata("Sol_Zenith_Angle",      sngl(pangs)                         ) ! solar zenith angle (degrees)
                  call nc_diag_metadata("Sol_Azimuth_Angle",     sngl(data_s(isazi_ang,n))           ) ! solar azimuth angle (degrees)
                  call nc_diag_metadata("Sun_Glint_Angle",       sngl(sgagl)                         ) ! sun glint angle (degrees) (sgagl)
+                 call nc_diag_metadata("Scan_Angle",            sngl(data_s(iscan_ang,n)*rad2deg)   ) ! scan angle
 
                  call nc_diag_metadata("Water_Fraction",        sngl(surface(1)%water_coverage)     ) ! fractional coverage by water
                  call nc_diag_metadata("Land_Fraction",         sngl(surface(1)%land_coverage)      ) ! fractional coverage by land
