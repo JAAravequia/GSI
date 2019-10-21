@@ -344,6 +344,8 @@ function dtype2index_(dtype) result(index_)
         !
     case("avhrr_navy"); index_= iobOper_rad
     case("avhrr"  ); index_= iobOper_rad
+        !
+    case("tempest"); index_= iobOper_rad
 
   case("tcp"    ,"[tcpoper]"    ); index_= iobOper_tcp
 
