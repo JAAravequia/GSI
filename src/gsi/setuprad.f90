@@ -354,7 +354,7 @@ contains
   real(r_kind) ys_bias_sst,cosza,val_obs
   real(r_kind) sstnv,sstcu,sstph,dtp_avh,dta,dqa
   real(r_kind) bearaz,sun_zenith,sun_azimuth
-!  real(r_kind) sfc_speed,frac_sea,clw,tpwc,sgagl,clwp_amsua,tpwc_amsua,tpwc_guess_retrieval
+!  real(r_kind) sfc_speed,frac_sea,clw,tpwc,sgagl,clwp_amsua,tpwc_guess_retrieval
 !  real(r_kind) sfc_speed,frac_sea,clw,tpwc,sgagl,tpwc_guess_retrieval
   real(r_kind) sfc_speed,frac_sea,tpwc_obs,sgagl,tpwc_guess_retrieval
   real(r_kind) gwp,clw_obs
@@ -1042,7 +1042,6 @@ contains
         clw_obs=zero
         clw_guess_retrieval=zero
         gwp=zero
-!        tpwc_amsua=zero
         tpwc_guess_retrieval=zero
         scatp=zero
         scat=zero  
@@ -2378,7 +2377,6 @@ contains
               diagbuf(21) = dtp_avh                           ! data type             
            endif
            if(radmod%lcloud_fwd .and. sea) then  
-           !  diagbuf(22) = tpwc_amsua   
               diagbuf(22) = scat                              ! scattering index from AMSU-A 
               diagbuf(23) = clw_guess                         ! integrated CLWP (kg/m**2) from background                
            else
@@ -2658,7 +2656,6 @@ contains
   if (retrieval.and.last_pass) call finish_sst_retrieval
                  call nc_diag_metadata("Vegetation_Fraction",   sngl(surface(1)%vegetation_fraction) )
                  call nc_diag_metadata("Snow_Depth",            sngl(surface(1)%snow_depth)         )
-!                 call nc_diag_metadata("tpwc_amsua",            sngl(tpwc_amsua)                    )
                  call nc_diag_metadata("tpwc",            sngl(tpwc_obs)                    )
                  call nc_diag_metadata("clw_guess_retrieval",   sngl(clw_guess_retrieval)           )
 
