@@ -326,7 +326,7 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
     call get_obs_data_ioda("radiance", nobs_max, nobs_maxdiag,            &
                            hx_mean, hx_mean_nobc, hx, x_obs, x_err,       &
                            x_lon, x_lat, x_press, x_time, x_channum,      &
-                           x_errorig, x_type, x_used, x_indx)
+                           x_errorig, x_type, x_used, nanal, x_indx)
   else
     call get_satobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx_mean_nobc, hx, hx_modens, x_obs, x_err, &
            x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal, nmem)

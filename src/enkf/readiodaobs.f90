@@ -162,23 +162,9 @@ subroutine get_numobs_ioda(obstype, num_obs_tot, num_obs_totdiag)
       nvars = vars%nvars()
       allocate(values(nlocs))
       do ivar = 1, nvars
-        !> TODO: read Effective QC:
-        ! call obsspace_get_db(obsspaces(iobss), "EffectiveQC", &
-        !                      vars%variable(ivar), values)
-        ! num_obs_tot = num_obs_tot + count(values == 0)
-        !> get the use flag to count nunber if used observations
-        if (obstype == "conventional" .or. obstype == "ozone") then
-          !> for ozone and conventional, GsiUseFlag is saved (1 if used, otherwise
-          !  if not)
-          call obsspace_get_db(obsspaces(iobss), "GsiUseFlag", &
-                               vars%variable(ivar), values)
-          num_obs_tot = num_obs_tot + count(values == 1)
-        elseif (obstype == "radiance") then
-          !> for radiances, GSI QC is saved (0 if passed QC)
-          call obsspace_get_db(obsspaces(iobss), "PreQC", &
-                               vars%variable(ivar), values)
-          num_obs_tot = num_obs_tot + count(values == 0)
-        endif
+        call obsspace_get_db(obsspaces(iobss), "EffectiveQC", &
+                             vars%variable(ivar), values)
+        num_obs_tot = num_obs_tot + count(values == 0)
       enddo
       deallocate(values)
       num_obs_totdiag = num_obs_totdiag + nlocs*nvars
@@ -275,13 +261,15 @@ end subroutine fill_array_obsdata_int
 subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
                              hx_mean, hx_mean_nobc, hx, x_obs, x_err, &
                              x_lon, x_lat, x_press, x_time, x_code,   &
-                             x_errorig, x_type, x_used, x_indx)
+                             x_errorig, x_type, x_used, nanal, x_indx)
   use obsspace_mod, only: obsspace_get_nlocs, obsspace_obsvariables, &
                           obsspace_get_db, obsspace_obsname
   use oops_variables_mod, only: oops_variables
   use kinds, only: r_single, i_kind
   use datetime_mod, only: datetime, datetime_diff
   use duration_mod, only: duration, duration_seconds
+  use params, only: nanals
+  use mpisetup
   implicit none
 
   character(len=*), intent(in)  :: obstype
@@ -296,6 +284,7 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
   integer(i_kind), dimension(nobs_max), intent(out)   :: x_code
   character(len=20), dimension(nobs_max), intent(out) :: x_type
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
+  integer(i_kind), intent(in) :: nanal
   integer(i_kind), dimension(nobs_max), intent(out), optional   :: x_indx  !< only used for radiances
 
   integer(i_kind) :: iobss, iloc, ivar
@@ -313,6 +302,8 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
   character(100) :: currvar
   integer(i_kind) :: channel, bar_index
   character(len=100) :: obsname
+  character(len=100) :: varname
+  character(len=5)  :: member
 
   character(len=60), dimension(7), parameter :: varnames_conv = &
     (/'air_temperature', 'virtual_temperature', 'specific_humidity', &
@@ -332,24 +323,9 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
       i2_all = i1_all + nvars*nlocs
 
       !> read flags (whether to use the obs)
-      !> TODO: read Effective QC:
-      ! call obsspace_get_db(obsspaces(iobss), "EffectiveQC", &
-      !                      vars%variable(ivar), values)
-      ! num_obs_tot = num_obs_tot + count(values == 0)
-      ! x_used(i1_all:i2_all) = 0
-      !  where(intvalues == 0) x_used(i1_all:i2_all) = 1
-      if (obstype == "conventional" .or. obstype == "ozone") then
-        !> for ozone and conventional, GsiUseFlag is saved (1 if used, otherwise
-        !  if not)
-        call fill_array_obsdata_int(obsspaces(iobss), "GsiUseFlag", intvalues)
-        x_used(i1_all:i2_all) = 0
-        where(intvalues == 1) x_used(i1_all:i2_all) = 1
-      elseif (obstype == "radiance") then
-        !> for radiances, GSI QC is saved (0 if passed QC)
-        call fill_array_obsdata_int(obsspaces(iobss), "PreQC", intvalues)
-        x_used(i1_all:i2_all) = 0
-        where(intvalues == 0) x_used(i1_all:i2_all) = 1
-      endif
+      call fill_array_obsdata_int(obsspaces(iobss), "EffectiveQC", intvalues)
+      x_used(i1_all:i2_all) = 0
+      where(intvalues == 0) x_used(i1_all:i2_all) = 1
       used_obs = (x_used(i1_all:i2_all) == 1)
       i2 = i1 + count(used_obs)
 
@@ -358,14 +334,8 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
       x_lon(i1:i2) = pack(values, used_obs)
       call fill_array_metadata(obsspaces(iobss), "latitude",  values)
       x_lat(i1:i2) = pack(values, used_obs)
-      !> read pressure
-      if (obstype == "conventional" .or. obstype == "ozone") then
-        call fill_array_metadata(obsspaces(iobss), "air_pressure", values)
-        x_press(i1:i2) = pack(values, used_obs)
-      elseif (obstype == "radiance") then
-        !> TODO: radiance files should hold pressure
-        x_press(i1:i2) = 99999.0
-      endif
+      call fill_array_metadata(obsspaces(iobss), "air_pressure", values)
+      x_press(i1:i2) = pack(values, used_obs)
       !> fill in time (ObsSpaces hold datetime in Datetime objects; need to
       !compute delta between datetime(obs) and datetime(middle of assim window)
       allocate(abs_time(nlocs))
@@ -381,23 +351,19 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
       deallocate(abs_time)
       call fill_array_obsdata(obsspaces(iobss), "ObsValue", values)
       x_obs(i1:i2) = pack(values, used_obs)
-! TODO: uncomment
-!      call fill_array_obsdata(obsspaces(iobss), "HofX", values)
-      call fill_array_obsdata(obsspaces(iobss), "GsiHofXBc", values)
+      call fill_array_obsdata(obsspaces(iobss), "HofX", values)
       hx_mean(i1:i2) = pack(values, used_obs)
-! TODO: uncomment
-!      call fill_array_obsdata(obsspaces(iobss), "ObsBias", values)
-!      hx_mean_nobc(i1:i2) = hx_mean(i1:i2) - pack(values, used_obs)
-      call fill_array_obsdata(obsspaces(iobss), "GsiHofX", values)
-      hx_mean_nobc(i1:i2) = pack(values, used_obs)
-      ! TODO: has to read different values for the members below!
-! TODO: uncomment and add member at the end of HofX
-!      call fill_array_obsdata(obsspaces(iobss), "HofX", values)
-      call fill_array_obsdata(obsspaces(iobss), "GsiHofX", values)
-      hx(i1:i2) = pack(values, used_obs)
-! TODO: uncomment
-!      call fill_array_obsdata(obsspaces(iobss), "EffectiveError", values)
-      call fill_array_obsdata(obsspaces(iobss), "GsiFinalObsError", values)
+      call fill_array_obsdata(obsspaces(iobss), "ObsBias", values)
+      hx_mean_nobc(i1:i2) = hx_mean(i1:i2) - pack(values, used_obs)
+      !> read ensemble member H(x) if needed
+      if (nanal <= nanals) then
+        write(member,'(I)') nanal
+        varname="HofX_" // trim(member)
+        print *, nproc, ', reading ', trim(varname)
+        call fill_array_obsdata(obsspaces(iobss), trim(varname), values)
+        hx(i1:i2) = pack(values, used_obs)
+      endif
+      call fill_array_obsdata(obsspaces(iobss), "EffectiveError", values)
       x_err(i1:i2) = pack(values, used_obs)
       call fill_array_obsdata(obsspaces(iobss), "ObsError", values)
       x_errorig(i1:i2) = pack(values, used_obs)
@@ -436,7 +402,6 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
       !> for radiances read ObsSpace.name from yaml (should have short
       !  sat/instrument name
       elseif (obstype == "radiance") then
-        !> TODO: fill in obstype as satellite name
         call obsspace_obsname(obsspaces(iobss), obsname)
         x_type(i1:i2) = obsname
       endif
