@@ -27,9 +27,8 @@ module enkf_obsmod
 ! Public Variables (all defined by subroutine readobs):
 !   nobs_conv (integer scalar):  number of "conventional" obs (from prepbufr file).
 !   nobs_oz (integer scalar): number of sbuv ozone obs.
-!   nobs_aod (integer scalar): number of aod obs.
 !   nobs_sat (integer scalar): number of satellite radiance obs.
-!   nobstot (integer scalar): total number of obs (=nobs_conv+nobs_oz+nobs_aod+nobs_sat)
+!   nobstot (integer scalar): total number of obs (=nobs_conv+nobs_oz+nobs_sat)
 !   jpch_rad: (integer scalar) total number of satellite sensors/channels
 !    (imported from module radinfo).
 !   npred: (integer scalar) total number of adaptive bias correction terms
@@ -132,8 +131,8 @@ real(r_kind), public, allocatable, dimension(:,:) :: deltapredx
 real(r_single), public, allocatable, dimension(:,:) :: obloc
 integer(i_kind), public, allocatable, dimension(:) :: stattype, indxsat
 character(len=20), public, allocatable, dimension(:) :: obtype
-INTEGER(i_kind), PUBLIC ::  nobs_sat, nobs_oz, nobs_conv, nobs_aod, nobstot
-INTEGER(i_kind) :: nobs_convdiag, nobs_ozdiag, nobs_aoddiag, nobs_satdiag, nobstotdiag
+integer(i_kind), public ::  nobs_sat, nobs_oz, nobs_conv, nobstot
+integer(i_kind) :: nobs_convdiag, nobs_ozdiag, nobs_satdiag, nobstotdiag
 
 ! for serial enkf, anal_ob is only used here and in loadbal. It is deallocated in loadbal.
 ! for letkf, anal_ob used on all tasks in letkf_update (bcast from root in loadbal), deallocated
@@ -149,11 +148,10 @@ subroutine readobs()
 ! all tasks.  Ob prior perturbations for each ensemble member
 ! are written to a temp file, since the entire array can be 
 ! very large.
-use radinfo, only: npred,jpch_rad,radinfo_read,predx,pg_rad
+use radinfo, only: npred,jpch_rad,radinfo_read,pg_rad
 use convinfo, only: convinfo_read, init_convinfo, cvar_pg, nconvtype, ictype,&
                     ioctype
 use ozinfo, only: init_oz, ozinfo_read, pg_oz, jpch_oz, nusis_oz, nulev
-USE aeroinfo, ONLY: init_aero,aeroinfo_read,pg_aero
 use covlocal, only: latval
 integer nob,j,ierr
 real(r_double) t1
@@ -165,9 +163,6 @@ call convinfo_read()
 call init_anasv()
 call init_oz()
 call ozinfo_read()
-!read aod info
-call init_aero()
-CALL aeroinfo_read()
 ! read radiance bias correction info (standard out redirected 
 ! specified unit number)
 call radinfo_read()
@@ -183,8 +178,8 @@ if (nproc == 0) print*, 'npred  = ', npred
 allocate(deltapredx(npred,jpch_rad))
 deltapredx = zero
 t1 = mpi_wtime()
-CALL mpi_getobs(datapath, datestring, nobs_conv, nobs_oz, nobs_aod, nobs_sat, nobstot,  &
-                nobs_convdiag,nobs_ozdiag, nobs_aoddiag, nobs_satdiag, nobstotdiag,         &
+call mpi_getobs(datapath, datestring, nobs_conv, nobs_oz, nobs_sat, nobstot,  &
+                nobs_convdiag,nobs_ozdiag, nobs_satdiag, nobstotdiag,         &
                 obsprd_prior, ensmean_obnobc, ensmean_ob, ob,                 &
                 oberrvar, obloclon, obloclat, obpress,                        &
                 obtime, oberrvar_orig, stattype, obtype, biaspreds, diagused, &
@@ -226,14 +221,6 @@ if (varqc .and. .not. huber) then
                 exit
             end if
          enddo
-      ELSE IF (nob <= nobs_conv+nobs_oz+nobs_aod) THEN
-         j=stattype(nob)-800
-!say maxchannel number is 40
-         IF (j < 0 .OR. j > 40) THEN
-            PRINT *,'unknown stattype ',stattype(nob)
-            CALL stop2(91)
-         ENDIF
-         prpgerr(nob) = pg_aero(j)
       else
          prpgerr(nob) = pg_rad(indxsat(nob-(nobs_conv+nobs_oz)))
       end if
@@ -244,7 +231,6 @@ endif
 if (nobs_sat > 0) then
   call channelstats()
 end if
-
 
 ! calculate locations of obs that passed initial screening in cartesian coords.
 allocate(obloc(3,nobstot))
@@ -262,8 +248,7 @@ do nob=1,nobstot
    obloc(3,nob) = sin(radlat)
    deglat = obloclat(nob)
 !  get limits on corrlength,lnsig,and obtime
-   IF (nob > nobs_conv+nobs_oz) THEN
-!includes aod
+   if (nob > nobs_conv+nobs_oz) then
       lnsigl(nob) = latval(deglat,lnsigcutoffsatnh,lnsigcutoffsattr,lnsigcutoffsatsh)
    else if (obtype(nob)(1:3) == ' ps') then
       lnsigl(nob) = latval(deglat,lnsigcutoffpsnh,lnsigcutoffpstr,lnsigcutoffpssh)
@@ -284,7 +269,6 @@ end subroutine readobs
 subroutine write_obsstats()
 use readconvobs, only: write_convobs_data
 use readozobs,   only: write_ozobs_data
-USE readaodobs,   only: write_aodobs_data
 use readsatobs,  only: write_satobs_data
 character(len=10) :: id,id2,gesid2
 
@@ -321,33 +305,20 @@ character(len=10) :: id,id2,gesid2
              diagused(nobs_convdiag+1:nobs_convdiag+nobs_ozdiag),         &
              id, id2, gesid2)
     end if
-
-    if (nobs_aod > 0) then
-       PRINT *, 'obsprd, aod: ', MINVAL(obsprd_prior(nobs_conv+nobs_oz+1:nobs_conv+nobs_oz+nobs_aod)), &
-              MAXVAL(obsprd_prior(nobs_conv+nobs_oz+1:nobs_conv+nobs_oz+nobs_aod))
-       PRINT *, 'posterior spread not calculated for AOD'
-       gesid2 = 'anl'
-       call write_aodobs_data(datapath, datestring, nobs_sat, nobs_satdiag, &
-             obfit_post(nobs_conv+nobs_oz+nobs_aod+1:nobstot),                       &
-             obsprd_post(nobs_conv+nobs_oz+nobs_aod+1:nobstot),                      &
-             diagused(nobs_convdiag+nobs_ozdiag+nobs_aoddiag+1:nobstotdiag),             &
-             id, id2, gesid2)
-    end if
-
     if (nobs_sat > 0) then
-       PRINT *, 'obsprd, sat: ', MINVAL(obsprd_prior(nobs_conv+nobs_oz+nobs_aod+1:nobstot)), &
-              MAXVAL(obsprd_prior(nobs_conv+nobs_oz+nobs_aod+1:nobstot))
+       print *, 'obsprd, sat: ', minval(obsprd_prior(nobs_conv+nobs_oz+1:nobstot)), &
+              maxval(obsprd_prior(nobs_conv+nobs_oz+1:nobstot))
        gesid2 = 'ges'
        call write_satobs_data(datapath, datestring, nobs_sat, nobs_satdiag, &
-             obfit_prior(nobs_conv+nobs_oz+nobs_aod+1:nobstot),                      &
-             obsprd_prior(nobs_conv+nobs_oz+nobs_aod+1:nobstot),                     & 
-             diagused(nobs_convdiag+nobs_ozdiag+nobs_aod+1:nobstotdiag),             &
+             obfit_prior(nobs_conv+nobs_oz+1:nobstot),                      &
+             obsprd_prior(nobs_conv+nobs_oz+1:nobstot),                     & 
+             diagused(nobs_convdiag+nobs_ozdiag+1:nobstotdiag),             &
              id, id2, gesid2)
        gesid2 = 'anl'
        call write_satobs_data(datapath, datestring, nobs_sat, nobs_satdiag, &
-             obfit_post(nobs_conv+nobs_oz+nobs_aod+1:nobstot),                       &
-             obsprd_post(nobs_conv+nobs_oz+nobs_aod+1:nobstot),                      &
-             diagused(nobs_convdiag+nobs_ozdiag+nobs_aoddiag+1:nobstotdiag),             &
+             obfit_post(nobs_conv+nobs_oz+1:nobstot),                       &
+             obsprd_post(nobs_conv+nobs_oz+1:nobstot),                      &
+             diagused(nobs_convdiag+nobs_ozdiag+1:nobstotdiag),             &
              id, id2, gesid2)
     end if
   endif
@@ -367,7 +338,7 @@ failm=1.e30_r_single
 !call apply_biascorr()
 !==> pre-process obs, obs metadata.
 do nob=1,nobstot
-  IF (nob > nobs_conv+nobs_oz+nobs_aod) oberrvar(nob) = saterrfact*oberrvar(nob)
+  if (nob > nobs_conv+nobs_oz) oberrvar(nob) = saterrfact*oberrvar(nob)
   ! empirical adjustment of obs errors for Huber norm from ECMWF RD tech memo
   if (varqc) oberrvar(nob) = oberrvar(nob)*(min(one,0.5_r_single+0.125_r_single*(zhuberleft+zhuberright)))**2
 
@@ -426,7 +397,7 @@ allocate(oberrvarmean(jpch_rad))
 numobspersat = 0
 oberrvarmean = zero
 do nob=1,nobs_sat
-   nob2=nob+nobs_conv+nobs_oz+nobs_aod
+   nob2=nob+nobs_conv+nobs_oz
    i=indxsat(nob)
    numobspersat(i) = numobspersat(i) + 1
    oberrvarmean(i) = oberrvarmean(i) + oberrvar(nob2)

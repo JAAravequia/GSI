@@ -20,7 +20,6 @@ module mpi_readobs
 !  readsatobs: to read satellite radiance diag* files.
 !  readconvobs: to read diag_conv* files (obs from prepbufr file).
 !  readozobs: to read diag_sbuv* ozone files.
-!  readaodobs: to read diag aod files.
 !  mpisetup
 !
 ! program history log:
@@ -39,7 +38,6 @@ use radinfo, only: npred
 use readconvobs
 use readsatobs
 use readozobs
-use readaodobs
 use mpisetup
 
 implicit none
@@ -49,8 +47,8 @@ public :: mpi_getobs
 
 contains
 
-SUBROUTINE mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_aod, nobs_sat, nobs_tot, &
-                      nobs_convdiag, nobs_ozdiag, nobs_aoddiag, nobs_satdiag, nobs_totdiag, &
+subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_tot, &
+                      nobs_convdiag, nobs_ozdiag, nobs_satdiag, nobs_totdiag, &
                       sprd_ob, ensmean_ob, ensmean_obbc, ob, &
                       oberr, oblon, oblat, obpress, &
                       obtime, oberrorig, obcode, obtype, &
@@ -69,33 +67,27 @@ SUBROUTINE mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_aod, nobs_sa
     real(r_single) :: analsi,analsim1
     real(r_double) t1,t2
     character(len=20), allocatable,  dimension(:) ::  obtype
-    INTEGER(i_kind) nob, ierr, iozproc, iaodproc, isatproc, neig, nens1, nens2, na, nmem,&
-            np, nobs_conv, nobs_oz, nobs_aod, nobs_sat, nobs_tot, nanal, nanalo
-    INTEGER(i_kind) :: nobs_convdiag, nobs_ozdiag, nobs_aoddiag, nobs_satdiag, nobs_totdiag
+    integer(i_kind) nob, ierr, iozproc, isatproc, neig, nens1, nens2, na, nmem,&
+            np, nobs_conv, nobs_oz, nobs_sat, nobs_tot, nanal, nanalo
+    integer(i_kind) :: nobs_convdiag, nobs_ozdiag, nobs_satdiag, nobs_totdiag
     integer(i_kind), intent(in) :: nanals, neigv
-    iozproc=max(0,min(1,numproc-1)) 
-    iaodproc=MAX(0,MIN(2,numproc-2))
-    isatproc=max(0,min(3,numproc-3))
+    iozproc=max(0,min(1,numproc-1))
+    isatproc=max(0,min(2,numproc-2))
 ! get total number of conventional and sat obs for ensmean.
     id = 'ensmean'
     if(nproc == 0)call get_num_convobs(obspath,datestring,nobs_conv,nobs_convdiag,id)
     if(nproc == iozproc)call get_num_ozobs(obspath,datestring,nobs_oz,nobs_ozdiag,id)
-    IF(nproc == iaodproc)CALL get_num_aodobs(obspath,datestring,nobs_aod,nobs_aoddiag,id)
     if(nproc == isatproc)call get_num_satobs(obspath,datestring,nobs_sat,nobs_satdiag,id)
     call mpi_bcast(nobs_conv,1,mpi_integer,0,mpi_comm_world,ierr)
     call mpi_bcast(nobs_convdiag,1,mpi_integer,0,mpi_comm_world,ierr)
     call mpi_bcast(nobs_oz,1,mpi_integer,iozproc,mpi_comm_world,ierr)
     call mpi_bcast(nobs_ozdiag,1,mpi_integer,iozproc,mpi_comm_world,ierr)
- 
-    CALL mpi_bcast(nobs_aod,1,mpi_integer,iaodproc,mpi_comm_world,ierr)
-    CALL mpi_bcast(nobs_aoddiag,1,mpi_integer,iaodproc,mpi_comm_world,ierr)
-
     call mpi_bcast(nobs_sat,1,mpi_integer,isatproc,mpi_comm_world,ierr)
     call mpi_bcast(nobs_satdiag,1,mpi_integer,isatproc,mpi_comm_world,ierr)
-    IF(nproc == 0)PRINT *,'nobs_conv, nobs_oz, nobs_aod, nobs_sat = ',nobs_conv,nobs_oz,nobs_aod,nobs_sat
+    if(nproc == 0)print *,'nobs_conv, nobs_oz, nobs_sat = ',nobs_conv,nobs_oz,nobs_sat
     if(nproc == 0)print *,'total diag nobs_conv, nobs_oz, nobs_sat = ', nobs_convdiag, nobs_ozdiag, nobs_satdiag
-    nobs_tot = nobs_conv + nobs_oz + nobs_aod + nobs_sat
-    nobs_totdiag = nobs_convdiag + nobs_ozdiag + nobs_aoddiag + nobs_satdiag
+    nobs_tot = nobs_conv + nobs_oz + nobs_sat
+    nobs_totdiag = nobs_convdiag + nobs_ozdiag + nobs_satdiag
 ! if nobs_tot != 0 (there were some obs to read)
     if (nobs_tot > 0) then
        if (nproc == 0) then
@@ -167,47 +159,25 @@ SUBROUTINE mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_aod, nobs_sa
         diagused(nobs_convdiag+1:nobs_convdiag+nobs_ozdiag),&
         id,nanal,nmem)
     end if
-
-    if (nobs_aod > 0) then
-! second nobs_aod are conventional obs.
-      CALL get_aodobs_data(obspath, datestring, nobs_aod, nobs_aoddiag,  &
-        ensmean_obbc(nobs_conv+nobs_oz+1:nobs_conv+nobs_oz+nobs_aod),                  &
-        ensmean_ob(nobs_conv+nobs_oz+1:nobs_conv+nobs_oz+nobs_aod),                    &
-        mem_ob(nobs_conv+nobs_oz+1:nobs_conv+nobs_oz+nobs_aod),                        &
-        mem_ob_modens(1:neigv,nobs_conv+nobs_oz+1:nobs_conv+nobs_oz+nobs_aod),         &
-        ob(nobs_conv+nobs_oz+1:nobs_conv+nobs_oz+nobs_aod),               &
-        oberr(nobs_conv+nobs_oz+1:nobs_conv+nobs_oz+nobs_aod),            &
-        oblon(nobs_conv+nobs_oz+1:nobs_conv+nobs_oz+nobs_aod),            &
-        oblat(nobs_conv+nobs_oz+1:nobs_conv+nobs_oz+nobs_aod),            &
-        obpress(nobs_conv+nobs_oz+1:nobs_conv+nobs_oz+nobs_aod),          &
-        obtime(nobs_conv+nobs_oz+1:nobs_conv+nobs_oz+nobs_aod),           &
-        obcode(nobs_conv+nobs_oz+1:nobs_conv+nobs_oz+nobs_aod),           &
-        oberrorig(nobs_conv+nobs_oz+1:nobs_conv+nobs_oz+nobs_aod),        &
-        obtype(nobs_conv+nobs_oz+1:nobs_conv+nobs_oz+nobs_aod),           &
-        diagused(nobs_convdiag+nobs_ozdiag+1:nobs_convdiag+nobs_ozdiag+nobs_aoddiag),&
-        id,nanal,nmem)
-    end if
-
-
     if (nobs_sat > 0) then
       biaspreds = 0. ! initialize bias predictor array to zero.
 ! last nobs_sat are satellite radiance obs.
       call get_satobs_data(obspath, datestring, nobs_sat, nobs_satdiag, &
-        ensmean_obbc(nobs_conv+nobs_oz+nobs_aod+1:nobs_tot),       &
-        ensmean_ob(nobs_conv+nobs_oz+nobs_aod+1:nobs_tot),         &
-        mem_ob(nobs_conv+nobs_oz+nobs_aod+1:nobs_tot),                &
-        mem_ob_modens(1:neigv,nobs_conv+nobs_oz+nobs_aod+1:nobs_tot),            &
-        ob(nobs_conv+nobs_oz+nobs_aod+1:nobs_tot),                 &
-        oberr(nobs_conv+nobs_oz+nobs_aod+1:nobs_tot),              &
-        oblon(nobs_conv+nobs_oz+nobs_aod+1:nobs_tot),              &
-        oblat(nobs_conv+nobs_oz+nobs_aod+1:nobs_tot),              &
-        obpress(nobs_conv+nobs_oz+nobs_aod+1:nobs_tot),            &
-        obtime(nobs_conv+nobs_oz+nobs_aod+1:nobs_tot),             &
-        obcode(nobs_conv+nobs_oz+nobs_aod+1:nobs_tot),             &
-        oberrorig(nobs_conv+nobs_oz+nobs_aod+1:nobs_tot),          &
-        obtype(nobs_conv+nobs_oz+nobs_aod+1:nobs_tot),             &
+        ensmean_obbc(nobs_conv+nobs_oz+1:nobs_tot),       &
+        ensmean_ob(nobs_conv+nobs_oz+1:nobs_tot),         &
+        mem_ob(nobs_conv+nobs_oz+1:nobs_tot),                &
+        mem_ob_modens(1:neigv,nobs_conv+nobs_oz+1:nobs_tot),            &
+        ob(nobs_conv+nobs_oz+1:nobs_tot),                 &
+        oberr(nobs_conv+nobs_oz+1:nobs_tot),              &
+        oblon(nobs_conv+nobs_oz+1:nobs_tot),              &
+        oblat(nobs_conv+nobs_oz+1:nobs_tot),              &
+        obpress(nobs_conv+nobs_oz+1:nobs_tot),            &
+        obtime(nobs_conv+nobs_oz+1:nobs_tot),             &
+        obcode(nobs_conv+nobs_oz+1:nobs_tot),             &
+        oberrorig(nobs_conv+nobs_oz+1:nobs_tot),          &
+        obtype(nobs_conv+nobs_oz+1:nobs_tot),             &
         biaspreds,indxsat,                                &
-        diagused(nobs_convdiag+nobs_ozdiag+nobs_aoddiag+1:nobs_totdiag),&
+        diagused(nobs_convdiag+nobs_ozdiag+1:nobs_totdiag),&
         id,nanal,nmem)
     end if ! read obs.
 
@@ -291,26 +261,17 @@ SUBROUTINE mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_aod, nobs_sa
            endif
         enddo
 !$omp end parallel do
-
-        IF (nobs_conv > 0) &
-             PRINT *, 'prior spread conv: ', MINVAL(sprd_ob(1:nobs_conv)), MAXVAL(sprd_ob(1:nobs_conv))
-        IF (nobs_oz > 0)&
-             PRINT *, 'prior spread oz: ', MINVAL(sprd_ob(nobs_conv+1:nobs_conv+nobs_oz)), &
+       print *, 'prior spread conv: ', minval(sprd_ob(1:nobs_conv)), maxval(sprd_ob(1:nobs_conv))
+       print *, 'prior spread oz: ', minval(sprd_ob(nobs_conv+1:nobs_conv+nobs_oz)), &
                                      maxval(sprd_ob(nobs_conv+1:nobs_conv+nobs_oz))
-
-        IF (nobs_aod > 0)&
-             &PRINT *, 'prior spread aod min max: ', MINVAL(sprd_ob(nobs_conv+nobs_oz+1:nobs_conv+nobs_oz+nobs_aod)), &
-             MAXVAL(sprd_ob(nobs_conv+nobs_oz+1:nobs_conv+nobs_oz+nobs_aod))
-
-        IF (nobs_sat > 0)&
-             PRINT *, 'prior spread sat: ',MINVAL(sprd_ob(nobs_conv+nobs_oz+nobs_aod+1:nobs_tot)), &
-             MAXVAL(sprd_ob(nobs_conv+nobs_oz+nobs_aod+1:nobs_tot))
-        DO nob =nobs_conv+nobs_oz+nobs_aod+1 , nobs_tot
-           IF (sprd_ob(nob) > 1000.) THEN 
-              PRINT *, nob, ' sat spread: ', sprd_ob(nob), ', ensmean_ob: ', ensmean_ob(nob), &
-                   ', anal_ob: ', anal_ob(:,nob), ', mem_ob: ', mem_ob(nob)
-           ENDIF
-        ENDDO
+       print *, 'prior spread sat: ',minval(sprd_ob(nobs_conv+nobs_oz+1:nobs_tot)), &
+                                     maxval(sprd_ob(nobs_conv+nobs_oz+1:nobs_tot))
+       do nob =nobs_conv+nobs_oz+1 , nobs_tot
+          if (sprd_ob(nob) > 1000.) then 
+             print *, nob, ' sat spread: ', sprd_ob(nob), ', ensmean_ob: ', ensmean_ob(nob), &
+                           ', anal_ob: ', anal_ob(:,nob), ', mem_ob: ', mem_ob(nob)
+          endif
+       enddo
     endif
 
 ! broadcast ob prior ensemble mean and spread to every task.

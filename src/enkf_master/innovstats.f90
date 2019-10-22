@@ -22,7 +22,7 @@ module innovstats
 !
 !$$$
 
-USE enkf_obsmod, ONLY:  oberrvar,ob,ensmean_ob,obtype,nobs_conv,nobs_oz,nobs_aod,&
+use enkf_obsmod, only:  oberrvar,ob,ensmean_ob,obtype,nobs_conv,nobs_oz,&
                    nobs_sat,nobstot,obloclat,ensmean_obnobc,obpress,stattype,&
                    oberrvar_orig,indxsat
 use params, only : latbound
@@ -47,7 +47,6 @@ integer(i_kind) nobst_nh,nobst_sh,nobst_tr,&
  nobsdbz_nh,nobsdbz_sh,nobsdbz_tr,&
  nobsrw_nh,nobsrw_sh,nobsrw_tr,&
  nobsq_nh,nobsq_sh,nobsq_tr,nobswnd_nh,nobswnd_sh,nobswnd_tr,&
- nobsaod_nh,nobsaod_sh,nobsaod_tr,&
  nobsoz_nh,nobsoz_sh,nobsoz_tr,nobsps_sh,nobsps_nh,nobsps_tr,nob
 real(r_single) sumps_nh,biasps_nh,sumps_sh,biasps_sh,&
  sumps_tr,biasps_tr,&
@@ -77,11 +76,6 @@ real(r_single) sumps_nh,biasps_nh,sumps_sh,biasps_sh,&
  sumoz_nh,biasoz_nh,sumoz_spread_nh,sumoz_oberr_nh,&
  sumoz_sh,biasoz_sh,sumoz_spread_sh,sumoz_oberr_sh,&
  sumoz_tr,biasoz_tr,sumoz_spread_tr,sumoz_oberr_tr,&
-
- sumaod_nh,biasaod_nh,sumaod_spread_nh,sumaod_oberr_nh,&
- sumaod_sh,biasaod_sh,sumaod_spread_sh,sumaod_oberr_sh,&
- sumaod_tr,biasaod_tr,sumaod_spread_tr,sumaod_oberr_tr,&
-
  sumwnd_nh,biaswnd_nh,sumwnd_spread_nh,sumwnd_oberr_nh,&
  sumwnd_sh,biaswnd_sh,sumwnd_spread_sh,sumwnd_oberr_sh,&
  sumwnd_tr,biaswnd_tr,sumwnd_spread_tr,sumwnd_oberr_tr
@@ -230,36 +224,6 @@ if (nobs_conv+nobs_oz > 0) then
         sumoz_tr,biasoz_tr,sumoz_spread_tr,sumoz_oberr_tr,nobsoz_tr)
 end if ! nobs_conv+nobs_oz > 0
 
-!do aod separately to include mulitple channels later
-
-IF (nobs_aod > 0) THEN
-   nobsaod_nh = 0
-   nobsaod_sh = 0
-   nobsaod_tr = 0
-
-   DO nob=nobs_oz+1,nobs_aod
-      IF(oberrvar(nob) < 1.e10_r_single)THEN
-         IF (obtype(nob)(1:3) == 'aod') THEN
-            CALL obstats(obfit(nob),oberrvar_orig(nob),&
-                 obsprd(nob),obloclat(nob),&
-                 sumaod_nh,biasaod_nh,sumaod_spread_nh,sumaod_oberr_nh,nobsaod_nh,&
-                 sumaod_sh,biasaod_sh,sumaod_spread_sh,sumaod_oberr_sh,nobsaod_sh,&
-                 sumaod_tr,biasaod_tr,sumaod_spread_tr,sumaod_oberr_tr,nobsaod_tr)
-         ELSE
-            PRINT *,'total nobs incorrect'
-            PRINT *,nob,nobs_aod,obtype(nob)(1:3)
-            CALL stop2(716)
-         ENDIF
-
-      ENDIF
-   ENDDO
-
-   CALL printstats('  all aod',sumaod_nh,biasaod_nh,sumaod_spread_nh,sumaod_oberr_nh,nobsaod_nh,&
-        sumaod_sh,biasaod_sh,sumaod_spread_sh,sumaod_oberr_sh,nobsaod_sh,&
-        sumaod_tr,biasaod_tr,sumaod_spread_tr,sumaod_oberr_tr,nobsaod_tr)
-ENDIF
-
-
 !==> stats for satellite brightness temp obs (amsua only).
 if (nobs_sat > 0) then
   sumsprd_sat = zero
@@ -268,7 +232,7 @@ if (nobs_sat > 0) then
   sumfitsq_sat = zero
   nob_sat = 0
   nn = 0
-  DO nob=nobs_conv+nobs_oz+nobs_aod+1,nobs_conv+nobs_oz+nobs_aod+nobs_sat
+  do nob=nobs_conv+nobs_oz+1,nobs_conv+nobs_oz+nobs_sat
      nn = nn + 1
      nchan = indxsat(nn)
      if (oberrvar(nob) < 1.e10_r_single .and. nchan > 0) then

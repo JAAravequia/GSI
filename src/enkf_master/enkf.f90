@@ -124,7 +124,7 @@ use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, oblnp, &
 use constants, only: pi, one, zero
 use params, only: sprd_tol, paoverpb_thresh, datapath, nanals,&
                   iassim_order,sortinc,deterministic,numiter,nlevs,&
-                  zhuberleft,zhuberright,varqc,lupd_satbiasc,huber,univaroz,univartracers,&
+                  zhuberleft,zhuberright,varqc,lupd_satbiasc,huber,univaroz,&
                   covl_minfact,covl_efold,nbackgrounds,nhr_anal,fhr_assim,&
                   iseed_perturbed_obs,lupd_obspace_serial,fso_cycling,&
                   neigv,vlocal_evecs,denkf
@@ -134,8 +134,6 @@ use gridinfo, only: nlevs_pres
 use sorting, only: quicksort, isort
 use mpeu_util, only: getindex
 use mpeu_util, only: getindex
-USE gridinfo, ONLY: ntracers_gocart,vars3d_supported_aero
-
 !use innovstats, only: print_innovstats
 
 implicit none
@@ -180,12 +178,8 @@ integer(i_kind) ierr
 ! kd-tree search results
 type(kdtree2_result),dimension(:),allocatable :: sresults1,sresults2 
 integer(i_kind) nanal,nn,nnn,nobm,nsame,nn1,nn2,oz_ind,nlev
-INTEGER(i_kind),DIMENSION(ntracers_gocart) :: aero_ind
 real(r_single),dimension(nlevs_pres):: taperv
 logical lastiter, kdgrid, kdobs
-LOGICAL :: loc_aero
-INTEGER(i_kind),DIMENSION(ntracers_gocart) :: nn1_aero,nn2_aero
-INTEGER(i_kind) :: iaero
 
 ! allocate temporary arrays.
 allocate(anal_obchunk(nanals,nobs_max))
@@ -245,8 +239,6 @@ else if (iassim_order .eq. 2) then
   if (paoverpb_thresh .gt. 0.999) paoverpb_thresh = 0.999
   ! if obs to be assimilated in order of increasing HPaHT/HPbHT,
   ! paoverpb_chunk holds latest estimate of obsdprd_post on each task.
-
-
   do nob=1,numobsperproc(nproc+1)
      nob1 = indxproc_obs(nproc+1,nob)
      paoverpb_chunk(nob) = oberrvar(nob1)/(oberrvar(nob1)+obsprd_prior(nob1))
@@ -265,16 +257,11 @@ obsprd_post(1:nobstot) = obsprd_prior(1:nobstot)
 anal_obchunk = anal_obchunk_prior
 if (neigv > 0) anal_obchunk_modens = anal_obchunk_modens_prior
 corrlengthsq_orig = corrlengthsq
-
 lnsigl_orig = lnsigl
 
 ! Check to see if kdtree structures are associated
 kdgrid=associated(kdtree_grid)
 kdobs=associated(kdtree_obs)
-
-DO i=1,ntracers_gocart
-   aero_ind(i) = getindex(cvars3d, vars3d_supported_aero(i))
-ENDDO
 
 do niter=1,numiter
 
@@ -534,6 +521,7 @@ do niter=1,numiter
          lnsigl(nob) = covl_fact*lnsigl_orig(nob)
       endif
 
+      lnsiglinv = one/lnsigl(nob)
       corrsqr = corrlengthsq(nob)
       corrlengthinv=one/corrlengthsq(nob)
       lnsiglinv=one/lnsigl(nob)
@@ -541,7 +529,6 @@ do niter=1,numiter
       hpfhtcon=hpfhtoberrinv*r_nanalsm1
 
 !  Only need to recalculate nearest points when lat/lon is different
-
       if(nobx == 1 .or. &
          abs(obloclat(nob)-obloclat(nobm)) .gt. taper_thresh .or. &
          abs(obloclon(nob)-obloclon(nobm)) .gt. taper_thresh .or. &
@@ -549,7 +536,6 @@ do niter=1,numiter
        nobm=nob
        ! determine localization length scales based on latitude of ob.
        nf2=0
-
        if (lastiter .and. .not. lupd_obspace_serial) then
         ! search analysis grid points for those within corrlength of 
         ! ob being assimilated (using a kd-tree for speed).
@@ -560,7 +546,6 @@ do niter=1,numiter
            ! use brute force search if number of grid points on this proc <= 3
            do npt=1,numptsperproc(nproc+1)
               r = sum( (obloc(:,nob)-grdloc_chunk(:,npt))**2, 1 )
-
               if (r < corrsqr) then
                   nf2 = nf2 + 1
                   sresults1(nf2)%idx = npt
@@ -596,8 +581,6 @@ do niter=1,numiter
           nob2 = sresults2(nob1)%idx
           if (univaroz .and. obtype(nob)(1:3) .eq. ' oz' .and. obtype(indxproc_obs(nproc+1,nob2))(1:3) .ne. ' oz') then
               taper_disob(nob1) = zero
-           ELSE IF (univartracers .AND. obtype(nob)(1:3) .EQ. 'aod' .AND. obtype(indxproc_obs(nproc+1,nob2))(1:3) .NE. 'aod') THEN
-              taper_disob(nob1) = zero
           else
               dist = sqrt(sresults2(nob1)%dis*corrlengthinv)
               taper_disob(nob1) = taper(dist)
@@ -613,33 +596,22 @@ do niter=1,numiter
 
       ! only need to update state variables on last iteration.
       oz_ind = getindex(cvars3d, 'oz')
-      IF (univaroz .AND. obtype(nob)(1:3) .EQ. ' oz' .AND. oz_ind > 0) THEN ! ozone obs only affect ozone
-         loc_aero=.FALSE.
-         nn1 = (oz_ind-1)*nlevs+1
-         nn2 = oz_ind*nlevs
-      ELSE IF (univartracers .AND. obtype(nob)(1:3) .EQ. 'aod') THEN
-         loc_aero=.TRUE.
-         DO i=1,ntracers_gocart
-            IF (aero_ind(i) > 0) THEN ! aod obs only affect aerosols
-               nn1_aero(i) = (aero_ind(i)-1)*nlevs+1
-               nn2_aero(i) = aero_ind(i)*nlevs
-            END IF
-         ENDDO
-      ELSE
-         loc_aero=.FALSE.
-         nn1 = 1
-         nn2 = ncdim
-      END IF
-
+      if (univaroz .and. obtype(nob)(1:3) .eq. ' oz' .and. oz_ind > 0) then ! ozone obs only affect ozone
+          nn1 = (oz_ind-1)*nlevs+1
+          nn2 = oz_ind*nlevs
+      else
+          nn1 = 1
+          nn2 = ncdim
+      end if
       if (nf2 > 0) then
 !$omp parallel do schedule(dynamic,1) private(ii,i,nb,obt,nn,nnn,nlev,lnsig,kfgain,ens_tmp,taper1,taper3,taperv)
           do ii=1,nf2 ! loop over nearby horiz grid points
-             DO nb=1,nbackgrounds ! loop over background time levels
+             do nb=1,nbackgrounds ! loop over background time levels
              obt = abs(obtime(nob)-(nhr_anal(nb)-fhr_assim))
              taper3=taper(obt*obtimelinv)*hpfhtcon
              taper1=taper_disgrd(ii)*taper3
              i = sresults1(ii)%idx
-             IF (neigv > 0) THEN ! modulated ensemble, no explicit vertical localizatoin
+             if (neigv > 0) then ! modulated ensemble, no explicit vertical localizatoin
                  if (taper1 > taper_thresh) then
                     do nn=nn1,nn2 
                        nlev = index_pres(nn) ! vertical index for nn'th control variable
@@ -659,66 +631,29 @@ do niter=1,numiter
                     enddo
                  endif
              else
-
-                 IF (loc_aero) THEN
-
-                    taperv = zero
-
-                    DO nn=1,nlevs_pres
-                       lnsig = ABS(lnp_chunk(i,nn)-lnp_chunk(i,1))
-                       IF(lnsig < lnsigl(nob))THEN
-                          taperv(nn)=taper1*taper(lnsig*lnsiglinv)
-                       END IF
-                    END DO
-
-                    DO iaero=1,ntracers_gocart
-                       DO nn=nn1_aero(iaero),nn2_aero(iaero)
-                          nnn=index_pres(nn)
-                          IF (taperv(nnn) > taper_thresh) THEN
-! gain includes covariance localization.
-! update all time levels
-                             kfgain=taperv(nnn)*SUM(anal_chunk(:,i,nn,nb)*anal_obtmp)
-
-! update mean.
-                             ensmean_chunk(i,nn,nb) = ensmean_chunk(i,nn,nb) + kfgain*obinc_tmp
-! update perturbations.
-                             anal_chunk(:,i,nn,nb) = anal_chunk(:,i,nn,nb) + kfgain*obganl(:)
-
-
-                          END IF
-                       ENDDO
-                    END DO
-                 ELSE
-                    
-                    taperv = zero
-
-                    DO nn=1,nlevs_pres
-                       lnsig = ABS(lnp_chunk(i,nn)-lnp_chunk(i,1))
-!                       lnsig = ABS(lnp_chunk(i,nn)-oblnp(nob))
-                       IF(lnsig < lnsigl(nob))THEN
-                          taperv(nn)=taper1*taper(lnsig*lnsiglinv)
-                       END IF
-                    END DO
-                    
-                    DO nn=nn1,nn2
-                       nnn=index_pres(nn)
-                       IF (taperv(nnn) > taper_thresh) THEN
-! gain includes covariance localization.
-! update all time levels
-! factor of 1/(nanals-1) included in taperv
-! (through hpfhtcon)
-                          kfgain=taperv(nnn)*SUM(anal_chunk(:,i,nn,nb)*anal_obtmp)
-! update mean.
-                          ensmean_chunk(i,nn,nb) = ensmean_chunk(i,nn,nb) + kfgain*obinc_tmp
-! update perturbations.
-                          anal_chunk(:,i,nn,nb) = anal_chunk(:,i,nn,nb) + kfgain*obganl(:)
-                       END IF
-                    END DO
-                 ENDIF
-                 
-              ENDIF
-
-           END DO ! end loop over background time levels. 
+                 taperv = zero
+                 do nn=1,nlevs_pres
+                   lnsig = abs(lnp_chunk(i,nn)-oblnp(nob))
+                   if(lnsig < lnsigl(nob))then
+                     taperv(nn)=taper1*taper(lnsig*lnsiglinv)
+                   end if
+                 end do
+                 do nn=nn1,nn2
+                    nnn=index_pres(nn)
+                    if (taperv(nnn) > taper_thresh) then
+                        ! gain includes covariance localization.
+                        ! update all time levels
+                        ! factor of 1/(nanals-1) included in taperv
+                        ! (through hpfhtcon)
+                        kfgain=taperv(nnn)*sum(anal_chunk(:,i,nn,nb)*anal_obtmp)
+                        ! update mean.
+                        ensmean_chunk(i,nn,nb) = ensmean_chunk(i,nn,nb) + kfgain*obinc_tmp
+                        ! update perturbations.
+                        anal_chunk(:,i,nn,nb) = anal_chunk(:,i,nn,nb) + kfgain*obganl(:)
+                    end if
+                 end do
+             endif
+          end do ! end loop over background time levels. 
           end do ! end loop over nearby horiz grid points
 !$omp end parallel do
       end if ! if .not. lastiter or no close grid points
@@ -879,13 +814,8 @@ do nob1=1,numobsperproc(nproc+1)
      buffertmp(nob2) = sum(anal_obchunk(:,nob1)**2)*r_nanalsm1
   endif
 end do
-
-
-IF (nproc == 0) PRINT *,'obsprd_prior = ',obsprd_prior
 call mpi_allreduce(buffertmp,obsprd_post,nobstot,mpi_real4,mpi_sum,mpi_comm_world,ierr)
 if (nproc == 0) print *,'time to broadcast obsprd_post = ',mpi_wtime()-t1
-
-IF (nproc == 0) PRINT *,'obsprd_posterior = ',obsprd_post
 
 predx = predx + deltapredx ! add increment to bias coeffs.
 deltapredx = 0.0

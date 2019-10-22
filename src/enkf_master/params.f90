@@ -53,11 +53,8 @@ public :: read_namelist,cleanup_namelist
 !   part of the diag* filename).
 integer(i_kind), public, parameter :: nsatmax_rad = 200
 integer(i_kind), public, parameter :: nsatmax_oz = 100
-INTEGER(i_kind), PUBLIC, parameter :: nsatmax_aod = 100
 character(len=20), public, dimension(nsatmax_rad) ::sattypes_rad, dsis
 character(len=20), public, dimension(nsatmax_oz) ::sattypes_oz
-CHARACTER(len=20), PUBLIC, dimension(nsatmax_aod) ::sattypes_aod
-
 ! forecast times for first-guess forecasts to be updated (in hours)
 integer,dimension(7),public ::  nhr_anal  = (/6,-1,-1,-1,-1,-1,-1/)
 integer,dimension(7),public ::  nhr_state = (/6,-1,-1,-1,-1,-1,-1/)
@@ -79,7 +76,7 @@ character(len=120),dimension(7),public :: anlfileprefixes
 ! analysis date string (YYYYMMDDHH)
 character(len=10), public ::  datestring
 ! filesystem path to input files (first-guess, GSI diagnostic files).
-CHARACTER(len=500),PUBLIC :: datapath
+character(len=500),public :: datapath
 ! if deterministic=.true., the deterministic square-root filter
 ! update is used.  If .false, a perturbed obs (stochastic) update
 ! is used.
@@ -90,7 +87,7 @@ integer(i_kind),public ::  iassim_order,nlevs,nanals,numiter,&
                            nlons,nlats,nbackgrounds,nstatefields,&
                            nanals_per_iotask, ntasks_io
 integer(i_kind),public, allocatable, dimension(:) ::  nanal1,nanal2
-INTEGER(i_kind),PUBLIC :: nsats_rad,nsats_oz,imp_physics,nsats_aod
+integer(i_kind),public :: nsats_rad,nsats_oz,imp_physics
 ! random seed for perturbed obs (deterministic=.false.)
 ! if zero, system clock is used.  Also used when
 ! iassim_order=1 (random shuffling of obs for serial assimilation).
@@ -157,7 +154,6 @@ logical,public :: letkf_novlocal = .false.
 logical,public :: simple_partition = .true.
 logical,public :: reducedgrid = .false.
 logical,public :: univaroz = .true.
-LOGICAL,public :: univartracers = .true.
 logical,public :: regional = .false.
 logical,public :: use_gfs_nemsio = .false.
 logical,public :: arw = .false.
@@ -193,15 +189,7 @@ logical,public :: lobsdiag_forenkf = .false.
 ! if true, use netcdf diag files, otherwise use binary diags
 logical,public :: netcdf_diag = .false.
 
-! use fv3 cubed-sphere tiled restart files
-LOGICAL,public :: fv3_native = .false.
-CHARACTER(len=500),public :: fv3fixpath = ' '
-INTEGER(i_kind),public :: ntiles=6
-INTEGER(i_kind),PUBLIC :: nx_res=0,ny_res=0
-LOGICAL,public ::l_pres_add_saved
-
-
-NAMELIST /nam_enkf/datestring,datapath,iassim_order,nvars,&
+namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    covinflatemax,covinflatemin,deterministic,sortinc,&
                    corrlengthnh,corrlengthtr,corrlengthsh,&
                    varqc,huber,nlons,nlats,smoothparm,use_qsatensmean,&
@@ -214,7 +202,7 @@ NAMELIST /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    covl_minfact,covl_efold,lupd_obspace_serial,letkf_novlocal,&
                    analpertwtnh,analpertwtsh,analpertwttr,sprd_tol,&
                    analpertwtnh_rtpp,analpertwtsh_rtpp,analpertwttr_rtpp,&
-                   nlevs,nanals,saterrfact,univaroz,univartracers,regional,use_gfs_nemsio,&
+                   nlevs,nanals,saterrfact,univaroz,regional,use_gfs_nemsio,&
                    paoverpb_thresh,latbound,delat,pseudo_rh,numiter,biasvar,&
                    lupd_satbiasc,cliptracers,simple_partition,adp_anglebc,angord,&
                    newpc4pred,nmmb,nhr_anal,nhr_state, fhr_assim,nbackgrounds,nstatefields, &
@@ -222,12 +210,11 @@ NAMELIST /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
                    getkf,getkf_inflation,denkf,modelspace_vloc,dfs_sort,write_spread_diag,&
                    covinflatenh,covinflatesh,covinflatetr,lnsigcovinfcutoff,&
-                   fso_cycling,fso_calculate,imp_physics,lupp,fv3_native
+                   fso_cycling,fso_calculate,imp_physics,lupp
 namelist /nam_wrf/arw,nmm,nmm_restart
-NAMELIST /nam_fv3/fv3fixpath,nx_res,ny_res,ntiles,l_pres_add_saved
 namelist /satobs_enkf/sattypes_rad,dsis
 namelist /ozobs_enkf/sattypes_oz
-NAMELIST /aodobs_enkf/sattypes_aod
+
 
 contains
 
@@ -361,7 +348,6 @@ cliptracers = .true.
 ! Initialize satellite files to ' '
 sattypes_rad=' '
 sattypes_oz=' '
-sattypes_aod=' '
 dsis=' '
 
 ! Initialize first-guess and analysis file name prefixes.
@@ -371,19 +357,11 @@ fgfileprefixes = ''; anlfileprefixes=''; statefileprefixes=''
 ! read from namelist file, doesn't seem to work from stdin with mpich
 open(912,file='enkf.nml',form="formatted")
 read(912,nam_enkf)
-READ(912,nam_fv3)
 read(912,satobs_enkf)
 read(912,ozobs_enkf)
-READ(912,aodobs_enkf)
 if (regional) then
   read(912,nam_wrf)
 endif
-if (fv3_native) then
-!  read(912,nam_fv3)
-  nlons = nx_res; nlats = ny_res ! (total number of pts = ntiles*res*res)
-endif
-
-
 close(912)
 
 ! find number of satellite files
@@ -402,12 +380,6 @@ do i=1,nsatmax_oz
 end do
 if(nproc == 0)write(6,*) 'number of satellite ozone files used',nsats_oz
 
-nsats_aod=0
-DO i=1,nsatmax_aod
-  if(sattypes_aod(i) == ' ') cycle
-  nsats_aod=nsats_aod+1
-end do
-IF(nproc == 0)WRITE(6,*) 'number of satellite aod files used',nsats_aod
 
 ! default value of vertical localization for sat radiances
 ! and surface pressure should be same as other data.
@@ -522,7 +494,6 @@ if (nproc == 0) then
    print *,'namelist parameters:'
    print *,'--------------------'
    write(6,nam_enkf)
-   WRITE(6,nam_fv3)
    print *,'--------------------'
 
 ! check for mandatory namelist variables
@@ -550,22 +521,10 @@ if (nproc == 0) then
       print *, 'must select either arw, nmm or nmmb regional dynamical core'
       call stop2(19)
    endif
-
-   if (fv3_native .and. (fv3fixpath == ' ' .or. nx_res == 0.or.ny_res)) then
-      PRINT *, 'must specify nx_res,ny_res and fv3fixpath when fv3_native is true'
-      call stop2(19)
-   endif
-
    if (letkf_flag .and. univaroz) then
      print *,'univaroz is not supported in LETKF!'
      call stop2(19)
    end if
-
-   if (letkf_flag .and. univartracers) then
-     PRINT *,'univartracers is not supported in LETKF!'
-     call stop2(19)
-   end if
-
    if ((obtimelnh < 1.e10 .or. obtimeltr < 1.e10 .or. obtimelsh < 1.e10) .and. &
        letkf_flag) then
      print *,'warning: no time localization in LETKF!'
