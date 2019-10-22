@@ -1,0 +1,40 @@
+state_vector::  
+!level is important for controlvec
+!var     level  itracer source     funcof
+ tsen     64      0     met_guess     tsen
+ q        64      1     met_guess     q
+ ps        1      0     met_guess     ps
+ sulf     64      1     chem_guess    sulf
+ bc1      64      1     chem_guess    bc1
+ bc2      64      1     chem_guess    bc2
+ oc1      64      1     chem_guess    oc1
+ oc2      64      1     chem_guess    oc2
+ dust1    64      1     chem_guess    dust1
+ dust2    64      1     chem_guess    dust2
+ dust3    64      1     chem_guess    dust3
+ dust4    64      1     chem_guess    dust4
+ dust5    64      1     chem_guess    dust5
+ seas1    64      1     chem_guess    seas1
+ seas2    64      1     chem_guess    seas2
+ seas3    64      1     chem_guess    seas3
+ seas4    64      1     chem_guess    seas4
+::
+
+control_vector_enkf::
+!var     level  itracer as/tsfc_sdv  an_amp0   source  funcof
+ sulf     64      1       1.00      -1.0     state    sulf
+ bc1      64      1       1.00      -1.0     state    bc1
+ bc2      64      1       1.00      -1.0     state    bc2
+ oc1      64      1       1.00      -1.0     state    oc1
+ oc2      64      1       1.00      -1.0     state    oc2
+ dust1    64      1       1.00      -1.0     state    dust1
+ dust2    64      1       1.00      -1.0     state    dust2
+ dust3    64      1       1.00      -1.0     state    dust3
+ dust4    64      1       1.00      -1.0     state    dust4
+ dust5    64      1       1.00      -1.0     state    dust5
+ seas1    64      1       1.00      -1.0     state    seas1
+ seas2    64      1       1.00      -1.0     state    seas2
+ seas3    64      1       1.00      -1.0     state    seas3
+ seas4    64      1       1.00      -1.0     state    seas4
+::
+
