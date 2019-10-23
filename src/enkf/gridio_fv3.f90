@@ -148,13 +148,15 @@ contains
        call stop2(23)
     endif
 
-    PRINT *,'@@@1',nanal1,nanal2
-
     ne = 0
     ensmemloop: DO nanal=nanal1,nanal2
     ne = ne + 1
 
-    WRITE(charnanal,'(a3, i3.3)') 'mem', nanal
+    IF (nanal > 0) THEN
+       WRITE(charnanal,'(a3, i3.3)') 'mem', nanal
+    ELSE
+       charnanal = 'ensmean'
+    ENDIF
 
     backgroundloop: DO nb=1,ntimes
 
@@ -563,21 +565,14 @@ contains
     ne = 0
     ensmemloop: DO nanal=nanal1,nanal2
     ne = ne + 1
-    WRITE(charnanal,'(i3.3)') nanal
 
-    CYCLE
+    WRITE(charnanal,'(a3, i3.3)') 'mem', nanal
 
     backgroundloop: do nb=1,nbackgrounds
 
     !----------------------------------------------------------------------
     ! First guess file should be copied to analysis file at scripting
     ! level; only variables updated by EnKF are changed
-       IF (nanal > 0) THEN
-          WRITE(charnanal,'(a3, i3.3)') 'mem', nanal
-       ELSE
-          charnanal = 'ensmean'
-       ENDIF
-
     !----------------------------------------------------------------------
     ! Update u and v variables (same for NMM and ARW)
     do ntile=1,ntiles
