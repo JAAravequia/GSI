@@ -123,6 +123,9 @@ do_cw_to_hydro_ad=.false.
 do_cw_to_hydro_ad=lc_cw.and.ls_ql.and.ls_qi
 do_cw_to_hydro_ad_hwrf=.false.
 do_cw_to_hydro_ad_hwrf=lc_cw.and.ls_ql.and.ls_qi.and.ls_qr.and.ls_qs.and.ls_qg.and.ls_q
+!! TCW 2019/07/15
+!write(*,*) 'ensctl2state_ad: do_cw_to_hydro_ad_hwrf = ', do_cw_to_hydro_ad_hwrf
+!! TCW 2019/07/15
 
 ! Initialize
 mval%values=zero
@@ -200,6 +203,9 @@ do jj=1,ntlevs_ens
    elseif (do_cw_to_hydro_ad_hwrf) then
 !!     Case when cloud-vars do not map one-to-one
 !!     e.g. cw-to-ql&qi&qr&qs&qg&qh
+! TCW 2019/07/15
+      write(*,*) 'ensctl2state_ad: calling cw2hydro_ad_hwrf'
+! TCW 2019/07/15
       call cw2hydro_ad_hwrf(eval(jj),wbundle_c,rv_tsen)
    else
 !  Since cloud-vars map one-to-one, take care of them together

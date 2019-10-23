@@ -1770,7 +1770,8 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
               auxdp(k)=abs(prsi_rtm(kk+1)-prsi_rtm(kk))*r10
               auxq (k)=q(kk2)
 
-              if (regional .and. (.not. wrf_mass_regional) .and. (.not. cold_start)) then
+!              if (regional .and. (.not. wrf_mass_regional) .and. (.not. cold_start)) then
+              if (regional .and. (.not. wrf_mass_regional)) then
                  do ii=1,n_clouds_fwd_wk
                     cloud_cont(k,ii)=cloud(kk2,ii)*c6(k)
                     cloud_efr (k,ii)=cloudefr(kk2,ii)
@@ -1812,6 +1813,18 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
      endif
   end do
 
+! TCW 2019/07/15
+  write(*,*) 'n_clouds_fwd_wk = ', n_clouds_fwd_wk
+  write(*,*) 'icmask = ', icmask
+  write(*,*) 'cw_cv = ', cw_cv
+  write(*,*) 'cold_start = ', cold_start
+  do ii=1,n_clouds_fwd_wk
+     iii=jcloud(ii)
+     write(*,*) 'ii, cloud_names = ', ii, trim(cloud_names(iii))
+     write(*,*) 'ii, max, min(cloud_cont) = ', ii, maxval(cloud_cont(:,ii)), minval(cloud_cont(:,ii))
+     write(*,*) 'ii, max, min(cloud_efr) = ', ii, maxval(cloud_efr(:,ii)), minval(cloud_efr(:,ii))
+  end do
+! TCW 2019/07/15
 
 ! Set clouds for CRTM
   if(n_clouds_fwd_wk>0) then

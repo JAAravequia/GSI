@@ -180,6 +180,9 @@ if (regional) then
 else
    do_cw_to_hydro_ad=lc_cw.and.ls_tsen.and.ls_ql.and.ls_qi.and.(.not.lc_ql) !ncep global
 endif
+!! TCW 2019/07/15
+!write(*,*) 'control2state_ad: do_cw_to_hydro_ad_hwrf = ', do_cw_to_hydro_ad_hwrf
+!! TCW 2019/07/15
 
 call gsi_bundlegetpointer (grad%step(1),'oz',icoz,istatus)
 call gsi_bundlegetpointer (grad%step(1),'gust',icgust,istatus)
@@ -282,6 +285,9 @@ do jj=1,nsubwin
    elseif (do_cw_to_hydro_ad_hwrf) then
 !     Case when cloud-vars do not map one-to-one
 !     e.g. cw-to-ql&qi&qr&qs&qg&qh
+! TCW 2019/07/15
+      write(*,*) 'control2state_ad: calling cw2hydro_ad_hwrf'
+! TCW 2019/07/15
       call cw2hydro_ad_hwrf(rval(jj),wbundle,rv_tsen)
    else
 !     Case when cloud-vars map one-to-one, take care of them together

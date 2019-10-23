@@ -383,6 +383,15 @@ subroutine intrad_(radhead,rval,sval,rpred,spred)
     call gsi_bundlegetpointer(rval,'qs' ,rqs,istatus)
   end if
 
+! TCW 2019/07/09
+  write(*,*) 'intrad: luseqg = ', luseqg
+  write(*,*) 'intrad: luseqh = ', luseqh
+  write(*,*) 'intrad: luseqi = ', luseqi
+  write(*,*) 'intrad: luseql = ', luseql
+  write(*,*) 'intrad: luseqr = ', luseqr
+  write(*,*) 'intrad: luseqs = ', luseqs
+! TCW 2019/07/09
+
   !radptr => radhead
   radptr => radNode_typecast(radhead)
   do while (associated(radptr))

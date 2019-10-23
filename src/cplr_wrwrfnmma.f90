@@ -1981,9 +1981,9 @@ contains
              end do
           end do
 ! TCW 2019/07/09
-          write(*,*) 'wrwrfnmma_netcdf: work_clwmr = ', k, maxval(work_clwmr), minval(work_clwmr)
-          write(*,*) 'wrwrfnmma_netcdf: work_fice = ', k, maxval(work_fice), minval(work_fice)
-          write(*,*) 'wrwrfnmma_netcdf: work_frain = ', k, maxval(work_frain), minval(work_frain)
+          write(*,*) 'work_clwmr = ', k, maxval(work_clwmr), minval(work_clwmr)
+          write(*,*) 'work_fice = ', k, maxval(work_fice), minval(work_fice)
+          write(*,*) 'work_frain = ', k, maxval(work_frain), minval(work_frain)
 ! TCW 2019/07/09
        end do
     end if ! end of n_actual_clouds>0
@@ -2331,13 +2331,22 @@ contains
        kf_ice=i_f_ice-1
        do k=1,nsig_write
           kf_ice=kf_ice+1
-          if(mype == 0) temp1=zero  ! no read-in of guess fields 
+          if(mype == 0) temp1=zero  ! no read-in of guess fields
+          if(mype == 0) write(6,*)' k,max,min(temp1) F_ICE in =',k,maxval(temp1),minval(temp1)
           call strip(all_loc(:,:,kf_ice),strp)
           call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
                tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
+! TCW 2019/07/15
+!          write(*,*) 'k, max, min(tempa) F_ICE = ', k, maxval(tempa), minval(tempa)
+! TCW 2019/07/15
           if(mype == 0) then
              if(filled_grid) call unfill_nmm_grid2(tempa,im,jm,temp1,igtypeh,2)
              if(half_grid)   call unhalf_nmm_grid2(tempa,im,jm,temp1,igtypeh,2)
+             ! set bounds between 0 and 1 (mostly for rightmost point due to extrapolation)
+             do j=1,im*jm
+                if (temp1(j) .lt. zero) temp1(j) = zero
+                if (temp1(j) .gt. one) temp1(j) = one
+             enddo
              write(lendian_out)temp1
              write(6,*)' k,max,min(temp1) F_ICE out =',k,maxval(temp1),minval(temp1)
           end if
@@ -2348,12 +2357,21 @@ contains
        do k=1,nsig_write
           kf_rain=kf_rain+1
           if(mype == 0) temp1=zero  ! no read-in of guess fields
+          if(mype == 0) write(6,*)' k,max,min(temp1) F_RAIN in =',k,maxval(temp1),minval(temp1)
           call strip(all_loc(:,:,kf_rain),strp)
           call mpi_gatherv(strp,ijn(mype+1),mpi_real4, &
                tempa,ijn,displs_g,mpi_real4,0,mpi_comm_world,ierror)
+! TCW 2019/07/15
+!          write(*,*) 'k, max, min(tempa) F_RAIN = ', k, maxval(tempa), minval(tempa)
+! TCW 2019/07/15
           if(mype == 0) then
              if(filled_grid) call unfill_nmm_grid2(tempa,im,jm,temp1,igtypeh,2)
              if(half_grid)   call unhalf_nmm_grid2(tempa,im,jm,temp1,igtypeh,2)
+             ! set bounds between 0 and 1 (mostly for rightmost point due to extrapolation)
+             do j=1,im*jm
+                if (temp1(j) .lt. zero) temp1(j) = zero
+                if (temp1(j) .gt. one) temp1(j) = one
+             enddo
              write(lendian_out)temp1
              write(6,*) ' k,max,min(temp1) F_RAIN out =',k,maxval(temp1),minval(temp1)
           end if

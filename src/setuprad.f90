@@ -289,6 +289,9 @@
   integer(i_kind) ii_ptr
   integer(i_kind) nadir,kraintype,ierrret
   integer(i_kind) ioz,ius,ivs,iwrmype
+!TCW 07/23/2019
+  integer(i_kind) iql, iqi, iqr, iqs, iqg, iqh
+!TCW 07/23/2019
   integer(i_kind) iversion_radiag, istatus
   integer(i_kind) isfctype
 
@@ -517,6 +520,38 @@
      ius=radjacindxs(ius)
      ivs=radjacindxs(ivs)
   endif
+!TCW 07/23/2019
+  iql =getindex(radjacnames,'ql')
+  iqi =getindex(radjacnames,'qi')
+  iqr =getindex(radjacnames,'qr')
+  iqs =getindex(radjacnames,'qs')
+  iqg =getindex(radjacnames,'qg')
+  iqh =getindex(radjacnames,'qh')
+  if(iql>0) then
+     iql=radjacindxs(iql)
+     write(*,*) 'SETUPRAD: iql = ',iql
+  endif
+  if(iqi>0) then
+     iqi=radjacindxs(iqi)
+     write(*,*) 'SETUPRAD: iqi = ',iqi
+  endif
+  if(iqr>0) then
+     iqr=radjacindxs(iqr)
+     write(*,*) 'SETUPRAD: iqr = ',iqr
+  endif
+  if(iqs>0) then
+     iqs=radjacindxs(iqs)
+     write(*,*) 'SETUPRAD: iqs = ',iqs
+  endif
+  if(iqg>0) then
+     iqg=radjacindxs(iqg)
+     write(*,*) 'SETUPRAD: iqg = ',iqg
+  endif
+  if(iqh>0) then
+     iqh=radjacindxs(iqh)
+     write(*,*) 'SETUPRAD: iqh = ',iqh
+  endif
+!TCW 07/23/2019
 
 ! Initialize ozone jacobian flags to .false. (retain ozone jacobian)
   zero_irjaco3_pole = .false.
@@ -1561,6 +1596,14 @@
                     do k=1,nsigradjac
                        my_head%dtb_dvar(k,iii)=jacobian(k,ii)
                     end do
+!TCW 07/23/2019
+                    write(*,*) 'jacobian(iql) =', maxval(jacobian(iql:iql+nsig-1,ii)), minval(jacobian(iql:iql+nsig-1,ii))
+                    write(*,*) 'jacobian(iqi) =', maxval(jacobian(iqi:iqi+nsig-1,ii)), minval(jacobian(iqi:iqi+nsig-1,ii))
+                    write(*,*) 'jacobian(iqr) =', maxval(jacobian(iqr:iqr+nsig-1,ii)), minval(jacobian(iqr:iqr+nsig-1,ii))
+                    write(*,*) 'jacobian(iqs) =', maxval(jacobian(iqs:iqs+nsig-1,ii)), minval(jacobian(iqs:iqs+nsig-1,ii))
+                    write(*,*) 'jacobian(iqg) =', maxval(jacobian(iqg:iqg+nsig-1,ii)), minval(jacobian(iqg:iqg+nsig-1,ii))
+                    write(*,*) 'jacobian(iqh) =', maxval(jacobian(iqh:iqh+nsig-1,ii)), minval(jacobian(iqh:iqh+nsig-1,ii))
+!TCW 07/23/2019
 
 !                   Load jacobian for ozone (dTb/doz).  For hirs and goes channel 9
 !                   (ozone channel) we do not let the observations change the ozone.
