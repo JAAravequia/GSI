@@ -285,8 +285,8 @@ subroutine setupaod(obsLL,odiagLL,lunin,mype,nchanl,nreal,nobs,&
 
      call gsi_chemguess_get('aerosols::3d',aerosol_names,istat)
 
-     varnames(1:5) = (/'air_temperature','humidity_mixing_ratio',&
-           &'relative_humidity','air_pressure','air_pressure_levels'/)
+     varnames(1:5) = (/'air_temperature      ','humidity_mixing_ratio', &
+           'relative_humidity    ','air_pressure         ','air_pressure_levels  '/)
      varnames(6:) = aerosol_names
 
      if (binary_diag) call init_binary_diag_
