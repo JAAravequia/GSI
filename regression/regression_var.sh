@@ -36,8 +36,8 @@ if [ -z ${machine+x} ]; then
      export machine="WCOSS"
   elif [ -d /glade/scratch ]; then # Cheyenne
    export machine="Cheyenne"
-  elif [ -d /scratch4/NCEPDEV/da ]; then # Theia
-   export machine="Theia"
+  elif [ -d /scratch1/NCEPDEV/da ]; then # Hera
+   export machine="Hera"
   elif [ -d /gpfs/hps/ptmp ]; then # LUNA or SURGE
    export machine="WCOSS_C"
   elif [ -d /gpfs/dell1/ptmp ]; then # venus or mars
@@ -58,7 +58,7 @@ case $machine in
 
    export ptmp="/gpfs/dell2/ptmp/$LOGNAME/$ptmpName"
 
-   export fixcrtm="/gpfs/dell2/emc/modeling/noscrub/Mark.Potts/fix_update"
+   export fixcrtm="/gpfs/dell2/emc/modeling/noscrub/Michael.Lueken/fix_update"
    if [ -d /gpfs/td2 ]; then
        export casesdir="/gpfs/td2/emc/da/noscrub/Michael.Lueken/CASES"
    elif [ -d /gpfs/gd2 ]; then
@@ -108,31 +108,31 @@ case $machine in
    export check_resource="no"
    export accnt="p48503002"
    ;;
-   Theia)
-   if [ -d /scratch4/NCEPDEV/da/noscrub/$LOGNAME ]; then 
-     export noscrub="/scratch4/NCEPDEV/da/noscrub/$LOGNAME"
-   elif [ -d /scratch4/NCEPDEV/global/noscrub/$LOGNAME ]; then 
-     export noscrub="/scratch4/NCEPDEV/global/noscrub/$LOGNAME"
-    elif [ -d /scratch3/BMC/gsienkf/$LOGNAME ]; then
-     export noscrub="/scratch3/BMC/gsienkf/$LOGNAME"
+   Hera)
+   if [ -d /scratch1/NCEPDEV/da/$LOGNAME ]; then 
+     export noscrub="/scratch1/NCEPDEV/da/$LOGNAME/noscrub"
+   elif [ -d /scratch1/NCEPDEV/global/$LOGNAME ]; then 
+     export noscrub="/scratch1/NCEPDEV/global/$LOGNAME/noscrub"
+    elif [ -d /scratch2/BMC/gsienkf/$LOGNAME ]; then
+     export noscrub="/scratch2/BMC/gsienkf/$LOGNAME"
    fi
    export group="global"
    export queue="batch"
    if [[ "$cmaketest" = "false" ]]; then
-     export basedir="/scratch4/NCEPDEV/da/save/$LOGNAME/git/gsi"
+     export basedir="/scratch1/NCEPDEV/da/$LOGNAME/git/gsi"
    fi 
 
-   export ptmp="/scratch4/NCEPDEV/stmp3/$LOGNAME/$ptmpName"
+   export ptmp="/scratch1/NCEPDEV/stmp2/$LOGNAME/$ptmpName"
 
-   export fixcrtm="/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/lib/crtm/2.2.3/fix_update"
-   export casesdir="/scratch4/NCEPDEV/da/noscrub/Michael.Lueken/CASES"
-   export ndate="/scratch4/NCEPDEV/da/save/Michael.Lueken/nwprod/util/exec/ndate"
+   export fixcrtm="/scratch1/NCEPDEV/da/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix_update"
+   export casesdir="/scratch1/NCEPDEV/da/Michael.Lueken/noscrub/CASES"
+   export ndate=$NDATE
 
    export check_resource="no"
 
    export accnt="da-cpu"
 
-   #  On Theia, there are no scrubbers to remove old contents from stmp* directories.
+   #  On Hera, there are no scrubbers to remove old contents from stmp* directories.
    #  After completion of regression tests, will remove the regression test subdirecories
    export clean=".true."
    ;;
@@ -150,7 +150,7 @@ case $machine in
 
    export ptmp="/gpfs/hps/ptmp/$LOGNAME/$ptmpName"
 
-   export fixcrtm="/gpfs/hps/nco/ops/nwprod/lib/crtm/v2.2.4/fix"
+   export fixcrtm="/gpfs/hps3/emc/da/noscrub/Michael.Lueken/CRTM_REL-2.2.3/fix_update"
    export casesdir="/gpfs/hps3/emc/da/noscrub/Michael.Lueken/CASES"
    export ndate=$NDATE
 
@@ -181,6 +181,7 @@ case $machine in
        echo "Regression tests on Discover need to be run via ctest"
        exit 1
    fi
+   export ptmp=$basedir
    export ptmp=$basedir
    export noscrub=$basedir
    export fixcrtm="/discover/nobackup/projects/gmao/share/gmao_ops/fvInput_4dvar/gsi/etc/fix_ncep20170329/REL-2.2.3-r60152_local-rev_1/CRTM_Coeffs/$endianness"
@@ -221,7 +222,8 @@ export JCAP="62"
 export global_T62_adate="2016120300"
 export global_4dvar_T62_adate="2014080400"
 export global_hybrid_T126_adate="2014092912"
-export global_4denvar_T126_adate="2016120300"
+export global_4denvar_T126_adate="2019041500"
+export global_fv3_4denvar_T126_adate="2018110500"
 export global_enkf_T62_adate="2014092912"
 export global_lanczos_T62_adate="2014080400"
 export global_nemsio_T62_adate="2013011400"
@@ -242,6 +244,8 @@ export global_4dvar_T62_ges="$casesdir/global/sigmap/$global_4dvar_T62_adate"
 export global_hybrid_T126_datobs="$casesdir/global/sigmap/$global_hybrid_T126_adate/obs"
 export global_4denvar_T126_datges="$casesdir/global/sigmap/$global_4denvar_T126_adate"
 export global_4denvar_T126_datobs="$casesdir/global/sigmap/$global_4denvar_T126_adate"
+export global_fv3_4denvar_T126_datges="$casesdir/global/fv3/$global_fv3_4denvar_T126_adate"
+export global_fv3_4denvar_T126_datobs=$global_fv3_4denvar_T126_datges
 export global_hybrid_T126_datges="$casesdir/global/sigmap/$global_hybrid_T126_adate/ges"
 export global_enkf_T62_datobs="$casesdir/global/sigmap/$global_enkf_T62_adate/new_obs"
 export global_enkf_T62_datges="$casesdir/global/sigmap/$global_enkf_T62_adate/ges"

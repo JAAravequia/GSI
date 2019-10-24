@@ -2,17 +2,25 @@ regtest=$1
 
 case $machine in
 
-	Theia)
-	   sub_cmd="sub_theia"
+	Hera)
+	   sub_cmd="sub_hera"
+           memnode=96
+           numcore=40
     ;;
 	WCOSS)
 	   sub_cmd="sub_wcoss -a GDAS-T2O -d $PWD"
+           memnode=64  # Phase-2 WCOSS
+           numcore=24  # Phase-2 WCOSS
     ;;
 	WCOSS_C)
 	   sub_cmd="sub_wcoss_c -a GDAS-T2O -d $PWD"
+           memnode=64
+           numcore=24
     ;;
 	WCOSS_D)
 	   sub_cmd="sub_wcoss_d -a ibm -d $PWD"
+           memnode=128
+           numcore=28
     ;;
 	Discover)
 	   sub_cmd="sub_discover"
@@ -29,11 +37,23 @@ case $machine in
 
 esac
 
+# Maximum memory per task for above machines
+#   wcoss_c :   64 Gb / 24 cores = 2.67 Gb / core
+#   wcoss_d :  128 Gb / 28 cores = 4.57 Gb / core
+#   theia   :   64 Gb / 24 cores = 2.67 Gb / core
+#   discover:
+#   s4      :
+#   cheyenne:
+# Select minimim memory per core for regression tests
+export memnode=${memnode:-64}
+export numcore=${numcore:-24}
+export maxmem=$((($memnode*1024*1024)/$numcore))  # Kb / core
+
 case $regtest in
 
     global_T62)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[ "$machine" = "Hera" ]]; then
            topts[1]="0:50:00" ; popts[1]="12/3/" ; ropts[1]="/1"
            topts[2]="0:50:00" ; popts[2]="12/9/" ; ropts[2]="/2"
         elif [[ "$machine" = "Cheyenne" ]]; then
@@ -66,7 +86,7 @@ case $regtest in
 
     global_T62_ozonly)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[ "$machine" = "Hera" ]]; then
             topts[1]="0:15:00" ; popts[1]="12/1/" ; ropts[1]="/1"
             topts[2]="0:15:00" ; popts[2]="12/3/" ; ropts[2]="/2"
         elif [[ "$machine" = "Cheyenne" ]]; then
@@ -99,7 +119,7 @@ case $regtest in
 
     global_4dvar_T62)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[ "$machine" = "Hera" ]]; then
             topts[1]="0:15:00" ; popts[1]="12/3/" ; ropts[1]="/1"
             topts[2]="0:15:00" ; popts[2]="12/5/" ; ropts[2]="/2"
         elif [[ "$machine" = "WCOSS" ]]; then
@@ -124,7 +144,7 @@ case $regtest in
 
         if [ "$debug" = ".true." ] ; then
            topts[1]="0:45:00"
-           if [[ "$machine" = "Theia" ]]; then
+           if [[ "$machine" = "Hera" ]]; then
               popts[1]="12/5/"
            elif [[ "$machine" = "WCOSS" ]]; then
               popts[1]="16/4/"
@@ -143,7 +163,7 @@ case $regtest in
 
     global_hybrid_T126)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[ "$machine" = "Hera" ]]; then
            topts[1]="0:15:00" ; popts[1]="12/3/" ; ropts[1]="/1"
            topts[2]="0:15:00" ; popts[2]="12/5/" ; ropts[2]="/2"
         elif [[ "$machine" = "WCOSS" ]]; then
@@ -176,7 +196,7 @@ case $regtest in
 
     global_4denvar_T126)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[ "$machine" = "Hera" ]]; then
            topts[1]="0:15:00" ; popts[1]="6/8/" ; ropts[1]="/1"
            topts[2]="0:15:00" ; popts[2]="6/10/" ; ropts[2]="/2"
         elif [[ "$machine" = "WCOSS" ]]; then
@@ -197,6 +217,36 @@ case $regtest in
         fi
 
         if [ "$debug" = ".true." ] ; then
+           topts[1]="2:00:00"
+        fi
+
+        scaling[1]=10; scaling[2]=8; scaling[3]=4
+
+    ;;
+
+    global_fv3_4denvar_T126)
+
+        if [[ "$machine" = "Hera" ]]; then
+           topts[1]="0:35:00" ; popts[1]="6/8/" ; ropts[1]="/1"
+           topts[2]="0:35:00" ; popts[2]="6/10/" ; ropts[2]="/2"
+        elif [[ "$machine" = "WCOSS" ]]; then
+           topts[1]="1:59:00" ; popts[1]="6/8/" ; ropts[1]="/1"
+           topts[2]="0:35:00" ; popts[2]="6/10/" ; ropts[2]="/2"
+        elif [[ "$machine" = "Discover" ]]; then
+           topts[1]="0:30:00" ; popts[1]="48/2"  ; ropts[1]="/1"
+           topts[2]="0:30:00" ; popts[2]="60/3"  ; ropts[2]="/2"
+        elif [[ "$machine" = "Cheyenne" ]]; then
+           topts[1]="1:59:00" ; popts[1]="6/8/" ; ropts[1]="/1"
+           topts[2]="0:35:00" ; popts[2]="6/10/" ; ropts[2]="/2"
+        elif [[ "$machine" = "WCOSS_C" ]]; then
+           topts[1]="0:35:00" ; popts[1]="48/8/" ; ropts[1]="1024/1"  # sub_wcoss_c popts are "#tasks/#nodes/"
+           topts[2]="0:35:00" ; popts[2]="60/10/" ; ropts[2]="1024/2"
+        elif [[ "$machine" = "WCOSS_D" ]]; then
+           topts[1]="0:35:00" ; popts[1]="6/8/" ; ropts[1]="/1"
+           topts[2]="0:35:00" ; popts[2]="6/10/" ; ropts[2]="/2"
+        fi
+
+        if [ "$debug" = ".true." ] ; then
            topts[1]="1:30:00"
         fi
 
@@ -206,7 +256,7 @@ case $regtest in
 
     global_lanczos_T62)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[ "$machine" = "Hera" ]]; then
            topts[1]="0:30:00" ; popts[1]="12/3/" ; ropts[1]="/1"
            topts[2]="0:30:00" ; popts[2]="12/5/" ; ropts[2]="/2"
         elif [[ "$machine" = "WCOSS" ]]; then
@@ -239,7 +289,7 @@ case $regtest in
 
     global_nemsio_T62)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[ "$machine" = "Hera" ]]; then
            topts[1]="0:15:00" ; popts[1]="12/3/" ; ropts[1]="/1"
            topts[2]="0:15:00" ; popts[2]="12/9/" ; ropts[2]="/2"
         elif [[ "$machine" = "WCOSS" ]]; then
@@ -272,7 +322,7 @@ case $regtest in
 
     arw_binary | arw_netcdf)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[ "$machine" = "Hera" ]]; then
             topts[1]="0:15:00" ; popts[1]="4/4/"  ; ropts[1]="/1"
             topts[2]="0:15:00" ; popts[2]="6/6/"  ; ropts[2]="/1"
         elif [[ "$machine" = "WCOSS" ]]; then
@@ -305,7 +355,7 @@ case $regtest in
 
     netcdf_fv3_regional)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[ "$machine" = "Hera" ]]; then
             topts[1]="0:15:00" ; popts[1]="4/4/"  ; ropts[1]="/1"
             topts[2]="0:15:00" ; popts[2]="6/6/"  ; ropts[2]="/1"
         elif [[ "$machine" = "WCOSS" ]]; then
@@ -332,7 +382,7 @@ case $regtest in
 
     nmm_binary )
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[ "$machine" = "Hera" ]]; then
             topts[1]="0:30:00" ; popts[1]="6/6/"  ; ropts[1]="/1"
             topts[2]="0:30:00" ; popts[2]="8/8/"  ; ropts[2]="/1"
         elif [[ "$machine" = "WCOSS" ]]; then
@@ -365,7 +415,7 @@ case $regtest in
 
     nmm_netcdf)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[ "$machine" = "Hera" ]]; then
             topts[1]="0:15:00" ; popts[1]="4/2/"  ; ropts[1]="/1"
             topts[2]="0:15:00" ; popts[2]="4/4/"  ; ropts[2]="/1"
         elif [[ "$machine" = "WCOSS" ]]; then
@@ -398,7 +448,7 @@ case $regtest in
 
     nmmb_nems_4denvar)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[ "$machine" = "Hera" ]]; then
             topts[1]="0:30:00" ; popts[1]="7/10/"  ; ropts[1]="/1"
             topts[2]="0:30:00" ; popts[2]="9/10/"  ; ropts[2]="/1"
         elif [[ "$machine" = "WCOSS" ]]; then
@@ -428,7 +478,7 @@ case $regtest in
 
     rtma)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[ "$machine" = "Hera" ]]; then
             topts[1]="0:30:00" ; popts[1]="6/12/"  ; ropts[1]="/1"
             topts[2]="0:30:00" ; popts[2]="8/12/"  ; ropts[2]="/1"
         elif [[ "$machine" = "WCOSS" ]]; then
@@ -461,7 +511,7 @@ case $regtest in
 
     hwrf_nmm_d2 | hwrf_nmm_d3)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[ "$machine" = "Hera" ]]; then
             topts[1]="0:20:00" ; popts[1]="6/6/"  ; ropts[1]="/1"
             topts[2]="0:20:00" ; popts[2]="8/8/"  ; ropts[2]="/1"
         elif [[ "$machine" = "WCOSS" ]]; then
@@ -491,7 +541,7 @@ case $regtest in
 
     global_enkf_T62)
 
-        if [[ "$machine" = "Theia" ]]; then
+        if [[ "$machine" = "Hera" ]]; then
             topts[1]="0:15:00" ; popts[1]="12/3/" ; ropts[1]="/1"
             topts[2]="0:15:00" ; popts[2]="12/5/" ; ropts[2]="/2"
         elif [[ "$machine" = "WCOSS" ]]; then
@@ -548,12 +598,12 @@ export tmpregdir
 export result
 export scaling
 
-if [[ "$machine" = "Theia" ]]; then
+if [[ "$machine" = "Hera" ]]; then
    export OMP_STACKSIZE=1024M
    export MPI_BUFS_PER_PROC=256
    export MPI_BUFS_PER_HOST=256
    export MPI_GROUP_MAX=256
-   export APRUN="mpirun -v -np \$PBS_NP"
+   export APRUN="srun"
 elif [[ "$machine" = "Cheyenne" ]]; then
    export OMP_STACKSIZE=1024M
    export MPI_BUFS_PER_PROC=256

@@ -51,9 +51,9 @@ if(BUILD_ENKF)
   gridinfo_${ENKF_SUFFIX}.f90
   enkf_obs_sensitivity.f90 
   )
-  if( (NOT HOST-Luna) AND (NOT HOST-Venus) )
-    find_package( LAPACK REQUIRED )
-  endif()
+# if( (NOT HOST-WCOSS_C) AND (NOT HOST-WCOSS_D) )
+#   find_package( LAPACK REQUIRED )
+# endif()
   
   add_definitions(${MPI_Fortran_FLAGS})
   
@@ -65,19 +65,17 @@ if(BUILD_ENKF)
   
   add_library(enkfdeplib STATIC ${ENKFMOD_SRCS} )
   add_library(enkflib STATIC ${ENKF_SRCS} $<TARGET_OBJECTS:MODS1> $<TARGET_OBJECTS:MODS2> )
-  add_dependencies(enkfdeplib ${GSILIB} )
-  add_dependencies(MODS1 enkfdeplib ${GSISHAREDLIB} ${GSILIB} )
-  add_dependencies(MODS2 MODS1 enkfdeplib ${GSISHAREDLIB} ${GSILIB} )
- # if(BUILD_EFSOI)
- #   add_dependencies(enkflib global_efsoi.x enkfdeplib ${GSISHAREDLIB} ${GSILIB} )
- # else()
-    add_dependencies(enkflib enkfdeplib ${GSISHAREDLIB} ${GSILIB} )
- # endif()
+  add_dependencies(enkfdeplib ${GSILIB} ${GSISHAREDLIB} )
+  add_dependencies(MODS1 enkfdeplib ${GSILIB} ${GSISHAREDLIB} )
+  add_dependencies(MODS2 MODS1 enkfdeplib ${GSILIB} ${GSISHAREDLIB} )
+  add_dependencies(enkflib enkfdeplib ${GSILIB} ${GSISHAREDLIB} )
   set(ENKFEXEC "${ENKF_BASE}${debug_suffix}${GSISUFFIX}" CACHE INTERNAL "ENKF Executable name")
   add_executable(${ENKFEXEC} enkf_main.f90)
-  target_link_libraries(${ENKFEXEC} enkflib enkfdeplib ${GSISHAREDLIB} ${GSILIB} ${CORE_LIBRARIES}
+  target_link_libraries(${ENKFEXEC} enkflib enkfdeplib ${GSILIB} ${GSISHAREDLIB} ${CORE_LIBRARIES}
   ${MPI_Fortran_LIBRARIES} ${LAPACK_LIBRARIES} ${NETCDF_LIBRARIES_F90} ${NETCDF_LIBRARIES}  ${HDF5_Fortran_HL_LIBRARIES}
   ${EXTRA_LINKER_FLAGS} ${HDF5_LIBRARIES} ${CURL_LIBRARIES} ${GSI_LDFLAGS} ${CORE_BUILT} ${CORE_LIBRARIES} ${CORE_BUILT} ${NCDIAG_LIBRARIES} ${EXTRA_LINKER_FLAGS})
-  set(TESTVAR enkflib CACHE INTERNAL "")
-  message("HEY in enkf, enkflib is ${TESTVAR}, and enkfdeplib is ${gsisharedlib}")
+  install(TARGETS ${ENKFEXEC} enkfdeplib enkflib 
+        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+        LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/static)
 endif()
