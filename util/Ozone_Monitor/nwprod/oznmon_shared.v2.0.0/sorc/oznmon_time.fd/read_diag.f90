@@ -1,6 +1,6 @@
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:    read_ozndiag                       read ozone diag file
+! subprogram:    read_diag                       read ozone diag file
 !   prgmmr: hliu           org: np20                date: 2009-04-15
 !
 ! abstract:  This module contains code to process ozone
@@ -24,11 +24,17 @@
 !------------------------------------------------------------
 !
 
-module read_ozndiag
+module read_diag
 
   ! USE:
   use kinds, only: r_single,i_kind
-  use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
+  use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close, & 
+                           nc_diag_read_get_dim, nc_diag_read_get_global_attr, &
+                           nc_diag_read_get_var_names, &
+                           nc_diag_read_get_global_attr_names
+ 
+  use ncdr_vars, only:     nc_diag_read_check_var
+
 
   !--- implicit
 
@@ -126,7 +132,7 @@ module read_ozndiag
      integer(i_kind), intent(inout) :: ftin
      integer(i_kind), intent(out):: istatus
 
-     integer(i_kind) :: i
+     integer(i_kind) :: i,ncd_nobs
 
      write(6,*)'--> open_ozndiag'
      istatus = -999
@@ -136,31 +142,42 @@ module read_ozndiag
         if (nopen_ncdiag >= MAX_OPEN_NCDIAG) then
            write(6,*) 'OPEN_RADIAG:  ***ERROR*** Cannot open more than ', &
                     MAX_OPEN_NCDIAG, ' netcdf diag files.'
-!!          call stop2(456)
            istatus = -1
         endif
-        call nc_diag_read_init(filename,ftin)
-        istatus=0
 
-        do i = 1, MAX_OPEN_NCDIAG
-           if (ncdiag_open_id(i) < 0) then
-              ncdiag_open_id(i) = ftin
-              ncdiag_open_status(i)%nc_read = .false.
-              ncdiag_open_status(i)%cur_ob_idx = -9999
-              ncdiag_open_status(i)%num_records = -9999
-              if (allocated(ncdiag_open_status(i)%all_data_fix)) then
-                 deallocate(ncdiag_open_status(i)%all_data_fix)
+        if ( istatus /= 0 ) then
+           call nc_diag_read_init(filename,ftin)
+           istatus=0
+
+           do i = 1, MAX_OPEN_NCDIAG
+
+              if (ncdiag_open_id(i) < 0) then
+
+                 ncdiag_open_id(i) = ftin
+                 ncdiag_open_status(i)%nc_read = .false.
+                 ncdiag_open_status(i)%cur_ob_idx = -9999
+                 ncdiag_open_status(i)%num_records = -9999
+
+                 if (allocated(ncdiag_open_status(i)%all_data_fix)) then
+                    deallocate(ncdiag_open_status(i)%all_data_fix)
+                 endif
+                 if (allocated(ncdiag_open_status(i)%all_data_nlev)) then
+                    deallocate(ncdiag_open_status(i)%all_data_nlev)
+                 endif
+                 if (allocated(ncdiag_open_status(i)%all_data_extra)) then
+                    deallocate(ncdiag_open_status(i)%all_data_extra)
+                 endif
+
+                 nopen_ncdiag = nopen_ncdiag + 1
+                 ncd_nobs = nc_diag_read_get_dim(ftin,'nobs')
+                 write(6,*) 'ncd_nobs = ', ncd_nobs
+
+                 exit
+
               endif
-              if (allocated(ncdiag_open_status(i)%all_data_nlev)) then
-                 deallocate(ncdiag_open_status(i)%all_data_nlev)
-              endif
-              if (allocated(ncdiag_open_status(i)%all_data_extra)) then
-                 deallocate(ncdiag_open_status(i)%all_data_extra)
-              endif
-              nopen_ncdiag = nopen_ncdiag + 1
-              exit
-           endif
-        enddo
+
+           enddo
+        endif
 
      else
        open(ftin,form="unformatted",file=filename,iostat=istatus)
@@ -240,14 +257,100 @@ module read_ozndiag
   
     istatus = 0
  
-!    if ( netcdf )
-!       call read_ozndiag_header_nc( ftin, header_fix, header_nlev, new_hdr, istatus )
-!    else
+    if ( netcdf ) then
+       call read_ozndiag_header_nc( ftin, header_fix, header_nlev, new_hdr, istatus )
+    else
        call read_ozndiag_header_bin( ftin, header_fix, header_nlev, new_hdr, istatus )
-!    fi
+    endif
  
  
   end subroutine read_ozndiag_header
+
+
+
+  subroutine read_ozndiag_header_nc( ftin, header_fix, header_nlev, new_hdr, istatus )
+    !--- interface
+
+    integer                    ,intent(in)  :: ftin
+    type(diag_header_fix_list ),intent(out) :: header_fix
+    type(diag_header_nlev_list),pointer     :: header_nlev(:)
+    logical                                 :: new_hdr
+    integer(i_kind),intent(out)             :: istatus
+
+    !--- variables
+    
+    integer,save :: nlevs_last = -1
+    integer :: ilev,k,ioff0
+    character(len=10):: id,obstype
+    character(len=20):: isis
+    integer(i_kind):: jiter,nlevs,ianldate,iint,ireal,iextra
+    integer(i_kind),dimension(:),allocatable :: iouse
+    real(r_single),dimension(:),allocatable  :: pob,grs,err
+    integer(i_kind)                          :: nchan_dim,nsdim
+    integer(i_kind)                          :: nchan_diag,idate
+
+    integer(i_kind)                          :: num_vars, var_name_mlen
+    integer(i_kind)                          :: num_global_attrs, attr_name_mlen
+    character(len=:),dimension(:), allocatable :: var_names,attr_names
+    logical                                  :: var_exists
+ 
+    istatus = 0
+    write(6,*) '--> read_ozndiag_header_nc, ftin = ', ftin
+ 
+    call nc_diag_read_get_global_attr_names(ftin, num_global_attrs, &
+                attr_name_mlen, attr_names)
+    write(6,*) ' num_global_attrs = ', num_global_attrs
+    do k=1,num_global_attrs
+       write(6,*) 'k, attr_names = ', k, attr_names(k)
+    end do 
+
+    call nc_diag_read_get_var_names(ftin, num_vars, var_name_mlen, var_names)
+    write(6,*) ' num_vars = ', num_vars
+
+    do k=1,num_vars
+       write(6,*) 'k, var_names = ', k, var_names(k)
+    end do 
+
+    write(6,*) 'idate = ', idate
+    call nc_diag_read_get_global_attr(ftin, "Number_of_state_vars", nsdim )
+    write(6,*) 'nsdim = ', nsdim
+
+    var_exists = nc_diag_read_check_var(ftin, "Satellite_Sensor") 
+    if ( var_exists == .true. ) then
+       call nc_diag_read_get_global_attr(ftin, "Satellite_Sensor", isis) 
+       write(6,*) 'from file, isis = ', isis
+    else
+       header_fix%isis="fred"
+       write(6,*) 'Satellite_Sensor not in file, using fred'
+    end if
+
+!    nchan_dim = nc_diag_read_get_dim(ftin,'nchans')
+!    write(6,*) 'nchan_dim = ', nchan_dim 
+
+!    header_fix%nchan = nchan_dim
+
+!    call nc_diag_read_get_global_attr(ftin, "Satellite_Sensor", isis)      ;
+!header_fix%isis = isis
+!     call nc_diag_read_get_global_attr(ftin, "Satellite", id) 
+!header_fix%id = id
+!  call nc_diag_read_get_global_attr(ftin, "Observation_type", obstype)   ;
+!header_fix%obstype = obstype
+!  call nc_diag_read_get_global_attr(ftin, "date_time", idate)            ;
+!header_fix%idate = idate
+
+
+!   call nc_diag_header("date_time",ianldate )
+!   call nc_diag_header("Satellite_Sensor", isis)
+!   call nc_diag_header("Satellite", dplat(is))
+!   call nc_diag_header("Observation_type", obstype)
+
+    write(6,*) 'isis = ', isis 
+
+
+    write(6,*) '<-- read_ozndiag_header_nc'
+
+  end subroutine read_ozndiag_header_nc
+
 
 
   subroutine read_ozndiag_header_bin( ftin, header_fix, header_nlev, new_hdr, istatus )
@@ -518,5 +621,5 @@ module read_ozndiag
   end function find_ncdiag_id
 
 
-end module read_ozndiag
+end module read_diag
 
