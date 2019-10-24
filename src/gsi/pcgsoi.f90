@@ -161,6 +161,9 @@ subroutine pcgsoi()
   use berror, only: vprecond
 
   use stpjomod, only: stpjo_setup
+  use gridmod,only: l_reg_update_hydro_delz
+  use guess_grids, only:geom_hgti,geom_hgti_bg
+  use guess_grids, only:  load_geop_hgt
   implicit none
 
 ! Declare passed variables
@@ -803,7 +806,9 @@ subroutine pcgsoi()
        call gsdcloudanalysis4gfs(mype)
     endif
   endif
-
+  if(l_reg_update_hydro_delz) then
+    call load_geop_hgt 
+  endif
 ! Write output analysis files
   if(.not.l4dvar) call prt_guess('analysis')
   call prt_state_norms(sval(1),'increment')
