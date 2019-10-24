@@ -232,8 +232,8 @@ namelist /nam_enkf/datestring,datehr,gdatehr,datapath,iassim_order,nvars,&
                    getkf,getkf_inflation,denkf,modelspace_vloc,dfs_sort,write_spread_diag,&
                    covinflatenh,covinflatesh,covinflatetr,lnsigcovinfcutoff,&
                    efsoi_cycling,efsoi_flag,eft,wmoist,adrate,andataname,&
-                   tar_minlat,tar_maxlat,tar_minlon,tar_maxlon,tar_minlev,tar_maxlev
-                   fso_cycling,fso_calculate,imp_physics,lupp
+                   tar_minlat,tar_maxlat,tar_minlon,tar_maxlon,tar_minlev,tar_maxlev,&
+                   imp_physics,lupp
 namelist /nam_wrf/arw,nmm,nmm_restart
 namelist /satobs_enkf/sattypes_rad,dsis
 namelist /ozobs_enkf/sattypes_oz
