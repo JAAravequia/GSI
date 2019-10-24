@@ -1,5 +1,5 @@
 program main
-  use read_ozndiag
+  use read_diag
   use valid
   use kinds, only: i_kind
 
