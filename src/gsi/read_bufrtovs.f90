@@ -236,6 +236,7 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
   integer(i_kind) :: ithin_time,n_tbin,it_mesh
   logical :: critical_channels_missing,quiet
   logical :: print_verbose
+  integer(i_kind):: nfov
 
 !**************************************************************************
 ! Initialize variables
@@ -584,7 +585,15 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
            end if
 
            ! Check that ifov is not out of range of cbias dimension
-           if (ifov < 1 .OR. ifov > 90) cycle read_loop
+! TCW 10/22/2019
+           if (tempest) then 
+              nfov = 160
+           else
+              nfov = 90 
+           endif 
+!           if (ifov < 1 .OR. ifov > 90) cycle read_loop
+           if (ifov < 1 .OR. ifov > nfov) cycle read_loop
+! TCW 10/22/2019
 
 !          Extract observation location and other required information
            if(abs(bfr1bhdr(11)) <= 90._r_kind .and. abs(bfr1bhdr(12)) <= r360)then
@@ -875,7 +884,10 @@ subroutine read_bufrtovs(mype,val_tovs,ithin,isfcalc,&
 !                 sval=-113.2_r_kind+(2.41_r_kind-0.0049_r_kind*ch1)*ch1 +  &
 !                 0.454_r_kind*ch2-ch15
                  
-              else if (amsub .or. mhs) then
+! TCW 10/22/2019
+!              else if (amsub .or. mhs) then
+              else if (amsub .or. mhs .or. tempest) then
+! TCW 10/22/2019
                  if (newpc4pred) then
                     ch1 = data1b8(ich1)-ang_rad(ichan1)*cbias(ifov,ichan1)- &
                          predx(1,ichan1)*air_rad(ichan1)

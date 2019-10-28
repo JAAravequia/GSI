@@ -111,6 +111,7 @@ PROGRAM read_diag_rad
   real :: rdhr
   real :: rsea
   real :: iwp_ret, lwp_ret, iwp_ges, lwp_ges
+  real :: sang
 !
 !  misc.
 !
@@ -160,6 +161,7 @@ PROGRAM read_diag_rad
         rlon=diagbuf(2)     ! observation longitude (degrees)
         rprs=diagbuf(3)     ! observation pressure (hPa)
         rdhr=diagbuf(4)     ! obs time (hours relative to analysis time)
+        sang=diagbuf(5)     ! sensor scan position
         rsea=diagbuf(11)    ! fractional coverage by water
 ! only for TEMPEST_CubeSat
         iwp_ret=diagbuf(25)    ! fractional coverage by water
@@ -176,14 +178,14 @@ PROGRAM read_diag_rad
            if (diagbufchan(2,i) > 999) diagbufchan(2,i)=-99.99999
            if (diagbufchan(3,i) > 999) diagbufchan(3,i)=-99.99999
 !           write(12,200) 'channel ', i, ' : ', rlat, rlon, rdhr, rsea, diagbufchan(1,i),diagbufchan(2,i), diagbufchan(3,i), diagbufchan(4,i), diagbufchan(5,i)
-           write(12,300) 'channel ', i, ' : ', rlat, rlon, rdhr, rsea, diagbufchan(1,i),diagbufchan(2,i), diagbufchan(3,i), diagbufchan(4,i), diagbufchan(5,i), iwp_ret, lwp_ret, iwp_ges, lwp_ges
+           write(12,300) 'channel ', i, ' : ', rlat, rlon, rdhr, rsea, sang, diagbufchan(1,i),diagbufchan(2,i), diagbufchan(3,i), diagbufchan(4,i), diagbufchan(5,i), diagbufchan(ipchan+npred+1,i), iwp_ret, lwp_ret, iwp_ges, lwp_ges
           !write(12,*)   'channel ', i, ' : ', rlat, rlon, rdhr,
           !diagbufchan(1,i),diagbufchan(2,i), diagbufchan(3,i),
           !diagbufchan(4,i), diagbufchan(5,i)
          enddo
 
 200 format(A7,2x,I2,1x,A3,1x,9(f10.5,1x))
-300 format(A7,2x,I2,1x,A3,1x,9(f10.5,1x),2(f20.5,1x),2(f10.5,1x))
+300 format(A7,2x,I2,1x,A3,1x,11(f10.5,1x),2(f20.5,1x),2(f10.5,1x))
 
 
      goto 100  ! goto another record
