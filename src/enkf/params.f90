@@ -417,6 +417,13 @@ if (lobsdiag_forenkf .and. jedi_ufo) then
   call stop2(19)
 endif
 
+! can not have both ncdiag and jedi files specified:
+if (jedi_ufo .and. netcdf_diag) then
+  if (nproc .eq. 0) print *, 'Can not have both netcdf_diag and jedi_ufo set, ', &
+                             'please pick one.'
+  call stop2(19)
+endif
+
 ! check that yaml file is provided for JEDI files
 if (jedi_ufo) then
   inquire(file=trim(jedi_yaml),exist=fexist)
