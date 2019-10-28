@@ -111,7 +111,7 @@ subroutine gsi_rfv3io_get_grid_specs(grid_spec,ak_bk,ierr)
   use netcdf, only: nf90_inquire_variable
   use mpimod, only: mype
   use mod_fv3_lola, only: generate_anl_grid
-  use gridmod,  only:nsig,regional_time,regional_fhr,aeta1_ll,aeta2_ll
+  use gridmod,  only:nsig,regional_time,regional_fhr,regional_fmin,aeta1_ll,aeta2_ll
   use gridmod,  only:nlon_regional,nlat_regional,eta1_ll,eta2_ll
   use kinds, only: i_kind,r_kind
   use constants, only: half,zero
@@ -142,6 +142,7 @@ subroutine gsi_rfv3io_get_grid_specs(grid_spec,ak_bk,ierr)
     regional_time(5)=mminute
     regional_time(6)=msecond
     regional_fhr=zero          ! forecast hour set zero for now
+    regional_fmin=zero          ! forecast hour set zero for now
 
 !!!!!!!!!!    grid_spec  !!!!!!!!!!!!!!!
     ierr=0
@@ -1092,7 +1093,7 @@ subroutine wrfv3_netcdf
         do k=1,nsig
         ges_delzinc(:,:,k)=geom_hgti(:,:,k+1,it)-geom_hgti_bg(:,:,k+1,it)-geom_hgti(:,:,k,it)+geom_hgti_bg(:,:,k,it)
         enddo
-       call   gsi_fv3ncdf_write_fv3_dz(dynvars,"delz",ges_delzinc,mype_delz,add_saved)
+       call   gsi_fv3ncdf_write_fv3_dz(dynvars,"DZ",ges_delzinc,mype_delz,add_saved)
         deallocate(ges_delzinc)
      
     endif

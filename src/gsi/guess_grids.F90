@@ -466,7 +466,10 @@ contains
             tropprs(lat2,lon2),fact_tv(lat2,lon2,nsig),&
             pbl_height(lat2,lon2,nfldsig),wgt_lcbas(lat2,lon2), &
             ges_qsat(lat2,lon2,nsig,nfldsig),stat=istatus)
-       if(l_reg_update_hydro_delz) allocate( geop_hgti(lat2,lon2,nsig+1,nfldsig))
+       if(l_reg_update_hydro_delz) then
+         allocate( geom_hgti(lat2,lon2,nsig+1,nfldsig))
+         allocate( geom_hgti_bg(lat2,lon2,nsig+1,nfldsig))
+       endif
 
        if(w_exist)then
          allocate(ges_w_btlev(lat2,lon2,2,nfldsig),stat=istatus)
@@ -1598,7 +1601,7 @@ contains
 !    termr  = equation 21
 !    termrg = first term in the denominator of equation 23
 !    zges   = equation 23
-   
+    mm1=mype+1 
     do jj=1,nfldsig
      do j=1,lon2
        jglob=max(1,min(j+jstart(mm1)-2,nlon))
