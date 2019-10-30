@@ -1,0 +1,324 @@
+window_begin: 2016-01-16T14:59:59Z
+window_end: 2016-01-16T21:00:00Z
+
+Observations: 
+ ObsTypes: 
+ # Radiances
+ # amsua
+ - ObsSpace:
+     name: amsua_n19
+     EnKF obstype: radiance
+     ObsDataIn:
+       obsfile: amsua_n19_obs_2016011618.nc4
+     simulate:
+       variables: [brightness_temperature]
+       channels: 1-6,9-13,15
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: CRTM
+     Absorbers: [H2O,O3,CO2]
+     Clouds: [Water, Ice]
+     LinearObsOperator:
+       Absorbers: [H2O,O3,CO2]
+       Clouds: [Water, Ice]
+     ObsOptions:
+       Sensor_ID: amsua_n19
+       EndianType: little_endian
+       CoefficientPath: Data/
+ - ObsSpace:
+     name: amsua_n18
+     EnKF obstype: radiance
+     ObsDataIn:
+       obsfile: amsua_n18_obs_2016011618.nc4
+     simulate:
+       variables: [brightness_temperature]
+       channels: 1-4,6,7,10-13,15
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: CRTM
+     Absorbers: [H2O,O3,CO2]
+     Clouds: [Water, Ice]
+     LinearObsOperator:
+       Absorbers: [H2O,O3,CO2]
+       Clouds: [Water, Ice]
+     ObsOptions:
+       Sensor_ID: amsua_n18
+       EndianType: little_endian
+       CoefficientPath: Data/
+ - ObsSpace:
+     name: amsua_n15
+     EnKF obstype: radiance
+     ObsDataIn:
+       obsfile: amsua_n15_obs_2016011618.nc4
+     simulate:
+       variables: [brightness_temperature]
+       channels: 1-5,7-10,12,13,15
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: CRTM
+     Absorbers: [H2O,O3,CO2]
+     Clouds: [Water, Ice]
+     LinearObsOperator:
+       Absorbers: [H2O,O3,CO2]
+       Clouds: [Water, Ice]
+     ObsOptions:
+       Sensor_ID: amsua_n15
+       EndianType: little_endian
+       CoefficientPath: Data/
+ - ObsSpace:
+     name: amsua_metop-a
+     EnKF obstype: radiance
+     ObsDataIn:
+       obsfile: amsua_metop-a_obs_2016011618.nc4
+     simulate:
+       variables: [brightness_temperature]
+       channels: 1-6,9-13,15
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: CRTM
+     Absorbers: [H2O,O3,CO2]
+     Clouds: [Water, Ice]
+     LinearObsOperator:
+       Absorbers: [H2O,O3,CO2]
+       Clouds: [Water, Ice]
+     ObsOptions:
+       Sensor_ID: amsua_metop-a
+       EndianType: little_endian
+       CoefficientPath: Data/
+ - ObsSpace:
+     name: amsua_metop-b
+     EnKF obstype: radiance
+     ObsDataIn:
+       obsfile: amsua_metop-b_obs_2016011618.nc4
+     simulate:
+       variables: [brightness_temperature]
+       channels: 8-13
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: CRTM
+     Absorbers: [H2O,O3,CO2]
+     Clouds: [Water, Ice]
+     LinearObsOperator:
+       Absorbers: [H2O,O3,CO2]
+       Clouds: [Water, Ice]
+     ObsOptions:
+       Sensor_ID: amsua_metop-b
+       EndianType: little_endian
+       CoefficientPath: Data/
+ - ObsSpace:
+     name: amsua_aqua
+     EnKF obstype: radiance
+     ObsDataIn:
+       obsfile: amsua_aqua_obs_2016011618.nc4
+     simulate:
+       variables: [brightness_temperature]
+       channels: 6,8-13
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: CRTM
+     Absorbers: [H2O,O3,CO2]
+     Clouds: [Water, Ice]
+     LinearObsOperator:
+       Absorbers: [H2O,O3,CO2]
+       Clouds: [Water, Ice]
+     ObsOptions:
+       Sensor_ID: amsua_aqua
+       EndianType: little_endian
+       CoefficientPath: Data/
+ # Conventional
+ # temperature
+ - ObsSpace:
+     name: aircraft_tsen
+     EnKF obstype: conventional
+     ObsDataIn:
+       obsfile: aircraft_tsen_obs_2016011618.nc4
+     simulate:
+       variables: [air_temperature]
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: VertInterp
+ - ObsSpace:
+     name: sondes_tsen
+     EnKF obstype: conventional
+     ObsDataIn:
+       obsfile: sondes_tsen_obs_2016011618.nc4
+     simulate:
+       variables: [air_temperature]
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: VertInterp
+ - ObsSpace:
+     name: sondes_tv
+     EnKF obstype: conventional
+     ObsDataIn:
+       obsfile: sondes_tv_obs_2016011618.nc4
+     simulate:
+       variables: [virtual_temperature]
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: VertInterp
+ - ObsSpace:
+     name: sfcship_tsen
+     EnKF obstype: conventional
+     ObsDataIn:
+       obsfile: sfcship_tsen_obs_2016011618.nc4
+     simulate:
+       variables: [air_temperature]
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: VertInterp
+ - ObsSpace:
+     name: sfcship_tv
+     EnKF obstype: conventional
+     ObsDataIn:
+       obsfile: sfcship_tv_obs_2016011618.nc4
+     simulate:
+       variables: [virtual_temperature]
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: VertInterp
+ # humidity
+ - ObsSpace:
+     name: aircraft_q
+     EnKF obstype: conventional
+     ObsDataIn:
+       obsfile: aircraft_q_obs_2016011618.nc4
+     simulate:
+       variables: [specific_humidity]
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: VertInterp
+ - ObsSpace:
+     name: sfcship_q
+     EnKF obstype: conventional
+     ObsDataIn:
+       obsfile: sfcship_q_obs_2016011618.nc4
+     simulate:
+       variables: [specific_humidity]
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: VertInterp
+ - ObsSpace:
+     name: sondes_q
+     EnKF obstype: conventional
+     ObsDataIn:
+       obsfile: sondes_q_obs_2016011618.nc4
+     simulate:
+       variables: [specific_humidity]
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: VertInterp
+ # surface pressure
+ - ObsSpace:
+     name: sondes_ps
+     EnKF obstype: conventional
+     ObsDataIn:
+       obsfile: sondes_ps_obs_2016011618.nc4
+     simulate:
+       variables: [surface_pressure]
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: VertInterp
+ - ObsSpace:
+     name: sfcship_ps
+     EnKF obstype: conventional
+     ObsDataIn:
+       obsfile: sfcship_ps_obs_2016011618.nc4
+     simulate:
+       variables: [surface_pressure]
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: VertInterp
+ - ObsSpace:
+     name: sfc_ps
+     EnKF obstype: conventional
+     ObsDataIn:
+       obsfile: sfc_ps_obs_2016011618.nc4
+     simulate:
+       variables: [surface_pressure]
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: VertInterp
+ # winds
+ - ObsSpace:
+     name: aircraft_uv
+     EnKF obstype: conventional
+     ObsDataIn:
+       obsfile: aircraft_uv_obs_2016011618.nc4
+     simulate:
+       variables: [eastward_wind, northward_wind]
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: VertInterp
+ - ObsSpace:
+     name: satwind_uv
+     EnKF obstype: conventional
+     ObsDataIn:
+       obsfile: satwind_uv_obs_2016011618.nc4
+     simulate:
+       variables: [eastward_wind, northward_wind]
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: VertInterp
+ - ObsSpace:
+     name: scatwind_uv
+     EnKF obstype: conventional
+     ObsDataIn:
+       obsfile: scatwind_uv_obs_2016011618.nc4
+     simulate:
+       variables: [eastward_wind, northward_wind]
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: VertInterp
+ - ObsSpace:
+     name: sfcship_uv
+     EnKF obstype: conventional
+     ObsDataIn:
+       obsfile: sfcship_uv_obs_2016011618.nc4
+     simulate:
+       variables: [eastward_wind, northward_wind]
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: VertInterp
+ - ObsSpace:
+     name: sondes_uv
+     EnKF obstype: conventional
+     ObsDataIn:
+       obsfile: sondes_uv_obs_2016011618.nc4
+     simulate:
+       variables: [eastward_wind, northward_wind]
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: VertInterp
+ - ObsSpace:
+     name: vadwind_uv
+     EnKF obstype: conventional
+     ObsDataIn:
+       obsfile: vadwind_uv_obs_2016011618.nc4
+     simulate:
+       variables: [eastward_wind, northward_wind]
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: VertInterp
+ - ObsSpace:
+     name: windprof_uv
+     EnKF obstype: conventional
+     ObsDataIn:
+       obsfile: windprof_uv_obs_2016011618.nc4
+     simulate:
+       variables: [eastward_wind, northward_wind]
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: VertInterp
+ # ozone
+ - ObsSpace:
+     name: OzoneLayer
+     EnKF obstype: ozone
+     ObsDataIn:
+       obsfile: sbuv2_n19_obs_2016011618.nc4
+     simulate:
+       variables: [mole_fraction_of_ozone_in_air]
+     distribution: InefficientDistribution
+   ObsOperator:
+     name: AtmVertInterpLay
+
