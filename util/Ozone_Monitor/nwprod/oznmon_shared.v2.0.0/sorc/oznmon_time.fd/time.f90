@@ -107,6 +107,7 @@ program main
 
 
 ! File exists.  Read header
+
   write(6,*)'call read_ozndiag_header'
   call read_ozndiag_header( lndiag, header_fix, header_nlev, new_hdr, istatus )
   write(6,*)'after read_ozndiag_header, new_hdr = ', new_hdr 
