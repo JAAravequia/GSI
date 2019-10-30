@@ -10,7 +10,7 @@
 set -x
 
 export OZNMON_NEW_HDR=${OZN_NEW_HDR:-0}
-export PDATE=${PDATE:-2019091200}	# netcdf
+export PDATE=${PDATE:-2019101900}	# netcdf
 #export PDATE=${PDATE:-2018091700}	# bin
 export NET=${NET:-gfs}
 export RUN=${RUN:-gdas}

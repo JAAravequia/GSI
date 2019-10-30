@@ -185,6 +185,8 @@ module read_diag
      endif
 
      write(6,*)'<-- open_ozndiag'
+     write(6,*)'                '
+
   end subroutine open_ozndiag
 
 
@@ -288,6 +290,7 @@ module read_diag
     real(r_single),dimension(:),allocatable  :: pob,grs,err
     integer(i_kind)                          :: nchan_dim,nsdim
     integer(i_kind)                          :: nchan_diag,idate
+    integer(i_kind)                          :: ncd_nobs
 
     integer(i_kind)                          :: num_vars, var_name_mlen
     integer(i_kind)                          :: num_global_attrs, attr_name_mlen
@@ -311,32 +314,33 @@ module read_diag
        write(6,*) 'k, var_names = ', k, var_names(k)
     end do 
 
-    write(6,*) 'idate = ', idate
+    nchan_dim = nc_diag_read_get_dim(ftin,'nchans')
+    write(6,*) 'nchan_dim = ', nchan_dim 
+    header_fix%nchan = nchan_dim
+
+    ncd_nobs = nc_diag_read_get_dim(ftin,'nobs')
+    write(6,*) 'ncd_nobs = ', ncd_nobs
+
+
+    call nc_diag_read_get_global_attr(ftin, "date_time", idate)            ;
+    write(6,*) 'date_time = ', idate
+    header_fix%ianldate = idate
+
+    call nc_diag_read_get_global_attr(ftin, "Satellite_Sensor", isis)      ;
+    write(6,*) 'Satellite_Sensor = ', isis
+    header_fix%isis = isis
+
+    call nc_diag_read_get_global_attr(ftin, "Satellite", id) 
+    write(6,*) 'Satellite = ', id
+    header_fix%id = id
+
+    call nc_diag_read_get_global_attr(ftin, "Observation_type", obstype)   ;
+    write(6,*) 'Observation_type = ', obstype
+    header_fix%obstype = obstype
+
     call nc_diag_read_get_global_attr(ftin, "Number_of_state_vars", nsdim )
-    write(6,*) 'nsdim = ', nsdim
+    write(6,*) 'Number_of_state_vars = ', nsdim
 
-    var_exists = nc_diag_read_check_var(ftin, "Satellite_Sensor") 
-    if ( var_exists == .true. ) then
-       call nc_diag_read_get_global_attr(ftin, "Satellite_Sensor", isis) 
-       write(6,*) 'from file, isis = ', isis
-    else
-       header_fix%isis="fred"
-       write(6,*) 'Satellite_Sensor not in file, using fred'
-    end if
-
-!    nchan_dim = nc_diag_read_get_dim(ftin,'nchans')
-!    write(6,*) 'nchan_dim = ', nchan_dim 
-
-!    header_fix%nchan = nchan_dim
-
-!    call nc_diag_read_get_global_attr(ftin, "Satellite_Sensor", isis)      ;
-!header_fix%isis = isis
-!     call nc_diag_read_get_global_attr(ftin, "Satellite", id) 
-!header_fix%id = id
-!  call nc_diag_read_get_global_attr(ftin, "Observation_type", obstype)   ;
-!header_fix%obstype = obstype
-!  call nc_diag_read_get_global_attr(ftin, "date_time", idate)            ;
-!header_fix%idate = idate
 
 
 !   call nc_diag_header("date_time",ianldate )
@@ -344,7 +348,6 @@ module read_diag
 !   call nc_diag_header("Satellite", dplat(is))
 !   call nc_diag_header("Observation_type", obstype)
 
-    write(6,*) 'isis = ', isis 
 
 
     write(6,*) '<-- read_ozndiag_header_nc'
