@@ -75,7 +75,6 @@ subroutine construct_obsspaces_ioda()
   character(kind=c_char,len=:), allocatable :: obstype
   type(datetime) :: winbgn, winend
   type(duration) :: winlen, winlenhalf
-
   integer(i_kind) :: iobss
 
   !> initialize winbgn, winend, get config
@@ -84,11 +83,13 @@ subroutine construct_obsspaces_ioda()
   call config%get_or_die("window_end", winendstr)
   call datetime_create(winbgnstr, winbgn)
   call datetime_create(winendstr, winend)
+
   !> find center of the window (to save in module)
   call datetime_diff(winend, winbgn, winlen)
   winlenhalf = duration_seconds(winlen) / 2
-  wincenter = winbgn
+  call datetime_create(winbgnstr, wincenter)
   call datetime_update(wincenter, winlenhalf)
+
   !> allocate all ObsSpaces
   call config%get_or_die("Observations.ObsTypes", obsconfigs)
   if (allocated(obsspaces))    deallocate(obsspaces)
@@ -299,12 +300,10 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
   logical, dimension(:), allocatable           :: used_obs
   type(datetime), dimension(:), allocatable    :: abs_time
   type(duration) :: dtime
-  character(100) :: currvar
-  integer(i_kind) :: channel, bar_index
   character(len=100) :: obsname
   character(len=100) :: varname
   character(len=5)  :: member
-
+  integer, allocatable :: channels(:)
   character(len=60), dimension(7), parameter :: varnames_conv = &
     (/'air_temperature', 'virtual_temperature', 'specific_humidity', &
       'eastward_wind', 'northward_wind', 'surface_pressure',         &
@@ -320,22 +319,27 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
       vars = obsspace_obsvariables(obsspaces(iobss))
       nvars = vars%nvars()
       allocate(values(nlocs*nvars), used_obs(nlocs*nvars), intvalues(nlocs*nvars))
-      i2_all = i1_all + nvars*nlocs
+      i2_all = i1_all + nvars*nlocs - 1
 
       !> read flags (whether to use the obs)
       call fill_array_obsdata_int(obsspaces(iobss), "EffectiveQC", intvalues)
       x_used(i1_all:i2_all) = 0
       where(intvalues == 0) x_used(i1_all:i2_all) = 1
       used_obs = (x_used(i1_all:i2_all) == 1)
-      i2 = i1 + count(used_obs)
+      i2 = i1 + count(used_obs) - 1
 
       !> read the rest of the fields, only save values for used obs
       call fill_array_metadata(obsspaces(iobss), "longitude", values)
       x_lon(i1:i2) = pack(values, used_obs)
       call fill_array_metadata(obsspaces(iobss), "latitude",  values)
       x_lat(i1:i2) = pack(values, used_obs)
-      call fill_array_metadata(obsspaces(iobss), "air_pressure", values)
-      x_press(i1:i2) = pack(values, used_obs)
+      if (obstype == "conventional" .or. obstype == "ozone") then
+        call fill_array_metadata(obsspaces(iobss), "air_pressure", values)
+        x_press(i1:i2) = pack(values, used_obs)
+      else
+        call fill_array_obsdata(obsspaces(iobss), 'Press_Max_Weight_Function', values)
+        x_press(i1:i2) = pack(values, used_obs)
+      endif
       !> fill in time (ObsSpaces hold datetime in Datetime objects; need to
       !compute delta between datetime(obs) and datetime(middle of assim window)
       allocate(abs_time(nlocs))
@@ -357,16 +361,23 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
       hx_mean_nobc(i1:i2) = hx_mean(i1:i2) - pack(values, used_obs)
       !> read ensemble member H(x) if needed
       if (nanal <= nanals) then
-        write(member,'(I)') nanal
-        varname="HofX_" // trim(member)
+        write(member,'(I4)') nanal
+        varname="HofX_" //adjustl(member)
         print *, nproc, ', reading ', trim(varname)
         call fill_array_obsdata(obsspaces(iobss), trim(varname), values)
         hx(i1:i2) = pack(values, used_obs)
+      else
+        hx(i1:i2) = 0.0_r_single
       endif
       call fill_array_obsdata(obsspaces(iobss), "EffectiveError", values)
       x_err(i1:i2) = pack(values, used_obs)
       call fill_array_obsdata(obsspaces(iobss), "ObsError", values)
       x_errorig(i1:i2) = pack(values, used_obs)
+      !> need variances, not stdev
+      do iloc = i1, i2
+        x_err(iloc) = x_err(iloc)**2
+        x_errorig(iloc) = x_errorig(iloc)**2
+      enddo
       !> x_code for conventional is the code from file (120 for radiosondes,
       !  etc)
       if (obstype == "conventional") then
@@ -405,18 +416,22 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
         call obsspace_obsname(obsspaces(iobss), obsname)
         x_type(i1:i2) = obsname
       endif
+
       !> for radiance data also fill in x_indx, contains channel numbers (like
       !  the ones from satinfo)
       if (present(x_indx)) then
+        allocate(channels(nvars))
+        call obsspace_get_db(obsspaces(iobss), "VarMetaData", "satinfo_channel", channels)
         do ivar = 1, nvars
-          currvar = vars%variable(ivar)
-          bar_index = index(currvar,"_",back=.true.) ! find final "_" before channel number
-          read(currvar(bar_index+1:len_trim(currvar)), *) channel
+!          currvar = vars%variable(ivar)
+!          bar_index = index(currvar,"_",back=.true.) ! find final "_" before channel number
+!          read(currvar(bar_index+1:len_trim(currvar)), *) channel
           do iloc = 1, nlocs
-            intvalues(nlocs*(ivar-1) + iloc) = channel
+            intvalues(nlocs*(ivar-1) + iloc) = channels(ivar) !channel
           enddo
         enddo
         x_indx(i1:i2) = pack(intvalues, used_obs)
+        deallocate(channels)
       endif
       i1 = i1 + count(used_obs)
       i1_all = i1_all + nvars*nlocs
