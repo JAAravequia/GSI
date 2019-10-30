@@ -363,7 +363,6 @@ subroutine get_obs_data_ioda(obstype, nobs_max, nobs_maxdiag,         &
       if (nanal <= nanals) then
         write(member,'(I4)') nanal
         varname="HofX_" //adjustl(member)
-        print *, nproc, ', reading ', trim(varname)
         call fill_array_obsdata(obsspaces(iobss), trim(varname), values)
         hx(i1:i2) = pack(values, used_obs)
       else
