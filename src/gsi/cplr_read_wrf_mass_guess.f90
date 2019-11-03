@@ -1389,7 +1389,7 @@ contains
     use gsi_chemguess_mod, only: GSI_ChemGuess_Bundle, gsi_chemguess_get
     use mpeu_util, only: die
     use guess_grids, only: ges_w_btlev
-    use control_vectors, only : w_exist, dbz_exist
+    use wrf_vars_mod, only : w_exist, dbz_exist
     use setupdbz_lib,only: hx_dart
     use obsmod,only: if_model_dbz
     use caps_radaruse_mod, only: l_use_log_qx, l_use_log_nt, l_use_dbz_caps ! CAPS

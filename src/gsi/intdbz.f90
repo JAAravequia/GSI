@@ -6,14 +6,15 @@ module intdbzmod
 ! abstract: module for intdbz and its tangent linear intdbz_tl
 !
 ! program history log:
-!   2005-05-13  Yanqiu zhu - wrap intrw and its tangent linear intrw_tl into one module 
-!   2005-11-16  Derber - remove interfaces
-!   2008-11-26  Todling - remove intrw_tl; add interface back
-!   2009-08-13  lueken - update documentation
-!   2016-09-xx  g.zhao - based on intrw and intq, build up intdbz for new obs dbz into GSIv3.5      
-!   2017-05-12  Y. Wang and X. Wang - add tangent linear of dbz operator to directly assimilate reflectivity
-!                                     for both ARW and NMMB models (Wang and Wang 2017 MWR). POC: xuguang.wang@ou.edu
-!   2019-02-19  ctong - modified to comply with new type structure
+! 2005-05-13  Yanqiu zhu - wrap intrw and its tangent linear intrw_tl into one module 
+! 2005-11-16  Derber - remove interfaces
+! 2008-11-26  Todling - remove intrw_tl; add interface back
+! 2009-08-13  lueken - update documentation
+! 2016-09-xx  g.zhao - based on intrw and intq, build up intdbz for new obs dbz into GSIv3.5      
+! 2017-05-12 Y. Wang and X. Wang - add tangent linear of dbz operator to directly assimilate reflectivity
+!                                  for both ARW and NMMB models (Wang and Wang 2017 MWR). POC: xuguang.wang@ou.edu
+! 2019-02-19  ctong - modified to comply with new type structure
+! 2019-07-11  todling - introduced wrf_vars_mod
 !
 ! subroutines included:
 !   sub intdbz_
@@ -30,6 +31,7 @@ use m_obsNode, only: obsNode
 use m_dbzNode, only: dbzNode
 use m_dbzNode, only: dbzNode_typecast
 use m_dbzNode, only: dbzNode_nextcast
+use m_obsdiagNode, only: obsdiagNode_set
 implicit none
 
 PRIVATE
@@ -103,7 +105,7 @@ subroutine intdbz_(dbzhead,rval,sval)
   use gsi_4dvar, only: ladtest_obs
   use caps_radaruse_mod, only: l_use_dbz_caps ! CAPS
 
-  use control_vectors, only : dbz_exist
+  use wrf_vars_mod, only : dbz_exist
   implicit none
 
 ! Declare passed variables
@@ -114,10 +116,7 @@ subroutine intdbz_(dbzhead,rval,sval)
 ! Declare local variables
   integer(i_kind) j1,j2,j3,j4,j5,j6,j7,j8,ier,istatus
 ! real(r_kind) penalty
-!  real(r_kind),pointer,dimension(:) :: xhat_dt_u,xhat_dt_v
-!  real(r_kind),pointer,dimension(:) :: dhat_dt_u,dhat_dt_v
-! CAPS : val is replaced with dbztl according to the old code. dbz introduced
-  real(r_kind) dbz,dbztl,w1,w2,w3,w4,w5,w6,w7,w8,valqr,valqs,valqg,valdbz 
+  real(r_kind) val,w1,w2,w3,w4,w5,w6,w7,w8,valqr,valqs,valqg,valdbz
   real(r_kind) cg_dbz,p0,grad,wnotgross,wgross,pg_dbz
   real(r_kind) qrtl,qstl, qgtl
   real(r_kind),pointer,dimension(:) :: sqr,sqs,sqg,sdbz
@@ -152,7 +151,6 @@ subroutine intdbz_(dbzhead,rval,sval)
      return
   end if
 
-  !dbzptr => dbzhead
   dbzptr => dbzNode_typecast(dbzhead)
   do while (associated(dbzptr))
      j1=dbzptr%ij(1)
@@ -175,7 +173,7 @@ subroutine intdbz_(dbzhead,rval,sval)
 
 !    Forward mode l
      if( dbz_exist )then
-       dbztl = w1* sdbz(j1)+w2* sdbz(j2)+w3* sdbz(j3)+w4* sdbz(j4)+ &
+       val = w1* sdbz(j1)+w2* sdbz(j2)+w3* sdbz(j3)+w4* sdbz(j4)+ &
              w5* sdbz(j5)+w6* sdbz(j6)+w7* sdbz(j7)+w8* sdbz(j8)
      else
        qrtl = w1* sqr(j1)+w2* sqr(j2)+w3* sqr(j3)+w4* sqr(j4)+      &
@@ -187,26 +185,20 @@ subroutine intdbz_(dbzhead,rval,sval)
          qgtl  = w1* sqg(j1)+w2* sqg(j2)+w3* sqg(j3)+w4* sqg(j4)+  &
                  w5* sqg(j5)+w6* sqg(j6)+w7* sqg(j7)+w8* sqg(j8)
 
-         dbztl   = (dbzptr%jqr)*qrtl + (dbzptr%jqs)*qstl + (dbzptr%jqg)*qgtl
+         val   = (dbzptr%jqr)*qrtl + (dbzptr%jqs)*qstl + (dbzptr%jqg)*qgtl
        end if
   
      end if
 
      if(luse_obsdiag)then
         if (lsaveobsens) then
-           grad = dbztl*dbzptr%raterr2*dbzptr%err2
-           dbzptr%diags%obssen(jiter) = grad
+           grad = val*dbzptr%raterr2*dbzptr%err2
+           !-- dbzptr%diags%obssen(jiter) = grad
+           call obsdiagNode_set(dbzptr%diags,jiter=jiter,obssen=grad)
+
         else
-           write(6,*)'intdbz: dbzptr%luse=',dbzptr%luse,'   jiter=',jiter
-           write(6,*)'intdbz: dbzhead%luse=',dbzhead%luse
-!          if (.not. associated(dbzhead%diags)) then
-!               write(6,*)'intdbz: not assocated dbzhead%diags ---- Wrong Wrong'
-!          end if
-!          write(6,*)'intdbz:
-!          dbzhead%diags%tld=',dbzhead%diags%tldepart(jiter)
-           write(6,*)'intdbz: dbzptr%diags%tld=',dbzptr%diags%tldepart(jiter)
-           write(6,*)'intdbz:  dbztl=',dbztl
-           if (dbzptr%luse) dbzptr%diags%tldepart(jiter)=dbztl
+           !-- if (dbzptr%luse) dbzptr%diags%tldepart(jiter)=val
+           if (dbzptr%luse) call obsdiagNode_set(dbzptr%diags,jiter=jiter,tldepart=val)
         endif
      endif
 
@@ -214,12 +206,10 @@ subroutine intdbz_(dbzhead,rval,sval)
         if (.not. lsaveobsens) then
            if( .not. ladtest_obs ) then
               if ( l_use_dbz_caps) then ! CAPS uses ddiff
-                 dbz=dbztl-dbzptr%ddiff
+                 val=val-dbzptr%ddiff
               else
-                 dbz=dbztl-dbzptr%res
+                 val=val-dbzptr%res
               end if
-           else
-              dbz=dbztl 
            end if
 
 !          gradient of nonlinear operator
@@ -229,14 +219,14 @@ subroutine intdbz_(dbzhead,rval,sval)
               cg_dbz=cg_term/dbzptr%b
               wnotgross= one-pg_dbz
               wgross = pg_dbz*cg_dbz/wnotgross
-              p0   = wgross/(wgross+exp(-half*dbzptr%err2*dbz**2))
-              dbz = dbz*(one-p0)
+              p0   = wgross/(wgross+exp(-half*dbzptr%err2*val**2))
+              val = val*(one-p0)
            endif
 
            if( ladtest_obs)  then
-              grad = dbz
+              grad = val
            else
-              grad = dbz*dbzptr%raterr2*dbzptr%err2
+              grad = val*dbzptr%raterr2*dbzptr%err2
            end if
 
         endif

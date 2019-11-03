@@ -1839,7 +1839,7 @@ contains
     use gsi_metguess_mod, only: gsi_metguess_get,GSI_MetGuess_Bundle
     use gsi_chemguess_mod, only: GSI_ChemGuess_Bundle, gsi_chemguess_get
     use mpeu_util, only: die
-    use control_vectors, only : w_exist, dbz_exist
+    use wrf_vars_mod, only : w_exist, dbz_exist
     use obsmod,only: if_model_dbz
 ! --- CAPS ---
     use constants, only: zero,r0_01

@@ -75,6 +75,7 @@ subroutine stpdbz(dbzhead,rval,sval,out,sges,nstep)
 !
 !   output argument list     - output for step size calculation
 !     out(1:nstep)   - penalty from radar reflectivity sges(1:nstep)
+!   2019-07-11  todling - introduced wrf_vars_mod
 !
 ! attributes:
 !   language: f90
@@ -86,7 +87,7 @@ subroutine stpdbz(dbzhead,rval,sval,out,sges,nstep)
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gridmod, only: wrf_mass_regional
-  use control_vectors, only : dbz_exist
+  use wrf_vars_mod, only : dbz_exist
   use m_obsNode, only: obsNode
   use m_dbzNode , only: dbzNode
   use m_dbzNode , only: dbzNode_typecast
