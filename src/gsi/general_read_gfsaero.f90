@@ -1,3 +1,48 @@
+subroutine general_read_ncaero(grd,sp_a,filename,mype,gfschem_bundle, &
+       naero,aeroname,init_head,iret_read)
+!$$$  subprogram documentation block
+!                .      .    .                                       .
+! subprogram:    general_read_ncaero     adaptation of general_read_nemsaero
+!                                        for reading in aerosols from netCDF
+!                                        files
+!
+! abstract: copied from general_read_nemsaero, primarily for reading in aerosol
+!           tracer variables from netCDF GFS I/O files 
+!
+! program history log:
+!   2019-11-06  Martin - copied and modified to read in aerosol arrays
+!                        from FV3-Chem netCDF Gaussian history files
+!
+!   input argument list:
+!     grd      - structure variable containing information about grid
+!                    (initialized by general_sub2grid_create_info,
+!                    located in general_sub2grid_mod.f90)
+!     sp_a     - structure variable containing spectral information for
+!     analysis
+!                    (initialized by general_init_spec_vars, located in
+!                    general_specmod.f90)
+!     filename - input sigma file name
+!     mype     - mpi task id
+!     naero    - number of aerosol tracers to read
+!     aeroname - len(naero) character strings of aerosol tracers to read
+!     init_head- flag to read header record.  Usually .true. unless
+!     repeatedly
+!                reading similar files (ensembles)
+!
+!   input/output list:
+!     gfschem_bundle - GSI bundle containing chem/aerosol arrays
+!
+!   output argument list:
+!     iret_read - return code, 0 for successful read.
+!
+! attributes:
+!   language: f90
+!   machine:  ibm RS/6000 SP
+!
+!$$$
+
+end subroutine general_read_ncaero
+
 subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
        naero,aeroname,init_head,iret_read)
 !$$$  subprogram documentation block
