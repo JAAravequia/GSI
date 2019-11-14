@@ -1,9 +1,9 @@
 # - Find the GRIB2 modules
 set( NO_DEFAULT_PATH )
 find_library( G2_LIB4  
-    NAMES libg2.a
+    NAMES libg2_4.a
     HINTS
-       /scratch1/BMC/wrfruc/ejames/wrf_code/GSD_UPP/comupp/lib
+       /scratch2/BMC/wrfruc/gge/codes/WPS/WPS.tanya/ungrib/src/ngl/g2
     ${NO_DEFAULT_PATH})
 
 find_library( G2TMPL_LIB
