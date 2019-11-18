@@ -1,0 +1,84 @@
+#!/bin/ksh
+
+set -xa
+
+date
+export PS4='$SECONDS + '
+
+####################################
+# Specify NET and RUN Name and model
+####################################
+export NET=gfs
+export RUN=nst
+
+export cycle=t${cyc}z
+#########################################
+# Run setpdy and initialize PDY variables
+#########################################
+setpdy.sh
+. PDY
+
+export CDATE=${CDATE:-${PDY}${cyc}}
+
+####################################
+# Set if alert GRIB2 files
+####################################
+export SENDDBN_GB2=${SENDDBN_GB2:-YES}
+
+##############################################################
+# Get real time dump directory where sea ice analysis locates
+##############################################################
+if [ -d /gpfs/tp1 ]; then
+   export SITE="MARS"
+   export DMPDIR="/gpfs/tp1/emc/globaldump"
+elif [ -d /gpfs/gp1 ]; then
+   export SITE="VENUS"
+   export DMPDIR="/gpfs/gp1/emc/globaldump"
+fi
+###################################################
+# Set directories where this job's input and output is located
+# using the COMIN variable
+###################################################
+export COMIN=${COMIN:-$COMROOT/${NET}/${envir}/${CDUMP}.${PDY}}
+export COMOUT=${COMOUT:-$COMROOT/${NET}/${envir}/${RUN}.${PDY}}
+mkdir -p $COMOUT
+
+#################################################
+# get work directory
+################################################
+export DATA=${DATA:-$DATAROOT/${jobid}}    # temporary running directory
+mkdir -p $DATA
+
+#################################################
+# Specify job's execution areas (directory paths)
+#################################################
+export EXECnstgrb=${EXECnstgrb:-$HOMEnstgrb/exec}
+export FIXnstgrb=${FIXnstgrb:-$HOMEnstgrb/fix}
+export PARMnstgrb=${PARMnstgrb:-$HOMEnstgrb/parm}
+
+#export GEMFIX=$NWROOT/spcsref.v7.1.1/gempak/fix
+#export GEMEXE=$NWROOT/gempak.v7.3.1/nawips/os/linux3.10.0_x86_64/bin
+#if [ "$envir" = 'test' ] ; then
+#   export GEMFIX=/gpfs/dell1/nco/ops/nwprod/spcsref.v7.1.1/gempak/fix
+#   export GEMEXE=/gpfs/dell1/nco/ops/nwprod/gempak.v7.3.1/nawips/os/linux3.10.0_x86_64/bin
+#fi
+# Execute the script
+$HOMEnstgrb/scripts/exnstgrb.sh.ecf
+###############################################
+
+#if [ $? -ne 0 ]; then
+#   ecflow_client --msg="***JOB ${ECF_NAME} ERROR RUNNING J-SCRIPT ***"
+#   ecflow_client --abort
+#   exit
+#fi
+
+cat $jlogfile
+
+msg='ENDED NORMALLY.'
+postmsg "$jlogfile" "$msg"
+
+if [[ $KEEPDATA != YES ]] ; then
+  cd $DATAROOT
+  rm -rf $DATA
+fi
+

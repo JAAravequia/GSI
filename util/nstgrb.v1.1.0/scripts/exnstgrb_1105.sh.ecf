@@ -1,0 +1,287 @@
+#!/bin/ksh 
+#
+# Abstract: This utility generates a RTG-like SST analysis file with 12Z NSST analysis in FV3GFS.
+#
+# Notes:
+#       RTG-like SST data file: SST analysis over water grids, derived surface temperature over non-water grids.
+#                               1/12 lat/lon grids, 4320 x 2160
+# Input files :
+#       sfcanl      : 6-hourly GFS NSST foundation temperature analysis (tref) and others like surface mask ( land), T1534 Gaussian grids (3072 x 1536)
+#       iceanl      : 6-hourly global sea ice analysis, grib (1/12 degree, 4320 x 2160) 
+#       grbmsk      : Surface land/water mask 
+#       sstclm      : SST climatology (monthly, RTG now)
+#       salclm      : Salinity climatology (Monthly, Levitus), at T1534 Gaussian grids. Interpolated from 1 degree lat/lon grids
+#                     And then set as 12 for Great Lake, 270 for Sal Lake and 500 for Dead Sea
+                                   
+# Output file :
+#       tf_grb1     : RTG-like Tf analysis with non-water grids filled as RTG, GRIB1
+#       tf_grb2     : RTG-like Tf analysis with non-water grids filled as RTG, GRIB2
+#
+# Author, 03/21/2019     - Xu Li
+#
+
+
+set -x
+
+cd $DATA
+
+msg="HAS BEGUN on `hostname`"
+postmsg "$jlogfile" "$msg"
+
+#
+# logical variable if fill land grids or not
+#
+  lputsi=.true.
+#
+# search radius
+#
+  dsearch=500.0
+#
+# monthly SST climatology (1/12 degree RTG is used here)
+#
+  SSTCLM=$FIXnstgrb/RTGSST.1982.2012.monthly.clim.grb
+#
+# Salinity climatology, half lat/lon degree
+#
+  SALCLM=$FIXnstgrb/global_salclm.t1534.3072.1536.nc
+
+  ln -s $SSTCLM    sstclm
+  ln -s $SALCLM    salclm
+#
+# input FV3GFS 6-hourlay surface analysis file at Gaussian grids, for T1534, 3072 x 1536
+#
+  sfcanl=/gpfs/dell1/nco/ops/com/gfs/prod/$CDUMP.${PDY}/${cyc}/$CDUMP.$cycle.sfcanl.nemsio
+  ln -fs $sfcanl sfcanl
+#
+# input Sea ice daily analysis, 1/12 lat/lon grids, 4320 x 2160
+#
+  iceanl=$DMPDIR/$CDATE/$CDUMP/$CDUMP.$cycle.seaice.5min.blend.grb
+  ln -fs $iceanl iceanl
+#
+# executable
+#
+ NSTRTG=$HOMEnstgrb/exec/nstgrb.x
+# processing 1/12 degree RTG-like file
+#
+#
+# Surface land/water mask 1/12 lat/lon grids, 4320 x 2160
+#
+  grbmsk=$FIXnstgrb/rtgssthr_ls_nas.twelfthdeg.dat
+  ln -fs $grbmsk grbmsk
+#
+# output RTG-like Tf analysis file (grib1)
+#
+ ln -fs rtgsstgrb0.083 tf_grb
+ ln -fs rtgsstgrb0.083_awips tf_grb_awips
+
+# Make namelist for CASE
+  cat << EOF > nstgrb_parm.input
+  &setup
+   catime='$CDATE',lputsi=$lputsi,dsearch=$dsearch,nx=4320,ny=2160
+/
+EOF
+
+ $NSTRTG < nstgrb_parm.input 1>res.log 2>res.err
+
+#
+# processing 1/2 degree RTG-like file
+#
+#
+# Surface land/water mask 1/2 lat/lon grids, 4320 x 2160
+#
+  grbmsk=$FIXnstgrb/rtgssthr_ls_nas.halfdeg.dat
+  ln -fs $grbmsk grbmsk
+#
+# output RTG-like Tf analysis file (grib1)
+#
+#
+ ln -fs rtgsstgrb0.5 tf_grb
+ ln -fs rtgsstgrb0.5_awips tf_grb_awips
+# Make namelist for CASE
+  cat << EOF > nstgrb_parm.input
+  &setup
+   catime='$CDATE',lputsi=$lputsi,dsearch=$dsearch,nx=720,ny=360
+/
+EOF
+
+$NSTRTG < nstgrb_parm.input 1>res_05.log 2>res_05.err
+
+#
+# processing 1/4 degree OISST-like file
+#
+#
+# Surface land/water mask 1/4 lat/lon grids, 4320 x 2160
+#
+  grbmsk=$FIXnstgrb/rtgssthr_ls_nas.quaterdeg.dat
+  ln -fs $grbmsk grbmsk
+#
+# output OISST-like Tf analysis file (grib1)
+#
+#
+ ln -fs sstoiqd.sst.grb tf_grb
+# Make namelist for CASE
+  cat << EOF > nstgrb_parm.input
+  &setup
+   catime='$CDATE',lputsi=$lputsi,dsearch=$dsearch,nx=1440,ny=720
+/
+EOF
+
+$NSTRTG < nstgrb_parm.input 1>res_025.log 2>res_025.err
+#
+#
+#
+$GRBINDEX rtgsstgrb0.083_awips  rtgsstgrb0.083_awips.index
+$GRBINDEX rtgsstgrb0.083        rtgsstgrb0.083.index
+$GRBINDEX rtgsstgrb0.5_awips    rtgsstgrb0.5_awips.index
+$GRBINDEX rtgsstgrb0.5          rtgsstgrb0.5.index
+
+$GRBINDEX sstoiqd.sst.grb       sstoiqd.sst.grb.index
+#####################################################################
+#
+#     PROCESS GLOBAL SEA SURFACE TEMPERATURE (SST) FOR AWIPS
+#
+#####################################################################
+
+$CNVGRIB -g12 -p40 rtgsstgrb0.083_awips  rtgsst_grb_0.083_awips.grib2
+$WGRIB2 rtgsst_grb_0.083_awips.grib2 -s > rtgsst_grb_0.083_awips.grib2.idx
+
+$CNVGRIB -g12 -p2 rtgsstgrb0.083_awips  rtgsst_grb_0.083_nomads.grib2
+$WGRIB2 rtgsst_grb_0.083_nomads.grib2 -s > rtgsst_grb_0.083_nomads.grib2.idx
+
+export parmcard=${PARMnstgrb}/grib2_awips_rtgssthr
+
+export FORT11="rtgsst_grb_0.083_awips.grib2"
+export FORT31=" "
+export FORT51="grib2.awips_rtgssthr_grb_0.083"
+
+$TOCGRIB2 < $parmcard
+
+######################################################
+# Convert to grib2 format for 0.5 degree RTG-like file
+######################################################
+$CNVGRIB -g12 -p40 rtgsstgrb0.5 rtgssthr_grb_0.5.grib2
+$CNVGRIB -g12 -p40 rtgsstgrb0.083 rtgssthr_grb_0.083.grib2
+$WGRIB2 rtgssthr_grb_0.5.grib2 -s > rtgssthr_grb_0.5.grib2.idx
+$WGRIB2 rtgssthr_grb_0.083.grib2 -s > rtgssthr_grb_0.083.grib2.idx
+##########################################################
+# Convert to grib2 format for 0.25 degree OISST-like file
+##########################################################
+$CNVGRIB -g12 -p40 sstoiqd.sst.grb sstoiqd.sst.grib2
+$WGRIB2 sstoiqd.sst.grib2 -s > sstoiqd.sst.grib2.idx
+
+##############################################
+# Get GEMPAK SST file for atl and pac areas 
+##############################################
+NAGRIB=${GEMEXE}/nagrib_nc
+#
+
+  cpyfil=gds
+  garea=dset
+  gbtbls=
+  maxgrd=4999
+  kxky=
+  grdarea=
+  proj=
+  output=T
+
+ GRIBIN=rtgsstgrb0.083_awips
+
+ GribList="atl pac"
+
+ for GRIB in $GribList; do
+
+  GEMGRD=rtgsst_${GRIB}_${PDY}00
+
+  if [ $GRIB = "atl" ] ; then
+    $COPYGB -g "255 0 840 540 50000 -100000 128 5000 -30000 083 083 0" -x $GRIBIN grib
+  else
+    # Assume Pacific region
+    $COPYGB -g "255 0 960 660 60000 -170000 128 5000 -90000 083 083 0" -x $GRIBIN grib
+  fi
+  export pgm="nagrib_nc F"
+  startmsg
+
+   $NAGRIB << EOF
+   GBFILE   = grib
+   INDXFL   =
+   GDOUTF   = $GEMGRD
+   PROJ     = $proj
+   GRDAREA  = $grdarea
+   KXKY     = $kxky
+   MAXGRD   = $maxgrd
+   CPYFIL   = $cpyfil
+   GAREA    = $garea
+   OUTPUT   = $output
+   GBTBLS   = $gbtbls
+   GBDIAG   =
+   PDSEXT   = $pdsext
+  l
+  r
+EOF
+  export err=$?;err_chk
+
+done
+
+if test "$SENDCOM" = 'YES'
+then
+  cp rtgsstgrb0.083_awips             $COMOUT/rtgssthr_grb_0.083_awips
+  cp rtgsstgrb0.083_awips.index       $COMOUT/rtgssthr_grb_0.083_awips.index
+  cp rtgsstgrb0.083                   $COMOUT/rtgssthr_grb_0.083
+  cp rtgsstgrb0.083.index             $COMOUT/rtgssthr_grb_0.083.index
+  cp rtgsstgrb0.5_awips               $COMOUT/rtgssthr_grb_0.5_awips
+  cp rtgsstgrb0.5_awips.index         $COMOUT/rtgssthr_grb_0.5_awips.index
+  cp rtgsstgrb0.5                     $COMOUT/rtgssthr_grb_0.5
+  cp rtgsstgrb0.5.index               $COMOUT/rtgssthr_grb_0.5.index
+
+  cp sstoiqd.sst.grb                  $COMOUT/sstoiqd.sst.grb
+
+  cp grib2.awips_rtgssthr_grb_0.083   $COMOUT/grib2.awips_rtgssthr_grb_0.083
+  cp rtgssthr_grb_0.5.grib2           $COMOUT/rtgssthr_grb_0.5.grib2
+  cp rtgssthr_grb_0.083.grib2         $COMOUT/rtgssthr_grb_0.083.grib2
+  cp rtgssthr_grb_0.5.grib2.idx       $COMOUT/rtgssthr_grb_0.5.grib2.idx
+  cp rtgssthr_grb_0.083.grib2.idx     $COMOUT/rtgssthr_grb_0.083.grib2.idx
+  cp rtgsst_grb_0.083_awips.grib2     $COMOUT/rtgssthr_grb_0.083_awips.grib2
+  cp rtgsst_grb_0.083_awips.grib2.idx $COMOUT/rtgssthr_grb_0.083_awips.grib2.idx
+  cp sstoiqd.sst.grib2                $COMOUT/sstoiqd.sst.grib2
+
+  cp rtgsst_atl_${PDY}00              $COMOUT/rtgsst_atl_${PDY}00
+  cp rtgsst_pac_${PDY}00              $COMOUT/rtgsst_pac_${PDY}00
+
+  if test "$SENDDBN" = 'YES'
+  then
+     $DBNROOT/bin/dbn_alert MODEL RTG_SST_grib  $job $COMOUT/rtgssthr_grb_0.5
+     $DBNROOT/bin/dbn_alert MODEL RTG_SST_gribi $job $COMOUT/rtgssthr_grb_0.5.index
+     $DBNROOT/bin/dbn_alert MODEL RTG_SST_grib  $job $COMOUT/rtgssthr_grb_0.083
+     $DBNROOT/bin/dbn_alert MODEL RTG_SST_gribi $job $COMOUT/rtgssthr_grb_0.083.index
+     $DBNROOT/bin/dbn_alert MODEL RTG_SST_grib  $job $COMOUT/rtgssthr_grb_0.083_awips
+     $DBNROOT/bin/dbn_alert MODEL RTG_SST_gribi $job $COMOUT/rtgssthr_grb_0.083_awips.index
+     $DBNROOT/bin/dbn_alert NTC_LOW $NET        $job $COMOUT/grib2.awips_rtgssthr_grb_0.083
+     $DBNROOT/bin/dbn_alert MODEL RTG_SST_grib  $job $COMOUT/rtgsst_atl_${PDY}00
+     $DBNROOT/bin/dbn_alert MODEL RTG_SST_grib  $job $COMOUT/rtgsst_pac_${PDY}00
+
+     $DBNROOT/bin/dbn_alert MODEL RTG_SST_grib  $job $COMOUT/sstoiqd.sst.grb
+
+     if [ $SENDDBN_GB2 = YES ]
+     then
+
+     $DBNROOT/bin/dbn_alert MODEL RTG_SST_grib_GB2      $job $COMOUT/rtgssthr_grb_0.5.grib2
+     $DBNROOT/bin/dbn_alert MODEL RTG_SST_grib_GB2      $job $COMOUT/rtgssthr_grb_0.083.grib2
+     $DBNROOT/bin/dbn_alert MODEL RTG_SST_grib_GB2      $job $COMOUT/rtgssthr_grb_0.083_awips.grib2
+     $DBNROOT/bin/dbn_alert MODEL RTG_SST_grib_GB2_WIDX $job $COMOUT/rtgssthr_grb_0.5.grib2.idx
+     $DBNROOT/bin/dbn_alert MODEL RTG_SST_grib_GB2_WIDX $job $COMOUT/rtgssthr_grb_0.083.grib2.idx
+     $DBNROOT/bin/dbn_alert MODEL RTG_SST_grib_GB2_WIDX $job $COMOUT/rtgssthr_grb_0.083_awips.grib2.idx
+
+     $DBNROOT/bin/dbn_alert MODEL RTG_SST_grib_GB2      $job $COMOUT/sstoiqd.sst.grib2
+     fi
+
+  else
+     echo "SENDDBN=$SENDDBN, files not posted to db_net."
+  fi
+
+fi
+
+set -x
+msg='ENDED NORMALLY.'
+postmsg "$jlogfile" "$msg"
+
+exit

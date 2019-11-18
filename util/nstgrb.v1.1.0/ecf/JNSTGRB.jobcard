@@ -1,0 +1,62 @@
+set -x
+
+export envir=test         # prod, para or test
+export job=jnstgrb
+export pid=$$
+export jobid=${job}.$pid
+export RUN_ENVIR=test
+
+. $MODULESHOME/init/ksh
+
+module purge
+module load ips/18.0.1.163
+module load impi/18.0.1
+
+module load NetCDF/4.5.0
+module load nemsio/2.2.3
+module load w3nco/2.0.6
+module load bacio/2.0.2
+
+module load prod_envir
+module load prod_util
+module load grib_util/1.0.6
+module load gempak/7.3.1
+
+module list
+
+export cyc=12
+export CDUMP=gdas
+
+export DATAROOT=/gpfs/dell1/nco/ops/tmpnwprd
+export DBNROOT=/iodprod_dell/dbnet_siphon
+
+#export jlogfile=${COMROOT}/logs/jlogfiles/jlogfile.${job}.${pid}
+
+
+if [ "$envir" = 'test' ] ; then
+  export NWROOT=/gpfs/dell2/emc/modeling/noscrub/Xu.Li
+# export COMROOT=/gpfs/dell2/ptmp/Xu.Li/nstgrb/com
+  export COMROOT=/gpfs/dell2/emc/modeling/noscrub/Xu.Li/com
+  export DATAROOT=/gpfs/dell2/ptmp/Xu.Li/nstgrb/work
+  export DBNROOT=${UTILROOT}/fakedbn
+
+  mkdir -p $COMROOT
+  mkdir -p $DATAROOT
+  mkdir -p $DBNROOT
+
+  export jlogfile=${COMROOT}/logs/${envir}/jlogfile.${job}.${pid}
+  mkdir -p ${COMROOT}/logs/${envir}
+fi
+
+export SENDECF=YES
+export SENDDBN=YES
+export SENDDBN_NTC=NO
+export SENDCOM=YES
+export SENDWEB=NO
+export KEEPDATA=YES
+export model=nstgrb
+
+modelver=v1.1.0
+
+export HOMEnstgrb=${NWROOT}/${model}.$modelver
+ksh ${HOMEnstgrb}/jobs/JNSTGRB
