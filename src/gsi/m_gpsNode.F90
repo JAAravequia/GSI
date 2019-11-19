@@ -66,8 +66,8 @@ module m_gpsNode
     procedure:: isvalid => obsNode_isvalid_
     procedure::  gettlddp => gettlddp_
 
-    procedure, nopass:: headerRead  => obsHeader_read_
-    procedure, nopass:: headerWrite => obsHeader_write_
+    procedure, nopass:: headerRead  => gpsHeader_read_
+    procedure, nopass:: headerWrite => gpsHeader_write_
     procedure:: init  => obsNode_init_
     procedure:: clean => obsNode_clean_
   end type gpsNode
@@ -136,7 +136,7 @@ function mytype()
   mytype="[gpsNode]"
 end function mytype
 
-subroutine obsHeader_read_(iunit,mobs,jread,istat)
+subroutine gpsHeader_read_(iunit,mobs,jread,istat)
   use gridmod, only: nsig
   implicit none
   integer(i_kind),intent(in ):: iunit
@@ -144,7 +144,7 @@ subroutine obsHeader_read_(iunit,mobs,jread,istat)
   integer(i_kind),intent(out):: jread
   integer(i_kind),intent(out):: istat
 
-  character(len=*),parameter:: myname_=myname//"::obsHeader_read"
+  character(len=*),parameter:: myname_=myname//"::gpsHeader_read"
   integer(i_kind):: msig
 _ENTRY_(myname_)
   
@@ -157,9 +157,9 @@ _ENTRY_(myname_)
   endif
 _EXIT_(myname_)
 return
-end subroutine obsHeader_read_
+end subroutine gpsHeader_read_
 
-subroutine obsHeader_write_(junit,mobs,jwrite,jstat)
+subroutine gpsHeader_write_(junit,mobs,jwrite,jstat)
   use gridmod, only: nsig
   implicit none
   integer(i_kind),intent(in ):: junit
@@ -167,12 +167,12 @@ subroutine obsHeader_write_(junit,mobs,jwrite,jstat)
   integer(i_kind),intent(in ):: jwrite
   integer(i_kind),intent(out):: jstat
   
-  character(len=*),parameter:: myname_=myname//"::obsHeader_write"
+  character(len=*),parameter:: myname_=myname//"::gpsHeader_write"
 _ENTRY_(myname_)
   write(junit,iostat=jstat) mobs,jwrite, nsig
 _EXIT_(myname_)
 return
-end subroutine obsHeader_write_
+end subroutine gpsHeader_write_
 
 subroutine obsNode_init_(aNode)
   use gridmod, only: nsig

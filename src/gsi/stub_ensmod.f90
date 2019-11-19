@@ -131,7 +131,8 @@ contains
      ! Reset the variable to a different memory location, so any original target
      ! won't be accessed anymore.
  
-     s2gi = sub2grid_info()
+     type(sub2grid_info):: s2gi_info
+     s2gi = s2gi_info
      return
   end subroutine destroy_sub2grid_info
 

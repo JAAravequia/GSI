@@ -74,8 +74,8 @@ module m_swcpNode
     procedure:: isvalid => obsNode_isvalid_
     procedure::  gettlddp => gettlddp_
 
-    procedure, nopass:: headerRead  => obsHeader_read_
-    procedure, nopass:: headerWrite => obsHeader_write_
+    procedure, nopass:: headerRead  => swcpHeader_read_
+    procedure, nopass:: headerWrite => swcpHeader_write_
     procedure:: init  => obsNode_init_
     procedure:: clean => obsNode_clean_
   end type swcpNode
@@ -144,7 +144,7 @@ function mytype()
   mytype="[swcpNode]"
 end function mytype
 
-subroutine obsHeader_read_(iunit,mobs,jread,istat)
+subroutine swcpHeader_read_(iunit,mobs,jread,istat)
   use gridmod, only: nsig
   implicit none
   integer(i_kind),intent(in ):: iunit
@@ -152,7 +152,7 @@ subroutine obsHeader_read_(iunit,mobs,jread,istat)
   integer(i_kind),intent(out):: jread
   integer(i_kind),intent(out):: istat
 
-  character(len=*),parameter:: myname_=myname//".obsHeader_read_"
+  character(len=*),parameter:: myname_=myname//".swcpHeader_read_"
   integer(i_kind):: msig
 _ENTRY_(myname_)
   
@@ -164,9 +164,9 @@ _ENTRY_(myname_)
   endif
 _EXIT_(myname_)
 return
-end subroutine obsHeader_read_
+end subroutine swcpHeader_read_
 
-subroutine obsHeader_write_(junit,mobs,jwrite,jstat)
+subroutine swcpHeader_write_(junit,mobs,jwrite,jstat)
   use gridmod, only: nsig
   implicit none
   integer(i_kind),intent(in ):: junit
@@ -174,12 +174,12 @@ subroutine obsHeader_write_(junit,mobs,jwrite,jstat)
   integer(i_kind),intent(in ):: jwrite
   integer(i_kind),intent(out):: jstat
   
-  character(len=*),parameter:: myname_=myname//".obsHeader_write_"
+  character(len=*),parameter:: myname_=myname//".swcpHeader_write_"
 _ENTRY_(myname_)
   write(junit,iostat=jstat) mobs,jwrite, nsig
 _EXIT_(myname_)
 return
-end subroutine obsHeader_write_
+end subroutine swcpHeader_write_
 
 subroutine obsNode_init_(aNode)
   use gridmod, only: nsig
