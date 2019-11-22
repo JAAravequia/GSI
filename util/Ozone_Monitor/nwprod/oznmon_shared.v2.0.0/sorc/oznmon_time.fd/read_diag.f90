@@ -27,11 +27,12 @@
 module read_diag
 
   ! USE:
-  use kinds, only: r_single,i_kind
+  use kinds, only: r_single,r_double,i_kind
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close, & 
                            nc_diag_read_get_dim, nc_diag_read_get_global_attr, &
                            nc_diag_read_get_var_names, &
-                           nc_diag_read_get_global_attr_names
+                           nc_diag_read_get_global_attr_names, &
+                           nc_diag_read_get_var
  
   use ncdr_vars, only:     nc_diag_read_check_var
 
@@ -66,7 +67,7 @@ module read_diag
     character(len=20) :: isis           ! sat and sensor type
     character(len=10) :: id             ! sat type
     character(len=10) :: obstype	! observation type
-    integer(i_kind)   :: jiter          ! outer loop counter
+    integer(i_kind)   :: jiter          ! outer loop counter (1 = ges, 3 = anl)
     integer(i_kind)   :: nlevs		! number of levels (layer amounts + total column) per obs
     integer(i_kind)   :: ianldate	! analysis date in YYYYMMDDHH 
     integer(i_kind)   :: iint		! mpi task number
@@ -129,15 +130,27 @@ module read_diag
 
   subroutine open_ozndiag(filename, ftin, istatus)
      character*500,   intent(in) :: filename
-     integer(i_kind), intent(inout) :: ftin
-     integer(i_kind), intent(out):: istatus
 
+     !---------------------------------------------------------------------------- 
+     !  Note:  This use of ftin here as inout is pretty sloppy.  Internally this
+     !  module should translate ftin (file id from time.f90) into the proper index
+     !  for use w/in this module.  Encapsulation is cleaner than modification of 
+     !  external variables.  I got this directly from the src/gsi read_diag.f90
+     !  but that doesn't make it right.  I'll clean this up when all is working.
+     !
+     integer(i_kind), intent(inout) :: ftin             
+     integer(i_kind), intent(out):: istatus
+     
      integer(i_kind) :: i,ncd_nobs
 
      write(6,*)'--> open_ozndiag'
+     write(6,*)'      filename, ftin = ', TRIM(filename), ftin
      istatus = -999
 
      if (netcdf) then
+
+        write(6,*) '  nopen_ncdiag, MAX_OPEN_NCDIAG = ', nopen_ncdiag, MAX_OPEN_NCDIAG
+        write(6,*) '  ncdiag_open_id = ', ncdiag_open_id
 
         if (nopen_ncdiag >= MAX_OPEN_NCDIAG) then
            write(6,*) 'OPEN_RADIAG:  ***ERROR*** Cannot open more than ', &
@@ -147,16 +160,19 @@ module read_diag
 
         if ( istatus /= 0 ) then
            call nc_diag_read_init(filename,ftin)
+           write(6,*) 'after nc_diag_read_init, ftin = ', ftin
            istatus=0
 
            do i = 1, MAX_OPEN_NCDIAG
+              write(6,*) 'top of 1..MAX_OPEN_NCDIAG loop, i = ', i
+              write(6,*) '  and ncdiag_open_id(i) = ', ncdiag_open_id(i)
 
               if (ncdiag_open_id(i) < 0) then
-
+                 
                  ncdiag_open_id(i) = ftin
+                 write(6,*) 'now i, ncdiag_open_id(i), ftin = ', i, ncdiag_open_id(i), ftin
                  ncdiag_open_status(i)%nc_read = .false.
-                 ncdiag_open_status(i)%cur_ob_idx = -9999
-                 ncdiag_open_status(i)%num_records = -9999
+                 ncdiag_open_status(i)%cur_ob_idx = 1 
 
                  if (allocated(ncdiag_open_status(i)%all_data_fix)) then
                     deallocate(ncdiag_open_status(i)%all_data_fix)
@@ -168,10 +184,15 @@ module read_diag
                     deallocate(ncdiag_open_status(i)%all_data_extra)
                  endif
 
+                 ncdiag_open_status(i)%num_records = nc_diag_read_get_dim(ftin,'nobs')
                  nopen_ncdiag = nopen_ncdiag + 1
-                 ncd_nobs = nc_diag_read_get_dim(ftin,'nobs')
-                 write(6,*) 'ncd_nobs = ', ncd_nobs
 
+                 write(6,*) 'ncdiag_open_status(i) dump, i     = ', i
+                 write(6,*) '                      %nc_read    = ', ncdiag_open_status(i)%nc_read
+                 write(6,*) '                      %cur_ob_idx = ', ncdiag_open_status(i)%cur_ob_idx
+                 write(6,*) '                      %num_records= ', ncdiag_open_status(i)%num_records
+                 write(6,*) 'nopen_ncdiag = ', nopen_ncdiag
+                 write(6,*) 'ncdiag_open_id(i) = ', ncdiag_open_id(i)
                  exit
 
               endif
@@ -282,27 +303,28 @@ module read_diag
     !--- variables
     
     integer,save :: nlevs_last = -1
-    integer :: ilev,k,ioff0
-    character(len=10):: id,obstype
-    character(len=20):: isis
-    integer(i_kind):: jiter,nlevs,ianldate,iint,ireal,iextra
-    integer(i_kind),dimension(:),allocatable :: iouse
-    real(r_single),dimension(:),allocatable  :: pob,grs,err
-    integer(i_kind)                          :: nchan_dim,nsdim
-    integer(i_kind)                          :: nchan_diag,idate
-    integer(i_kind)                          :: ncd_nobs
 
+    character(len=10):: sat,obstype
+    character(len=20):: isis
+    integer(i_kind):: jiter,nlevs
+    integer(i_kind),dimension(:),allocatable :: iouse
+    real(r_double),dimension(:),allocatable  :: pobs,gross,tnoise
+   
+    integer(i_kind)                          :: nsdim,k,idate
+    integer(i_kind),dimension(:),allocatable :: iuse_flag
+    integer(i_kind)                          :: analysis_use_flag,idx
     integer(i_kind)                          :: num_vars, var_name_mlen
     integer(i_kind)                          :: num_global_attrs, attr_name_mlen
     character(len=:),dimension(:), allocatable :: var_names,attr_names
-    logical                                  :: var_exists
+
  
     istatus = 0
+    write(6,*) ''; write(6,*) ''
+    write(6,*) '============================================='
     write(6,*) '--> read_ozndiag_header_nc, ftin = ', ftin
  
     call nc_diag_read_get_global_attr_names(ftin, num_global_attrs, &
                 attr_name_mlen, attr_names)
-    write(6,*) ' num_global_attrs = ', num_global_attrs
     do k=1,num_global_attrs
        write(6,*) 'k, attr_names = ', k, attr_names(k)
     end do 
@@ -314,43 +336,84 @@ module read_diag
        write(6,*) 'k, var_names = ', k, var_names(k)
     end do 
 
-    nchan_dim = nc_diag_read_get_dim(ftin,'nchans')
-    write(6,*) 'nchan_dim = ', nchan_dim 
-    header_fix%nchan = nchan_dim
-
-    ncd_nobs = nc_diag_read_get_dim(ftin,'nobs')
-    write(6,*) 'ncd_nobs = ', ncd_nobs
-
-
     call nc_diag_read_get_global_attr(ftin, "date_time", idate)            ;
-    write(6,*) 'date_time = ', idate
-    header_fix%ianldate = idate
-
     call nc_diag_read_get_global_attr(ftin, "Satellite_Sensor", isis)      ;
-    write(6,*) 'Satellite_Sensor = ', isis
-    header_fix%isis = isis
-
-    call nc_diag_read_get_global_attr(ftin, "Satellite", id) 
-    write(6,*) 'Satellite = ', id
-    header_fix%id = id
-
+    call nc_diag_read_get_global_attr(ftin, "Satellite", sat) 
     call nc_diag_read_get_global_attr(ftin, "Observation_type", obstype)   ;
-    write(6,*) 'Observation_type = ', obstype
-    header_fix%obstype = obstype
-
     call nc_diag_read_get_global_attr(ftin, "Number_of_state_vars", nsdim )
-    write(6,*) 'Number_of_state_vars = ', nsdim
 
+    call nc_diag_read_get_global_attr(ftin, "pobs", pobs )
+    call nc_diag_read_get_global_attr(ftin, "gross", gross )
+    call nc_diag_read_get_global_attr(ftin, "tnoise", tnoise )
 
+    write(6,*) 'tnoise = ', tnoise
 
-!   call nc_diag_header("date_time",ianldate )
-!   call nc_diag_header("Satellite_Sensor", isis)
-!   call nc_diag_header("Satellite", dplat(is))
-!   call nc_diag_header("Observation_type", obstype)
+    !-------------------------------------------------------------------
+    !  The Anaysis_Use_Flag in the netcdf file resides in the 
+    !  obs data rather than global (equivalent of binary header location.  So we
+    !  need read that in a different way.  Also, iuse assignment by level is not
+    !  possible, so the first value is good for all (or so I've been told).
 
+    idx = find_ncdiag_id(ftin)
+    if( ncdiag_open_status(idx)%num_records > 0 ) then 
+       allocate( iuse_flag( ncdiag_open_status(idx)%num_records ))
+       call nc_diag_read_get_var( ftin, 'Analysis_Use_Flag', iuse_flag )
+       print*, ' iuse_flag = ', iuse_flag
+
+       analysis_use_flag = iuse_flag(1)
+       deallocate( iuse_flag )
+    else
+       analysis_use_flag = -1
+    end if 
+    print*, 'anaysis_use_flag = ', analysis_use_flag
+
+    nlevs = SIZE( pobs )
+    write(6,*) 'nlevs = ', nlevs
+
+    header_fix%isis      = isis
+    header_fix%id        = sat
+    header_fix%obstype   = obstype
+!    header_fix%jiter     = jiter
+    header_fix%nlevs     = nlevs
+    header_fix%ianldate  = idate
+!    write(6,*) 'header_fix asignments complete'
+
+    !--- allocate if necessary
+
+    if( header_fix%nlevs /= nlevs_last )then
+      if( nlevs_last > 0 )then
+        deallocate( header_nlev )
+      endif
+      allocate( header_nlev( header_fix%nlevs ) )
+      nlevs_last = header_fix%nlevs
+    endif
+!    write(6,*) 'header_nlev allocated'
+
+    !--- read header (level part)
+    
+    do k=1,header_fix%nlevs
+       write(6,*) 'header_nlev load loop, iter = ', k
+       header_nlev(k)%pob = pobs(k)
+       write(6,*) 'header_nlev(k)%pob   = ', k, header_nlev(k)%pob
+
+       header_nlev(k)%grs = gross(k)
+       write(6,*) 'header_nlev(k)%grs   = ', k, header_nlev(k)%grs
+
+       header_nlev(k)%err = tnoise(k)
+       write(6,*) 'header_nlev(k)%err   = ', k, header_nlev(k)%err
+
+       header_nlev(k)%iouse = analysis_use_flag
+       write(6,*) 'header_nlev(k)%iouse = ', k, header_nlev(k)%iouse
+
+    end do
+!    write(6,*) 'end header_nlev assignments'
+    deallocate( pobs,gross,tnoise )
 
 
     write(6,*) '<-- read_ozndiag_header_nc'
+    write(6,*) ''
+    write(6,*) '============================================='
+    write(6,*) ''; write(6,*) ''
 
   end subroutine read_ozndiag_header_nc
 
@@ -407,6 +470,7 @@ module read_diag
     print*,'header_fix%iint   = ', header_fix%iint
     print*,'header_fix%ireal  = ', header_fix%ireal
     print*,'header_fix%iextra = ', header_fix%iextra
+    print*,'header_fix%jiter  = ', header_fix%jiter
 
     !--- check header
     
@@ -445,6 +509,10 @@ module read_diag
        header_nlev(k)%grs = grs(k)
        header_nlev(k)%err = err(k)
        header_nlev(k)%iouse = iouse(k)
+       write(6,*) 'header_nlev(k)%pob   = ', k, header_nlev(k)%pob
+       write(6,*) 'header_nlev(k)%grs   = ', k, header_nlev(k)%grs
+       write(6,*) 'header_nlev(k)%err   = ', k, header_nlev(k)%err
+       write(6,*) 'header_nlev(k)%iouse = ', k, header_nlev(k)%iouse
     end do
     deallocate (pob,grs,err,iouse)
 
@@ -476,17 +544,72 @@ module read_diag
     integer                    ,intent(out) :: iflag
     integer(i_kind)            ,intent(out) :: ntobs
     integer(i_kind)            ,pointer     :: data_mpi(:)
-    
-    print*, '===> read_ozndiag_data'
+   
+ 
+    write(6,*) '===> read_ozndiag_data'
+    write(6,*) '  netcdf = ', netcdf
 
-!    if ( netcdf ) then
-!       call read_ozndiag_data_nc( ftin, header_fix, data_fix, data_nlev, data_extra, ntobs, iflag )
-!    else
+    if ( netcdf ) then
+       call read_ozndiag_data_nc( ftin, header_fix, data_fix, data_nlev, data_extra, ntobs, iflag )
+    else
        call read_ozndiag_data_bin( ftin, header_fix, data_fix, data_nlev, data_extra, ntobs, iflag )
-!    fi
+    end if 
+
 
     print*, '<=== read_ozndiag_data'
   end subroutine read_ozndiag_data
+
+
+
+  subroutine read_ozndiag_data_nc( ftin, header_fix, data_fix, data_nlev, data_extra, ntobs, iflag )
+
+    !--- interface
+
+    integer                    ,intent(in)  :: ftin
+    type(diag_header_fix_list ),intent(in)  :: header_fix
+
+    !--- NOTE:  These pointers are used to build an array numbering
+    !           iobs.  So they should be allocated every time this
+    !           routine is called and should not be deallocated
+    !           here.  The time.f90 could deallocate them at the
+    !           very end of the program, I think.
+    type(diag_data_fix_list),   pointer     :: data_fix(:)
+    type(diag_data_nlev_list)  ,pointer     :: data_nlev(:,:)
+    type(diag_data_extra_list) ,pointer     :: data_extra(:,:)
+    integer                    ,intent(out) :: iflag
+    integer(i_kind)            ,intent(out) :: ntobs
+    integer(i_kind)            ,pointer     :: data_mpi(:)
+    integer(i_kind)                         :: id
+    integer(i_kind),allocatable             :: Use_Flag(:)
+
+    print*, '===> read_ozndiag_data_nc'
+    print*, '      ftin = ', ftin
+    iflag = 0
+    ntobs = 0
+
+    id = find_ncdiag_id(ftin)
+    print*, ' id = ', id
+    write(6,*) 'ncdiag_open_status(id) dump       = '
+    write(6,*) '                      %nc_read    = ', ncdiag_open_status(id)%nc_read
+    write(6,*) '                      %cur_ob_idx = ', ncdiag_open_status(id)%cur_ob_idx
+    write(6,*) '                      %num_records= ', ncdiag_open_status(id)%num_records
+    write(6,*) 'ncdiag_open_id(id) = ', ncdiag_open_id(id)
+
+    if( ncdiag_open_status(id)%cur_ob_idx <= ncdiag_open_status(id)%num_records) then 
+
+       allocate( Use_Flag( ncdiag_open_status(id)%num_records ))
+       call nc_diag_read_get_var( ftin, 'Analysis_Use_Flag', Use_Flag )
+       print*, ' Use_Flag = ', Use_Flag
+       deallocate( Use_Flag )
+ 
+       ncdiag_open_status(id)%cur_ob_idx = ncdiag_open_status(id)%cur_ob_idx + 1
+       print*, '<=== read_ozndiag_data_nc'
+    else
+       iflag = -1               ! signal we're done
+    end if
+
+  end subroutine read_ozndiag_data_nc
+
 
 
   subroutine read_ozndiag_data_bin( ftin, header_fix, data_fix, data_nlev, data_extra, ntobs, iflag )

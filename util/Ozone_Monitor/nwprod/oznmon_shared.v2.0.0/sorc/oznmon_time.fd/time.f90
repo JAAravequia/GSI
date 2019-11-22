@@ -187,10 +187,12 @@ program main
      var_list=anl_vars
   end if
 
-
-  call create_ctl_oz(ntype,ptype, var_list,n_levs,iyy,imm,idd,ihh,idhh,&
-       incr,ctl_file,lunctl,rmiss,satname,satype,dplat,nregion,&
-       region,rlonmin,rlonmax,rlatmin,rlatmax,prs_nlev,use(1,1),error(1,1))
+!-----------------------------------------------------
+!  create GrADS contol file
+!
+!  call create_ctl_oz(ntype,ptype, var_list,n_levs,iyy,imm,idd,ihh,idhh,&
+!       incr,ctl_file,lunctl,rmiss,satname,satype,dplat,nregion,&
+!       region,rlonmin,rlonmax,rlatmin,rlatmax,prs_nlev,use(1,1),error(1,1))
 
 
 ! Loop to read entries in diagnostic file
