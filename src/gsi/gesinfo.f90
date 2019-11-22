@@ -247,7 +247,7 @@ subroutine gesinfo
            idsl=gfshead%idsl,   ncldt=gfshead%ncldt, iret=iret2)
 
         ! FV3GFS write component does not include JCAP, infer from DIMY-2
-        if (gfshead%jcap<0) gfshead%jcap=gfshead%latb-2
+        !if (gfshead%jcap<0) gfshead%jcap=gfshead%latb-2
 
         if ( iret2 /= 0 .or. TRIM(filetype) /= 'NEMSIO' ) then
            write(6,*)' GESINFO:  UNKNOWN FORMAT FOR GFSATM file = ', &
