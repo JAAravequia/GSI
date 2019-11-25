@@ -80,13 +80,16 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
   real(r_kind),parameter:: r6= 6.0_r_kind
   real(r_kind),parameter:: r360 = 360.0_r_kind
 
+! thresold for VEIA data 
+  real(r_kind),parameter:: qcthresd=4800.0_r_kind
+
 ! Declare local variables
   character(len=12) :: myname
-! set c_station_id and set station id to "veia100t" for now
 
   character(len=8) :: c_prvstg='veiacams'
   character(len=8) :: c_sprvstg='veiacams'
   character(len=25):: filename
+! initializing c_station_id 
   character(len=8) :: c_station_id='VEIA1000'
 
   integer(i_kind) :: nreal,i,lunin
@@ -124,10 +127,7 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
   ! hardwired kx for webcams
   integer(i_kind) :: kx=999_i_kind   
 
-!-----------------------------------------------------
-! RY: 10/7/2019: seems in Theia, this following does not work.  Don't know why.
-!------
-   equivalence(rstation_id, c_station_id)
+  equivalence(rstation_id, c_station_id)
 
   equivalence(r_prvstg,c_prvstg)
   equivalence(r_sprvstg,c_sprvstg)
@@ -197,22 +197,46 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
   rewind(lunin)
   loop_readobs: do icount=1,maxobs
       read(lunin,90,end=101) filename,nid,rlat4,rlon4,stnelev4,y4m2d2,h2m2s2,obvalmi,sunangle,veiaqc
-90 format(A25,I4,5X,F7.4,4X,F9.4,3X,I4,3X,I8,3X,I6,5X,F5.2,8x,I2,3x,I3)
+90 format(A25,I4,5X,F7.4,4X,F9.4,3X,I4,3X,I8,3X,I6,5X,F5.2,7x,I3,3x,I3)
 !--------------------------------------------------------------------
 ! Mike M. viscams provider the following information:
+!
 !  1) if the sunangle>105,i.e.,the sun is 15 degree below the horizontal level, the observation quality is not good.
 !  2) veiaqc is a metrics of the quality, from 1-100
 !  3) if visibility value > 5 miles, just assign it as 5 miles
-!09/26/2019---for current stage, use the following as dening criteron 
-! !!!! IMPORTANT :  wrong:  usage should not be set here
 !--------------------------------------------------------------------
-!      usage=1._r_kind
-!      if (sunangle>105 .and. veiaqc<50 .and. obvalmi>4.5) usage=-130._r_kind
-!      write(6,*)myname,': sunangle, veiaqc, usage',sunangle,veiaqc, usage
+!  setup first part of the QC here
+!..............................
+!     1. if (sunangle>=105 .and. veiaqc<50) not use the data 
+!     
 !--------------------------------------------------------------------
-!      write(c_station_id,'(I8)') nid
-!--------------------------------------------------------------------
+      if (sunangle>=105 .and. veiaqc<50) cycle loop_readobs
+      !   date arrary
+      ivisdate(1)=y4m2d2/10000            ! four-digit year
+      ivisdate(2)=mod(y4m2d2,10000)/100   ! two-digit months
+      ivisdate(3)=mod(y4m2d2,100)         ! two-digit day
+      ivisdate(4)=h2m2s2/10000            ! two-digit hour
+      ivisdate(5)=mod(h2m2s2,10000)/100   ! two-digit minute
 
+!     write (6,*) myname,'y4m2d2*10000=', y4m2d2*100,  ivisdate(4)
+!     write (6,*) myname,'idate=', idate,t4dv,tdiff
+
+      call w3fs21(ivisdate, nmind)
+      rminobs=real(nmind,r_double)
+      t4dv =(rminobs-real(iwinbgn,r_kind))*r60inv ! wrt the beginning of 4dvar window (6hr window length)
+      tdiff=(rminobs-gstime)*r60inv   ! note: both rminobs and gstime is w.r.t.  a reference time
+                                      ! so, tdiff is the departure of
+                                      ! observation time from
+                                      ! the analysis time
+!
+!      write (6,*) myname, 'date=',
+!      ivisdate(1),ivisdate(2),ivisdate(3),ivisdate(4),ivisdate(5)
+!      write (6,*) myname,'usagerj rminobs,iwindbgn,gstime', rminobs,
+!      real(iwinbgn,r_kind),gstime
+!      write (6,*) myname,'4 get_usagerj t4dv,tdiff', t4dv,tdiff
+
+! not consider the data that falls out the analysis time window
+       if (abs(tdiff)>ctwind(nc).or.(abs(tdiff)>twind)) cycle loop_readobs
        rnid=float(nid)
        rrnid=dble(rnid)
        write(c_station_id,'(f8.4)') rrnid
@@ -223,9 +247,7 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 !............................................................
       obval=obvalmi*1600.
       stnelev=real(stnelev4)
-      iout=iout+1
-
-!RY:  what is the function of those code
+!
 !-------------------------------------------
        if (kx /= 999) then
           linvalidkx=.true.
@@ -249,11 +271,11 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
       if (dlon_earth_deg == r360) dlon_earth_deg=dlon_earth_deg-r360
       if (dlon_earth_deg < zero)  dlon_earth_deg=dlon_earth_deg+r360
 
-!!!!      write(6,*)myname,'dlon_earth_deg dlat_earth_deg', dlon_earth_deg,dlat_earth_deg
+!     write(6,*)myname,'dlon_earth_deg dlat_earth_deg', dlon_earth_deg,dlat_earth_deg
       dlon_earth=dlon_earth_deg*deg2rad
       dlat_earth=dlat_earth_deg*deg2rad
-      outside=.false. !need this on account of global gsi
 
+      outside=.false. !need this on account of global gsi
       if(regional)then
          call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)    ! convert to rotated coordinate
          if(outside) n_outside=n_outside+1
@@ -263,28 +285,14 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
          call grdcrd1(dlat,rlats,nlat,1)
          call grdcrd1(dlon,rlons,nlon,1)
       endif
-         write(6,*)myname,': OUTSIDE ', outside 
+         write(6,*)myname,': OUTSIDE, m_outside', outside ,n_outside
       if (linvalidkx .or. linvalidob .or. outside)  cycle loop_readobs
 
-      !   date arrary
-      ivisdate(1)=y4m2d2/10000            ! four-digit year
-      ivisdate(2)=mod(y4m2d2,10000)/100   ! two-digit months
-      ivisdate(3)=mod(y4m2d2,100)         ! two-digit day
-      ivisdate(4)=h2m2s2/10000            ! two-digit hour
-      ivisdate(5)=mod(h2m2s2,10000)/100   ! two-digit minute
+! count the valid observation
+!--------------------------------
+      iout=iout+1
 
-      call w3fs21(ivisdate, nmind)
-      rminobs=real(nmind,r_double)
-      t4dv =(rminobs-real(iwinbgn,r_kind))*r60inv ! wrt the beginning of 4dvar window (6hr window length)
-      tdiff=(rminobs-gstime)*r60inv   ! note: both rminobs and gstime is w.r.t.  a reference time
-                                      ! so, tdiff is the departure of observation time from
-                                      ! the analysis time
-!      write (6,*) myname, 'date=', ivisdate(1),ivisdate(2),ivisdate(3),ivisdate(4),ivisdate(5)
-!      write (6,*) myname,'usagerj rminobs,iwindbgn,gstime', rminobs, real(iwinbgn,r_kind),gstime
-!      write (6,*) myname,'4 get_usagerj t4dv,tdiff', t4dv,tdiff  
-
-
-! Set usage variable    ! need to check late
+! Set usage variable    ! RY:  what this means?
       usage = zero
       if(icuse(nc) <= 0)usage=100._r_kind
 
@@ -296,8 +304,6 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 
       idate= y4m2d2*100_i_kind + ivisdate(4)
  
-!     write (6,*) myname,'y4m2d2*10000=', y4m2d2*100,  ivisdate(4)
-!     write (6,*) myname,'idate=', idate,t4dv,tdiff
 
       call get_usagerj(kx,obstype,c_station_id,c_prvstg,c_sprvstg, &
                          dlon_earth,dlat_earth,idate,tdiff, udbl,vdbl,usage) 
@@ -329,26 +335,30 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 !  real(r_kind), parameter:: bmiss = 1.0e9_r_kind !#endif
 ! in setupvis: missing data is checked and assigned not use in muse
 ! visthres is much smaller than bmiss
-! i.e: this holds: (obval> zero .and. obval<=vis_thres)
+! do NLTR when this formula holds: (obval> zero .and. obval<=vis_thres)
 !......................................................................
-      if(obval < zero) then
-        cdata_all(4,iout)=bmiss
-      elseif(obval> r0_1_bmiss)then
-        cdata_all(4,iout)=obval
-      elseif(obval> vis_thres .and. obval<= r0_1_bmiss)then
-        obval=vis_thres
-      else
-        obval=max(obval,one)
-      endif
-      if(obval> zero .and. obval<=vis_thres)then
+!RY:  add the second part of QC:
+!   QC one 10/18/2019:
+!   if visibility > 4.8 miles,i.e,vis >7680.00 meter,
+!   treat it as a missing record, but keep the inventory in the obs.listing file
+!-------------------------------------------------------------------------------
+!RY:  using strict QC:
+!   10/24/2019:
+!   if visibility > 3 miles (IFR),i.e,vis >=4800.00 meter,
+!   treat it as a missing record, but keep the inventory in the obs.listing file
+!-------------------------------------------------------------------------------
+
+      if(obval < zero)   cdata_all(4,iout)=bmiss
+      if(obval >= qcthresd) cdata_all(4,iout)=bmiss
+      if(obval == zero)  obval=max(obval,one)
+      if(obval> zero .and. obval<= qcthresd) then
         tempvis=obval
         call nltransf_forward(tempvis,visout,pvis,scale_cv)
         cdata_all(4,iout) = visout
       endif
+!----------------------------------------------------
 
       cdata_all(5,iout)=rstation_id             ! station id
-
-! RY     cdata_all(5,iout)=rrnid                   ! station id
       cdata_all(6,iout)=t4dv                    ! time
       cdata_all(7,iout)=nc                      ! type
       cdata_all(8,iout)=visoe*three             ! max error
@@ -383,10 +393,6 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
   call count_obs(ndata,nreal,ilat,ilon,cdata_all,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon,ndata
   write(lunout) cdata_out
-!******************************************
-!  ONLY FOR TEST 
-!  write(6,*)  'read_viscams: WANT TO check the header:', obstype,sis,nreal,nchanl,ilat,ilon,ndata
-!  write(6,*)  'read_viscams: WANT TO print all data???', cdata_out
 
   deallocate(cdata_all)
   deallocate(cdata_out)
