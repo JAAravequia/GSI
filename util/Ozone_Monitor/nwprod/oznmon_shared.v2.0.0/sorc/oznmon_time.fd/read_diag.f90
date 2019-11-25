@@ -321,6 +321,7 @@ module read_diag
     istatus = 0
     write(6,*) ''; write(6,*) ''
     write(6,*) '============================================='
+    write(6,*) '============================================='
     write(6,*) '--> read_ozndiag_header_nc, ftin = ', ftin
  
     call nc_diag_read_get_global_attr_names(ftin, num_global_attrs, &
@@ -365,7 +366,7 @@ module read_diag
     else
        analysis_use_flag = -1
     end if 
-    print*, 'anaysis_use_flag = ', analysis_use_flag
+!    print*, 'anaysis_use_flag = ', analysis_use_flag
 
     nlevs = SIZE( pobs )
     write(6,*) 'nlevs = ', nlevs
@@ -412,6 +413,7 @@ module read_diag
 
     write(6,*) '<-- read_ozndiag_header_nc'
     write(6,*) ''
+    write(6,*) '============================================='
     write(6,*) '============================================='
     write(6,*) ''; write(6,*) ''
 
@@ -543,7 +545,6 @@ module read_diag
     type(diag_data_extra_list) ,pointer     :: data_extra(:,:)
     integer                    ,intent(out) :: iflag
     integer(i_kind)            ,intent(out) :: ntobs
-    integer(i_kind)            ,pointer     :: data_mpi(:)
    
  
     write(6,*) '===> read_ozndiag_data'
@@ -578,35 +579,147 @@ module read_diag
     type(diag_data_extra_list) ,pointer     :: data_extra(:,:)
     integer                    ,intent(out) :: iflag
     integer(i_kind)            ,intent(out) :: ntobs
-    integer(i_kind)            ,pointer     :: data_mpi(:)
-    integer(i_kind)                         :: id
+    integer(i_kind)                         :: id,ii
     integer(i_kind),allocatable             :: Use_Flag(:)
 
+    real(r_single),allocatable              :: lat(:)            ! latitude (deg)
+    real(r_single),allocatable              :: lon(:)            ! longitude (deg)
+    real(r_single),allocatable              :: obstime(:)        ! observation time relative to analysis
+
+    real(r_single),allocatable              :: ozobs(:)          ! observation
+    real(r_single),allocatable              :: ozone_inv(:)      ! obs-forecast adjusted
+    real(r_single),allocatable              :: varinv(:)         ! inverse obs error
+    real(r_single),allocatable              :: sza(:)            ! solar zenith angle   
+    real(r_single),allocatable              :: fovn(:)           ! scan position (fielf of view)
+    real(r_single),allocatable              :: toqf(:)           ! row anomaly index
+
+    write(6,*) ''
+    write(6,*) ''
+    write(6,*) '============================================='
+    write(6,*) '============================================='
     print*, '===> read_ozndiag_data_nc'
     print*, '      ftin = ', ftin
+    print*, '      header_fix%nlevs=',header_fix%nlevs
     iflag = 0
     ntobs = 0
 
     id = find_ncdiag_id(ftin)
-    print*, ' id = ', id
-    write(6,*) 'ncdiag_open_status(id) dump       = '
-    write(6,*) '                      %nc_read    = ', ncdiag_open_status(id)%nc_read
-    write(6,*) '                      %cur_ob_idx = ', ncdiag_open_status(id)%cur_ob_idx
-    write(6,*) '                      %num_records= ', ncdiag_open_status(id)%num_records
-    write(6,*) 'ncdiag_open_id(id) = ', ncdiag_open_id(id)
+    ntobs = ncdiag_open_status(id)%num_records
 
-    if( ncdiag_open_status(id)%cur_ob_idx <= ncdiag_open_status(id)%num_records) then 
+    !------------------------------------
+    !  allocate the returned structures
+    !
+    allocate( data_fix( ntobs ) )
+    allocate( data_nlev( header_fix%nlevs,ntobs ) )
 
-       allocate( Use_Flag( ncdiag_open_status(id)%num_records ))
-       call nc_diag_read_get_var( ftin, 'Analysis_Use_Flag', Use_Flag )
-       print*, ' Use_Flag = ', Use_Flag
-       deallocate( Use_Flag )
+      
+    !---------------------------------
+    ! load data_fix structure
+    !
+    allocate( lat(ntobs) ) 
+    allocate( lon(ntobs) )
+    allocate( obstime(ntobs) ) 
+    call nc_diag_read_get_var( ftin, 'Latitude', lat )
+    call nc_diag_read_get_var( ftin, 'Longitude', lon )
+    call nc_diag_read_get_var( ftin, 'Time', obstime )
+
+    do ii=1,ntobs
+       data_fix(ii)%lat     = lat(ii)
+       print*, 'data_fix(ii)%lat = ', ii, data_fix(ii)%lat
+       data_fix(ii)%lon     = lon(ii)
+       print*, 'data_fix(ii)%lon = ', ii, data_fix(ii)%lon
+       data_fix(ii)%obstime = obstime(ii)
+       print*, 'data_fix(ii)%obstime = ', ii, data_fix(ii)%obstime
+    end do
  
-       ncdiag_open_status(id)%cur_ob_idx = ncdiag_open_status(id)%cur_ob_idx + 1
-       print*, '<=== read_ozndiag_data_nc'
-    else
-       iflag = -1               ! signal we're done
-    end if
+    deallocate( lat, lon, obstime )
+
+
+    !---------------------------------
+    ! load data_nlev structure
+    !
+    allocate( data_nlev( header_fix%nlevs,ntobs ) )
+
+!!-------------------------------------------------
+!!  structure of data_nlev
+!!
+!!  type diag_data_nlev_list
+!!    sequence
+!!    real(r_single) :: ozobs              ! ozone (obs)
+!!    real(r_single) :: ozone_inv          ! obs-ges
+!!    real(r_single) :: varinv             ! inverse obs error **2
+!!    real(r_single) :: sza                ! solar zenith angle
+!!    real(r_single) :: fovn               ! scan position (field of view)
+!!    real(r_single) :: toqf               ! omi row anomaly index or MLS o3mr precision
+!!  end type diag_data_nlev_list
+
+!    allocate( ozobs(ntobs) ) 
+!    call nc_diag_read_get_var( ftin, 'Observation', ozobs )
+!    write(6,*) '  ozobs = ', ozobs
+!    deallocate( ozobs )
+
+    allocate( ozone_inv(ntobs) ) 
+    call nc_diag_read_get_var( ftin, 'Obs_Minus_Forecast_adjusted', ozone_inv )
+    write(6,*) '  ozone_inv = ', varinv
+    deallocate( ozone_inv )
+
+    allocate( varinv(ntobs) ) 
+    call nc_diag_read_get_var( ftin, 'Inverse_Observation_Error', varinv )
+    write(6,*) '  varinv = ', varinv
+    deallocate( varinv )
+
+!    allocate( sza(ntobs) ) 
+!    call nc_diag_read_get_var( ftin, 'Solar_Zenith_Angle', sza )
+!    write(6,*) '  sza = ', sza
+!    deallocate( sza )
+
+!    call nc_diag_read_get_var( ftin, 'Scan_Position', fovn )
+!    call nc_diag_read_get_var( ftin, 'Row_Anomaly_Index', toqf )
+
+
+!!------------------------------------------------
+!!   Contents of NetCDF file:
+!!
+!!        float Reference_Pressure(nobs) ;
+!!        int Analysis_Use_Flag(nobs) ;
+!!        float Observation(nobs) ;
+!!        float Inverse_Observation_Error(nobs) ;
+!!        float Obs_Minus_Forecast_adjusted(nobs) ;
+!!        float Obs_Minus_Forecast_unadjusted(nobs) ;
+!!        float Solar_Zenith_Angle(nobs) ;
+!!        float Scan_Position(nobs) ;
+!!        float Row_Anomaly_Index(nobs) ;
+
+
+!    do j=1,ntobs
+!       do i=1,header_fix%nlevs
+!          data_nlev(i,j)%ozobs  = tmp_nlev(1,i,j)
+!          data_nlev(i,j)%ozone_inv= tmp_nlev(2,i,j)
+!          data_nlev(i,j)%varinv = tmp_nlev(3,i,j)
+!          data_nlev(i,j)%sza    = tmp_nlev(4,i,j)
+!          data_nlev(i,j)%fovn   = tmp_nlev(5,i,j)
+!          data_nlev(i,j)%toqf   = tmp_nlev(6,i,j)
+!       end do
+!    end do
+
+ 
+
+    iflag = -1               ! signal we're done  
+                             ! note that the binary read loops over each obs and
+                             ! is called in a loop by time.f90.  The netcdf read
+                             ! can process each field for all obs so this
+                             ! routing can grab all the obs data in a single go
+                             ! load it into the structures and return it to
+                             ! time.f90.  For now I'll just hack the iflag to
+                             ! signal we're done, but time.f90 should change to
+                             ! not call this in a loop, but just once.
+
+
+    write(6,*) ''
+    print*, '<=== read_ozndiag_data_nc'
+    write(6,*) '============================================='
+    write(6,*) '============================================='
+    write(6,*) ''; write(6,*) ''
 
   end subroutine read_ozndiag_data_nc
 
@@ -654,13 +767,13 @@ module read_diag
         deallocate( data_mpi )
       endif
 
-      print*, 'attempt to allocate array data_fix, data_nlev, data_mpi'
+!      print*, 'attempt to allocate array data_fix, data_nlev, data_mpi'
       allocate( data_fix( ntobs ) )
-      print*, 'data_fix( ntobs ) allocated', ntobs
+!      print*, 'data_fix( ntobs ) allocated', ntobs
       allocate( data_mpi( ntobs ) )
-      print*, 'data_mpi( ntobs ) allocated', ntobs
+!      print*, 'data_mpi( ntobs ) allocated', ntobs
       allocate( data_nlev( header_fix%nlevs,ntobs ) )
-      print*, 'data_nlev( header_fix%nlevs, ntobs ) allocated', header_fix%nlevs, ntobs
+!      print*, 'data_nlev( header_fix%nlevs, ntobs ) allocated', header_fix%nlevs, ntobs
       nlevs_last = header_fix%nlevs
     endif
 
@@ -706,17 +819,24 @@ module read_diag
 
     do j=1,ntobs
        data_fix(j)%lat     = tmp_fix(1,j)
+       print*, 'data_fix(j)%lat = ', j, data_fix(j)%lat
        data_fix(j)%lon     = tmp_fix(2,j)
+       print*, 'data_fix(j)%lon = ', j, data_fix(j)%lon
        data_fix(j)%obstime = tmp_fix(3,j)
+       print*, 'data_fix(j)%obstime = ', j, data_fix(j)%obstime
     end do
     deallocate(tmp_fix)
 
     do j=1,ntobs
        do i=1,header_fix%nlevs
           data_nlev(i,j)%ozobs  = tmp_nlev(1,i,j)
+!          write(6,*)' data_nlev(i,j)%ozobs = ', i, j, data_nlev(i,j)%ozobs
           data_nlev(i,j)%ozone_inv= tmp_nlev(2,i,j)
+          write(6,*)' data_nlev(i,j)%ozone_inv = ', i, j, data_nlev(i,j)%ozone_inv
           data_nlev(i,j)%varinv = tmp_nlev(3,i,j)
+          write(6,*)' data_nlev(i,j)%varinv = ', i, j, data_nlev(i,j)%varinv
           data_nlev(i,j)%sza    = tmp_nlev(4,i,j)
+!          write(6,*)' data_nlev(i,j)%sza = ', i, j, data_nlev(i,j)%sza
           data_nlev(i,j)%fovn   = tmp_nlev(5,i,j)
           data_nlev(i,j)%toqf   = tmp_nlev(6,i,j)
        end do

@@ -103,15 +103,15 @@ program main
 
   call set_netcdf_read( netcdf )
   call open_ozndiag( diag_oz, lndiag, istatus )
-  write(6,*) 'istatus from open_ozndiag = ', istatus
+!  write(6,*) 'istatus from open_ozndiag = ', istatus
 
 
 ! File exists.  Read header
 
   write(6,*)'call read_ozndiag_header'
   call read_ozndiag_header( lndiag, header_fix, header_nlev, new_hdr, istatus )
-  write(6,*)'after read_ozndiag_header, new_hdr = ', new_hdr 
-  write(6,*) 'istatus from read_ozndiag_header = ', istatus
+!  write(6,*)'after read_ozndiag_header, new_hdr = ', new_hdr 
+!  write(6,*) 'istatus from read_ozndiag_header = ', istatus
   
 !  call close_ozndiag( diag_oz, lndiag )
 !  goto 950
@@ -129,10 +129,10 @@ program main
     n_levs = mls3_levs
   end if
 
-  write(6,*)'satype,dplat,n_levs=',satype,' ',dplat,n_levs
+!  write(6,*)'satype,dplat,n_levs=',satype,' ',dplat,n_levs
 
   string = trim(satype)//'_'//trim(dplat)
-  write(6,*)'string,satname=',string,' ',satname
+!  write(6,*)'string,satname=',string,' ',satname
   if ( trim(string) /= trim(satname) ) then
      write(6,*)'***ERROR*** inconsistent instrument types'
      write(6,*)'  satname,string  =',satname,' ',string
@@ -141,8 +141,8 @@ program main
 
 
 ! Allocate arrays to hold observational information
-  write(6,*)' '
-  write(6,*)'allocate arrays'
+!  write(6,*)' '
+!  write(6,*)'allocate arrays'
   allocate ( prs_nlev(n_levs))
   allocate (omg_cor(n_levs,mregion,2), &
        cnt(n_levs,mregion), & 
@@ -175,7 +175,7 @@ program main
         
 
 ! Create GrADS control file
-  write(6,*)'call create_ctl_oz'
+!  write(6,*)'call create_ctl_oz'
 
 ! ----------------------------------------------------
 ! Set the var_list list to use either the ges or anl 
