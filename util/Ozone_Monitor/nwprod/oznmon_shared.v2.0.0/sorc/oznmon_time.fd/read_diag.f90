@@ -285,7 +285,19 @@ module read_diag
     else
        call read_ozndiag_header_bin( ftin, header_fix, header_nlev, new_hdr, istatus )
     endif
- 
+
+    print*, 'ftin                = ',        ftin
+    print*, 'header_fix%isis     = ',        header_fix%isis
+    print*, 'header_fix%id       = ',        header_fix%id
+    print*, 'header_fix%obstype  = ',        header_fix%obstype
+    print*, 'header_fix%jiter    = ',        header_fix%jiter  
+    print*, 'header_fix%nlevs    = ',        header_fix%nlevs  
+    print*, 'header_fix%ianldate = ',        header_fix%ianldate
+    print*, 'header_fix%iint     = ',        header_fix%iint    
+    print*, 'header_fix%ireal    = ',        header_fix%ireal    
+    print*, 'header_fix%iextra   = ',        header_fix%iextra   
+
+    print*, 'istatus             = ',        istatus
  
   end subroutine read_ozndiag_header
 
@@ -450,10 +462,10 @@ module read_diag
     !
     if ( new_hdr ) then
        read(ftin) isis,id,obstype,jiter,nlevs,ianldate,iint,ireal,iextra,ioff0
-       print*,'isis,id,obstype,jiter,nlevs,ianldate,iint,ireal,iextra,ioff0 = ', isis,id,obstype,jiter,nlevs,ianldate,iint,ireal,iextra,ioff0
+!       print*,'isis,id,obstype,jiter,nlevs,ianldate,iint,ireal,iextra,ioff0 = ', isis,id,obstype,jiter,nlevs,ianldate,iint,ireal,iextra,ioff0
     else
        read(ftin) isis,id,obstype,jiter,nlevs,ianldate,iint,ireal,iextra
-       print*,'isis,id,obstype,jiter,nlevs,ianldate,iint,ireal,iextra= ', isis,id,obstype,jiter,nlevs,ianldate,iint,ireal,iextra
+!       print*,'isis,id,obstype,jiter,nlevs,ianldate,iint,ireal,iextra= ', isis,id,obstype,jiter,nlevs,ianldate,iint,ireal,iextra
     endif
 
 
@@ -466,13 +478,13 @@ module read_diag
     header_fix%iint      = iint
     header_fix%ireal     = ireal
     header_fix%iextra    = iextra
+    
 
-
-    print*,'header_fix%nlevs  = ', header_fix%nlevs
-    print*,'header_fix%iint   = ', header_fix%iint
-    print*,'header_fix%ireal  = ', header_fix%ireal
-    print*,'header_fix%iextra = ', header_fix%iextra
-    print*,'header_fix%jiter  = ', header_fix%jiter
+!    print*,'header_fix%nlevs  = ', header_fix%nlevs
+!    print*,'header_fix%iint   = ', header_fix%iint
+!    print*,'header_fix%ireal  = ', header_fix%ireal
+!    print*,'header_fix%iextra = ', header_fix%iextra
+!    print*,'header_fix%jiter  = ', header_fix%jiter
 
     !--- check header
     
@@ -653,13 +665,14 @@ module read_diag
 !!    real(r_single) :: toqf               ! omi row anomaly index or MLS o3mr precision
 !!  end type diag_data_nlev_list
 
-!    allocate( ozobs(ntobs) ) 
-!    call nc_diag_read_get_var( ftin, 'Observation', ozobs )
-!    write(6,*) '  ozobs = ', ozobs
-!    deallocate( ozobs )
+    allocate( ozobs(ntobs) ) 
+    call nc_diag_read_get_var( ftin, 'Observation', ozobs )
+    write(6,*) '  ozobs = ', ozobs
+    deallocate( ozobs )
 
     allocate( ozone_inv(ntobs) ) 
-    call nc_diag_read_get_var( ftin, 'Obs_Minus_Forecast_adjusted', ozone_inv )
+    !call nc_diag_read_get_var( ftin, 'Obs_Minus_Forecast_adjusted', ozone_inv )
+    call nc_diag_read_get_var( ftin, 'Obs_Minus_Forecast_unadjusted', ozone_inv )
     write(6,*) '  ozone_inv = ', varinv
     deallocate( ozone_inv )
 
@@ -668,13 +681,20 @@ module read_diag
     write(6,*) '  varinv = ', varinv
     deallocate( varinv )
 
-!    allocate( sza(ntobs) ) 
-!    call nc_diag_read_get_var( ftin, 'Solar_Zenith_Angle', sza )
-!    write(6,*) '  sza = ', sza
-!    deallocate( sza )
+    allocate( sza(ntobs) ) 
+    call nc_diag_read_get_var( ftin, 'Solar_Zenith_Angle', sza )
+    write(6,*) '  sza = ', sza
+    deallocate( sza )
 
-!    call nc_diag_read_get_var( ftin, 'Scan_Position', fovn )
-!    call nc_diag_read_get_var( ftin, 'Row_Anomaly_Index', toqf )
+    allocate( fovn(ntobs) )
+    call nc_diag_read_get_var( ftin, 'Scan_Position', fovn )
+    write(6,*) '  fovn = ', fovn
+    deallocate( fovn )
+
+    allocate( toqf(ntobs) )
+    call nc_diag_read_get_var( ftin, 'Row_Anomaly_Index', toqf )
+    write(6,*) '  toqf = ', toqf
+    deallocate( toqf )
 
 
 !!------------------------------------------------
@@ -733,7 +753,7 @@ module read_diag
     type(diag_header_fix_list ),intent(in)  :: header_fix
 
     !--- NOTE:  These pointers are used to build an array numbering
-    !           iobs.  So they should be allocated every time this
+    !           ntobs.  So they should be allocated every time this
     !           routine is called and should not be deallocated
     !           here.  The time.f90 could deallocate them at the
     !           very end of the program, I think.
@@ -830,15 +850,17 @@ module read_diag
     do j=1,ntobs
        do i=1,header_fix%nlevs
           data_nlev(i,j)%ozobs  = tmp_nlev(1,i,j)
-!          write(6,*)' data_nlev(i,j)%ozobs = ', i, j, data_nlev(i,j)%ozobs
+          write(6,*)' data_nlev(i,j)%ozobs = ', i, j, data_nlev(i,j)%ozobs
           data_nlev(i,j)%ozone_inv= tmp_nlev(2,i,j)
           write(6,*)' data_nlev(i,j)%ozone_inv = ', i, j, data_nlev(i,j)%ozone_inv
           data_nlev(i,j)%varinv = tmp_nlev(3,i,j)
           write(6,*)' data_nlev(i,j)%varinv = ', i, j, data_nlev(i,j)%varinv
           data_nlev(i,j)%sza    = tmp_nlev(4,i,j)
-!          write(6,*)' data_nlev(i,j)%sza = ', i, j, data_nlev(i,j)%sza
+          write(6,*)' data_nlev(i,j)%sza = ', i, j, data_nlev(i,j)%sza
           data_nlev(i,j)%fovn   = tmp_nlev(5,i,j)
+          write(6,*)' data_nlev(i,j)%fovn = ', i, j, data_nlev(i,j)%fovn
           data_nlev(i,j)%toqf   = tmp_nlev(6,i,j)
+          write(6,*)' data_nlev(i,j)%toqf = ', i, j, data_nlev(i,j)%toqf
        end do
     end do
     deallocate(tmp_nlev)
