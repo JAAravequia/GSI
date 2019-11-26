@@ -54,12 +54,11 @@ CDATE=${CDATE:-"2001010100"}
 
 # Filenames.
 GPREFIX=${GPREFIX:-""}
-GSUFFIX=${GSUFFIX:-""}
+GSUFFIX=${GSUFFIX:-$SUFFIX}
 APREFIX=${APREFIX:-""}
-ASUFFIX=${ASUFFIX:-""}
+ASUFFIX=${ASUFFIX:-$SUFFIX}
 
 SMOOTH_ENKF=${SMOOTH_ENKF:-"YES"}
-GFS_NCIO=${GFS_NCIO:-"YES"}
 
 GBIASe=${GBIASe:-${APREFIX}abias_int.ensmean}
 CNVSTAT=${CNVSTAT:-${APREFIX}cnvstat}
@@ -68,10 +67,15 @@ RADSTAT=${RADSTAT:-${APREFIX}radstat}
 ENKFSTAT=${ENKFSTAT:-${APREFIX}enkfstat}
 
 # Namelist parameters
+USE_CORRELATED_OBERRS=${USE_CORRELATED_OBERRS:-"NO"}
 NMEM_ENKF=${NMEM_ENKF:-80}
 NAM_ENKF=${NAM_ENKF:-""}
 SATOBS_ENKF=${SATOBS_ENKF:-""}
 OZOBS_ENKF=${OZOBS_ENKF:-""}
+use_correlated_oberrs=${use_correlated_oberrs:-".false."}
+if [ $USE_CORRELATED_OBERRS == "YES" ]; then
+   use_correlated_oberrs=".true."
+fi
 imp_physics=${imp_physics:-"99"}
 lupp=${lupp:-".true."}
 corrlength=${corrlength:-1250}
@@ -92,7 +96,7 @@ IAUFHRS_ENKF=${IAUFHRS_ENKF:-6}
 
 ################################################################################
 ATMGES_ENSMEAN=$COMIN_GES_ENS/${GPREFIX}atmf006.ensmean${GSUFFIX}
-if [ $GFS_NCIO = "YES" ]; then
+if [ $SUFFIX = ".nc" ]; then
    LONB_ENKF=${LONB_ENKF:-$($NCLEN $ATMGES_ENSMEAN grid_xt)} # get LONB_ENKF
    LATB_ENKF=${LATB_ENKF:-$($NCLEN $ATMGES_ENSMEAN grid_yt)} # get LATB_ENFK
    LEVS_ENKF=${LEVS_ENKF:-$($NCLEN $ATMGES_ENSMEAN pfull)} # get LEVS_ENFK
@@ -206,7 +210,7 @@ for imem in $(seq 1 $NMEM_ENKF); do
       if [ $FHR -eq 6 ]; then
          $NLN $COMOUT_ANL_ENS/$memchar/${APREFIX}atmanl${ASUFFIX}             sanl_${CDATE}_fhr0${FHR}_${memchar}
       else
-         $NLN $COMOUT_ANL_ENS/$memchar/${APREFIX}atmanl00${FHR}${ASUFFIX}             sanl_${CDATE}_fhr0${FHR}_${memchar}
+         $NLN $COMOUT_ANL_ENS/$memchar/${APREFIX}atma00${FHR}${ASUFFIX}             sanl_${CDATE}_fhr0${FHR}_${memchar}
       fi
    done
 done
@@ -257,6 +261,7 @@ cat > enkf.nml << EOFnml
    lobsdiag_forenkf=$lobsdiag_forenkf,
    write_spread_diag=$write_spread_diag,
    modelspace_vloc=$modelspace_vloc,
+   use_correlated_oberrs=${use_correlated_oberrs},
    netcdf_diag=$netcdf_diag,cnvw_option=$cnvw_option,
    $NAM_ENKF
 /
@@ -330,6 +335,7 @@ cat > enkf.nml << EOFnml
    sattypes_rad(67)= 'mhs_metop-c',   dsis(67)= 'mhs_metop-c',
    sattypes_rad(68)= 'ahi_himawari8', dsis(68)= 'ahi_himawari8',
    sattypes_rad(69)= 'abi_g16',       dsis(69)= 'abi_g16',
+   sattypes_rad(70)= 'abi_g17',       dsis(70)= 'abi_g17',
    $SATOBS_ENKF
 /
 &ozobs_enkf

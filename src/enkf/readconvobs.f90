@@ -31,7 +31,7 @@ module readconvobs
 
 use kinds, only: r_kind,i_kind,r_single,r_double
 use constants, only: one,zero,deg2rad
-use params, only: npefiles, netcdf_diag
+use params, only: npefiles, netcdf_diag, modelspace_vloc
 implicit none
 
 private
@@ -360,8 +360,9 @@ subroutine get_num_convobs_nc(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
               nobs(itype,1) = nobs(itype,1) + 1
            endif
            if (error < errorlimit .or. error > errorlimit2 .or.  &
-               abs(obmax) > 1.e9_r_kind .or.                     &
-               pres < 0.001_r_kind .or. pres > 1200._r_kind) cycle
+               abs(obmax) > 1.e9_r_kind) cycle
+           if (.not. modelspace_vloc .and. &
+              (pres < 0.001_r_kind .or. pres > 1200._r_kind)) cycle
            ! skipping sst obs since ENKF does not how how to handle them yet.
            nobs(itype,2) = nobs(itype,2) + 1
            if (obtype == ' uv') then
@@ -664,8 +665,9 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
            endif
            if (Analysis_Use_Flag(i) < zero .or.                  &
                error < errorlimit .or. error > errorlimit2 .or.  &
-               abs(obmax) > 1.e9_r_kind .or.                     &
-               pres < 0.001_r_kind .or. pres > 1200._r_kind) cycle
+               abs(obmax) > 1.e9_r_kind) cycle
+           if (.not. modelspace_vloc .and. &
+              (pres < 0.001_r_kind .or. pres > 1200._r_kind)) cycle
            ! skipping sst obs since ENKF does not how how to handle them yet.
            if (obtype == 'sst') cycle
 
@@ -712,12 +714,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
            if (nanal <= nanals) then
               ! read full Hx from file
               if (.not. lobsdiag_forenkf) then
-                 hx(nob) = Observation(i) - Obs_Minus_Forecast_unadjusted2(i)
-                 if (obtype == '  q' .or. obtype == 'spd' .or. obtype == ' dw' .or. &
-                     obtype == ' pw') then
-                    hx(nob) = Observation(i) - Obs_Minus_Forecast_adjusted2(i)
-                 endif
-
+                 hx(nob) = Observation(i) - Obs_Minus_Forecast_adjusted2(i)
               ! run the linearized Hx
               else
                  dhx_dx = Observation_Operator_Jacobian(1:nsdim,i)
@@ -738,13 +735,13 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
                                   ix, delx, ixp, delxp, iy, dely,  &
                                   iyp, delyp, it, delt, itp, deltp)
                  endif
-                 call calc_linhx(hx_mean_nobc(nob), state_d(:,:,:,nmem),&
+                 call calc_linhx(hx_mean(nob), state_d(:,:,:,nmem),&
                                  dhx_dx, hx(nob),                  &
                                  ix, delx, ixp, delxp, iy, dely,   &
                                  iyp, delyp, it, delt, itp, deltp)
                  ! compute modulated ensemble in obs space
                  if (neigv > 0) then
-                    call calc_linhx_modens(hx_mean_nobc(nob), state_d(:,:,:,nmem), &
+                    call calc_linhx_modens(hx_mean(nob), state_d(:,:,:,nmem), &
                                     dhx_dx, hx_modens(:,nob),          &
                                     ix, delx, ixp, delxp, iy, dely,    &
                                     iyp, delyp, it, delt, itp, delxp,  &
@@ -803,7 +800,7 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
               if (nanal <= nanals) then
                  ! read full Hx
                  if (.not. lobsdiag_forenkf) then
-                    hx(nob) = v_Observation(i) - v_Obs_Minus_Forecast_unadjusted2(i)
+                    hx(nob) = v_Observation(i) - v_Obs_Minus_Forecast_adjusted2(i)
 
                  ! run linearized Hx
                  else
@@ -825,13 +822,13 @@ subroutine get_convobs_data_nc(obspath, datestring, nobs_max, nobs_maxdiag,   &
                                      ix, delx, ixp, delxp, iy, dely,  &
                                      iyp, delyp, it, delt, itp, deltp)
                     endif
-                    call calc_linhx(hx_mean_nobc(nob), state_d(:,:,:,nmem),    &
+                    call calc_linhx(hx_mean(nob), state_d(:,:,:,nmem),    &
                                     dhx_dx, hx(nob),                  &
                                     ix, delx, ixp, delxp, iy, dely,   &
                                     iyp, delyp, it, delt, itp, deltp)
                     ! compute modulated ensemble in obs space
                     if (neigv > 0) then
-                       call calc_linhx_modens(hx_mean_nobc(nob), state_d(:,:,:,nmem), &
+                       call calc_linhx_modens(hx_mean(nob), state_d(:,:,:,nmem), &
                                        dhx_dx, hx_modens(:,nob),          &
                                        ix, delx, ixp, delxp, iy, dely,    &
                                        iyp, delyp, it, delt, itp, delxp,  &
@@ -1080,8 +1077,9 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
           endif
           if (rdiagbuf(12,n) < zero .or.                        &
               error < errorlimit .or. error > errorlimit2 .or.  &
-              abs(obmax) > 1.e9_r_kind .or.                     &
-              pres < 0.001_r_kind .or. pres > 1200._r_kind) cycle
+              abs(obmax) > 1.e9_r_kind) cycle
+          if (.not. modelspace_vloc .and. &
+              (pres < 0.001_r_kind .or. pres > 1200._r_kind)) cycle
           ! skipping sst obs since ENKF does not how how to handle them yet.
           if (obtype == 'sst') cycle
           if (twofiles) then
@@ -1148,10 +1146,6 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
                 if (obtype == 'gps') then
                    hx(nob) = rdiagbuf2(17,n) - (rdiagbuf2(5,n)*rdiagbuf2(17,n))
                 else
-                   hx(nob) = rdiagbuf(17,n) - rdiagbuf2(19,n)
-                endif
-                if (obtype == '  q' .or. obtype == 'spd' .or. obtype == ' dw' .or. &
-                    obtype == ' pw') then
                    hx(nob) = rdiagbuf(17,n) - rdiagbuf2(18,n)
                 endif
 
@@ -1177,13 +1171,13 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
                                  ix, delx, ixp, delxp, iy, dely,  &
                                  iyp, delyp, it, delt, itp, deltp)
                 endif
-                call calc_linhx(hx_mean_nobc(nob), state_d(:,:,:,nmem),  &
+                call calc_linhx(hx_mean(nob), state_d(:,:,:,nmem),  &
                                 dhx_dx, hx(nob),                  &
                                 ix, delx, ixp, delxp, iy, dely,   &
                                 iyp, delyp, it, delt, itp, deltp)
                 ! compute modulated ensemble in obs space
                 if (neigv > 0) then
-                   call calc_linhx_modens(hx_mean_nobc(nob), state_d(:,:,:,nmem), &
+                   call calc_linhx_modens(hx_mean(nob), state_d(:,:,:,nmem), &
                                    dhx_dx, hx_modens(:,nob),          &
                                    ix, delx, ixp, delxp, iy, dely,    &
                                    iyp, delyp, it, delt, itp, delxp,  &
@@ -1244,7 +1238,7 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
              if (nanal <= nanals) then
                 ! read full Hx
                 if (.not. lobsdiag_forenkf) then
-                   hx(nob) = rdiagbuf(20,n)-rdiagbuf2(22,n)
+                   hx(nob) = rdiagbuf(20,n)-rdiagbuf2(21,n)
                 ! run linearized Hx
                 else
                    call readarray(dhx_dx_read, rdiagbuf(ind:nreal,n))
@@ -1267,13 +1261,13 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
                                     ix, delx, ixp, delxp, iy, dely,  &
                                     iyp, delyp, it, delt, itp, deltp)
                    endif
-                   call calc_linhx(hx_mean_nobc(nob), state_d(:,:,:,nmem), &
+                   call calc_linhx(hx_mean(nob), state_d(:,:,:,nmem), &
                                    dhx_dx, hx(nob),                  &
                                    ix, delx, ixp, delxp, iy, dely,   &
                                    iyp, delyp, it, delt, itp, deltp)
                    ! compute modulated ensemble in obs space
                    if (neigv > 0) then
-                      call calc_linhx_modens(hx_mean_nobc(nob), state_d(:,:,:,nmem), &
+                      call calc_linhx_modens(hx_mean(nob), state_d(:,:,:,nmem), &
                                       dhx_dx, hx_modens(:,nob),          &
                                       ix, delx, ixp, delxp, iy, dely,    &
                                       iyp, delyp, it, delt, itp, delxp,  &
@@ -1304,10 +1298,11 @@ subroutine get_convobs_data_bin(obspath, datestring, nobs_max, nobs_maxdiag,   &
        do n=1,ii
           nobdiag = nobdiag + 1
           if(rdiagbuf(6,n) < errorlimit .or.        &
-             rdiagbuf(6,n) > errorlimit2)cycle
-          if(abs(rdiagbuf(7,n)) > 1.e9_r_kind  .or. &
-             rdiagbuf(4,n) < 0.001_r_kind .or.      &
-             rdiagbuf(4,n) > 1200._r_kind) cycle
+             rdiagbuf(6,n) > errorlimit2 .or.       &
+             abs(rdiagbuf(7,n)) > 1.e9_r_kind )cycle
+          if(.not. modelspace_vloc .and. &
+             (rdiagbuf(4,n) < 0.001_r_kind .or.      &
+             rdiagbuf(4,n) > 1200._r_kind)) cycle
           if (twofiles) then
           if (abs(rdiagbuf(2,n)-rdiagbuf2(2,n)) .gt. 1.e-5 .or. &
               abs(rdiagbuf(3,n)-rdiagbuf2(3,n)) .gt. 1.e-5) then
