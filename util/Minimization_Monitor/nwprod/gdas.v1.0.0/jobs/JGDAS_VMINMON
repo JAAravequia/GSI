@@ -37,24 +37,17 @@ export m_job=${m_job:-${MINMON_SUFFIX}_mmDE}
 export HOMEgfs=${HOMEgfs:-${NWROOT}/gfs.${gfs_ver}}
 export SCRgfs=${SCRgfs:-$HOMEgfs/scripts}
 
-export PARMmon=${PARMmon:-$HOMEgfs/parm/mon}
-export M_FIXgdas=${M_FIXgfs:-$HOMEgfs/fix/gdas}
+export M_FIXgdas=${M_FIXgdas:-$HOMEgfs/fix/gdas}
 
 export HOMEminmon=${HOMEminmon:-${HOMEgfs}}
 export EXECminmon=${EXECminmon:-$HOMEminmon/exec}
 export USHminmon=${USHminmon:-$HOMEminmon/ush}
 
 
-###################################
-# source the parm file
-###################################
-.  ${PARMmon}/da_mon.parm
-
-
 #############################################
 # Run setpdy and initialize PDY variables
 #############################################
-if [[ $MY_MACHINE != "theia" ]]; then
+if [[ $MY_MACHINE != "hera" ]]; then
    export cycle=t${cyc}z
    setpdy.sh
    . ./PDY
@@ -62,7 +55,6 @@ fi
 
 #############################################
 #  determine PDY and cyc for previous cycle
-<<<<<<< HEAD
 #############################################
 
 cdate=`${NDATE} -6 ${PDY}${cyc}`
@@ -75,35 +67,17 @@ export p_cyc=`echo ${cdate} | cut -c9-10`
 #############################################
 # TANKverf - WHERE OUTPUT DATA WILL RESIDE
 #############################################
+export COM_IN=${COM_IN:-${COMROOT}/${NET}/${envir}}
 
-M_TANKverfM0=${M_TANKverfM0:-${M_TANKverf}/${RUN}.${PDY}/${cyc}/minmon}
-export M_TANKverfM1=${M_TANKverfM1:-${M_TANKverf}/${RUN}.${P_PDY}/${p_cyc}/minmon}
-
-echo "M_TANKverfM0 = $M_TANKverfM0"
-echo "M_TANKverfM1 = $M_TANKverfM1"
-
-export M_TANKverf=$M_TANKverfM0
-
-cdate=`${NDATE} -6 ${PDY}${cyc}`
-echo 'pdate = ${pdate}'
-
-export P_PDY=`echo ${cdate} | cut -c1-8`
-export p_cyc=`echo ${cdate} | cut -c9-10`
-
->>>>>>> master
-
-#############################################
-# TANKverf - WHERE OUTPUT DATA WILL RESIDE
-#############################################
 M_TANKverf=${M_TANKverf:-${COM_IN}}
 M_TANKverfM0=${M_TANKverfM0:-${M_TANKverf}/${RUN}.${PDY}/${cyc}/minmon}
 export M_TANKverfM1=${M_TANKverfM1:-${M_TANKverf}/${RUN}.${P_PDY}/${p_cyc}/minmon}
 export M_TANKverf=$M_TANKverfM0
 
-export COM_IN=${COM_IN:-${COMROOT}/${NET}/${envir}}
 export COMIN=${COMIN:-$COM_IN/${RUN}.${PDY}/${cyc}}
 
 mkdir -p -m 775 $M_TANKverf
+
 
 
 ########################################
@@ -113,17 +87,12 @@ export CYCLE_INTERVAL=6
 export gsistat=${gsistat:-${COMIN}/gdas.t${cyc}z.gsistat}
 
 
-msg="JOB HAS STARTED"
-postmsg "$jlogfile" "$msg"
-
 ########################################################
 # Execute the script.
 ${GMONSH:-$SCRgfs/exgdas_vrfminmon.sh.ecf} ${PDY} ${cyc}
 err=$?
 [[ $err -ne 0 ]] && exit $err
 
-msg="JOB COMPLETED NORMALLY"
-postmsg "$jlogfile" "$msg"
 
 ################################
 # Remove the Working Directory

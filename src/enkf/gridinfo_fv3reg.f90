@@ -144,17 +144,16 @@ if (nproc .eq. 0) then
 
 
    ptop = eta1_ll(nlevsp1)
-      call nc_check( nf90_close(file_id),&
-      myname_,'close '//trim(filename) )
-!cltorg   filename = trim(adjustl(fileprefix))//'/ensmean/INPUT/fv_core.res.nc'
+   call nc_check( nf90_close(file_id),&
+   myname_,'close '//trim(filename) )
    filename = 'fv3sar_tile1_grid_spec.nc'
    call nc_check( nf90_open(trim(adjustl(filename)),nf90_nowrite,file_id),&
    myname_,'open: '//trim(adjustl(filename)) )
 
    call nc_check( nf90_inq_dimid(file_id,'grid_xt',dim_id),&
-       myname_,'inq_dimid grid_xt '//trim(filename) )
+                 myname_,'inq_dimid grid_xt '//trim(filename) )
    call nc_check( nf90_inquire_dimension(file_id,dim_id,len=nx_tile),&
-       myname_,'inquire_dimension grid_xt '//trim(filename) )
+                 myname_,'inquire_dimension grid_xt '//trim(filename) )
    if(nx_res.ne.nx_tile) then
      write(6,*)"nx_tile and nx_res are ",nx_tile,nx_res
      write(6,*)'the readin nx_tile does not equal to nx_res as expected, stop'
@@ -162,9 +161,9 @@ if (nproc .eq. 0) then
    endif
 
    call nc_check( nf90_inq_dimid(file_id,'grid_yt',dim_id),&
-       myname_,'inq_dimid grid_yt '//trim(filename) )
+                 myname_,'inq_dimid grid_yt '//trim(filename) )
    call nc_check( nf90_inquire_dimension(file_id,dim_id,len=ny_tile),&
-       myname_,'inquire_dimension grid_yt '//trim(filename) )
+                 myname_,'inquire_dimension grid_yt '//trim(filename) )
    if(ny_res.ne.ny_tile) then
      write(6,*)'the readin ny_tile does not equal to ny_res as expected, stop'
      call stop2(25)
@@ -182,8 +181,6 @@ if (nproc .eq. 0) then
    do ntile=1,ntiles
       nn_tile0=(ntile-1)*nx_res*ny_res
       write(char_tile, '(i1)') ntile
-!cltorg      filename=trim(adjustl(fv3fixpath))//'/C'//trim(adjustl(char_res))//'/C'//trim(adjustl(char_res))//'_oro_data.tile'//char_tile//'.nc'
-!clt      filename=trim(adjustl(fv3fixpath))//'/C'//trim(adjustl(char_nxres))//'/C'//trim(adjustl(char_nyres))//'grid_spec.tile'//char_tile//'.nc'
       filename='fv3sar_tile'//char_tile//'_grid_spec.nc'
       call nc_check( nf90_open(trim(adjustl(filename)),nf90_nowrite,file_id),&
       myname_,'open: '//trim(adjustl(filename)) )
@@ -202,9 +199,8 @@ if (nproc .eq. 0) then
          enddo
       enddo
    enddo  !loop for ntilet
-      latsgrd = pi*latsgrd/180._r_single
-      lonsgrd = pi*lonsgrd/180._r_single
-!cltthink the unit of the lat/lon
+   latsgrd = pi*latsgrd/180._r_single
+   lonsgrd = pi*lonsgrd/180._r_single
    allocate(delp(nx_res,ny_res,nlevs),ps(nx_res,ny_res))
    allocate(g_prsi(nx_res,ny_res,nlevsp1))
    allocate(pressimn(npts,nlevsp1),presslmn(npts,nlevs))
@@ -214,8 +210,6 @@ if (nproc .eq. 0) then
       nn_tile0=(ntile-1)*nx_res*ny_res
       nn=nn_tile0
       write(char_tile, '(i1)') ntile
-!cltorg      filename = trim(adjustl(datapath))//'/ensmean/fv_core.res.tile'//char_tile//'.nc'
-!clt      filename = trim(adjustl(datapath))//'/ensmean/dynvars.tile'//char_tile//'.nc'
       filename = 'fv3sar_tile'//char_tile//"_ensmean_dynvartracer"
       !print *,trim(adjustl(filename))
       call nc_check( nf90_open(trim(adjustl(filename)),nf90_nowrite,file_id),&
@@ -229,7 +223,6 @@ if (nproc .eq. 0) then
         g_prsi(:,:,i)=delp(:,:,i)*0.01_r_kind+g_prsi(:,:,i+1)
        enddo
 
-!cltorg      ps = sum(delp,3) + ptop
       ps = g_prsi(:,:,1)
       !print *,'min/max ps',ntile,minval(ps),maxval(ps)
       nn=nn_tile0
@@ -272,7 +265,6 @@ if (nproc .eq. 0) then
    deallocate(spressmn,presslmn,pressimn)
    deallocate(ak,bk,ps)
    deallocate(g_prsi,delp)
-!cltorg   deallocate(eta1_ll,eta2_ll,ak,bk)
    deallocate(lat_tile,lon_tile)
 endif ! root task
 
@@ -291,7 +283,6 @@ call mpi_bcast(lonsgrd,npts,mpi_real4,0,MPI_COMM_WORLD,ierr)
 call mpi_bcast(latsgrd,npts,mpi_real4,0,MPI_COMM_WORLD,ierr)
 call mpi_bcast(eta1_ll,nlevsp1,mpi_real4,0,MPI_COMM_WORLD,ierr)
 call mpi_bcast(eta2_ll,nlevsp1,mpi_real4,0,MPI_COMM_WORLD,ierr)
-!clt ptop tothink to be defined
 call mpi_bcast(ptop,1,mpi_real4,0,MPI_COMM_WORLD,ierr)
   
 !==> precompute cartesian coords of analysis grid points.

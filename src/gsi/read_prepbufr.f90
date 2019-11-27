@@ -138,8 +138,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !   2016-05-05  pondeca - add 10-m u-wind and v-wind (uwnd10m, vwnd10m)
 !   2016-06-01  zhu    - use errormod_aircraft
 !   2017-06-17  levine - add GLERL program code lookup
-!
 !   2017-03-21  Su      - add option to thin conventional data in 4 dimension 
+!   2018-08-16  akella  - explicit KX definition for ships (formerly ID'd by subtype 522/523)
 
 !   input argument list:
 !     infile   - unit from which to read BUFR data
@@ -172,7 +172,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
       ncmiter,ncgroup,ncnumgrp,icuse,ictype,icsubtype,ioctype, &
       ithin_conv,rmesh_conv,pmesh_conv,pmot_conv,ptime_conv, &
       use_prepb_satwnd
-  use convinfo, only: id_drifter
+  use convinfo, only: id_drifter,id_ship
 
   use obsmod, only: iadate,oberrflg,perturb_obs,perturb_fact,ran01dom,hilbert_curve
   use obsmod, only: blacklst,offtime_data,bmiss,ext_sonde
@@ -209,7 +209,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                            destroy_aircraft_rjlists
   use adjust_cloudobs_mod, only: adjust_convcldobs,adjust_goescldobs
   use mpimod, only: npe
-  use rapidrefresh_cldsurf_mod, only: i_gsdsfc_uselist,i_gsdqc
+  use rapidrefresh_cldsurf_mod, only: i_gsdsfc_uselist,i_gsdqc,i_ens_mean
   use gsi_io, only: verbose
 
   implicit none
@@ -420,7 +420,6 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 ! Initialize variables
 
   vdisterrmax=zero
-!  pflag=0                  !  dparrish debug compile run flags pflag as not defined ???????????
   zflag=0
   nreal=0
   satqc=zero
@@ -481,7 +480,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
   else if(howvob) then
      nreal=23
   else if(metarcldobs) then
-     nreal=25
+     nreal=27
   else if(goesctpobs) then
      nreal=8
   else if(tcamtob) then
@@ -674,6 +673,11 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  kx = kx + 19
               end if
            end if
+        end if
+
+        if (id_ship .and. (kx==180) .and. (nint(hdr(3))==522 .or. nint(hdr(3))==523)) then
+           rstation_id=hdr(4)
+           kx = kx + 18
         end if
 
         if(twodvar_regional)then
@@ -946,6 +950,11 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  end if
               end if
 
+              if (id_ship .and. (kx==180) .and.  (nint(hdr(8))==522 .or. nint(hdr(8))==523) ) then
+                 rstation_id=hdr(1)
+                 kx = kx + 18
+              end if
+!
 
 !             check VAD subtype. 1--old, 2--new, other--old 
               if(kx==224) then
@@ -1603,6 +1612,26 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  end do
               end if
            end if
+
+           if(i_gsdqc==2) then
+!          AMV acceptance for all obs (E. James)
+              if (kx >= 240 .and. kx <= 260) then
+                 do k=1,levs
+                    pqm(k)=2
+                    wqm(k)=2
+                 end do
+              end if
+!          END of the AMV acceptance section (E. James)
+!          USE q from 300-10 mb for aircraft and raobs (E. James)
+              if(qob .and. (kx==120 .or. kx==131 .or. kx==133 .or. kx==134)) then
+                 do k=1,levs
+                    if(  plevs(k)<=30.0_r_kind .and. plevs(k)>=1.0_r_kind ) then
+                      if(qqm(k) == 9) qqm(k)=2
+                    endif
+                 end do
+              endif
+!          END use q from 300-10 mb
+           endif
 
            stnelev=hdr(6)
            ithin=ithin_conv(nc)
@@ -2370,6 +2399,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                    if ((kx==280).or.(kx==180)) oelev=r20+selev
                    if ((kx==299).or.(kx==199)) oelev=r20+selev
                    if ((kx==282).or.(kx==182)) oelev=r20+selev
+                   if  (kx==198)               oelev=r20+selev
                    if ((kx==285).or.(kx==185)) then
                       oelev=selev
                       selev=zero
@@ -2654,7 +2684,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                        cdata_all(17+kk,iout)= -99999.0_r_kind
                     endif
                  enddo
-                 cdata_all(21,iout)=timeobs     !  time observation
+                 cdata_all(21,iout)=timeobs  !  time observation
                  cdata_all(22,iout)=usage
                  if (lhilbert) thisobtype_usage=22         ! save INDEX of where usage is stored for hilbertcurve cross validation (if requested)
                  cdata_all(23,iout)=0.0_r_kind  ! reserved for distance between obs and grid
@@ -2666,7 +2696,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  else
                     cdata_all(24,iout)=-99999.0_r_kind  ! temperature - dew point
                  endif
-! cdata_all(24,iout) and cdata_all(25,iout) will be used to save dlon and dlat
+                 cdata_all(25,iout)=nc                     ! type
+                 cdata_all(26,iout)=dlon_earth_deg         ! earth relative longitude (degrees)
+                 cdata_all(27,iout)=dlat_earth_deg         ! earth relative latitude (degrees)
 ! NESDIS cloud products
               else if(goesctpobs) then
                  cdata_all(1,iout)=rstation_id    !  station ID
@@ -2879,18 +2911,20 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 ! define a closest METAR cloud observation for each grid point
 
   if(metarcldobs .and. ndata > 0) then
-     maxobs=2000000
-     allocate(cdata_all(nreal,maxobs))
-     call reorg_metar_cloud(cdata_out,nreal,ndata,cdata_all,maxobs,iout)
-     ndata=iout
-     deallocate(cdata_out)
-     allocate(cdata_out(nreal,ndata))
-     do i=1,nreal
-        do j=1,ndata
-          cdata_out(i,j)=cdata_all(i,j)
+     if(i_ens_mean /= 1) then
+        maxobs=2000000
+        allocate(cdata_all(nreal,maxobs))
+        call reorg_metar_cloud(cdata_out,nreal,ndata,cdata_all,maxobs,iout)
+        ndata=iout
+        deallocate(cdata_out)
+        allocate(cdata_out(nreal,ndata))
+        do i=1,nreal
+           do j=1,ndata
+             cdata_out(i,j)=cdata_all(i,j)
+           end do
         end do
-     end do
-     deallocate(cdata_all)
+        deallocate(cdata_all)
+     endif
   endif
   call count_obs(ndata,nreal,ilat,ilon,cdata_out,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon,ndata

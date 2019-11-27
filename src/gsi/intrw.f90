@@ -29,6 +29,7 @@ use m_obsNode, only: obsNode
 use m_rwNode, only: rwNode
 use m_rwNode, only: rwNode_typecast
 use m_rwNode, only: rwNode_nextcast
+use m_obsdiagNode, only: obsdiagNode_set
 implicit none
 
 PRIVATE
@@ -60,6 +61,7 @@ subroutine intrw_(rwhead,rval,sval)
 !   2005-09-28  derber  - consolidate location and weight arrays
 !   2006-07-28  derber  - modify to use new inner loop obs data structure
 !                       - unify NL qc
+!   2007-02-15  rancic  - add foto
 !   2007-03-19  tremolet - binning of observations
 !   2007-06-05  tremolet - use observation diagnostics structure
 !   2007-07-09  tremolet - observation sensitivity
@@ -68,6 +70,8 @@ subroutine intrw_(rwhead,rval,sval)
 !   2010-05-13  todlng   - update to use gsi_bundle; update interface
 !   2012-09-14  Syed RH Rizvi, NCAR/NESL/MMM/DAS  - introduced ladtest_obs         
 !   2014-12-03  derber  - modify so that use of obsdiags can be turned off
+!   2017-05-12  Y. Wang and X. Wang - include w into tangent linear of rw operator, 
+!                                     POC: xuguang.wang@ou.edu
 !   2016-06-23  lippi   - add terms for vertical velocity (w) in forward operator
 !                         and adjoint code (uses include_w to check if w is
 !                         being used). Now, the multiplications of costilt
@@ -176,9 +180,11 @@ subroutine intrw_(rwhead,rval,sval)
      if(luse_obsdiag)then
         if (lsaveobsens) then
            grad = val*rwptr%raterr2*rwptr%err2
-           rwptr%diags%obssen(jiter) = grad
+           !-- rwptr%diags%obssen(jiter) = grad
+           call obsdiagNode_set(rwptr%diags,jiter=jiter,obssen=grad)
         else
-           if (rwptr%luse) rwptr%diags%tldepart(jiter)=val
+           !-- if (rwptr%luse) rwptr%diags%tldepart(jiter)=val
+           if (rwptr%luse) call obsdiagNode_set(rwptr%diags,jiter=jiter,tldepart=val)
         endif
      endif
 
@@ -235,8 +241,6 @@ subroutine intrw_(rwhead,rval,sval)
            rw(j7)=rw(j7)+w7*valw
            rw(j8)=rw(j8)+w8*valw
         end if
-
-
      endif
 
      !rwptr => rwptr%llpoint

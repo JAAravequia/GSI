@@ -24,6 +24,7 @@ module gsi_4dvar
 !   2015-02-23 Rancic/Thomas - iwinbgn changed from hours to mins, added thin4d
 !                         option to remove thinning in time       
 !   2015-10-01 Guo      - trigger for redistribution of obs when applicable
+!   2017-05-06 todling  - add tau_fcst to determine EFSOI-like calculation
 !
 ! Subroutines Included:
 !   sub init_4dvar    -
@@ -82,6 +83,8 @@ module gsi_4dvar
 !                       will be set to center of window for 4D-ens mode
 !   lwrite4danl       - logical to turn on writing out of 4D analysis state for 4D analysis modes
 !                       ** currently only set up for write_gfs in ncepgfs_io module
+!   nhr_anal          - forecast times to output if lwrite4danl=T. if zero, output all times (default).
+!                       if > 0, output specific fcst time given by nhr_anal
 !   thin4d            - When .t., removes thinning of observations due to
 !                       location in the time window
 !
@@ -112,8 +115,12 @@ module gsi_4dvar
   public :: ladtest,ladtest_obs,lgrtest,lcongrad,nhr_obsbin,nhr_subwin,nwrvecs
   public :: jsiga,ltcost,iorthomax,liauon,lnested_loops
   public :: l4densvar,ens_nhr,ens_fhrlevs,ens_nstarthr,ibin_anl
-  public :: lwrite4danl,thin4d
+  public :: lwrite4danl,thin4d,nhr_anal
   public :: mPEs_observer
+  public :: tau_fcst
+  public :: efsoi_order
+  public :: efsoi_afcst
+  public :: efsoi_ana
 
   logical         :: l4dvar
   logical         :: lsqrtb
@@ -132,6 +139,10 @@ module gsi_4dvar
   logical         :: lnested_loops
   logical         :: lwrite4danl
   logical         :: thin4d
+  logical         :: efsoi_afcst
+  logical         :: efsoi_ana
+
+  integer(i_kind),dimension(21) ::  nhr_anal
 
   integer(i_kind) :: iwrtinc
   integer(i_kind) :: iadatebgn, iadateend
@@ -144,6 +155,8 @@ module gsi_4dvar
   integer(i_kind) :: jsiga
   integer(i_kind) :: ens_nhr,ens_nstarthr,ibin_anl
   integer(i_kind),allocatable,dimension(:) :: ens_fhrlevs
+  integer(i_kind) :: tau_fcst
+  integer(i_kind) :: efsoi_order
 
   integer(i_kind),save:: mPEs_observer=0
 
@@ -210,6 +223,14 @@ ibin_anl = 1
 
 lwrite4danl = .false.
 thin4d = .false.
+! if zero, output all times.
+! if > 0, output specific fcst time given by nhr_anal
+nhr_anal = 0 
+
+tau_fcst = -1          ! ensemble of forecast at hour current+tau_fcst 
+efsoi_order = 1        ! order of appox used in EFSOI-like settings
+efsoi_afcst = .false.  ! internal EFSOI-like parameter (NEVER to be in namelist)
+efsoi_ana   = .false.  ! internal EFSOI-like parameter (NEVER to be in namelist)
 
 end subroutine init_4dvar
 ! --------------------------------------------------------------------
@@ -380,6 +401,7 @@ if (mype==0) then
    write(6,*)'SETUP_4DVAR: liauon=',liauon
    write(6,*)'SETUP_4DVAR: ljc4tlevs=',ljc4tlevs
    write(6,*)'SETUP_4DVAR: ibin_anl=',ibin_anl
+   write(6,*)'SETUP_4DVAR: tau_fcst=',tau_fcst
 endif
 
 end subroutine setup_4dvar

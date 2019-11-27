@@ -27,6 +27,12 @@ module control_vectors
 !   2010-05-28  todling  - remove all nrf2/3_VAR-specific "pointers"
 !   2011-07-04  todling  - fixes to run either single or double precision
 !   2013-05-20  zhu      - add aircraft temperature bias correction coefficients as control variables
+!   2016-02-15  Johnson, Y. Wang, X. Wang - add variables to control reading
+!                                           state variables for radar DA. POC: xuguang.wang@ou.edu
+!   2019-03-14  eliu     - add logic to turn on using full set of hydrometeors
+!                          in obs operator and analysis 
+!   2019-07-11  Todling  - move WRF specific variables w_exist and dbz_exit to a new wrf_vars_mod.f90.
+!                        . move imp_physics and lupp to ncepnems_io.f90.
 !
 ! subroutines included:
 !   sub init_anacv   
@@ -58,8 +64,7 @@ module control_vectors
 !
 ! variable definitions:
 !   def n_ens     - number of ensemble perturbations (=0 except when hybrid ensemble option turned on)
-!   def imp_physics - type of microphysics used in the GFS.  99: Zhao-Carr, 11: GFDL
-!   def lupp - if T, UPP is used and additional variables are output
+!   def lcalc_gfdl_cfrac - if T, calculate and use GFDL cloud fraction in obs operator 
 !
 ! attributes:
 !   language: f90
@@ -121,8 +126,7 @@ public as3d        ! normalized scale factor for background error 3d-variables
 public as2d        ! normalized scale factor for background error 2d-variables
 public atsfc_sdv   ! standard deviation of surface temperature error over (1) land (and (2) ice
 public an_amp0     ! multiplying factors on reference background error variances
-public imp_physics ! type of GFS microphysics
-public lupp        ! when .t., UPP is used and extra variables are output
+public lcalc_gfdl_cfrac ! when .t., calculate and use GFDL cloud fraction in obs operator 
 
 public nrf2_loc,nrf3_loc,nmotl_loc   ! what are these for??
 public ntracer
@@ -145,8 +149,8 @@ character(len=*),parameter:: myname='control_vectors'
 
 integer(i_kind) :: nclen,nclen1,nsclen,npclen,ntclen,nrclen,nsubwin,nval_len
 integer(i_kind) :: latlon11,latlon1n,lat2,lon2,nsig,n_ens
-integer(i_kind) :: nval_lenz_en,imp_physics
-logical :: lsqrtb,lupp
+integer(i_kind) :: nval_lenz_en
+logical,save :: lsqrtb,lcalc_gfdl_cfrac  
 
 integer(i_kind) :: m_vec_alloc, max_vec_alloc, m_allocs, m_deallocs
 
@@ -382,9 +386,7 @@ if (mype==0) then
     write(6,*) myname_,': MOTLEY CONTROL VARIABLES ', cvarsmd
     write(6,*) myname_,': ALL CONTROL VARIABLES    ', nrf_var
 end if
-
-imp_physics=99
-lupp = .false.
+lcalc_gfdl_cfrac = .false.
 
 end subroutine init_anacv
 subroutine final_anacv

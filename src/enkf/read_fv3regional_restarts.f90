@@ -1,5 +1,5 @@
     module read_fv3regional_restarts
-!clt modified from read_fv3_restarts.f90
+! modified from read_fv3_restarts.f90
 
 ! ifort -I${NETCDF}/include -O2 -traceback read_fv3_restarts.f90 kinds.o
 ! netcdf_mod.o -L/${NETCDF}/lib -lnetcdf -lnetcdff

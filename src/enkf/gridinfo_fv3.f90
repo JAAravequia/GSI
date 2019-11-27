@@ -142,7 +142,6 @@ if (nproc .eq. 0) then
       latsgrd = pi*latsgrd/180._r_single
       lonsgrd = pi*lonsgrd/180._r_single
    enddo
-!cltthink the unit of the lat/lon
    allocate(delp(res,res,nlevs,1),ps(res,nres))
    allocate(pressimn(npts,nlevsp1),presslmn(npts,nlevs))
    nn = 0

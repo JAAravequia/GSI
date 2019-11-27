@@ -34,8 +34,6 @@ set -ax
 ################################################################################
 export scr=exgdas_vrfyozn.sh.ecf
 
-msg="${scr} HAS STARTED"
-postmsg "$jlogfile" "$msg"
 err=0
 
 #-------------------------------------------------------------------------------
@@ -52,7 +50,7 @@ export cyc=${2:-${cyc:?}}
 
 #  Directories
 export OZN_WORK_DIR=${OZN_WORK_DIR:-$(pwd)}
-export COM_IN=${COMROOT}/${NET}/${envir}
+export COM_IN=${COM_IN:-${COMROOT}/${NET}/${envir}}
 export COMIN=${COMIN:-$COM_IN/${RUN}.${PDY}}
 
 export HOMEgdas_ozn=${HOMEgdas_ozn:-${NWROOT}/gdas.${gdas_oznmon_ver}}
@@ -74,6 +72,7 @@ export PDATE=${PDY}${cyc}
 export DO_DATA_RPT=${DO_DATA_RPT:-1}
 export NCP=${NCP:-/bin/cp}
 export NDATE=${NDATE:-/nwprod/util/exec/ndate}
+
 
 ##################################################################
 # ensure work and TANK dirs exist, verify oznstat is available
@@ -107,15 +106,17 @@ if [[ -s ${oznstat} ]]; then
    tar -xvf oznstat.$PDATE
    rm oznstat.$PDATE
 
-   netcdf_diag=".false."
+   netcdf=0
    count=`ls diag* | grep ".nc4" | wc -l`
    if [ $count -gt 0 ] ; then
-      netcdf_diag=".true."
+      netcdf=1
       for filenc4 in `ls diag*nc4.gz`; do
          file=`echo $filenc4 | cut -d'.' -f1-2`.gz
          mv $filenc4 $file
       done
    fi
+   
+   export OZNMON_NETCDF=${netcdf}
 
    ${HOMEoznmon}/ush/ozn_xtrct.sh
    err=$?
@@ -130,8 +131,6 @@ if [[ "$VERBOSE" = "YES" ]]; then
    echo "end exgdas_vrfyozn.sh.ecf, exit value = ${err}"
 fi
 
-msg="${scr} HAS ENDED"
-postmsg "$jlogfile" "$msg"
 
 set +x
 exit ${err}

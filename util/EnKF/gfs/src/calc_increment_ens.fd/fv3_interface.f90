@@ -132,7 +132,7 @@ contains
 
     type(increment_netcdf) :: ncdat  !! cached info about NetCDF output file
 
-    integer :: i, j, k ! loop indices within a variable
+    integer :: j, k ! loop indices within a variable
     integer :: ivar !! loop index over variables in input_vars & output_vars
 
     ! Formats for print statements:
@@ -244,6 +244,13 @@ contains
           
           ! Subtract and write
           an_grid%var3d = an_grid%var3d - fg_grid%var3d
+
+          ! Flip increment if the delz background is positive (GFSv15)
+          if(trim(input_vars(ivar)) == 'delz') then
+             if (sum(fg_grid%var3d) > 0.0_r_kind) then
+                an_grid%var3d = an_grid%var3d * -1.0_r_kind
+             endif
+          endif
        endif zero_or_read
 
        call fv3_netcdf_write_var3d(ncdat,output_vars(ivar),an_grid%var3d)
@@ -660,9 +667,6 @@ contains
     type(analysis_grid) :: grid !! analysis or first guess to read
 
     ! Local variables
-
-    type(varinfo) :: var_info ! to request a variable from gfs_nems_read
-    integer :: k ! Vertical index loop when reading data level-by-level
 
     ! Read the nemsio file header
     call gfs_nems_initialize(meta_nemsio,filename=grid%filename)

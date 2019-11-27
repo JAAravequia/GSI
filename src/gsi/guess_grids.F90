@@ -14,14 +14,6 @@ module guess_grids
  
   use kinds, only: r_single,r_kind,i_kind
   use constants, only: max_varname_length
-  use gridmod, only: regional
-  use gridmod, only: wrf_nmm_regional,nems_nmmb_regional,fv3_regional
-  use gridmod, only: eta1_ll
-  use gridmod, only: eta2_ll
-  use gridmod, only: aeta1_ll
-  use gridmod, only: aeta2_ll
-  use gridmod, only: pdtop_ll
-  use gridmod, only: pt_ll
 
   use gsi_bundlemod, only : gsi_bundlegetpointer
 
@@ -106,7 +98,10 @@ module guess_grids
 !                         all tendencies now in a bundle (see tendsmod)
 !                         all derivaties now in a bundle (see derivsmod)
 !   2015-01-15  Hu      - Add coast_prox to hold coast proximity
+!   2017-05-12  Y. Wang and X. Wang - add bottom and top levels of w and rho for
+!                                     radar DA later, POC: xuguang.wang@ou.edu
 !   2017-10-10  wu      - Add code for fv3_regional 
+!   2019-03-21  Wei/Martin - add code for external aerosol file input
 !
 ! !AUTHOR: 
 !   kleist           org: np20                date: 2003-12-01
@@ -135,6 +130,7 @@ module guess_grids
   public :: destroy_metguess_grids
   public :: create_chemges_grids
   public :: destroy_chemges_grids
+  public :: get_ref_gesprs
 ! set passed variables to public
   public :: ntguessig,ges_prsi,ges_psfcavg,ges_prslavg
   public :: isli2,ges_prsl,nfldsig
@@ -143,20 +139,26 @@ module guess_grids
   public :: ntguessfc,ntguesnst,dsfct,ifilesig,veg_frac,soil_type,veg_type
   public :: sno2,ifilesfc,ifilenst,sfc_rough,fact10,sno,isli,soil_temp,soil_moi,coast_prox 
   public :: nfldsfc,nfldnst,hrdifsig,ges_tsen,sfcmod_mm5,sfcmod_gfs,ifact10,hrdifsfc,hrdifnst
-  public :: geop_hgti,ges_lnprsi,ges_lnprsl,geop_hgtl,pt_ll,pbl_height
+  public :: geop_hgti,ges_lnprsi,ges_lnprsl,geop_hgtl,pbl_height,ges_geopi
   public :: wgt_lcbas
   public :: ges_qsat
   public :: use_compress,nsig_ext,gpstop
+  public :: ntguesaer,ifileaer,nfldaer,hrdifaer ! variables for external aerosol files
 
   public :: ges_initialized
 
   public :: nfldsig_all,nfldsig_now,hrdifsig_all
   public :: nfldsfc_all,nfldsfc_now,hrdifsfc_all
   public :: nfldnst_all,nfldnst_now,hrdifnst_all
+  public :: nfldaer_all,nfldaer_now,hrdifaer_all ! variables for external aerosol files
   public :: extrap_intime
   public :: ntguessig_ref
   public :: ntguessfc_ref
   public :: ntguesnst_ref
+  public :: ntguesaer_ref
+
+  public :: ges_w_btlev
+  public :: ges_rho
 
   logical:: sfcmod_gfs = .false.    ! .true. = recompute 10m wind factor using gfs physics
   logical:: sfcmod_mm5 = .false.    ! .true. = recompute 10m wind factor using mm5 physics
@@ -168,10 +170,12 @@ module guess_grids
   integer(i_kind) ntguessig         ! location of actual guess time for sigma fields
   integer(i_kind) ntguessfc         ! location of actual guess time for sfc fields
   integer(i_kind) ntguesnst         ! location of actual guess time for nst FCST fields
+  integer(i_kind) ntguesaer         ! location of actual guess time for aer FCST fields
 
   integer(i_kind), save:: ntguessig_ref	! replace ntguessig as the storage for its original value
   integer(i_kind), save:: ntguessfc_ref	! replace ntguessfc as the storage for its original value
   integer(i_kind), save:: ntguesnst_ref ! replace ntguesnst as the storage for its original value
+  integer(i_kind), save:: ntguesaer_ref ! replace ntguesaer as the storage for its original value
 
   integer(i_kind):: ifact10 = 0     ! 0 = use 10m wind factor from guess
   integer(i_kind):: nsig_ext = 13   ! use 13 layers above model top to compute the bending angle for gpsro
@@ -181,6 +185,7 @@ module guess_grids
   real(r_kind), allocatable, dimension(:), save:: hrdifsig_all  ! a list of all times
   real(r_kind), allocatable, dimension(:), save:: hrdifsfc_all  ! a list of all times
   real(r_kind), allocatable, dimension(:), save:: hrdifnst_all  ! a list of all times
+  real(r_kind), allocatable, dimension(:), save:: hrdifaer_all  ! a list of all times
 
   integer(i_kind), save:: nfldsig_all	! expected total count of time slots
   integer(i_kind), save:: nfldsfc_all
@@ -194,16 +199,23 @@ module guess_grids
   integer(i_kind), save:: nfldsfc_now
   integer(i_kind), save:: nfldnst_now
 
+! variables for external aerosol files
+  integer(i_kind), save:: nfldaer_all
+  integer(i_kind), save:: nfldaer       ! actual count of in-cache time slots for AER file
+  integer(i_kind), save:: nfldaer_now
+
   logical, save:: extrap_intime		! compute o-f interpolate within the time ranges of guess_grids,
   					! or also extrapolate outside the time ranges.
 
   real(r_kind), allocatable, dimension(:):: hrdifsig  ! times for cached sigma guess_grid
   real(r_kind), allocatable, dimension(:):: hrdifsfc  ! times for cached surface guess_grid
   real(r_kind), allocatable, dimension(:):: hrdifnst  ! times for cached nst guess_grid
+  real(r_kind), allocatable, dimension(:):: hrdifaer  ! times for cached aer guess_grid
 
   integer(i_kind),allocatable, dimension(:)::ifilesfc  ! array used to open the correct surface guess files
   integer(i_kind),allocatable, dimension(:)::ifilesig  ! array used to open the correct sigma guess files
   integer(i_kind),allocatable, dimension(:)::ifilenst  ! array used to open the correct nst guess files
+  integer(i_kind),allocatable, dimension(:)::ifileaer  ! array used to open the correct aer guess files
 
   integer(i_kind),allocatable,dimension(:,:,:):: isli    ! snow/land/ice mask
   integer(i_kind),allocatable,dimension(:,:,:):: isli_g  ! isli on horiz/global grid
@@ -235,6 +247,7 @@ module guess_grids
 
   real(r_kind),allocatable,dimension(:,:,:,:):: geop_hgtl ! guess geopotential height at mid-layers
   real(r_kind),allocatable,dimension(:,:,:,:):: geop_hgti ! guess geopotential height at level interfaces
+  real(r_kind),allocatable,dimension(:,:,:,:):: ges_geopi ! input guess geopotential height at level interfaces
 
   real(r_kind),allocatable,dimension(:,:,:):: pbl_height  !  GSD PBL height in hPa
                                                           ! Guess Fields ...
@@ -248,6 +261,9 @@ module guess_grids
 
   real(r_kind),allocatable,dimension(:,:,:):: fact_tv      ! 1./(one+fv*ges_q) for virt to sen calc.
   real(r_kind),allocatable,dimension(:,:,:,:):: ges_qsat   ! 4d qsat array
+
+  real(r_kind),allocatable,dimension(:,:,:,:):: ges_w_btlev
+  real(r_kind),allocatable,dimension(:,:,:,:):: ges_rho
 
   interface guess_grids_print
      module procedure print1r8_
@@ -392,6 +408,7 @@ contains
 
 ! !USES:
 
+    use wrf_vars_mod, only : w_exist
     use constants,only: zero,one
     use gridmod, only: lat2,lon2,nsig
     implicit none
@@ -422,6 +439,7 @@ contains
 !   2012-05-14  todling - revisit cw check to check also on some hydrometeors
 !   2013-10-19  todling - revisit initialization of certain vars wrt ESMF
 !   2014-06-09  carley/zhu - add wgt_lcbas
+!   2019-03-21  Wei/Martin - add capability to read external aerosol file
 !
 ! !REMARKS:
 !   language: f90
@@ -446,6 +464,8 @@ contains
        nfldsig_now=0 ! _now variables are not used if not for ESMF
        nfldsfc_now=0
        nfldnst_now=0
+       nfldaer_all=nfldaer
+       nfldaer_now=0
        extrap_intime=.true.
 #endif /* HAVE_ESMF */
 
@@ -454,11 +474,18 @@ contains
             ges_lnprsl(lat2,lon2,nsig,nfldsig),ges_lnprsi(lat2,lon2,nsig+1,nfldsig),&
             ges_tsen(lat2,lon2,nsig,nfldsig),&
             ges_teta(lat2,lon2,nsig,nfldsig),&
+            ges_rho(lat2,lon2,nsig,nfldsig), &  
             geop_hgtl(lat2,lon2,nsig,nfldsig), &
             geop_hgti(lat2,lon2,nsig+1,nfldsig),ges_prslavg(nsig),&
+            ges_geopi(lat2,lon2,nsig+1,nfldsig),&
             tropprs(lat2,lon2),fact_tv(lat2,lon2,nsig),&
             pbl_height(lat2,lon2,nfldsig),wgt_lcbas(lat2,lon2), &
             ges_qsat(lat2,lon2,nsig,nfldsig),stat=istatus)
+
+       if(w_exist)then
+         allocate(ges_w_btlev(lat2,lon2,2,nfldsig),stat=istatus)
+       endif
+
        if (istatus/=0) write(6,*)'CREATE_GES_GRIDS(ges_prsi,..):  allocate error, istatus=',&
             istatus,lat2,lon2,nsig,nfldsig
 
@@ -497,6 +524,7 @@ contains
                 do i=1,lat2
                    ges_prsl(i,j,k,n)=zero
                    ges_lnprsl(i,j,k,n)=zero
+                   ges_rho(i,j,k,n)=zero
                    ges_qsat(i,j,k,n)=zero
                    ges_tsen(i,j,k,n)=zero
                    ges_teta(i,j,k,n)=zero
@@ -510,6 +538,7 @@ contains
                    ges_prsi(i,j,k,n)=zero
                    ges_lnprsi(i,j,k,n)=zero
                    geop_hgti(i,j,k,n)=zero
+                   ges_geopi(i,j,k,n)=zero
                 end do
              end do
           end do
@@ -520,6 +549,10 @@ contains
              wgt_lcbas(i,j)=0.01_r_kind
           end do
        end do
+
+       if(w_exist) then
+         ges_w_btlev=zero
+       endif
 
     end if ! ges_initialized
     
@@ -760,6 +793,7 @@ contains
   subroutine destroy_ges_grids
 
 ! !USES:
+    use wrf_vars_mod, only : w_exist
 
     implicit none
 
@@ -796,8 +830,9 @@ contains
     call destroy_ges_tendencies
 !
     deallocate(ges_prsi,ges_prsl,ges_lnprsl,ges_lnprsi,&
-         ges_tsen,ges_teta,geop_hgtl,geop_hgti,ges_prslavg,&
+         ges_tsen,ges_teta,geop_hgtl,geop_hgti,ges_geopi,ges_prslavg,ges_rho,&
          tropprs,fact_tv,pbl_height,wgt_lcbas,ges_qsat,stat=istatus)
+    if(w_exist) deallocate(ges_w_btlev,stat=istatus)
     if (istatus/=0) &
          write(6,*)'DESTROY_GES_GRIDS(ges_prsi,..):  deallocate error, istatus=',&
          istatus
@@ -889,6 +924,7 @@ contains
 !
 ! !REVISION HISTORY:
 !   2009-01-08  todling
+!   2019-03-21  Wei/Martin - added separate aerosol input file
 !
 ! !REMARKS:
 !   language: f90
@@ -911,13 +947,17 @@ contains
     nfldsig_now=0	! _now variables are not used if not for ESMF
     nfldsfc_now=0
     nfldnst_now=0
+    nfldaer_all=nfldaer
+    nfldaer_now=0
     extrap_intime=.true.
     allocate(hrdifsfc(nfldsfc),ifilesfc(nfldsfc), &
              hrdifnst(nfldnst),ifilenst(nfldnst), &
              hrdifsig(nfldsig),ifilesig(nfldsig), &
+             hrdifaer(nfldaer),ifileaer(nfldaer), &
 	     hrdifsfc_all(nfldsfc_all), &
              hrdifnst_all(nfldnst_all), &
 	     hrdifsig_all(nfldsig_all), &
+             hrdifaer_all(nfldaer_all), &
 	     stat=istatus)
     if (istatus/=0) &
          write(6,*)'CREATE_GESFINFO(hrdifsfc,..):  allocate error, istatus=',&
@@ -946,6 +986,7 @@ contains
 !
 ! !REVISION HISTORY:
 !   2009-01-08  todling
+!   2019-03-21  Wei/Martin - added external aerosol file variables
 !
 ! !REMARKS:
 !   language: f90
@@ -962,8 +1003,8 @@ contains
     gesfinfo_created_=.false.
 
 #ifndef HAVE_ESMF
-    deallocate(hrdifsfc,ifilesfc,hrdifnst,ifilenst,hrdifsig,ifilesig, &
-    	hrdifsfc_all,hrdifnst_all,hrdifsig_all,stat=istatus)
+    deallocate(hrdifsfc,ifilesfc,hrdifnst,hrdifaer,ifilenst,hrdifsig,ifilesig,ifileaer,&
+    	hrdifsfc_all,hrdifnst_all,hrdifsig_all,hrdifaer_all,stat=istatus)
     if (istatus/=0) &
          write(6,*)'DESTROY_GESFINFO:  deallocate error, istatus=',&
          istatus
@@ -974,6 +1015,8 @@ contains
     nfldsfc    =0
     nfldnst    =0
     nfldsig    =0
+    nfldaer_all=0
+    nfldaer    =0
 #endif /* HAVE_ESMF */
 
     return
@@ -993,12 +1036,12 @@ contains
 
 ! !USES:
 
-    use constants,only: zero,one,rd_over_cp,one_tenth,half,ten
+    use constants,only: zero,one,rd_over_cp,one_tenth,half,ten,rd,r1000
     use gridmod, only: lat2,lon2,nsig,ak5,bk5,ck5,tref5,idvc5,&
          regional,wrf_nmm_regional,nems_nmmb_regional,wrf_mass_regional,&
          cmaq_regional,pt_ll,aeta2_ll,fv3_regional,&
          aeta1_ll,eta2_ll,pdtop_ll,eta1_ll,twodvar_regional,idsl5
-  use mpimod, only: mype
+    use obsmod, only: dtype,ndat
     implicit none
 
 ! !DESCRIPTION: populate guess pressure arrays
@@ -1037,7 +1080,7 @@ contains
     real(r_kind),dimension(:,:)  ,pointer::ges_ps=>NULL()
     real(r_kind),dimension(:,:,:),pointer::ges_tv=>NULL()
     real(r_kind) pinc(lat2,lon2)
-    integer(i_kind) i,j,k,jj,itv,ips,kp
+    integer(i_kind) i,j,k,ii,jj,itv,ips,kp
     logical ihaveprs(nfldsig)
 
     kap1=rd_over_cp+one
@@ -1211,6 +1254,26 @@ contains
 
     end if  !  end regional/global block
 
+!   Compute density for dBZ assimilation purposes - multiply by 1000 to convert
+!   to Pa
+    do ii=1,ndat
+       if ( index(dtype(ii), 'dbz') /= 0 )then
+          do jj=1,nfldsig
+             call gsi_bundlegetpointer(gsi_metguess_bundle(jj),'tv' ,ges_tv,itv)
+             if(idvc5==3) then
+                if(itv/=0) call die(myname_,': tv must be present when idvc5=3,abort',itv)
+             endif
+             do j=1,lon2
+                do i=1,lat2
+                   do k=1,nsig
+                        ges_rho(i,j,k,jj)=(ges_prsl(i,j,k,jj)/(ges_tv(i,j,k)*rd))*r1000
+                   end do
+                end do
+             end do
+          end do
+       end if
+    end do
+
 ! For regional applications only, load variables containing mean
 ! surface pressure and pressure profile at the layer midpoints
     if (regional) then
@@ -1237,6 +1300,52 @@ contains
 
     return
   end subroutine load_prsges
+
+  subroutine get_ref_gesprs(prs)
+  use constants, only: zero,one_tenth,r100,r1000
+  use gridmod, only: regional,twodvar_regional,cmaq_regional
+  use gridmod, only: wrf_nmm_regional,nems_nmmb_regional,wrf_mass_regional,fv3_regional
+  use gridmod, only: idvc5,ak5,bk5
+  use gridmod, only: eta1_ll
+  use gridmod, only: eta2_ll
+  use gridmod, only: pdtop_ll
+  use gridmod, only: pt_ll
+  use gridmod, only: nsig
+  implicit none
+  real(r_kind), dimension(nsig+1), intent(out) :: prs
+
+  integer(i_kind) k
+
+! get some reference-like pressure levels
+  do k=1,nsig+1
+     if(regional) then
+        if (wrf_nmm_regional.or.nems_nmmb_regional.or.cmaq_regional) &
+           prs(k)=one_tenth* &
+                  (eta1_ll(k)*pdtop_ll + &
+                   eta2_ll(k)*(r1000-pdtop_ll-pt_ll) + &
+                   pt_ll)
+        if (twodvar_regional) &
+           prs(k)=one_tenth*(eta1_ll(k)*(r1000-pt_ll) + pt_ll)
+        if (fv3_regional ) &
+           prs(k)=eta1_ll(k)+r100*eta2_ll(k)
+        if (wrf_mass_regional) &
+           prs(k)=one_tenth*(eta1_ll(k)*(r1000-pt_ll) + eta2_ll(k) + pt_ll)
+     else
+        if (idvc5==1 .or. idvc5==2) then
+           prs(k)=ak5(k)+(bk5(k)*r1000)
+        else if (idvc5==3) then
+           if (k==1) then
+              prs(k)=r1000
+           else if (k==nsig+1) then
+              prs(k)=zero
+           else
+              prs(k)=ak5(k)+(bk5(k)*r1000)! +(ck5(k)*trk)
+           end if
+        end if
+     endif
+  enddo
+  end subroutine get_ref_gesprs
+
 
 !-------------------------------------------------------------------------
 !    NOAA/NCEP, National Centers for Environmental Prediction GSI        !
@@ -1509,6 +1618,7 @@ contains
 
     use constants, only: one,rd_over_cp_mass,r1000,ten,zero,two
     use gridmod, only: lat2, lon2, nsig,wrf_mass_regional, &
+         aeta1_ll,aeta2_ll,pdtop_ll,pt_ll,&
          twodvar_regional,nems_nmmb_regional,fv3_regional
 
     implicit none

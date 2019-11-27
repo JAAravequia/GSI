@@ -16,6 +16,8 @@ module mod_fv3_lola
 !   2017-10-10  wu w - setup interpolation and trnsform coeff in generate_anl_grid
 !                      add routines earthuv2fv3, fv3uv2earth, fv3_h_to_ll
 !                        fv3_ll_to_h
+!   2019-11-01  wu   - add checks in generate_anl_grid to present the mean
+!                      longitude correctly to fix problem near lon=0
 !
 ! subroutines included:
 !   sub generate_anl_grid
@@ -90,6 +92,8 @@ subroutine generate_anl_grid(nx,ny,grid_lon,grid_lont,grid_lat,grid_latt)
 !                      2. compute/setup FV3 to A grid interpolation parameters
 !                      3. compute/setup A to FV3 grid interpolation parameters         
 !                      4. setup weightings for wind conversion from FV3 to earth
+!   2019-11-01  wu   - add checks to present the mean longitude correctly to fix
+!                       problem near lon=0
 !
 !   input argument list:
 !    nx, ny               - number of cells = nx*ny 
@@ -141,7 +145,7 @@ subroutine generate_anl_grid(nx,ny,grid_lon,grid_lont,grid_lat,grid_latt)
   real(r_kind) xv,yv,zv,vval
   real(r_kind) cx,cy
   real(r_kind) uval,ewval,nsval
-
+  real(r_kind) diff,sq180
   real(r_kind) d(4),ds
   integer(i_kind) kk,k
 
@@ -510,12 +514,17 @@ subroutine generate_anl_grid(nx,ny,grid_lon,grid_lont,grid_lat,grid_latt)
   enddo
 
 !  2   find angles to E-W and N-S for U edges
- 
+  sq180=180._r_kind**2 
   do j=1,ny+1
      do i=1,nx
 !      center lat/lon of the edge 
         rlat=half*(grid_lat(i,j)+grid_lat(i+1,j))
-        rlon=half*(grid_lon(i,j)+grid_lon(i+1,j))
+        diff=(grid_lon(i,j)-grid_lon(i+1,j))**2
+        if(diff < sq180)then
+           rlon=half*(grid_lon(i,j)+grid_lon(i+1,j))
+        else
+           rlon=half*(grid_lon(i,j)+grid_lon(i+1,j)-360._r_kind)
+        endif
 !    vector to center of the edge
         xr=cos(rlat*deg2rad)*cos(rlon*deg2rad)
         yr=cos(rlat*deg2rad)*sin(rlon*deg2rad)
@@ -537,7 +546,12 @@ subroutine generate_anl_grid(nx,ny,grid_lon,grid_lont,grid_lat,grid_latt)
   do j=1,ny
      do i=1,nx+1
         rlat=half*(grid_lat(i,j)+grid_lat(i,j+1))
-        rlon=half*(grid_lon(i,j)+grid_lon(i,j+1))
+        diff=(grid_lon(i,j)-grid_lon(i,j+1))**2
+        if(diff < sq180)then
+           rlon=half*(grid_lon(i,j)+grid_lon(i,j+1))
+        else
+           rlon=half*(grid_lon(i,j)+grid_lon(i,j+1)-360._r_kind)
+        endif
         xr=cos(rlat*deg2rad)*cos(rlon*deg2rad)
         yr=cos(rlat*deg2rad)*sin(rlon*deg2rad)
         zr=sin(rlat*deg2rad)
@@ -833,7 +847,7 @@ subroutine rotate2deg(rlon_in,rlat_in,rlon_out,rlat_out,rlon0,rlat0,nx,ny)
 
 
   use kinds, only: r_kind,i_kind
-  use constants, only: deg2rad,rearth,rad2deg
+  use constants, only: deg2rad,rad2deg
   implicit none
 
   integer(i_kind), intent(in   ) :: nx,ny                 ! fv3 tile x- and y-dimensions
@@ -890,7 +904,7 @@ subroutine unrotate2deg(rlon_in,rlat_in,rlon_out,rlat_out,rlon0,rlat0,nx,ny)
 !$$$ end documentation block
 
   use kinds, only: r_kind,i_kind
-  use constants, only: deg2rad,rearth,rad2deg
+  use constants, only: deg2rad,rad2deg
   implicit none
 
   real(r_kind),intent(in   ) :: rlon_out(nx,ny),rlat_out(nx,ny),rlon0,rlat0
