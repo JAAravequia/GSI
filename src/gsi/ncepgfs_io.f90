@@ -1445,7 +1445,7 @@ end subroutine write_ghg_grid
                 call write_fv3_increment(grd_a,sp_a,filename,mype_atm, &
                      atm_bundle,itoutsig)
                if ( laeroana_gocart ) then
-                   if (mype==0) write(6,'Write Increment not supported for Aerosols, wrting full analysis also') 
+                   if (mype==0) write(6,*) 'Write Increment not supported for Aerosols, wrting full analysis also' 
                    call write_nemsatm(grd_a,sp_a,filename,mype_atm, &
                         atm_bundle,itoutsig,chem_bundle)
                end if
@@ -1471,7 +1471,7 @@ end subroutine write_ghg_grid
                call write_fv3_increment(grd_a,sp_a,filename,mype_atm, &
                      atm_bundle,itoutsig)
                if ( laeroana_gocart ) then
-                   if (mype==0) write(6,'Write Increment not supported for Aerosols, wrting full analysis also') 
+                   if (mype==0) write(6,*) 'Write Increment not supported for Aerosols, wrting full analysis also' 
                    call write_gfsncatm(grd_a,sp_a,filename,mype_atm, &
                         atm_bundle,itoutsig,chem_bundle)
                end if
