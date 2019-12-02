@@ -83,7 +83,7 @@ subroutine read_abi(mype,val_abi,ithin,rmesh,jsatid,&
 ! Declare local variables
   logical outside,iuse,assim,clrsky,allsky
 
-  character(8) subset,subcsr,subasr
+  character(8) subset,subcsr,subasr,subcsr2
   character(80):: hdrabi              ! abi header
 
   integer(i_kind) nchanl,ilath,ilonh,ilzah,iszah,irec,next,ilazi,isazi
@@ -111,6 +111,9 @@ subroutine read_abi(mype,val_abi,ithin,rmesh,jsatid,&
 
   real(r_kind) cdist,disterr,disterrmax,dlon00,dlat00
   integer(i_kind) ntest
+  integer(i_kind)     :: unit_table_in_abi = 60
+  character(40) :: infile2
+
 
   logical :: allchnmiss
 
@@ -148,6 +151,7 @@ subroutine read_abi(mype,val_abi,ithin,rmesh,jsatid,&
   iszah=12                     ! solar zenith angle
   isazi=13                     ! solar azimuth angle
   subcsr='NC021046'            ! sub message
+  subcsr2='FN021046'           ! sub message nesdis g17
   subasr='NC021045'            ! sub message
 
 ! If all channels of a given sensor are set to monitor or not
@@ -167,9 +171,21 @@ subroutine read_abi(mype,val_abi,ithin,rmesh,jsatid,&
 ! Open bufr file.
   call closbf(lnbufr)
   open(lnbufr,file=trim(infile),form='unformatted')
-  call openbf(lnbufr,'IN',lnbufr)
+  !call openbf(lnbufr,'IN',lnbufr)
+  !call datelen(10)
+  !call readmg(lnbufr,subset,idate,iret)
+   
+  if (jsatid == 'g17' ) then
+      open(unit_table_in_abi,file='pbufr_table_abi')
+      call openbf(lnbufr,'IN',unit_table_in_abi)
+  else
+      call openbf(lnbufr,'IN',lnbufr)
+  endif
+
   call datelen(10)
   call readmg(lnbufr,subset,idate,iret)
+
+
 
 ! Check the data set
   if( iret/=0) then
@@ -180,7 +196,7 @@ subroutine read_abi(mype,val_abi,ithin,rmesh,jsatid,&
 
   clrsky=.false.
   allsky=.false.
-  if(subset == subcsr) then
+  if(subset == subcsr .or. subset == subcsr2) then
      clrsky=.true.
   elseif(subset == subasr) then
      allsky=.true.
@@ -219,12 +235,24 @@ subroutine read_abi(mype,val_abi,ithin,rmesh,jsatid,&
   nele  = nreal   + nchanl
   allocate(data_all(nele,itxmax),nrec(itxmax))
 
+  if(jsatid == 'g16') then
+     kidsat=270
+  elseif (jsatid == 'g17') then
+     kidsat = 271
+  endif
 
-!  Reopen unit to bufr file
+
   call closbf(lnbufr)
-  open(lnbufr,file=infile,form='unformatted')
-  call openbf(lnbufr,'IN',lnbufr)
-  if(jsatid == 'gr' .or. jsatid == 'g16') kidsat = 270
+  open(lnbufr,file=trim(infile),form='unformatted')
+  if(jsatid == 'g16') then
+     call openbf(lnbufr,'IN',lnbufr)
+  elseif (jsatid == 'g17') then
+     !infile2 = trim(infile)//'_g17' 
+     !open(lnbufr,file=trim(infile),form='unformatted')
+     open(unit_table_in_abi,file='pbufr_table_abi')
+     call openbf(lnbufr,'IN',unit_table_in_abi)
+  endif
+  call datelen(10)
 
 
   nrec=999999
@@ -334,7 +362,6 @@ subroutine read_abi(mype,val_abi,ithin,rmesh,jsatid,&
 
         call ufbrep(lnbufr,dataabi2,1,nbrst,iret,'TMBRST')
         call ufbrep(lnbufr,dataabi3,1,nbrst,iret,'SDTB')
- 
 !       toss data if SDTB>1.3 
         do i=1,nbrst
           if(i==2 .or. i==3 .or. i==4) then   ! 3 water-vapor channels
