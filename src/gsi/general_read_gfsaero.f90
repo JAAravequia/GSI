@@ -7,7 +7,7 @@ subroutine general_read_ncaero(grd,sp_a,filename,mype,gfschem_bundle, &
 !                                        files
 !
 ! abstract: copied from general_read_nemsaero, primarily for reading in aerosol
-!           tracer variables from netCDF GFS I/O files 
+!           tracer variables from netCDF GFS I/O files
 !
 ! program history log:
 !   2019-11-06  Martin - copied and modified to read in aerosol arrays
@@ -40,6 +40,287 @@ subroutine general_read_ncaero(grd,sp_a,filename,mype,gfschem_bundle, &
 !   machine:  ibm RS/6000 SP
 !
 !$$$
+    use kinds, only: r_kind,r_single,i_kind
+    use gridmod, only: use_fv3_aero
+    use general_commvars_mod, only: fill_ns,fill2_ns
+    use general_sub2grid_mod, only: sub2grid_info
+    use general_specmod, only: spec_vars
+    use mpimod, only: npe
+    use constants, only: zero,one,r0_01
+    use egrid2agrid_mod, only: g_egrid2agrid,g_create_egrid2agrid,egrid2agrid_parm,destroy_egrid2agrid
+    use constants, only: two,pi,half,deg2rad,r60,r3600
+    use gsi_bundlemod, only: gsi_bundle, gsi_bundlegetpointer
+    use module_fv3gfs_ncio, only: Dataset, Variable, Dimension, open_dataset,&
+                            close_dataset, get_dim, read_vardata,get_idate_from_time_units
+
+    implicit none
+
+!   Declare local parameters
+    real(r_kind),parameter:: r0_001 = 0.001_r_kind
+
+!   Declare passed variables
+    type(sub2grid_info)                   ,intent(in   ) :: grd
+    type(spec_vars)                       ,intent(in   ) :: sp_a
+    character(*)                          ,intent(in   ) :: filename
+    integer(i_kind)                       ,intent(in   ) :: mype
+    integer(i_kind)                       ,intent(in   ) :: naero
+    character(*),dimension(naero)         ,intent(in   ) :: aeroname
+    logical                               ,intent(in   ) :: init_head
+    integer(i_kind)                       ,intent(  out) :: iret_read
+    type(gsi_bundle)                      ,intent(inout) :: gfschem_bundle
+
+!   Declare local variables
+    character(len=120) :: my_name = 'general_read_ncaero'
+    character(len=1)   :: null = ' '
+    character(len=20),dimension(npe) :: ch_aero
+    integer(i_kind):: iret,nlatm2,nlevs,icm,nord_int
+    integer(i_kind):: i,j,k,kr,l,icount,kk,istatus,ier
+    integer(i_kind) :: latb, lonb, levs, nframe
+    integer(i_kind) :: nfhour, nfminute, nfsecondn, nfsecondd
+    integer(i_kind) :: istop = 101
+    integer(i_kind),dimension(npe)::ilev,iflag,mype_use
+    integer(i_kind),dimension(6):: idate
+    integer(i_kind),dimension(4):: odate
+    real(r_kind),dimension(:,:,:),pointer :: &
+               ae_d1,ae_d2,ae_d3,ae_d4,ae_d5,&
+               ae_s1,ae_s2,ae_s3,ae_s4,ae_so4,&
+               ae_ocpho,ae_ocphi,ae_bcpho,ae_bcphi
+
+    real(r_kind),allocatable,dimension(:,:) :: grid,grid_v,grid_vor,grid_div,grid_b,grid_b2
+    real(r_kind),allocatable,dimension(:,:,:) :: grid_c, grid2, grid_c2
+    real(r_kind),allocatable,dimension(:)   :: work, work_v, fhour
+    real(r_single),allocatable,dimension(:,:,:) :: rwork3d0, rwork3d1
+    real(r_single),allocatable,dimension(:,:) :: rwork2d
+    real(r_kind),allocatable,dimension(:) :: rlats,rlons,clons,slons
+    real(r_single),allocatable,dimension(:) :: r4lats,r4lons
+    real(r_kind),allocatable,dimension(:):: spec_div,spec_vor
+    real(r_kind),allocatable,dimension(:) :: rlats_tmp,rlons_tmp
+
+
+    logical :: procuse,diff_res,eqspace
+    type(egrid2agrid_parm) :: p_high
+    logical,dimension(1) :: vector
+    type(Dataset) :: aerges
+    type(Dimension) :: ncdim
+
+!******************************************************************************
+    if(mype==0) write(6,*) trim(my_name)," start and filename is ",trim(filename)
+
+!   Initialize variables used below
+    iret_read=0
+    iret=0
+    nlatm2=grd%nlat-2
+    iflag = 0
+    ilev = 0
+
+    nlevs=grd%nsig
+    mype_use=-1
+    icount=0
+    procuse=.false.
+    if(mype == 0)procuse = .true.
+    do i=1,npe
+       if(grd%recvcounts_s(i-1) > 0)then
+         icount = icount+1
+         mype_use(icount)=i-1
+         if(i-1 == mype) procuse=.true.
+       end if
+    end do
+    icm=icount
+    allocate( work(grd%itotsub))
+    work=zero
+    if(procuse)then
+       aerges = open_dataset(filename)
+       ! get dimension sizes
+       ncdim = get_dim(aerges, 'grid_xt'); lonb = ncdim%len
+       ncdim = get_dim(aerges, 'grid_yt'); latb = ncdim%len
+       ncdim = get_dim(aerges, 'pfull'); levs = ncdim%len
+
+       ! get time information
+       idate = get_idate_from_time_units(aerges)
+       odate(1) = idate(4)  !hour
+       odate(2) = idate(2)  !month
+       odate(3) = idate(3)  !day
+       odate(4) = idate(1)  !year
+       call read_vardata(aerges, 'time', fhour)
+       fhour = float(nint(fhour))
+       if ( iret == 0 .and. mype == 0 ) then
+          write(6,'(''Aerosol file valid time='',i4.4,i2.2,i2.2,i2.2)') odate(4),odate(2),odate(3),odate(1)+fhour
+       end if
+       diff_res=.false.
+       if ( latb /= nlatm2 ) then
+          diff_res=.true.
+          if ( mype == 0 ) write(6, &
+             '(a,'': different spatial dimension nlatm2 = '',i4,tr1,''latb = '',i4)') &
+             trim(my_name),nlatm2,latb
+       endif
+       if ( lonb /= grd%nlon ) then
+          diff_res=.true.
+          if ( mype == 0 ) write(6, &
+             '(a,'': different spatial dimension nlon   = '',i4,tr1,''lonb = '',i4)') &
+             trim(my_name),grd%nlon,lonb
+       endif
+       if ( levs /= grd%nsig ) then
+          if ( mype == 0 ) write(6, &
+             '(a,'': inconsistent spatial dimension nsig   = '',i4,tr1,''levs = '',i4)') &
+             trim(my_name),grd%nsig,levs
+          call stop2(101)
+       endif
+
+       allocate( spec_vor(sp_a%nc), spec_div(sp_a%nc) )
+       allocate( grid(grd%nlon,nlatm2), grid_v(grd%nlon,nlatm2) )
+       if ( diff_res ) then
+          allocate(grid_b(lonb,latb),grid_c(latb+2,lonb,1),grid2(grd%nlat,grd%nlon,1))
+          allocate(grid_b2(lonb,latb),grid_c2(latb+2,lonb,1))
+       endif
+       allocate(rwork3d0(lonb,latb,levs))
+       allocate(rwork3d1(lonb,latb,levs))
+       allocate(rwork2d(lonb,latb))
+       allocate(rlats(latb+2),rlons(lonb),clons(lonb),slons(lonb))
+       call read_vardata(aerges, 'grid_xt', rlons_tmp)
+       call read_vardata(aerges, 'grid_yt', rlats_tmp)
+       do j=1,latb
+         rlats(latb+2-j)=deg2rad*rlats_tmp(j)
+       end do
+       do j=1,lonb
+         rlons(j)=deg2rad*rlons_tmp(j)
+       end do
+       deallocate(rlats_tmp,rlons_tmp)
+       rlats(1)=-half*pi
+       rlats(latb+2)=half*pi
+       do j=1,lonb
+          clons(j)=cos(rlons(j))
+          slons(j)=sin(rlons(j))
+       enddo
+
+       nord_int=4
+       eqspace=.false.
+       call g_create_egrid2agrid(grd%nlat,sp_a%rlats,grd%nlon,sp_a%rlons, &
+                               latb+2,rlats,lonb,rlons,&
+                               nord_int,p_high,.true.,eqspace=eqspace)
+       deallocate(rlats,rlons)
+
+    endif ! if ( procuse )
+
+    istatus=0
+    do l=1,naero
+       select case(trim(aeroname(l)))
+       case ('sulf')
+           call gsi_bundlegetpointer(gfschem_bundle,'sulf' ,ae_so4  ,ier); istatus=istatus+ier
+       case ('oc1')
+           call gsi_bundlegetpointer(gfschem_bundle,'oc1'  ,ae_ocpho,ier); istatus=istatus+ier
+       case ('oc2')
+           call gsi_bundlegetpointer(gfschem_bundle,'oc2'  ,ae_ocphi,ier); istatus=istatus+ier
+       case ('bc1')
+           call gsi_bundlegetpointer(gfschem_bundle,'bc1'  ,ae_bcpho,ier); istatus=istatus+ier
+       case ('bc2')
+           call gsi_bundlegetpointer(gfschem_bundle,'bc2'  ,ae_bcphi,ier); istatus=istatus+ier
+       case ('dust1')
+           call gsi_bundlegetpointer(gfschem_bundle,'dust1',ae_d1   ,ier); istatus=istatus+ier
+       case ('dust2')
+           call gsi_bundlegetpointer(gfschem_bundle,'dust2',ae_d2   ,ier); istatus=istatus+ier
+       case ('dust3')
+           call gsi_bundlegetpointer(gfschem_bundle,'dust3',ae_d3   ,ier); istatus=istatus+ier
+       case ('dust4')
+           call gsi_bundlegetpointer(gfschem_bundle,'dust4',ae_d4   ,ier); istatus=istatus+ier
+       case ('dust5')
+           call gsi_bundlegetpointer(gfschem_bundle,'dust5',ae_d5   ,ier); istatus=istatus+ier
+       case ('seas1')
+           call gsi_bundlegetpointer(gfschem_bundle,'seas1',ae_s1   ,ier); istatus=istatus+ier
+       case ('seas2')
+           call gsi_bundlegetpointer(gfschem_bundle,'seas2',ae_s2   ,ier); istatus=istatus+ier
+       case ('seas3')
+           call gsi_bundlegetpointer(gfschem_bundle,'seas3',ae_s3   ,ier); istatus=istatus+ier
+       case ('seas4')
+           call gsi_bundlegetpointer(gfschem_bundle,'seas4',ae_s4   ,ier); istatus=istatus+ier
+       end select
+    end do
+    if ( istatus /= 0 ) then
+       if ( mype == 0 ) then
+         write(6,*) 'general_read_ncaero: ERROR'
+         write(6,*) 'Missing some of the required fields'
+         write(6,*) 'Aborting ... '
+      endif
+      call stop2(999)
+   endif
+
+   if (.not. use_fv3_aero) then
+      if ( mype == 0) then
+         write(6,*) 'Only FV3 aero fieldnames are supported for netCDF aerosol read'
+         write(6,*) 'Aborting...'
+      end if
+      call stop2(999)
+   end if
+   ! loop through all aerosol fields
+   do l=1,naero
+      ! special case for sea salt because CRTM != GOCART
+      if ( aeroname(l)(1:4) == 'seas') then
+         select case ( trim(aeroname(l)) )
+            case ('seas1')
+               call read_vardata(aerges, 'seas1', rwork3d0)
+               call read_vardata(aerges, 'seas2', rwork3d1)
+               rwork3d0 = rwork3d0 + rwork3d1
+            case ('seas2')
+               call read_vardata(aerges, 'seas3', rwork3d0)
+            case ('seas3')
+               call read_vardata(aerges, 'seas4', rwork3d0)
+            case ('seas4')
+               call read_vardata(aerges, 'seas5', rwork3d0)
+         end select
+      else ! 1-to-1 for the rest
+         call read_vardata(aerges, trim(aeroname(l)), rwork3d0)
+      end if
+      do k=1,nlevs
+         icount=icount+1
+         iflag(icount)=3
+         ilev(icount)=k
+         kr = levs+1-k ! netcdf is top to bottom, need to flip
+
+         if (mype==mype_use(icount)) then
+            rwork2d = rwork3d0(:,:,kr)
+            if ( diff_res ) then
+               grid_b = rwork2d
+               vector(1) = .false.
+               call fill2_ns(grid_b,grid_c(:,:,1),latb+2,lonb)
+               call g_egrid2agrid(p_high,grid_c,grid2,1,1,vector)
+               do kk=1,grd%itotsub
+                  i=grd%ltosi_s(kk)
+                  j=grd%ltosj_s(kk)
+                  work(kk)=grid2(i,j,1)
+               enddo
+            else
+               grid=rwork2d
+               call general_fill_ns(grd,grid,work)
+            endif
+         endif
+         if(icount == icm)then
+            call aerosol_reload(grd,ae_d1,ae_d2,ae_d3,ae_d4,ae_d5, &
+                   ae_s1,ae_s2,ae_s3,ae_s4,ae_so4,&
+                   ae_ocpho,ae_ocphi,ae_bcpho,ae_bcphi, &
+                   icount,ilev,ch_aero,work)
+         end if
+      end do
+    end do
+
+    if ( procuse ) then
+       if ( diff_res) deallocate(grid_b,grid_b2,grid_c,grid_c2,grid2)
+       call destroy_egrid2agrid(p_high)
+       deallocate(spec_div,spec_vor)
+       deallocate(rwork3d1,rwork3d0,clons,slons)
+       deallocate(rwork2d)
+       deallocate(grid,grid_v)
+       call close_dataset(aerges)
+    endif
+    deallocate(work)
+
+!   Print date/time stamp
+    if(mype==0) then
+       write(6,700) lonb,latb,nlevs,grd%nlon,nlatm2,&
+            fhour,odate
+700    format('READ_GLOBAL_AEROSOL:  ges read/scatter, lonb,latb,levs=',&
+            3i6,', nlon,nlat=',2i6,', hour=',f10.1,', idate=',4i5)
+    end if
+
+    return
 
 end subroutine general_read_ncaero
 
@@ -51,7 +332,7 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
 !                                        for reading in aerosols from NEMSI/O
 !
 ! abstract: copied from general_read_gfsatm, primarily for reading in aerosol
-!           tracer variables from NEMS GFS I/O files 
+!           tracer variables from NEMS GFS I/O files
 !
 ! program history log:
 !   2019-04-19  Wei/Martin - copied and modified to read in aerosol arrays
@@ -99,7 +380,7 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
     use gsi_bundlemod, only: gsi_bundle, gsi_bundlegetpointer
 
     implicit none
-    
+
 !   Declare local parameters
     real(r_kind),parameter:: r0_001 = 0.001_r_kind
 
@@ -113,7 +394,7 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
     logical                               ,intent(in   ) :: init_head
     integer(i_kind)                       ,intent(  out) :: iret_read
     type(gsi_bundle)                      ,intent(inout) :: gfschem_bundle
-    
+
 !   Declare local variables
     character(len=120) :: my_name = 'general_read_nemsaero'
     character(len=1)   :: null = ' '
@@ -144,7 +425,7 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
     type(egrid2agrid_parm) :: p_high
     logical,dimension(1) :: vector
 
-!******************************************************************************  
+!******************************************************************************
     if(mype==0) write(6,*) trim(my_name)," start and filename is ",trim(filename)
 
 !   Initialize variables used below
@@ -167,7 +448,7 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
        end if
     end do
     icm=icount
-    allocate( work(grd%itotsub)) 
+    allocate( work(grd%itotsub))
     work=zero
     if(procuse)then
 
@@ -302,7 +583,7 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
 !   are spectral coefficient files and need to be transformed to the
 !   grid.
 !   Once on the grid, fields need to be scattered from the full domain
-!   to 
+!   to
 !   sub-domains.
     do l=1,naero
       do k=1,nlevs
@@ -311,7 +592,7 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
          ch_aero(icount)=trim(aeroname(l))
          vector(1)=.false.
          if (mype==mype_use(icount)) then
-           
+
             if (use_fv3_aero) then
                ! variable names in FV3GFS-GSDChem
                if ( aeroname(l)(1:4) == 'seas') then
@@ -366,12 +647,12 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
                 case ('seas4')
                call nemsio_readrecv(gfile,'ss005','mid layer',k,rwork1d0,iret=iret)
                end select
-     
+
      ! Convert NGAC mixing ratio unit from kg/kg( 10^3 g/kg ) to ug/kg( 10^-6 g/kg )
                rwork1d0=rwork1d0*1.0e+9_r_kind
             end if ! NGAC vs FV3-Chem
-  
-  
+
+
             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'tmp','read',istop+7,iret)
             if(diff_res)then
                grid_b=reshape(rwork1d0,(/size(grid_b,1),size(grid_b,2)/))
@@ -386,7 +667,7 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
                grid=reshape(rwork1d0,(/size(grid,1),size(grid,2)/))
                call general_fill_ns(grd,grid,work)
             end if
-  
+
          end if
          if(icount == icm)then
             call aerosol_reload(grd,ae_d1,ae_d2,ae_d3,ae_d4,ae_d5, &
@@ -409,7 +690,7 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
     deallocate(work)
 
 
-!   Print date/time stamp 
+!   Print date/time stamp
     if(mype==0) then
        write(6,700) lonb,latb,nlevs,grd%nlon,nlatm2,&
             fhour,odate
@@ -419,16 +700,6 @@ subroutine general_read_nemsaero(grd,sp_a,filename,mype,gfschem_bundle, &
 
     return
 
-
-!   ERROR detected while reading file
-1000 continue
-     write(6,*)'GENERAL_READ_GFSATM:  ***ERROR*** reading ',&
-         trim(filename),' mype,iret_read=',mype,iret_read,grd%nsig,nlevs
-     return
-
-!   End of routine.  Return
-
-    return
 end subroutine general_read_nemsaero
 !
 subroutine aerosol_reload(grd,ae_d1,ae_d2,ae_d3,ae_d4,ae_d5, &
@@ -592,4 +863,3 @@ subroutine aerosol_reload(grd,ae_d1,ae_d2,ae_d3,ae_d4,ae_d5, &
   ilev=0
   return
 end subroutine aerosol_reload
-

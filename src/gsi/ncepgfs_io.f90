@@ -1182,7 +1182,7 @@ end subroutine write_ghg_grid
 
     integer(i_kind),intent(in   ) :: increment
     integer(i_kind),intent(in   ) :: mype_atm,mype_sfc
-    character(24):: filename
+    character(24):: filename, filenameaer
     integer(i_kind) :: itoutsig,istatus,iret_write,nlon_b,ntlevs,it
 
     real(r_kind),pointer,dimension(:,:  ):: aux_ps
@@ -1348,12 +1348,14 @@ end subroutine write_ghg_grid
             if ( it == ntguessig ) then
                if ( increment > 0 .or. write_fv3_incr ) then
                    filename = 'siginc'
+                   if (laeroana_gocart) filenameaer = 'aerinc'
                else
                    filename = 'siganl'
                endif
             else
                if ( increment > 0 .or. write_fv3_incr ) then
                    write(filename,"('sigi',i2.2)") ifilesig(it)
+                   if (laeroana_gocart) write(filenameaer,"('aeri',i2.2)") ifilesig(it)
                else
                    write(filename,"('siga',i2.2)") ifilesig(it)
                endif
@@ -1442,6 +1444,11 @@ end subroutine write_ghg_grid
             if ( write_fv3_incr ) then
                 call write_fv3_increment(grd_a,sp_a,filename,mype_atm, &
                      atm_bundle,itoutsig)
+               if ( laeroana_gocart ) then
+                   if (mype==0) write(6,'Write Increment not supported for Aerosols, wrting full analysis also') 
+                   call write_nemsatm(grd_a,sp_a,filename,mype_atm, &
+                        atm_bundle,itoutsig,chem_bundle)
+               end if
             else
                 if (fv3_full_hydro) then
                    call write_fv3atm_nems(grd_a,sp_a,filename,mype_atm, &
@@ -1461,11 +1468,22 @@ end subroutine write_ghg_grid
 
         else if ( use_gfs_ncio ) then
             if  ( write_fv3_incr ) then
-                call write_fv3_increment(grd_a,sp_a,filename,mype_atm, &
+               call write_fv3_increment(grd_a,sp_a,filename,mype_atm, &
                      atm_bundle,itoutsig)
+               if ( laeroana_gocart ) then
+                   if (mype==0) write(6,'Write Increment not supported for Aerosols, wrting full analysis also') 
+                   call write_gfsncatm(grd_a,sp_a,filename,mype_atm, &
+                        atm_bundle,itoutsig,chem_bundle)
+               end if
             else
-                call write_gfsncatm(grd_a,sp_a,filename,mype_atm, &
-                     atm_bundle,itoutsig)
+                ! if using aerosols, optional chem_bundle argument
+                if ( laeroana_gocart ) then
+                   call write_gfsncatm(grd_a,sp_a,filename,mype_atm, &
+                        atm_bundle,itoutsig,chem_bundle)
+                else
+                   call write_gfsncatm(grd_a,sp_a,filename,mype_atm, &
+                        atm_bundle,itoutsig)
+                end if
             end if
         else
 
