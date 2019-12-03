@@ -591,7 +591,7 @@ module read_diag
     type(diag_data_extra_list) ,pointer     :: data_extra(:,:)
     integer                    ,intent(out) :: iflag
     integer(i_kind)            ,intent(out) :: ntobs
-    integer(i_kind)                         :: id,ii
+    integer(i_kind)                         :: id,ii,jj
     integer(i_kind),allocatable             :: Use_Flag(:)
 
     real(r_single),allocatable              :: lat(:)            ! latitude (deg)
@@ -667,35 +667,52 @@ module read_diag
 
     allocate( ozobs(ntobs) ) 
     call nc_diag_read_get_var( ftin, 'Observation', ozobs )
-    write(6,*) '  ozobs = ', ozobs
-    deallocate( ozobs )
+!    write(6,*) '  ozobs = ', ozobs
 
     allocate( ozone_inv(ntobs) ) 
-    !call nc_diag_read_get_var( ftin, 'Obs_Minus_Forecast_adjusted', ozone_inv )
-    call nc_diag_read_get_var( ftin, 'Obs_Minus_Forecast_unadjusted', ozone_inv )
-    write(6,*) '  ozone_inv = ', varinv
-    deallocate( ozone_inv )
+    call nc_diag_read_get_var( ftin, 'Obs_Minus_Forecast_adjusted', ozone_inv )
+    !call nc_diag_read_get_var( ftin, 'Obs_Minus_Forecast_unadjusted', ozone_inv )
+!    write(6,*) '  ozone_inv = ', ozone_inv
 
     allocate( varinv(ntobs) ) 
     call nc_diag_read_get_var( ftin, 'Inverse_Observation_Error', varinv )
-    write(6,*) '  varinv = ', varinv
-    deallocate( varinv )
+!    write(6,*) '  varinv = ', varinv
 
     allocate( sza(ntobs) ) 
     call nc_diag_read_get_var( ftin, 'Solar_Zenith_Angle', sza )
-    write(6,*) '  sza = ', sza
-    deallocate( sza )
+!    write(6,*) '  sza = ', sza
 
     allocate( fovn(ntobs) )
     call nc_diag_read_get_var( ftin, 'Scan_Position', fovn )
-    write(6,*) '  fovn = ', fovn
-    deallocate( fovn )
+!    write(6,*) '  fovn = ', fovn
 
     allocate( toqf(ntobs) )
     call nc_diag_read_get_var( ftin, 'Row_Anomaly_Index', toqf )
-    write(6,*) '  toqf = ', toqf
-    deallocate( toqf )
+!    write(6,*) '  toqf = ', toqf
 
+    do jj=1,ntobs
+       do ii=1,header_fix%nlevs
+          data_nlev(ii,jj)%ozobs     =     ozobs( ii )
+          write(6,*) 'data_nlev(ii,jj)%ozobs     = ',ii,jj,data_nlev(ii,jj)%ozobs
+          data_nlev(ii,jj)%ozone_inv = ozone_inv( ii )
+          write(6,*) 'data_nlev(ii,jj)%ozone_inv     = ',ii,jj,data_nlev(ii,jj)%ozone_inv
+          data_nlev(ii,jj)%varinv    =    varinv( ii )
+          write(6,*) 'data_nlev(ii,jj)%varinv     = ',ii,jj,data_nlev(ii,jj)%varinv
+          data_nlev(ii,jj)%sza       =       sza( ii )
+          write(6,*) 'data_nlev(ii,jj)%sza     = ',ii,jj,data_nlev(ii,jj)%sza
+          data_nlev(ii,jj)%fovn      =      fovn( ii )
+          write(6,*) 'data_nlev(ii,jj)%fovn     = ',ii,jj,data_nlev(ii,jj)%fovn
+          data_nlev(ii,jj)%toqf      =      toqf( ii )
+          write(6,*) 'data_nlev(ii,jj)%toqf     = ',ii,jj,data_nlev(ii,jj)%toqf
+       end do
+    end do
+
+    deallocate( ozobs )
+    deallocate( ozone_inv )
+    deallocate( varinv )
+    deallocate( sza )
+    deallocate( fovn )
+    deallocate( toqf )
 
 !!------------------------------------------------
 !!   Contents of NetCDF file:
@@ -711,16 +728,6 @@ module read_diag
 !!        float Row_Anomaly_Index(nobs) ;
 
 
-!    do j=1,ntobs
-!       do i=1,header_fix%nlevs
-!          data_nlev(i,j)%ozobs  = tmp_nlev(1,i,j)
-!          data_nlev(i,j)%ozone_inv= tmp_nlev(2,i,j)
-!          data_nlev(i,j)%varinv = tmp_nlev(3,i,j)
-!          data_nlev(i,j)%sza    = tmp_nlev(4,i,j)
-!          data_nlev(i,j)%fovn   = tmp_nlev(5,i,j)
-!          data_nlev(i,j)%toqf   = tmp_nlev(6,i,j)
-!       end do
-!    end do
 
  
 
