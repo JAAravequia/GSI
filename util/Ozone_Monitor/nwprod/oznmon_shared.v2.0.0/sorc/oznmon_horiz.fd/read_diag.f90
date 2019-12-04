@@ -190,7 +190,8 @@ module read_diag
        header_nlev(k)%grs = grs(k)
        header_nlev(k)%err = err(k)
        header_nlev(k)%iouse = iouse(k)
-    end do
+      end do
+    endif
     deallocate (pob,grs,err,iouse)
 
 
@@ -251,12 +252,8 @@ module read_diag
       allocate( data_mpi( ntobs ) )
       print*, 'data_mpi( ntobs ) allocated', ntobs
       allocate( data_nlev( header_fix%nlevs,ntobs ) )
-<<<<<<< HEAD
       allocate( tmp_fix(3,ntobs))
       allocate( tmp_nlev(10,header_fix%nlevs,ntobs))
-=======
-      print*, 'data_nlev( header_fix%nlevs, ntobs ) allocated', header_fix%nlevs, ntobs
->>>>>>> master
       nlevs_last = header_fix%nlevs
     endif
 
