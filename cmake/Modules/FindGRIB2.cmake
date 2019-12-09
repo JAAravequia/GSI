@@ -9,13 +9,13 @@ find_library( G2_LIB4
 find_library( G2TMPL_LIB
     NAMES libg2tmpl.a
     HINTS
-       /scratch1/BMC/wrfruc/ejames/wrf_code/GSD_UPP/comupp/lib
+       /scratch2/BMC/wrfruc/gge/codes/UPP/GSD_UPP_17oct2019/comupp/lib
     ${NO_DEFAULT_PATH})
 
 find_path( GRIB2INC
     NAMES grib_mod.mod
     HINTS
-       /scratch1/BMC/wrfruc/ejames/wrf_code/GSD_UPP/comupp/include
+       /scratch2/BMC/wrfruc/gge/codes/UPP/GSD_UPP_17oct2019/comupp/include
     ${NO_DEFAULT_PATH})
 
 set( GRIB2_LIBRARY ${G2_LIB4} ${G2TMPL_LIB} CACHE STRING "GRIB2 Library Location" )
