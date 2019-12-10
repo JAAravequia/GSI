@@ -437,8 +437,13 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
          call general_fill_ns(grd,grid,work)
       endif
       if ( icount == icm ) then
-         call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-              icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+         if (lsidea) then
+            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                 icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+         else
+            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                 icount,iflag,ilev,work,uvflag,vordivflag)
+         endif
       endif
    endif ! if ( zflag )
 
@@ -462,8 +467,13 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
        call general_fill_ns(grd,grid,work)
    endif
    if ( icount == icm ) then
-      call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-           icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+         if (lsidea) then
+            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                 icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+         else
+            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                 icount,iflag,ilev,work,uvflag,vordivflag)
+         endif
    endif
 
    ! Thermodynamic variable:  s-->g transform, communicate to all tasks
@@ -493,8 +503,13 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
          call general_fill_ns(grd,grid,work)
       endif
       if ( icount == icm ) then
-         call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-              icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+         if (lsidea) then
+            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                 icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+         else
+            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                 icount,iflag,ilev,work,uvflag,vordivflag)
+         endif
       endif
 
       if ( vordivflag .or. .not. uvflag ) then
@@ -520,8 +535,13 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
             call general_fill_ns(grd,grid,work)
          endif
          if ( icount == icm ) then
-            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-                 icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+            if (lsidea) then
+               call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+            else
+               call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag)
+            endif
          endif
 
          icount=icount+1
@@ -545,8 +565,13 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
             call general_fill_ns(grd,grid,work)
          endif
          if ( icount == icm ) then
-            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-                 icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+            if (lsidea) then
+               call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+            else
+               call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag)
+            endif
          endif
 
       endif ! if ( vordivflag .or. .not. uvflag ) then
@@ -583,8 +608,13 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
             deallocate(spec_div,grid_v)
          endif
          if ( icount == icm ) then
-            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-                 icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+            if (lsidea) then
+               call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+            else
+               call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag)
+            endif
          endif
 
          icount=icount+1
@@ -617,8 +647,13 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
             deallocate(spec_div,grid_v)
          endif
          if ( icount == icm ) then
-            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-                 icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+            if (lsidea) then
+               call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+            else
+               call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                    icount,iflag,ilev,work,uvflag,vordivflag)
+            endif
          endif
 
       endif ! if ( uvflag )
@@ -642,8 +677,13 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
          call general_fill_ns(grd,grid,work)
       endif
       if ( icount == icm ) then
-         call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-              icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+         if (lsidea) then
+            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                 icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+         else
+            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                 icount,iflag,ilev,work,uvflag,vordivflag)
+         endif
       endif
 
       icount=icount+1
@@ -665,8 +705,13 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
          call general_fill_ns(grd,grid,work)
       endif
       if ( icount == icm ) then
-         call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-              icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+         if (lsidea) then
+            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                 icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+         else
+            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                 icount,iflag,ilev,work,uvflag,vordivflag)
+         endif
       endif
 
       icount=icount+1
@@ -692,8 +737,13 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
          endif
       endif
       if ( icount == icm .or. k == nlevs ) then
-         call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
-              icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+         if (lsidea) then
+            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                 icount,iflag,ilev,work,uvflag,vordivflag,g_o=g_o,g_o2=g_o2)
+         else
+            call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
+                 icount,iflag,ilev,work,uvflag,vordivflag)
+         endif
       endif
       if (lsidea) then
 
