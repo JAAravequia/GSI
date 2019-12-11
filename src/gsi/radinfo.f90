@@ -1132,30 +1132,6 @@ contains
           do j=1,jpch_rad
              call angle_cbias(nusis(j),j,cbias(1,j))
           end do
-! TCW 10/21/2019 print cbias for tempest
-
-999       format(5f20.15)
-          write(*,*) 'mhs_n18 cbias: j = 55-59' 
-          do k = 1, maxscan 
-             write(*,999) cbias(k,55:59)
-          enddo
-          write(*,*) 'mhs_metop-a cbias: j = 94-98'
-          do k = 1, maxscan 
-             write(*,999) cbias(k,94:98)
-          enddo
-          write(*,*) 'mhs_n19 cbias: j = 1325-1329'
-          do k = 1, maxscan 
-             write(*,999) cbias(k,1325:1329)
-          enddo
-          write(*,*) 'mhs_metop-b cbias: j = 2550-2554'
-          do k = 1, maxscan 
-             write(*,999) cbias(k,2550:2554)
-          enddo
-          write(*,*) 'tempest cbias: j = 3217-3221'
-          do k = 1, maxscan 
-             write(*,999) cbias(k,3217:3221)
-          enddo
-! TCW 10/21/2019 print cbias for tempest
 
 !         check inew_rad again
           do j =1,jpch_rad

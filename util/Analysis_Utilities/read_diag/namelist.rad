@@ -1,5 +1,5 @@
  &iosetup
-  infilename='./diag_tempest_cubesat_anl',
-  outfilename='./results_tempest_cubesat_anl',
+  infilename='./diag_tempest_cubesat_ges',
+  outfilename='./results_tempest_cubesat_ges',
  /     
 
