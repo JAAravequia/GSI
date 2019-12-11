@@ -1224,16 +1224,16 @@ contains
 !              tempest2mhs_calidiff(3) = -0.12
 !              tempest2mhs_calidiff(4) = -0.61
 !              tempest2mhs_calidiff(5) = -0.82
-!              tempest2mhs_calidiff(1) = 0.0
-!              tempest2mhs_calidiff(2) = 0.0
-!              tempest2mhs_calidiff(3) = 0.0
-!              tempest2mhs_calidiff(4) = 0.0
-!              tempest2mhs_calidiff(5) = 0.0
               tempest2mhs_calidiff(1) = 0.0
               tempest2mhs_calidiff(2) = 0.0
-              tempest2mhs_calidiff(3) = -0.12
-              tempest2mhs_calidiff(4) = -0.61
-              tempest2mhs_calidiff(5) = -0.82
+              tempest2mhs_calidiff(3) = 0.0
+              tempest2mhs_calidiff(4) = 0.0
+              tempest2mhs_calidiff(5) = 0.0
+!              tempest2mhs_calidiff(1) = 0.0
+!              tempest2mhs_calidiff(2) = 0.0
+!              tempest2mhs_calidiff(3) = -0.12
+!              tempest2mhs_calidiff(4) = -0.61
+!              tempest2mhs_calidiff(5) = -0.82
               tbc(i) = tbc(i) - tempest2mhs_calidiff(i)*air_rad(mm)
            endif
 ! TCW 10/24/2019
