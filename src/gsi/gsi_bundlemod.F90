@@ -16,7 +16,6 @@ module GSI_BundleMod
 
    use kinds, only: i_kind,r_single,r_kind,r_double,r_quad
    use constants, only: zero_single,zero,zero_quad
-   use m_rerank, only: rerank
    use mpeu_util, only: perr, die
 
    implicit none
@@ -185,9 +184,9 @@ module GSI_BundleMod
       character(len=MAXSTR) :: longname            ! longname, e.g., 'Surface Pressure'
       character(len=MAXSTR) :: units               ! units, e.g. 'hPa'
       integer(i_kind)       :: myKind = -1         ! no default
-      real(r_single), pointer :: qr4(:) => null()  ! rank-1 real*4 field
-      real(r_double), pointer :: qr8(:) => null()  ! rank-1 real*8 field
-      real(r_kind),   pointer :: q  (:) => null()  ! points to intrisic rank-1 default precision
+      real(r_single),contiguous,pointer :: qr4(:) => null()  ! rank-1 real*4 field
+      real(r_double),contiguous,pointer :: qr8(:) => null()  ! rank-1 real*8 field
+      real(r_kind),  contiguous,pointer :: q  (:) => null()  ! points to intrisic rank-1 default precision
    end type GSI_1D
 
    type GSI_2D
@@ -195,9 +194,9 @@ module GSI_BundleMod
       character(len=MAXSTR) :: longname
       character(len=MAXSTR) :: units
       integer(i_kind)       :: myKind = -1            ! no default
-      real(r_single), pointer :: qr4(:,:) => null()   ! rank-2 real*4 field
-      real(r_double), pointer :: qr8(:,:) => null()   ! rank-2 real*8 field
-      real(r_kind),   pointer :: q  (:,:) => null()   ! points to intrisic rank-2 default precision
+      real(r_single),contiguous,pointer :: qr4(:,:) => null()   ! rank-2 real*4 field
+      real(r_double),contiguous,pointer :: qr8(:,:) => null()   ! rank-2 real*8 field
+      real(r_kind),  contiguous,pointer :: q  (:,:) => null()   ! points to intrisic rank-2 default precision
    end type GSI_2D
 
    type GSI_3D
@@ -206,9 +205,9 @@ module GSI_BundleMod
       character(len=MAXSTR) :: units
       integer(i_kind)       :: level                  ! level: size of rank3 other than km
       integer(i_kind)       :: myKind = -1            ! no default
-      real(r_single), pointer :: qr4(:,:,:) => null() ! rank-3 real*4 field
-      real(r_double), pointer :: qr8(:,:,:) => null() ! rank-3 real*8 field
-      real(r_kind),   pointer :: q  (:,:,:) => null() ! points to intrisic rank-3 default precision
+      real(r_single),contiguous,pointer :: qr4(:,:,:) => null() ! rank-3 real*4 field
+      real(r_double),contiguous,pointer :: qr8(:,:,:) => null() ! rank-3 real*8 field
+      real(r_kind),  contiguous,pointer :: q  (:,:,:) => null() ! points to intrisic rank-3 default precision
    end type GSI_3D
 
 ! !PUBLIC TYPES:
@@ -232,9 +231,9 @@ module GSI_BundleMod
       integer(i_kind), pointer :: ival1(:)  => null()
       integer(i_kind), pointer :: ival2(:)  => null()
       integer(i_kind), pointer :: ival3(:)  => null()
-      real(r_single),  pointer :: valuesr4(:) => null()
-      real(r_double),  pointer :: valuesr8(:) => null()
-      real(r_kind),    pointer :: values  (:) => null()
+      real(r_single), contiguous, pointer :: valuesr4(:) => null()
+      real(r_double), contiguous, pointer :: valuesr8(:) => null()
+      real(r_kind),   contiguous, pointer :: values  (:) => null()
    end type GSI_Bundle
 
    interface init_     ! internal procedure only - not to become public
@@ -286,6 +285,9 @@ module GSI_BundleMod
 !  05Oct2014 Todling - add 4d-like interfaces to getvars
 !  26Aug2017   G. Ge - change names(nd) to names(:) to make the passing of assumed size character
 !                      array consistent between nested calls                   
+!  12Dec2017 Guo     - m_rerank functions are replaced with now Fortran standard
+!                      pointer remappings.  And CONTIGUOUS attributes are added
+!                      to relevant pointer components.
 !
 ! !SEE ALSO:  
 !           gsi_metguess_mod.F90
@@ -296,7 +298,7 @@ module GSI_BundleMod
 !  1. This module should never depend on more than the following GSI modules:
 !      kinds
 !      constants
-!      m_rerank
+!      m_rerank (no longer in use, see Reivions History above)
 !
 !  2. Currently the Bundle uses a very simple (im,jm,km) grid. The grid could 
 !     be generalized. In doing so, it should not be a part of the Bundle, but
@@ -770,17 +772,17 @@ CONTAINS
            endif
            if (Bundle%r3(i)%myKind == r_single) then
 #ifdef _REAL4_
-               Bundle%r3(i)%q   => rerank(Bundle%values  (ii+1:ii+ndim3d1),mold3,(/im,jm,km1/))
+               Bundle%r3(i)%q(1:im,1:jm,1:km1) => Bundle%values(ii+1:ii+ndim3d1)
                Bundle%r3(i)%qr4 => Bundle%r3(i)%q
 #else
-               Bundle%r3(i)%qr4 => rerank(Bundle%valuesr4(ii+1:ii+ndim3d1),mold3,(/im,jm,km1/))
+               Bundle%r3(i)%qr4(1:im,1:jm,1:km1) => Bundle%valuesr4(ii+1:ii+ndim3d1)
 #endif
            else if (Bundle%r3(i)%myKind == r_double) then
 #ifdef _REAL8_
-               Bundle%r3(i)%q   => rerank(Bundle%values  (ii+1:ii+ndim3d1),mold3,(/im,jm,km1/))
+               Bundle%r3(i)%q(1:im,1:jm,1:km1) => Bundle%values(ii+1:ii+ndim3d1)
                Bundle%r3(i)%qr8 => Bundle%r3(i)%q
 #else
-               Bundle%r3(i)%qr8 => rerank(Bundle%valuesr8(ii+1:ii+ndim3d1),mold3,(/im,jm,km1/))
+               Bundle%r3(i)%qr8(1:im,1:jm,1:km1) => Bundle%valuesr8(ii+1:ii+ndim3d1)
 #endif
            else
                istatus = 999
@@ -795,17 +797,17 @@ CONTAINS
         do i = 1, n2d
            if (Bundle%r2(i)%myKind == r_single) then
 #ifdef _REAL4_
-               Bundle%r2(i)%q   => rerank(Bundle%values  (ii+1:ii+ndim2d),mold2,(/im,jm/))
+               Bundle%r2(i)%q(1:im,1:jm) => Bundle%values(ii+1:ii+ndim2d)
                Bundle%r2(i)%qr4 => Bundle%r2(i)%q
 #else
-               Bundle%r2(i)%qr4 => rerank(Bundle%valuesr4(ii+1:ii+ndim2d),mold2,(/im,jm/))
+               Bundle%r2(i)%qr4(1:im,1:jm) => Bundle%valuesr4(ii+1:ii+ndim2d)
 #endif
            else if (Bundle%r2(i)%myKind == r_double) then
 #ifdef _REAL8_
-               Bundle%r2(i)%q   => rerank(Bundle%values  (ii+1:ii+ndim2d),mold2,(/im,jm/))
+               Bundle%r2(i)%q(1:im,1:jm) => Bundle%values(ii+1:ii+ndim2d)
                Bundle%r2(i)%qr8 => Bundle%r2(i)%q
 #else
-               Bundle%r2(i)%qr8 => rerank(Bundle%valuesr8(ii+1:ii+ndim2d),mold2,(/im,jm/))
+               Bundle%r2(i)%qr8(1:im,1:jm) => Bundle%valuesr8(ii+1:ii+ndim2d)
 #endif
            else
                istatus = 999
@@ -1182,17 +1184,17 @@ CONTAINS
            endif
            if (Bundle%r3(i)%myKind == r_single) then
 #ifdef _REAL4_
-               Bundle%r3(i)%q   => rerank(Bundle%values  (ii+1:ii+ndim3d1),mold3,(/im,jm,km1/))
+               Bundle%r3(i)%q(1:im,1:jm,1:km1) => Bundle%values(ii+1:ii+ndim3d1)
                Bundle%r3(i)%qr4 => Bundle%r3(i)%q
 #else
-               Bundle%r3(i)%qr4 => rerank(Bundle%valuesr4(ii+1:ii+ndim3d1),mold3,(/im,jm,km1/))
+               Bundle%r3(i)%qr4(1:im,1:jm,1:km1) => Bundle%valuesr4(ii+1:ii+ndim3d1)
 #endif
            else if (Bundle%r3(i)%myKind == r_double) then
 #ifdef _REAL8_
-               Bundle%r3(i)%q   => rerank(Bundle%values  (ii+1:ii+ndim3d1),mold3,(/im,jm,km1/))
+               Bundle%r3(i)%q(1:im,1:jm,1:km1) => Bundle%values(ii+1:ii+ndim3d1)
                Bundle%r3(i)%qr8 => Bundle%r3(i)%q
 #else
-               Bundle%r3(i)%qr8 => rerank(Bundle%valuesr8(ii+1:ii+ndim3d1),mold3,(/im,jm,km1/))
+               Bundle%r3(i)%qr8(1:im,1:jm,1:km1) => Bundle%valuesr8(ii+1:ii+ndim3d1)
 #endif
            else
                istatus = 999
@@ -1207,17 +1209,17 @@ CONTAINS
         do i = 1, n2d
            if (Bundle%r2(i)%myKind == r_single) then
 #ifdef _REAL4_
-               Bundle%r2(i)%q   => rerank(Bundle%values  (ii+1:ii+ndim2d),mold2,(/im,jm/))
+               Bundle%r2(i)%q(1:im,1:jm) => Bundle%values(ii+1:ii+ndim2d)
                Bundle%r2(i)%qr4 => Bundle%r2(i)%q
 #else
-               Bundle%r2(i)%qr4 => rerank(Bundle%valuesr4(ii+1:ii+ndim2d),mold2,(/im,jm/))
+               Bundle%r2(i)%qr4(1:im,1:jm) => Bundle%valuesr4(ii+1:ii+ndim2d)
 #endif
            else if (Bundle%r2(i)%myKind == r_double) then
 #ifdef _REAL8_
-               Bundle%r2(i)%q   => rerank(Bundle%values  (ii+1:ii+ndim2d),mold2,(/im,jm/))
+               Bundle%r2(i)%q(1:im,1:jm) => Bundle%values(ii+1:ii+ndim2d)
                Bundle%r2(i)%qr8 => Bundle%r2(i)%q
 #else
-               Bundle%r2(i)%qr8 => rerank(Bundle%valuesr8(ii+1:ii+ndim2d),mold2,(/im,jm/))
+               Bundle%r2(i)%qr8(1:im,1:jm) => Bundle%valuesr8(ii+1:ii+ndim2d)
 #endif
            else
                istatus = 999
@@ -1852,11 +1854,11 @@ CONTAINS
           case(1)
              pntr => Bundle%r1(ipnt)%qr8
           case(2)
-!            pntr => rerank(Bundle%r2(ipnt)%qr8)
+!            pntr(1:size(Bundle%r2(ipnt)%qr8)) => Bundle%r2(ipnt)%qr8(:,:)      ! in a form of pointer remapping
              nsz=size(Bundle%r2(ipnt)%qr8)
              pntr => Bundle%valuesr8(ival:ival+nsz-1)
           case(3)
-!            pntr => rerank(Bundle%r3(ipnt)%qr8)
+!            pntr(1:size(Bundle%r3(ipnt)%qr8)) => Bundle%r3(ipnt)%qr8(:,:,:)    ! in a form of pointer remapping
              nsz=size(Bundle%r3(ipnt)%qr8)
              pntr => Bundle%valuesr8(ival:ival+nsz-1)
           case default

@@ -1,0 +1,16 @@
+#%Module######################################################################
+proc ModulesHelp { } {
+    puts stderr "Set environment veriables for GSI"
+    puts stderr "This module initializes the environment "
+    puts stderr "for building and testing GSI on NCCS Discover:PGI\n"
+}
+module-whatis "Initialize GSI build/test environment"
+
+module load comp/pgi-18.5.0
+module load other/mpi/openmpi/3.1.1-pgi-18.5.0-k40
+
+module load other/cmake
+
+setenv BASEDIR /discover/swdev/gmao_SIteam/Baselibs/ESMA-Baselibs-5.1.8/x86_64-unknown-linux-gnu/pgfortran_18.5-openmpi_3.1.1-gcc_6.3.0-k40
+
+#

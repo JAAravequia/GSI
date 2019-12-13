@@ -13,6 +13,9 @@ module m_radNode
 !                         implementation.
 !   2016-07-19  kbathmann - add rsqrtinv and use_corr_obs to rad_ob_type
 !   2019-04-22  kbathmann - change rsqrtinv to Rpred
+!   2019-12-12  j guo   - renamed overriding obsHeader_read_/obsHeader_write_
+!                         procedures to radHeader_read_/radHeader_write_.  This
+!                         is needed to be portable to the current PGI compiler.
 !
 !   input argument list: see Fortran 90 style document below
 !

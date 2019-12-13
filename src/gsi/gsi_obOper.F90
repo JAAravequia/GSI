@@ -10,6 +10,7 @@ module gsi_obOper
 !
 ! program history log:
 !   2018-06-26  j guo   - a new module for abstract GSI obOper.
+!   2019-12-12  j guo   - initialize pointer components of obOper to null().
 !
 !   input argument list: see Fortran 90 style document below
 !
@@ -61,8 +62,8 @@ module gsi_obOper
         ! objects are accessed for 1:ndat, or once per obs-stream, where each
         ! type is in general accessed in zero or multiple times.
 
-    type(obs_diags),pointer,dimension(:):: odiagLL    ! (1:nobs_bins)
-    type(obsLList ),pointer,dimension(:)::   obsLL    ! (1:nobs_bins)
+    type(obs_diags),pointer,dimension(:):: odiagLL => null()    ! (1:nobs_bins)
+    type(obsLList ),pointer,dimension(:)::   obsLL => null()    ! (1:nobs_bins)
 
   contains
     procedure(mytype  ),deferred,nopass:: mytype    ! type information

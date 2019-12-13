@@ -670,5 +670,5 @@ elif [[ "$machine" = "s4" ]]; then
    export KMP_STACKSIZE=512MB 
    export KMP_AFFINITY=scatter
 elif [[ "$machine" = "Discover" ]]; then
-   export APRUN="mpiexec_mpt -np \$SLURM_NTASKS"
+   export APRUN="MPIexec=\$(basename \$(which mpiexec_mpt || which mpirun || which mpiexec)); \$MPIexec -np \$SLURM_NTASKS"
 fi

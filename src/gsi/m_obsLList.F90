@@ -17,6 +17,11 @@ module m_obsLList
 !   2016-09-19  j.guo   - added function lincr_() to extend []_lsize().
 !   2017-08-26  G.Ge    - change allocate(headLL%mold,mold=mold)
 !                             to allocate(headLL%mold,source=mold)
+!   2019-12-12  j.guo   - Removed unused obsLList_rewind and procedure lrewind_.
+!                       . Added #defines (NDEBUG and DEBUG_TRACE) and functions
+!                         (isValid_ and isValid1_) for debuging switches.
+!                       . Restored source= to mold=, since it does not seem to
+!                         be a problem anymore for recent compilers.
 !
 !   input argument list: see Fortran 90 style document below
 !
@@ -59,10 +64,8 @@ module m_obsLList
         interface obsLList_reset     ; module procedure lreset_     ; end interface
         interface obsLList_appendNode; module procedure lappendNode_; end interface
 
-  public:: obsLList_rewind      ! rewind obsLList
   public:: obsLList_nextNode    ! move obsLList to its next node
 
-        interface obsLList_rewind    ; module procedure lrewind_    ; end interface
         interface obsLList_nextNode  ; module procedure lnextNode_  ; end interface
 
   public:: obsLList_headNode    ! locate the head node of obsLList
@@ -95,6 +98,8 @@ module m_obsLList
 
   character(len=*),parameter:: MYNAME="m_obsLList"
 
+!#define DEBUG_TRACE
+#define NDEBUG
 #include "myassert.H"
 #include "mytrace.H"
 contains
@@ -128,13 +133,6 @@ function lmold_(headLL) result(ptr_)
   ptr_ => null()
   if(associated(headLL%mold)) ptr_ => headLL%mold
 end function lmold_
-
-!--------------------------- will go to m_obsLList ----------------------
-subroutine lrewind_(headLL)
-  implicit none
-  type(obsLList),target,intent(inout):: headLL
-  headLL%tail => null()
-end subroutine lrewind_
 
 function lnextNode_(headLL) result(here_)
   use m_obsNode, only: obsNode_next
@@ -254,6 +252,7 @@ _ENTRY_(myname_)
   endif
 
   allocate(headLL%mold, mold=mold)
+  call headLL%mold%clean()
 _EXIT_(myname_)
 return
 end subroutine lreset_
@@ -308,6 +307,39 @@ subroutine lappendNode_(headLL,targetNode)
 !_EXIT_(myname_)
 return
 end subroutine lappendNode_
+function isValid_(headLL) result(valid_)
+  implicit none
+  type(obsLList),intent(in):: headLL
+
+  character(len=*),parameter:: myname_=MYNAME//"::isValid_"
+  logical:: valid_
+
+  valid_=associated(headLL%head).eqv.associated(headLL%tail)
+  if(.not.valid_) then
+    call perr(myname_,'unexpected state of headLL, associated(%head) =',associated(headLL%head))
+    call perr(myname_,'                            associated(%tail) =',associated(headLL%tail))
+    call perr(myname_,'                            associated(%mold) =',associated(headLL%mold))
+    !call  die(myname_)
+  endif
+return
+end function isValid_
+function isValid1_(headLL) result(valid_)
+  implicit none
+  type(obsLList),dimension(:),intent(in):: headLL
+
+  character(len=*),parameter:: myname_=MYNAME//"::isValid1_"
+  integer(kind=i_kind):: i
+  logical:: valid_
+
+  valid_=.true.
+  do i=lbound(headLL,1),ubound(headLL,1)
+    if(.not.isValid_(headLL(i))) then
+      valid_=.false.
+      call perr(myname_,'unexpected state of headLL(:), at i =',i)
+    endif
+  enddo
+return
+end function isValid1_
 
 !--------------------------- will go to m_obsLListIO ----------------------
 subroutine lread_(headLL,iunit,redistr,diagLookup,jtype)
@@ -604,6 +636,7 @@ subroutine lchecksum1_(headLL,itype)
   character(len=*),parameter:: myname_=MYNAME//"::lchecksum1_"
   integer(kind=i_kind):: i
 _ENTRY_(myname_)
+  ASSERT(isValid1_(headLL))
   do i=1,size(headLL)
     call lchecksum_(headLL(i),itype=itype,ibin=i)
   enddo

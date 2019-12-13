@@ -10,6 +10,8 @@ module get_gfs_ensmod_mod
 ! program history log:
 !   2016-06-30  mahajan  - initial code
 !   2019-07-09  todling  - revised abstract layer
+!   2019-12-12  guo      - removed this_ens_class, an alias to abstractEnsemble,
+!                          to make the relation explicit to code readers.
 !
 ! attributes:
 !   language: f90
@@ -18,14 +20,14 @@ module get_gfs_ensmod_mod
 !$$$
     use mpeu_util, only: die
     use mpimod, only: mype,npe
-    use abstract_ensmod, only: this_ens_class => abstractEnsemble
+    use abstract_ensmod, only: abstractEnsemble
 
     implicit none
     private
     public :: ensemble
     public :: ensemble_typemold
 
-    type, extends(this_ens_class) :: ensemble
+    type, extends(abstractEnsemble) :: ensemble
       private
       contains
       procedure :: get_user_ens => get_gfs_ens

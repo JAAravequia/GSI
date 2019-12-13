@@ -31,6 +31,7 @@ module m_obsdiags
 !                       . Locally renamed MPI_comm_world to gsi_comm_world.
 !   2018-01-23  k apodaca - Add a new observation type i.e. lightning (light) 
 !                           suitable for the GOES/GLM instrument
+!   2019-12-12  j guo   - Edited some runtime messages.
 !
 !   input argument list: see Fortran 90 style document below
 !
@@ -288,6 +289,7 @@ function createbyindex_(ioper) result(self)
   mold_ => obOper_typeMold(ioper)
   if(associated(mold_)) then
     allocate(self,mold=mold_)
+    call self%clean()
 
         if(ioper<lbound(obsLLists,1) .or. ioper>ubound(obsLLists,1)) then
           call perr(myname_,'unexpected value, ioper =',ioper)
@@ -337,6 +339,7 @@ function createbyvmold_(mold) result(self)
   self => mold
   if(associated(self)) then
     allocate(self,mold=mold)
+    call self%clean()
 
     ! Get its corresponding obsNode type name, then convert to its type-index
     itype=obOper_typeIndex(self)
@@ -626,9 +629,8 @@ _TIMER_ON_(myname_)
 
   endif ! of if(redistr)
 
-  if(myPE==0) then
-    call tell(myname_,'Finished reading of all obsdiags files, nPEs =',uPE-lPE+1)
-  endif
+  if(ALL_PEs.or.myPE==0) &
+    call tell(myname_,'Finished reading of obsdiags files, file-count/PE =',uPE-lPE+1)
   
   if(CHECK_SIZES_) then
     do jtyp=lbound(lsize_type,1),ubound(lsize_type,1)
@@ -949,7 +951,8 @@ _TIMER_ON_(myname_)
   call latlonRange_reset(luseRange)
 
   if(SYNCH_MESSAGES) call MPI_Barrier(gsi_comm_world,ier)
-  if (mype==0) call tell(myname_,'Finish writing obsdiags to file ',filename_(cdfile,myPE))
+  if(ALL_PEs.or.mype==0) &
+    call tell(myname_,'Finished writing of local obsdiags file, filename/PE =',filename_(cdfile,myPE))
 
 ! ----------------------------------------------------------
 !call stdout_close()

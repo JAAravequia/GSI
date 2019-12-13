@@ -11,6 +11,9 @@ module m_swcpNode
 ! program history log:
 !   2016-05-18  j guo   - added this document block for the initial polymorphic
 !                         implementation.
+!   2019-12-12  j guo   - renamed overriding obsHeader_read_/obsHeader_write_
+!                         procedures to swcpHeader_read_/swcpHeader_write_.  This
+!                         is needed to be portable to the current PGI compiler.
 !
 !   input argument list: see Fortran 90 style document below
 !

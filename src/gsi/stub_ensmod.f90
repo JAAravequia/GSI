@@ -13,6 +13,8 @@ module stub_ensmod
 !  01Dec2011 Todling - Add put_gsi_ens to allow write out of internal members
 !  30Nov2014 Todling - Update interface to get (bundle passed in)
 !  30Jun2019 Todling - Revamp in light of abstract layer
+!  12Dec2019 Guo     - Added a type(sub2grid_info) variable to avoid using a
+!                      F2008 type constructor.
 !
 ! !REMARKS:
 !    1. Unlike the previous version of this stub, the correct version should
