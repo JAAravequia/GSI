@@ -1121,9 +1121,6 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   integer(i_kind):: idx700,dprs,dprs_min  
   integer(i_kind),dimension(8)::obs_time,anal_time
   integer(i_kind),dimension(msig) :: klevel
- ! change in lsidea
-  integer(i_kind):: nsig_wam !msig+1
-  integer(i_kind), parameter :: nsig_wamdec=10
   real(r_kind)   :: jacwam_decay(nsig)
 
 ! ****************************** 
@@ -1246,7 +1243,6 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   w00=delx1*dely1; w10=delx*dely1; w01=delx1*dely; w11=delx*dely
 ! w_weights = (/w00,w10,w01,w11/)
 
-! lsidea related stuff
   if (lsidea) then
       do k=1,nsig
           jacwam_decay(k) = 1.0_r_kind
@@ -2237,7 +2233,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 !   ptau5 - layer transmittance
 
       if (lsidea) then
-          ptau5(1:nsig,i)= 1.0 !   1. - should
+          ptau5(1:nsig,i)= 1.0
       endif
 
 
@@ -2256,7 +2252,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 !  Small sensitivities for temp
           if (abs(temp(k,i))<sqrt_tiny_r_kind) temp(k,i)=sign(sqrt_tiny_r_kind,temp(k,i))
           if (lsidea) then
-               if(k > msig) temp(k,i) = temp(k,i)*jacwam_decay(k)
+             if(k > msig) temp(k,i) = temp(k,i)*jacwam_decay(k)
           endif
        end do ! <nsig>
 
@@ -2265,7 +2261,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
           do k=1,nsig
              jacobian(itv+k,i)=temp(k,i)*c2(k)               ! virtual temperature sensitivity
              if (lsidea) then
-                 if(k > msig) jacobian(itv+k,i)= jacobian(itv+k,i)*jacwam_decay(k)
+                if (k > msig) jacobian(itv+k,i) = jacobian(itv+k,i)*jacwam_decay(k)
              endif
           end do ! <nsig>
        endif
@@ -2278,7 +2274,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
                 jacobian(iqv+k,i) = exp(ifactq(m)*term)*jacobian(iqv+k,i)
              endif
              if (lsidea) then
-                 if(k > msig) jacobian(iqv+k,i)= jacobian(iqv+k,i)*jacwam_decay(k)
+                 if (k > msig) jacobian(iqv+k,i) = jacobian(iqv+k,i)*jacwam_decay(k)
              endif
           end do ! <nsig>
        endif
@@ -2287,7 +2283,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
           do k=1,nsig
              jacobian(ioz+k,i)=omix(k,i)*constoz       ! ozone sensitivity
              if (lsidea) then
-                 if(k > msig) jacobian(ioz+k,i)= jacobian(ioz+k,i)*jacwam_decay(k)
+                if (k > msig) jacobian(ioz+k,i) = jacobian(ioz+k,i)*jacwam_decay(k)
              endif
           end do ! <nsig>
 !        end if
