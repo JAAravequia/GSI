@@ -2,13 +2,15 @@
 proc ModulesHelp { } {
     puts stderr "Set environment veriables for GSI"
     puts stderr "This module initializes the environment "
-    puts stderr "for building and testing GSI on NCCS Discover:Intel\n"
+    puts stderr "for building and testing GSI on NCCS Discover:GCC\n"
 }
 module-whatis "Initialize GSI build/test environment"
 
-module load comp/intel-18.0.3.222
-module load lib/mkl-18.0.3.222
-module load mpi/sgi-mpt-2.17
-module load other/cmake-3.8.2
+module load other/comp/gcc-8.2
+module load other/mpi/openmpi/3.1.1-gcc-8.2
 
-setenv BASEDIR /discover/nobackup/projects/gmao/share/gmao_ops/Baselibs/v5.1.3_build1/x86_64-unknown-linux-gnu/ifort_18.0.3.222-mpt_2.17
+module load lib/mkl-18.0.3.222
+module load other/cmake
+
+setenv BASEDIR /discover/swdev/mathomp4/Baselibs/ESMA-Baselibs-5.1.7/x86_64-unknown-linux-gnu/gfortran_8.2.0-openmpi_3.1.1
+#
