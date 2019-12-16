@@ -231,7 +231,8 @@ cat << EOF > input
          idhh=-18,
          incr=6,
          new_hdr=${new_hdr},
-         ptype=${ptype}
+         ptype=${ptype},
+         netcdf=${netcdf_boolean}
       /
 EOF
 
