@@ -13,6 +13,10 @@ module timermod
 !   2009-08-13  lueken  - update documentation
 !   2011-08-01  lueken  - replaced F90 with f90 (no machine logic)
 !   2017-06-28  guo     - Extended to a polymorphic portal to multi-timer extensions.
+!   2019-12-12  guo     - Removed intermediate pointers referencing to allocatable
+!                         objects typemold_ and this_timer_.  This ensures its
+!                         portability to compilers where null-reference is strickly
+!                         undefined and invalid.
 !
 !  subroutines included: see Fortran style document below.
 !
@@ -156,32 +160,22 @@ subroutine typedef_(mold)
   class(abstractTimer),optional,target,intent(in):: mold
 
   character(len=*),parameter:: myname_=myname//'::typedef_'
-  class(abstractTimer),pointer:: pmold_
 
-        ! argument checking
-  pmold_ => null()
-  if(present(mold)) then
-    pmold_ => mold
-    if(.not.associated(pmold_)) &               ! is argument _mold_ a null-object?
-      call warn(myname_,'a null argument (mold) is given.  Will typedef to default')
-  endif
-
-        ! reset current typemold
   if(allocated(typemold_)) then
     if(verbose) call tell(myname_,'deallocating, typemold_%mytype() = '//typemold_%mytype())
     call typemold_%reset()
     deallocate(typemold_)
   endif
 
-        ! (re)allocate the new typemold_
-  if(associated(pmold_)) then
-    allocate(typemold_,mold=pmold_)
-    pmold_ => null()
-
+        ! allocate and reset the new typemold_
+  if(present(mold)) then
+    allocate(typemold_,mold=mold)
   else
     allocate(stubTimer::typemold_)
   endif
   if(verbose) call tell(myname_,'allocated, typemold_%mytype() = '//typemold_%mytype())
+  call typemold_%reset()
+return
 end subroutine typedef_
 
 function typename_() result(name)
@@ -193,6 +187,7 @@ function typename_() result(name)
   name=abstractTimer_typename()
   if(allocated(typemold_)) name=typemold_%mytype()
         ! Note the use of typemold_, instead of this_timer_.
+return
 end function typename_
 
 !-------------------------------------------------------------------------------
@@ -204,6 +199,7 @@ implicit none
 
   call ifn_alloc_()     ! to ensure an allocated(this_timer_)
   call this_timer_%on(name)
+return
 end subroutine tmon_
 
 subroutine tmoff_(name)
@@ -213,38 +209,34 @@ subroutine tmoff_(name)
 
   call ifn_alloc_()     ! to ensure an allocated(this_timer_)
   call this_timer_%off(name)
+return
 end subroutine tmoff_
 
 subroutine ifn_alloc_()
 !-- If-not-properly-allocated(this_timer_), do something
+  use m_stubTimer, only: stubTimer => timer
   implicit none
-  class(abstractTimer),pointer:: pmold_
 
-    ! First, check to make sure typemold_ is type-defined, at least to a
-    ! default multi-timer type.
-  pmold_ => typemold_
-  if(.not.associated(pmold_)) call typedef_()
-  pmold_ => null()
+  ! If this_timer_ has been allocated, do nothing
+  if(allocated(this_timer_)) return
 
-    ! Then, check and possibly instantiate this_timer_, which is must be
-    ! typed the same as typemold_
-
-  if(allocated(this_timer_)) then
-    if(same_type_as(typemold_,this_timer_)) return      ! Everything seems good.
-
-      ! Otherwise, this_timer_ must be re-intentiated with a different type.
-
-    call this_timer_%reset()  ! before deallocate -this_timer-, empty it.
-    deallocate(this_timer_)
+    ! Allocate stubTimer::typemold_, if typemold_ has not been type-defined.
+  if(.not.allocated(typemold_)) then
+    allocate(stubTimer::typemold_)
+    call typemold_%reset()
   endif
+
   allocate(this_timer_,mold=typemold_)
+  call this_timer_%reset()    ! initialize it.
+return
 end subroutine ifn_alloc_
 
 subroutine reset_()
 !-- Reset this_timer_ to its initialized state.
   implicit none
-  call ifn_alloc_()     ! to ensure an allocated(this_timer_)
-  call this_timer_%reset()
+  call ifn_alloc_()             ! to ensure allocated(this_timer_)
+  call this_timer_%reset()      ! reset the timer anyway.
+return
 end subroutine reset_
 
 subroutine flush_(lu)
@@ -254,6 +246,7 @@ subroutine flush_(lu)
 
   call ifn_alloc_()     ! to ensure an allocated(this_timer_)
   call this_timer_%flush(lu)
+return
 end subroutine flush_
 
 subroutine allflush_(lu,comm,root)
@@ -271,6 +264,7 @@ subroutine allflush_(lu,comm,root)
 
   call ifn_alloc_()     ! to ensure an allocated(this_timer_)
   call this_timer_%allflush(lu,comm=comm_,root=root_)
+return
 end subroutine allflush_
 
 end module timermod

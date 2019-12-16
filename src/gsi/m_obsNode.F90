@@ -11,6 +11,8 @@ module m_obsNode
 ! program history log:
 !   2015-01-12  j guo   - added this document block.
 !   2016-05-18  j guo   - finished its initial polymorphic implementation.
+!   2019-12-12  j guo   - added #defines (NDEBUG and DEBUG_TRACE) for
+!                         debugging switches.
 !
 !   input argument list: see Fortran 90 style document below
 !
@@ -180,6 +182,8 @@ module m_obsNode
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   character(len=*),parameter :: myname='m_obsNode'
 
+!#define DEBUG_TRACE
+#define NDEBUG
 #include "mytrace.H"
 #include "myassert.H"
 
@@ -434,7 +438,7 @@ subroutine init_(aNode)
   class(obsNode),intent(out):: aNode
 
   character(len=*),parameter:: myname_=MYNAME//'::init_'
-_ENTRY_(myname_)
+!_ENTRY_(myname_)
 !_TRACEV_(myname_,'%mytype() =',aNode%mytype())
   aNode%llpoint => null()
   aNode%luse = .false.
@@ -443,7 +447,7 @@ _ENTRY_(myname_)
   aNode%elon = 0._r_kind
   aNode%idv  =-1
   aNode%iob  =-1
-_EXIT_(myname_)
+!_EXIT_(myname_)
 return
 end subroutine init_
 

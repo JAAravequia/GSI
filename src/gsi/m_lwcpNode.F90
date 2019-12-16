@@ -11,6 +11,9 @@ module m_lwcpNode
 ! program history log:
 !   2016-05-18  j guo   - added this document block for the initial polymorphic
 !                         implementation.
+!   2019-12-12  j guo   - renamed overriding obsHeader_read_/obsHeader_write_
+!                         procedures to lwcpHeader_read_/lwcpHeader_write_.  This
+!                         is needed to be portable to the current PGI compiler.
 !
 !   input argument list: see Fortran 90 style document below
 !
@@ -70,8 +73,8 @@ module m_lwcpNode
     procedure:: isvalid => obsNode_isvalid_
     procedure::  gettlddp => gettlddp_
 
-    procedure, nopass:: headerRead  => obsHeader_read_
-    procedure, nopass:: headerWrite => obsHeader_write_
+    procedure, nopass:: headerRead  => lwcpHeader_read_
+    procedure, nopass:: headerWrite => lwcpHeader_write_
     procedure:: init  => obsNode_init_
     procedure:: clean => obsNode_clean_
   end type lwcpNode
@@ -140,7 +143,7 @@ function mytype()
   mytype="[lwcpNode]"
 end function mytype
 
-subroutine obsHeader_read_(iunit,mobs,jread,istat)
+subroutine lwcpHeader_read_(iunit,mobs,jread,istat)
   use gridmod, only: nsig
   implicit none
   integer(i_kind),intent(in ):: iunit
@@ -148,7 +151,7 @@ subroutine obsHeader_read_(iunit,mobs,jread,istat)
   integer(i_kind),intent(out):: jread
   integer(i_kind),intent(out):: istat
 
-  character(len=*),parameter:: myname_=myname//".obsHeader_read_"
+  character(len=*),parameter:: myname_=myname//".lwcpHeader_read_"
   integer(i_kind):: msig
 _ENTRY_(myname_)
   
@@ -160,9 +163,9 @@ _ENTRY_(myname_)
   endif
 _EXIT_(myname_)
 return
-end subroutine obsHeader_read_
+end subroutine lwcpHeader_read_
 
-subroutine obsHeader_write_(junit,mobs,jwrite,jstat)
+subroutine lwcpHeader_write_(junit,mobs,jwrite,jstat)
   use gridmod, only: nsig
   implicit none
   integer(i_kind),intent(in ):: junit
@@ -170,12 +173,12 @@ subroutine obsHeader_write_(junit,mobs,jwrite,jstat)
   integer(i_kind),intent(in ):: jwrite
   integer(i_kind),intent(out):: jstat
   
-  character(len=*),parameter:: myname_=myname//".obsHeader_write_"
+  character(len=*),parameter:: myname_=myname//".lwcpHeader_write_"
 _ENTRY_(myname_)
   write(junit,iostat=jstat) mobs,jwrite, nsig
 _EXIT_(myname_)
 return
-end subroutine obsHeader_write_
+end subroutine lwcpHeader_write_
 
 subroutine obsNode_init_(aNode)
   use gridmod, only: nsig

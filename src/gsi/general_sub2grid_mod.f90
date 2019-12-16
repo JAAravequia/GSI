@@ -50,6 +50,7 @@ module general_sub2grid_mod
 !   2013-08-03  todling  - protect write-out with print_verbose (set to false)
 !   2013-10-25  todling  - nullify work pointers
 !   2014-12-03  derber   - optimization changes
+!   2019-12-12  guo      - m_rerank hacks are replaced with now Fortran standard pointer remappings.
 !
 ! subroutines included:
 !   sub general_sub2grid_r_single  - convert from subdomains to grid for real single precision (4 byte)
@@ -959,19 +960,18 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),intent(in   ) :: s
-      real(r_single),     intent(in   ) :: sub_vars(:)
-      real(r_single),    intent(inout)  :: grid_vars(:)
+      real(r_single),target,intent(in   ) :: sub_vars(:)
+      real(r_single),target,intent(inout) :: grid_vars(:)
 
       real(r_single),pointer,dimension(:,:,:,:) :: sub_vars_r4=>NULL()
       real(r_single),pointer,dimension(:,:,:,:) :: grid_vars_r4=>NULL()
       integer(i_kind) mold4(2,2,2,2)
 
-      sub_vars_r4  => rerank(sub_vars ,mold4,(/s%inner_vars,s%lat2,s%lon2,s%num_fields/))
-      grid_vars_r4 => rerank(grid_vars,mold4,(/s%inner_vars,s%nlat,s%nlon,s%kend_alloc-s%kbegin_loc+1/))
+       sub_vars_r4(1:s%inner_vars,1:s%lat2,1:s%lon2,1:s%num_fields               ) =>  sub_vars(:)
+      grid_vars_r4(1:s%inner_vars,1:s%nlat,1:s%nlon,1:s%kend_alloc-s%kbegin_loc+1) => grid_vars(:)
 
       call general_sub2grid_r_single_rank4(s,sub_vars_r4,grid_vars_r4)
 
@@ -1003,17 +1003,16 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),intent(in   ) :: s
-      real(r_single),     intent(in   ) :: sub_vars(:)
-      real(r_single),     intent(  out) :: grid_vars(:,:,:,:)
+      real(r_single),target,intent(in   ) :: sub_vars(:)
+      real(r_single),       intent(  out) :: grid_vars(:,:,:,:)
 
       real(r_single),pointer,dimension(:,:,:,:) :: sub_vars_r4=>NULL()
       integer(i_kind) mold4(2,2,2,2)
 
-      sub_vars_r4  => rerank(sub_vars,mold4,(/s%inner_vars,s%lat2,s%lon2,s%num_fields/))
+      sub_vars_r4(1:s%inner_vars,1:s%lat2,1:s%lon2,1:s%num_fields) => sub_vars(:)
 
       call general_sub2grid_r_single_rank4(s,sub_vars_r4,grid_vars)
 
@@ -1139,19 +1138,18 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),intent(in   ) :: s
-      real(r_single), intent(in   )     :: grid_vars(:)
-      real(r_single),     intent(inout) :: sub_vars(:)
+      real(r_single),target,intent(in   ) :: grid_vars(:)
+      real(r_single),target,intent(inout) ::  sub_vars(:)
 
       real(r_single),pointer,dimension(:,:,:,:) :: grid_vars_r4=>NULL()
       real(r_single),pointer,dimension(:,:,:,:) :: sub_vars_r4=>NULL()
       integer(i_kind) mold4(2,2,2,2)
 
-      grid_vars_r4=> rerank(grid_vars,mold4,(/s%inner_vars,s%nlat,s%nlon,s%kend_alloc-s%kbegin_loc+1/))
-      sub_vars_r4 => rerank(sub_vars, mold4,(/s%inner_vars,s%lat2,s%lon2,s%num_fields/))
+      grid_vars_r4(1:s%inner_vars,1:s%nlat,1:s%nlon,1:s%kend_alloc-s%kbegin_loc+1) => grid_vars(:)
+       sub_vars_r4(1:s%inner_vars,1:s%lat2,1:s%lon2,1:s%num_fields               ) =>  sub_vars(:)
 
       call general_grid2sub_r_single_rank4(s,grid_vars_r4,sub_vars_r4)
 
@@ -1183,17 +1181,16 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),intent(in   ) :: s
       real(r_single), intent(in   )     :: grid_vars(s%inner_vars,s%nlat,s%nlon,s%kbegin_loc:s%kend_alloc)
-      real(r_single),     intent(inout) :: sub_vars(:)
+      real(r_single),target,intent(inout) :: sub_vars(:)
 
       real(r_single),pointer,dimension(:,:,:,:) :: sub_vars_r4=>NULL()
       integer(i_kind) mold4(2,2,2,2)
 
-      sub_vars_r4 => rerank(sub_vars,mold4,(/s%inner_vars,s%lat2,s%lon2,s%num_fields/))
+      sub_vars_r4(1:s%inner_vars,1:s%lat2,1:s%lon2,1:s%num_fields) => sub_vars(:)
 
       call general_grid2sub_r_single_rank4(s,grid_vars,sub_vars_r4)
 
@@ -1309,19 +1306,18 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),intent(in   ) :: s
-      real(r_double),     intent(in   ) :: sub_vars(:)
-      real(r_double),     intent(inout) :: grid_vars(:)
+      real(r_double),target,intent(in   ) ::  sub_vars(:)
+      real(r_double),target,intent(inout) :: grid_vars(:)
 
       real(r_double),pointer,dimension(:,:,:,:) :: sub_vars_r4=>NULL()
       real(r_double),pointer,dimension(:,:,:,:) :: grid_vars_r4=>NULL()
       integer(i_kind) mold4(2,2,2,2)
 
-      sub_vars_r4  => rerank(sub_vars, mold4,(/s%inner_vars,s%lat2,s%lon2,s%num_fields/))
-      grid_vars_r4 => rerank(grid_vars,mold4,(/s%inner_vars,s%nlat,s%nlon,s%kend_alloc-s%kbegin_loc+1/))
+       sub_vars_r4(1:s%inner_vars,1:s%lat2,1:s%lon2,1:s%num_fields               ) =>  sub_vars(:)
+      grid_vars_r4(1:s%inner_vars,1:s%nlat,1:s%nlon,1:s%kend_alloc-s%kbegin_loc+1) => grid_vars(:)
 
       call general_sub2grid_r_double_rank4(s,sub_vars_r4,grid_vars_r4)
 
@@ -1353,17 +1349,16 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),intent(in   ) :: s
-      real(r_double),     intent(in   ) :: sub_vars(:)
+      real(r_double),target,intent(in ) :: sub_vars(:)
       real(r_double),     intent(  out) :: grid_vars(:,:,:,:)
 
       real(r_double),pointer,dimension(:,:,:,:) :: sub_vars_r4=>NULL()
       integer(i_kind) mold4(2,2,2,2)
 
-      sub_vars_r4  => rerank(sub_vars,mold4,(/s%inner_vars,s%lat2,s%lon2,s%num_fields/))
+      sub_vars_r4(1:s%inner_vars,1:s%lat2,1:s%lon2,1:s%num_fields) => sub_vars(:)
 
       call general_sub2grid_r_double_rank4(s,sub_vars_r4,grid_vars)
 
@@ -1489,19 +1484,18 @@ end subroutine get_iuse_pe
 !
 !$$$
       use kinds, only: r_single,i_kind
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),intent(in   ) :: s
-      real(r_double),     intent(in   ) :: grid_vars(:)
-      real(r_double),     intent(inout) :: sub_vars(:)
+      real(r_double),target,intent(in   ) :: grid_vars(:)
+      real(r_double),target,intent(inout) ::  sub_vars(:)
 
       real(r_double),pointer,dimension(:,:,:,:) :: grid_vars_r4=>NULL()
       real(r_double),pointer,dimension(:,:,:,:) :: sub_vars_r4=>NULL()
       integer(i_kind) mold4(2,2,2,2)
 
-      grid_vars_r4 => rerank(grid_vars,mold4,(/s%inner_vars,s%nlat,s%nlon,s%kend_alloc-s%kbegin_loc+1/))
-      sub_vars_r4  => rerank(sub_vars, mold4,(/s%inner_vars,s%lat2,s%lon2,s%num_fields/))
+      grid_vars_r4(1:s%inner_vars,1:s%nlat,1:s%nlon,1:s%kend_alloc-s%kbegin_loc+1) => grid_vars(:)
+       sub_vars_r4(1:s%inner_vars,1:s%lat2,1:s%lon2,1:s%num_fields               ) =>  sub_vars(:)
 
       call general_grid2sub_r_double_rank4(s,grid_vars_r4,sub_vars_r4)
 
@@ -1533,17 +1527,16 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),intent(in   ) :: s
       real(r_double),     intent(in   ) :: grid_vars(s%inner_vars,s%nlat,s%nlon,s%kbegin_loc:s%kend_alloc)
-      real(r_double),     intent(inout) :: sub_vars(:)
+      real(r_double),target,intent(inout) :: sub_vars(:)
 
       real(r_double),pointer,dimension(:,:,:,:) :: sub_vars_r4=>NULL()
       integer(i_kind) mold4(2,2,2,2)
 
-      sub_vars_r4 => rerank(sub_vars,mold4,(/s%inner_vars,s%lat2,s%lon2,s%num_fields/))
+      sub_vars_r4(1:s%inner_vars,1:s%lat2,1:s%lon2,1:s%num_fields) => sub_vars(:)
 
       call general_grid2sub_r_double_rank4(s,grid_vars,sub_vars_r4)
 
@@ -1656,20 +1649,19 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),intent(in   ) :: s
-      real(r_single),     intent(in   ) :: sub_vars(:)
-      real(r_single),    intent(inout)  :: grid_vars(:)
+      real(r_single),target,intent(in   ) ::  sub_vars(:)
+      real(r_single),target,intent(inout) :: grid_vars(:)
       integer(i_kind),    intent(in   ) :: gridpe
 
       real(r_single),pointer,dimension(:,:,:) :: sub_vars_r3=>NULL()
       real(r_single),pointer,dimension(:,:,:) :: grid_vars_r3=>NULL()
       integer(i_kind) mold3(2,2,2)
 
-      sub_vars_r3  => rerank(sub_vars ,mold3,(/s%inner_vars,s%lat2,s%lon2/))
-      grid_vars_r3 => rerank(grid_vars,mold3,(/s%inner_vars,s%nlat,s%nlon/))
+       sub_vars_r3(1:s%inner_vars,1:s%lat2,1:s%lon2) =>  sub_vars(:)
+      grid_vars_r3(1:s%inner_vars,1:s%nlat,1:s%nlon) => grid_vars(:)
 
       call general_gather2grid_r_single_rank3(s,sub_vars_r3,grid_vars_r3,gridpe)
 
@@ -1707,18 +1699,17 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),intent(in   ) :: s
-      real(r_single),     intent(in   ) :: sub_vars(:)
+      real(r_single),target,intent(in   ) :: sub_vars(:)
       real(r_single),     intent(  out) :: grid_vars(:,:,:)
       integer(i_kind),    intent(in   ) :: gridpe
 
       real(r_single),pointer,dimension(:,:,:) :: sub_vars_r3=>NULL()
       integer(i_kind) mold3(2,2,2)
 
-      sub_vars_r3  => rerank(sub_vars,mold3,(/s%inner_vars,s%lat2,s%lon2/))
+      sub_vars_r3(1:s%inner_vars,1:s%lat2,1:s%lon2) => sub_vars(:)
 
       call general_gather2grid_r_single_rank3(s,sub_vars_r3,grid_vars,gridpe)
 
@@ -1839,20 +1830,19 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),intent(in   ) :: s
-      real(r_double),     intent(in   ) :: sub_vars(:)
-      real(r_double),     intent(inout) :: grid_vars(:)
+      real(r_double),target,intent(in   ) ::  sub_vars(:)
+      real(r_double),target,intent(inout) :: grid_vars(:)
       integer(i_kind),    intent(in   ) :: gridpe
 
       real(r_double),pointer,dimension(:,:,:) :: sub_vars_r3=>NULL()
       real(r_double),pointer,dimension(:,:,:) :: grid_vars_r3=>NULL()
       integer(i_kind) mold3(2,2,2)
 
-      sub_vars_r3  => rerank(sub_vars, mold3,(/s%inner_vars,s%lat2,s%lon2/))
-      grid_vars_r3 => rerank(grid_vars,mold3,(/s%inner_vars,s%nlat,s%nlon/))
+       sub_vars_r3(1:s%inner_vars,1:s%lat2,1:s%lon2) =>  sub_vars(:)
+      grid_vars_r3(1:s%inner_vars,1:s%nlat,1:s%nlon) => grid_vars(:)
 
       call general_gather2grid_r_double_rank3(s,sub_vars_r3,grid_vars_r3,gridpe)
 
@@ -1884,18 +1874,17 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),intent(in   ) :: s
-      real(r_double),     intent(in   ) :: sub_vars(:)
+      real(r_double),target,intent(in   ) :: sub_vars(:)
       real(r_double),     intent(  out) :: grid_vars(:,:,:)
       integer(i_kind),    intent(in   ) :: gridpe
 
       real(r_double),pointer,dimension(:,:,:) :: sub_vars_r3=>NULL()
       integer(i_kind) mold3(2,2,2)
 
-      sub_vars_r3  => rerank(sub_vars,mold3,(/s%inner_vars,s%lat2,s%lon2/))
+      sub_vars_r3(1:s%inner_vars,1:s%lat2,1:s%lon2) => sub_vars(:)
 
       call general_gather2grid_r_double_rank3(s,sub_vars_r3,grid_vars,gridpe)
 
@@ -2022,20 +2011,19 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),intent(in   ) :: s
-      real(r_single), intent(in   )     :: grid_vars(:)
-      real(r_single),     intent(inout) :: sub_vars(:)
+      real(r_single),target,intent(in   ) :: grid_vars(:)
+      real(r_single),target,intent(inout) ::  sub_vars(:)
       integer(i_kind),intent(in   )     :: gridpe
 
       real(r_single),pointer,dimension(:,:,:) :: grid_vars_r3=>NULL()
       real(r_single),pointer,dimension(:,:,:) :: sub_vars_r3=>NULL()
       integer(i_kind) mold3(2,2,2)
 
-      grid_vars_r3=> rerank(grid_vars,mold3,(/s%inner_vars,s%nlat,s%nlon/))
-      sub_vars_r3 => rerank(sub_vars, mold3,(/s%inner_vars,s%lat2,s%lon2/))
+      grid_vars_r3(1:s%inner_vars,1:s%nlat,1:s%nlon) => grid_vars(:)
+       sub_vars_r3(1:s%inner_vars,1:s%lat2,1:s%lon2) =>  sub_vars(:)
 
       call general_scatter2sub_r_single_rank3(s,grid_vars_r3,sub_vars_r3,gridpe)
 
@@ -2067,18 +2055,17 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),intent(in   ) :: s
       real(r_single), intent(in   )     :: grid_vars(s%inner_vars,s%nlat,s%nlon)
-      real(r_single),     intent(inout) :: sub_vars(:)
+      real(r_single),target,intent(inout) :: sub_vars(:)
       integer(i_kind),intent(in   )     :: gridpe
 
       real(r_single),pointer,dimension(:,:,:) :: sub_vars_r3=>NULL()
       integer(i_kind) mold3(2,2,2)
 
-      sub_vars_r3 => rerank(sub_vars,mold3,(/s%inner_vars,s%lat2,s%lon2/))
+      sub_vars_r3(1:s%inner_vars,1:s%lat2,1:s%lon2) => sub_vars(:)
 
       call general_scatter2sub_r_single_rank3(s,grid_vars,sub_vars_r3,gridpe)
 
@@ -2177,20 +2164,19 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),intent(in   ) :: s
-      real(r_double),     intent(in   ) :: grid_vars(:)
-      real(r_double),     intent(inout) :: sub_vars(:)
+      real(r_double),target,intent(in   ) :: grid_vars(:)
+      real(r_double),target,intent(inout) ::  sub_vars(:)
       integer(i_kind),intent(in   )     :: gridpe
 
       real(r_double),pointer,dimension(:,:,:) :: grid_vars_r3=>NULL()
       real(r_double),pointer,dimension(:,:,:) :: sub_vars_r3=>NULL()
       integer(i_kind) mold3(2,2,2)
 
-      grid_vars_r3 => rerank(grid_vars,mold3,(/s%inner_vars,s%nlat,s%nlon/))
-      sub_vars_r3  => rerank(sub_vars, mold3,(/s%inner_vars,s%lat2,s%lon2/))
+      grid_vars_r3(1:s%inner_vars,1:s%nlat,1:s%nlon) => grid_vars(:)
+       sub_vars_r3(1:s%inner_vars,1:s%lat2,1:s%lon2) =>  sub_vars(:)
 
       call general_scatter2sub_r_double_rank3(s,grid_vars_r3,sub_vars_r3,gridpe)
 
@@ -2222,18 +2208,17 @@ end subroutine get_iuse_pe
 !   machine:  ibm RS/6000 SP
 !
 !$$$
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),intent(in   ) :: s
       real(r_double),     intent(in   ) :: grid_vars(s%inner_vars,s%nlat,s%nlon)
-      real(r_double),     intent(inout) :: sub_vars(:)
+      real(r_double),target,intent(inout) :: sub_vars(:)
       integer(i_kind),    intent(in   ) :: gridpe
 
       real(r_double),pointer,dimension(:,:,:) :: sub_vars_r3=>NULL()
       integer(i_kind) mold3(2,2,2)
 
-      sub_vars_r3 => rerank(sub_vars,mold3,(/s%inner_vars,s%lat2,s%lon2/))
+      sub_vars_r3(1:s%inner_vars,1:s%lat2,1:s%lon2) => sub_vars(:)
 
       call general_scatter2sub_r_double_rank3(s,grid_vars,sub_vars_r3,gridpe)
 
@@ -2335,21 +2320,20 @@ end subroutine get_iuse_pe
 !
 !$$$
       use egrid2agrid_mod, only: g_egrid2agrid,egrid2agrid_parm
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),   intent(in   ) :: se,sa
       type(egrid2agrid_parm),intent(in   ) :: p_e2a
-      real(r_single),        intent(in   ) :: sube_vars(:)
-      real(r_single),        intent(inout) :: suba_vars(:)
+      real(r_single), target,intent(in   ) :: sube_vars(:)
+      real(r_single), target,intent(inout) :: suba_vars(:)
       logical,               intent(in   ) :: regional
 
       real(r_single),pointer,dimension(:,:,:,:) :: sube_vars_r4=>NULL()
       real(r_single),pointer,dimension(:,:,:,:) :: suba_vars_r4=>NULL()
       integer(i_kind) mold4(2,2,2,2)
 
-      sube_vars_r4 => rerank(sube_vars,mold4,(/se%inner_vars,se%lat2,se%lon2,se%num_fields/))
-      suba_vars_r4 => rerank(suba_vars,mold4,(/sa%inner_vars,sa%lat2,sa%lon2,sa%num_fields/))
+      sube_vars_r4(1:se%inner_vars,1:se%lat2,1:se%lon2,1:se%num_fields) => sube_vars(:)
+      suba_vars_r4(1:sa%inner_vars,1:sa%lat2,1:sa%lon2,1:sa%num_fields) => suba_vars(:)
 
       call general_sube2suba_r_single_rank4(se,sa,p_e2a,sube_vars_r4,suba_vars_r4,regional)
 
@@ -2447,21 +2431,20 @@ end subroutine get_iuse_pe
 !
 !$$$
       use egrid2agrid_mod, only: g_egrid2agrid,egrid2agrid_parm
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),   intent(in   ) :: se,sa
       type(egrid2agrid_parm),intent(in   ) :: p_e2a
-      real(r_double),        intent(in   ) :: sube_vars(:)
-      real(r_double),        intent(inout) :: suba_vars(:)
+      real(r_double), target,intent(in   ) :: sube_vars(:)
+      real(r_double), target,intent(inout) :: suba_vars(:)
       logical,               intent(in   ) :: regional
 
       real(r_double),pointer,dimension(:,:,:,:) :: sube_vars_r4=>NULL()
       real(r_double),pointer,dimension(:,:,:,:) :: suba_vars_r4=>NULL()
       integer(i_kind) mold4(2,2,2,2)
 
-      sube_vars_r4 => rerank(sube_vars,mold4,(/se%inner_vars,se%lat2,se%lon2,se%num_fields/))
-      suba_vars_r4 => rerank(suba_vars,mold4,(/sa%inner_vars,sa%lat2,sa%lon2,sa%num_fields/))
+      sube_vars_r4(1:se%inner_vars,1:se%lat2,1:se%lon2,1:se%num_fields) => sube_vars(:)
+      suba_vars_r4(1:sa%inner_vars,1:sa%lat2,1:sa%lon2,1:sa%num_fields) => suba_vars(:)
 
       call general_sube2suba_r_double_rank4(se,sa,p_e2a,sube_vars_r4,suba_vars_r4,regional)
 
@@ -2558,21 +2541,20 @@ end subroutine get_iuse_pe
 !
 !$$$
       use egrid2agrid_mod, only: g_egrid2agrid_ad,egrid2agrid_parm
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),   intent(in   ) :: se,sa
       type(egrid2agrid_parm),intent(in   ) :: p_e2a
-      real(r_single),        intent(inout) :: sube_vars(:)
-      real(r_single),        intent(in   ) :: suba_vars(:)
+      real(r_single), target,intent(inout) :: sube_vars(:)
+      real(r_single), target,intent(in   ) :: suba_vars(:)
       logical,               intent(in   ) :: regional
 
       real(r_single),pointer,dimension(:,:,:,:) :: sube_vars_r4=>NULL()
       real(r_single),pointer,dimension(:,:,:,:) :: suba_vars_r4=>NULL()
       integer(i_kind) mold4(2,2,2,2)
 
-      sube_vars_r4 => rerank(sube_vars,mold4,(/se%inner_vars,se%lat2,se%lon2,se%num_fields/))
-      suba_vars_r4 => rerank(suba_vars,mold4,(/sa%inner_vars,sa%lat2,sa%lon2,sa%num_fields/))
+      sube_vars_r4(1:se%inner_vars,1:se%lat2,1:se%lon2,1:se%num_fields) => sube_vars(:)
+      suba_vars_r4(1:sa%inner_vars,1:sa%lat2,1:sa%lon2,1:sa%num_fields) => suba_vars(:)
 
       call general_sube2suba_r_single_rank4_ad(se,sa,p_e2a,sube_vars_r4,suba_vars_r4,regional)
 
@@ -2667,21 +2649,20 @@ end subroutine get_iuse_pe
 !
 !$$$
       use egrid2agrid_mod, only: g_egrid2agrid_ad,egrid2agrid_parm
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),   intent(in   ) :: se,sa
       type(egrid2agrid_parm),intent(in   ) :: p_e2a
-      real(r_double),        intent(inout) :: sube_vars(:)
-      real(r_double),        intent(in   ) :: suba_vars(:)
+      real(r_double), target,intent(inout) :: sube_vars(:)
+      real(r_double), target,intent(in   ) :: suba_vars(:)
       logical,               intent(in   ) :: regional
 
       real(r_double),pointer,dimension(:,:,:,:) :: sube_vars_r4=>NULL()
       real(r_double),pointer,dimension(:,:,:,:) :: suba_vars_r4=>NULL()
       integer(i_kind) mold4(2,2,2,2)
 
-      sube_vars_r4 => rerank(sube_vars,mold4,(/se%inner_vars,se%lat2,se%lon2,se%num_fields/))
-      suba_vars_r4 => rerank(suba_vars,mold4,(/sa%inner_vars,sa%lat2,sa%lon2,sa%num_fields/))
+      sube_vars_r4(1:se%inner_vars,1:se%lat2,1:se%lon2,1:se%num_fields) => sube_vars(:)
+      suba_vars_r4(1:sa%inner_vars,1:sa%lat2,1:sa%lon2,1:sa%num_fields) => suba_vars(:)
 
       call general_sube2suba_r_double_rank4_ad(se,sa,p_e2a,sube_vars_r4,suba_vars_r4,regional)
 
@@ -2776,21 +2757,20 @@ end subroutine get_iuse_pe
 !
 !$$$
       use egrid2agrid_mod, only: g_agrid2egrid,egrid2agrid_parm
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),   intent(in   ) :: sa,se
       type(egrid2agrid_parm),intent(in   ) :: p_e2a
-      real(r_single),        intent(in   ) :: suba_vars(:)
-      real(r_single),        intent(inout) :: sube_vars(:)
+      real(r_single), target,intent(in   ) :: suba_vars(:)
+      real(r_single), target,intent(inout) :: sube_vars(:)
       logical,               intent(in   ) :: regional
 
       real(r_single),pointer,dimension(:,:,:,:) :: suba_vars_r4=>NULL()
       real(r_single),pointer,dimension(:,:,:,:) :: sube_vars_r4=>NULL()
       integer(i_kind) mold4(2,2,2,2)
 
-      suba_vars_r4 => rerank(suba_vars,mold4,(/sa%inner_vars,sa%lat2,sa%lon2,sa%num_fields/))
-      sube_vars_r4 => rerank(sube_vars,mold4,(/se%inner_vars,se%lat2,se%lon2,se%num_fields/))
+      suba_vars_r4(1:sa%inner_vars,1:sa%lat2,1:sa%lon2,1:sa%num_fields) => suba_vars(:)
+      sube_vars_r4(1:se%inner_vars,1:se%lat2,1:se%lon2,1:se%num_fields) => sube_vars(:)
 
       call general_suba2sube_r_single_rank4(sa,se,p_e2a,suba_vars_r4,sube_vars_r4,regional)
 
@@ -2887,21 +2867,20 @@ end subroutine get_iuse_pe
 !
 !$$$
       use egrid2agrid_mod, only: g_agrid2egrid,egrid2agrid_parm
-      use m_rerank, only: rerank
       implicit none
 
       type(sub2grid_info),   intent(in   ) :: sa,se
       type(egrid2agrid_parm),intent(in   ) :: p_e2a
-      real(r_double),        intent(in   ) :: suba_vars(:)
-      real(r_double),        intent(inout) :: sube_vars(:)
+      real(r_double), target,intent(in   ) :: suba_vars(:)
+      real(r_double), target,intent(inout) :: sube_vars(:)
       logical,               intent(in   ) :: regional
 
       real(r_double),pointer,dimension(:,:,:,:) :: suba_vars_r4=>NULL()
       real(r_double),pointer,dimension(:,:,:,:) :: sube_vars_r4=>NULL()
       integer(i_kind) mold4(2,2,2,2)
 
-      suba_vars_r4 => rerank(suba_vars,mold4,(/sa%inner_vars,sa%lat2,sa%lon2,sa%num_fields/))
-      sube_vars_r4 => rerank(sube_vars,mold4,(/se%inner_vars,se%lat2,se%lon2,se%num_fields/))
+      suba_vars_r4(1:sa%inner_vars,1:sa%lat2,1:sa%lon2,1:sa%num_fields) => suba_vars(:)
+      sube_vars_r4(1:se%inner_vars,1:se%lat2,1:se%lon2,1:se%num_fields) => sube_vars(:)
 
       call general_suba2sube_r_double_rank4(sa,se,p_e2a,suba_vars_r4,sube_vars_r4,regional)
 

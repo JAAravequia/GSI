@@ -57,15 +57,6 @@ subroutine typedef_(mold)
   class(abstractEnsemble),optional,target,intent(in):: mold
 
   character(len=*),parameter:: myname_=myname//'::typedef_'
-  class(abstractEnsemble),pointer:: pmold_
-
-        ! argument checking
-  pmold_ => null()
-  if(present(mold)) then
-    pmold_ => mold
-    if(.not.associated(pmold_)) &               ! is argument _mold_ a null-object?
-      call warn(myname_,'a null argument (mold) is given.  Will typedef to default')
-  endif
 
         ! reset current typemold
   if(allocated(typemold_)) then
@@ -73,10 +64,9 @@ subroutine typedef_(mold)
     deallocate(typemold_)
   endif
 
-        ! (re)allocate the new typemold_
-  if(associated(pmold_)) then
-    allocate(typemold_,mold=pmold_)
-    pmold_ => null()
+        ! allocate the new typemold_
+  if(present(mold)) then
+    allocate(typemold_,mold=mold)
   else
     allocate(stub_ensemble::typemold_)
   endif
@@ -149,25 +139,22 @@ end function typename_
 
    subroutine ifn_alloc_()
 !-- If-not-properly-allocated(this_ensemble_), do something
+   use stub_ensmod, only: stub_ensemble => ensemble
    implicit none
-   class(abstractEnsemble),pointer:: pmold_
 
-    ! First, check to make sure typemold_ is type-defined, at least to a
+    ! if IT has been allocated, don't do anything.
+
+   if(allocated(this_ensemble_)) return
+
+    ! Otherwise, first check to make sure typemold_ is type-defined, at least to a
     ! default multi-ensemble type.
-   pmold_ => typemold_
-   if(.not.associated(pmold_)) call typedef_()
-   pmold_ => null()
 
-    ! Then, check and possibly instantiate this_ensemble_, which is must be
-    ! typed the same as typemold_
-
-   if(allocated(this_ensemble_)) then
-     if(same_type_as(typemold_,this_ensemble_)) return      ! Everything seems good.
- 
-       ! Otherwise, this_ensemble_ must be re-intentiated with a different type.
- 
-     deallocate(this_ensemble_)
+   if(.not.allocated(typemold_)) then
+     allocate(stub_ensemble::typemold_)
    endif
+
+    ! Then, instantiate this_ensemble_, according to typemold_
+
    allocate(this_ensemble_,mold=typemold_)
   end subroutine ifn_alloc_
 
@@ -179,6 +166,10 @@ end function typename_
 !  19Sep2011 Todling - Initial code
 !  30Nov2014 Todling - Update interface to get (bundle passed in)
 !  28Jun2018 Todling - Revamp in light of truly abstract ensemble interface
+!  12Dec2019 Guo     - Removed intermediate pointers referencing to allocatable
+!                      objects typemold_ and this_ensemble_.  This ensures its
+!                      portability to compilers where null-reference is strickly
+!                      undefined and invalid.
 !
 !EOP
 !-------------------------------------------------------------------------

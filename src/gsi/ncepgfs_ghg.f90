@@ -474,10 +474,10 @@ module ncepgfs_ghg
 
       inquire (file=cfile, exist=file_exist)
       if ( .not. file_exist ) then
-			if ( mype == 0 ) then
-				write(6,*) '   Can not find ',trim(char_ghg),' data source file'
-				write(6,*) ' *** Stopped in subroutine read_ch4n2oco !!'
-			endif
+                        if ( mype == 0 ) then
+                                write(6,*) '   Can not find ',trim(char_ghg),' data source file'
+                                write(6,*) ' *** Stopped in subroutine read_ch4n2oco !!'
+                        endif
          call stop2(332) 
 
       endif   ! end if_file_exist_block
@@ -485,23 +485,23 @@ module ncepgfs_ghg
 !  --- ...  read in 2-d (Y-Z) data for the request month 
 
       open (lughg,file=cfile,form='formatted',status='old',iostat=ierr)
-		if (ierr /= 0) then
-			if ( mype == 0 ) then
+                if (ierr /= 0) then
+                        if ( mype == 0 ) then
                                 write(6,*) '   error opening file = '//cfile
                                 write(6,*) ' *** Stopped in subroutine read_ch4n2oco !!'
-			endif
-      	call stop2(332) 
-		endif
+                        endif
+        call stop2(332) 
+                endif
       rewind lughg
       read (lughg, 36,iostat=ierr) iyr,title1, nmaxlon, nmaxlat, title2
  36   format(i8,4x,a18,2i3,a30)
-		if (ierr /= 0) then
-			if ( mype == 0 ) then
-				write(6,*) '   error reading  file = '//cfile
-				write(6,*) '   *** Stopped in subroutine read_ch4n2oco !!'
+                if (ierr /= 0) then
+                        if ( mype == 0 ) then
+                                write(6,*) '   error reading  file = '//cfile
+                                write(6,*) '   *** Stopped in subroutine read_ch4n2oco !!'
                         endif
-			call stop2(332)
-		endif
+                        call stop2(332)
+                endif
 
       if ( mype == 0 ) then
          write(6,*) '   Opened ghg data file: ',cfile

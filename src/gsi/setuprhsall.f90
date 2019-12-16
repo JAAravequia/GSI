@@ -268,6 +268,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 
   if(.not.rhs_allocated) call rhs_alloc()
   allocate(awork1,mold=awork)
+  awork1(:,:)=zero
 
 ! Reset observation pointers
   if(init_pass) then

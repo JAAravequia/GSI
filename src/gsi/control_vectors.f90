@@ -33,6 +33,7 @@ module control_vectors
 !                          in obs operator and analysis 
 !   2019-07-11  Todling  - move WRF specific variables w_exist and dbz_exit to a new wrf_vars_mod.f90.
 !                        . move imp_physics and lupp to ncepnems_io.f90.
+!   2019-12-12  guo      - m_rerank hackes are replaced with now Fortran standard pointer remappings.
 !
 ! subroutines included:
 !   sub init_anacv   
@@ -82,7 +83,6 @@ use hybrid_ensemble_parameters, only: beta_s0,l_hyb_ens
 use hybrid_ensemble_parameters, only: grd_ens
 use constants, only : max_varname_length
 
-use m_rerank, only : rerank
 use GSI_BundleMod, only : GSI_BundleCreate
 use GSI_BundleMod, only : GSI_BundleSet
 use GSI_BundleMod, only : GSI_Bundle
@@ -133,7 +133,7 @@ public ntracer
 
 type control_vector
    integer(i_kind) :: lencv
-   real(r_kind), pointer :: values(:) => NULL()
+   real(r_kind), contiguous, pointer :: values(:) => NULL()
    type(GSI_Grid)  :: grid_step
    type(GSI_Bundle), pointer :: step(:)
    type(GSI_Bundle), pointer :: motley(:)
@@ -1224,7 +1224,7 @@ subroutine prt_norms_vars(xcv,sgrep)
   allocate(vdot(nc3d),vsum(nc3d),vmin(nc3d),vmax(nc3d),vnum(nc3d))
   do iv=1,nc3d
      do jj=1,nsw
-        piv => rerank(xcv%step(jj)%r3(iv)%q)
+        piv(1:size(xcv%step(jj)%r3(iv)%q)) => xcv%step(jj)%r3(iv)%q(:,:,:)
 
         call stats_sum(piv, &
                        vdot(iv),vsum(iv),vmin(iv),vmax(iv),vnum(iv),add=jj>1)
@@ -1246,7 +1246,7 @@ subroutine prt_norms_vars(xcv,sgrep)
   allocate(vdot(nc2d),vsum(nc2d),vmin(nc2d),vmax(nc2d),vnum(nc2d))
   do iv=1,nc2d
      do jj=1,nsw
-        piv => rerank(xcv%step(jj)%r2(iv)%q)
+        piv(1:size(xcv%step(jj)%r2(iv)%q)) => xcv%step(jj)%r2(iv)%q(:,:)
 
         call stats_sum(piv, &
                        vdot(iv),vsum(iv),vmin(iv),vmax(iv),vnum(iv),add=jj>1)

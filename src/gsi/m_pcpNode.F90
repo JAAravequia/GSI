@@ -11,6 +11,9 @@ module m_pcpNode
 ! program history log:
 !   2016-05-18  j guo   - added this document block for the initial polymorphic
 !                         implementation.
+!   2019-12-12  j guo   - renamed overriding obsHeader_read_/obsHeader_write_
+!                         procedures to pcpHeader_read_/pcpHeader_write_.  This
+!                         is needed to be portable to the current PGI compiler.
 !
 !   input argument list: see Fortran 90 style document below
 !
@@ -61,8 +64,8 @@ module m_pcpNode
     procedure:: isvalid => obsNode_isvalid_
     procedure::  gettlddp => gettlddp_
 
-    procedure, nopass:: headerRead  => obsHeader_read_
-    procedure, nopass:: headerWrite => obsHeader_write_
+    procedure, nopass:: headerRead  => pcpHeader_read_
+    procedure, nopass:: headerWrite => pcpHeader_write_
     procedure:: init  => obsNode_init_
     procedure:: clean => obsNode_clean_
   end type pcpNode
@@ -131,7 +134,7 @@ function mytype()
   mytype="[pcpNode]"
 end function mytype
 
-subroutine obsHeader_read_(iunit,mobs,jread,istat)
+subroutine pcpHeader_read_(iunit,mobs,jread,istat)
   use gridmod, only: nsig5
   use pcpinfo, only: npredp
   implicit none
@@ -140,7 +143,7 @@ subroutine obsHeader_read_(iunit,mobs,jread,istat)
   integer(i_kind),intent(out):: jread
   integer(i_kind),intent(out):: istat
 
-  character(len=*),parameter:: myname_=myname//'.obsHeader_read_'
+  character(len=*),parameter:: myname_=myname//'.pcpHeader_read_'
   integer(i_kind):: mpredp,msig5
 _ENTRY_(myname_)
   
@@ -159,9 +162,9 @@ _ENTRY_(myname_)
   endif
 _EXIT_(myname_)
 return
-end subroutine obsHeader_read_
+end subroutine pcpHeader_read_
 
-subroutine obsHeader_write_(junit,mobs,jwrite,jstat)
+subroutine pcpHeader_write_(junit,mobs,jwrite,jstat)
   use gridmod, only: nsig5
   use pcpinfo, only: npredp
   implicit none
@@ -170,13 +173,13 @@ subroutine obsHeader_write_(junit,mobs,jwrite,jstat)
   integer(i_kind),intent(in ):: jwrite
   integer(i_kind),intent(out):: jstat
 
-  character(len=*),parameter:: myname_=myname//'.obsHeader_write_'
+  character(len=*),parameter:: myname_=myname//'.pcpHeader_write_'
 _ENTRY_(myname_)
   
   write(junit,iostat=jstat) mobs,jwrite, npredp,nsig5
 _EXIT_(myname_)
 return
-end subroutine obsHeader_write_
+end subroutine pcpHeader_write_
 
 subroutine obsNode_init_(aNode)
   use gridmod, only: nsig5
