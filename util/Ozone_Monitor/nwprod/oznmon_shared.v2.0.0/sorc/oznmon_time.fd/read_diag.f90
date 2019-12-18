@@ -287,6 +287,7 @@ module read_diag
     integer(i_kind),intent(out)             :: istatus
 
   
+    write(6,*) '--> read_ozndiag_header'
     istatus = 0
  
     if ( netcdf ) then
@@ -307,6 +308,7 @@ module read_diag
     print*, 'header_fix%iextra   = ',        header_fix%iextra   
 
     print*, 'istatus             = ',        istatus
+    write(6,*) '<-- read_ozndiag_header'
  
   end subroutine read_ozndiag_header
 
@@ -464,7 +466,7 @@ module read_diag
     else
        read(ftin) isis,id,obstype,jiter,nlevs,ianldate,iint,ireal,iextra
     endif
-
+    write(6,*) 'isis, nlevs = ', isis, nlevs
 
     header_fix%isis      = isis
     header_fix%id        = id
@@ -475,7 +477,7 @@ module read_diag
     header_fix%iint      = iint
     header_fix%ireal     = ireal
     header_fix%iextra    = iextra
-    
+    print *, 'header_fix has been assigned'   
 
     !--- check header
     
@@ -517,26 +519,30 @@ module read_diag
          header_nlev(k)%iouse = iouse(k)
       end do
       deallocate (pob,grs,err,iouse)
-!     print*,'header_nlev%pob=', header_nlev%pob
-!     print*,'header_nlev%grs=', header_nlev%grs
-!     print*,'header_nlev%err=', header_nlev%err
-!     print*,'header_nlev%iouse=', header_nlev%iouse
+      print*,'header_nlev%pob=', header_nlev%pob
+      print*,'header_nlev%grs=', header_nlev%grs
+      print*,'header_nlev%err=', header_nlev%err
+      print*,'header_nlev%iouse=', header_nlev%iouse
+    else
+      print*,'OMPSLP_NPP detected, but not handled'
     endif
 
     !--- read header (level part)
-    
-    read(ftin)  pob,grs,err,iouse
-    do k=1,header_fix%nlevs
-       header_nlev(k)%pob = pob(k)
-       header_nlev(k)%grs = grs(k)
-       header_nlev(k)%err = err(k)
-       header_nlev(k)%iouse = iouse(k)
-       write(6,*) 'header_nlev(k)%pob   = ', k, header_nlev(k)%pob
-       write(6,*) 'header_nlev(k)%grs   = ', k, header_nlev(k)%grs
-       write(6,*) 'header_nlev(k)%err   = ', k, header_nlev(k)%err
-       write(6,*) 'header_nlev(k)%iouse = ', k, header_nlev(k)%iouse
-    end do
-    deallocate (pob,grs,err,iouse)
+
+!    write(6,*) ' reading pob,grs,err,iouse' 
+!    read(ftin)  pob,grs,err,iouse
+!    write(6,*) ' pob,grs,err,iouse have been read' 
+!    do k=1,header_fix%nlevs
+!       header_nlev(k)%pob = pob(k)
+!       header_nlev(k)%grs = grs(k)
+!       header_nlev(k)%err = err(k)
+!       header_nlev(k)%iouse = iouse(k)
+!       write(6,*) 'header_nlev(k)%pob   = ', k, header_nlev(k)%pob
+!       write(6,*) 'header_nlev(k)%grs   = ', k, header_nlev(k)%grs
+!       write(6,*) 'header_nlev(k)%err   = ', k, header_nlev(k)%err
+!       write(6,*) 'header_nlev(k)%iouse = ', k, header_nlev(k)%iouse
+!    end do
+!    deallocate (pob,grs,err,iouse)
 
 
     write(6,*) '<-- read_ozndiag_header_bin'

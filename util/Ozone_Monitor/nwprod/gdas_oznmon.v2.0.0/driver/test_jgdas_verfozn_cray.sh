@@ -6,7 +6,7 @@
 #BSUB -q dev
 #BSUB -M 100
 #BSUB -W 00:05
-#BSUB -P GFS-T2O
+#BSUB -P GFS-DEV
 #BSUB -R "select[mem>100] rusage[mem=100]"
 
 ##BSUB -cwd /gpfs/hps/ptmp/Edward.Safford
