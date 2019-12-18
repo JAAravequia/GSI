@@ -14,19 +14,17 @@
 ! contains
 !   read_ozndiag_header - read ozone diagnostic file header
 !   read_ozndiag_data   - read ozone diagnostic file data
-!   set_netcdf_read  - call set_netcdf_read(.true.) to use nc4 hooks,
+!   set_netcdf_read     - call set_netcdf_read(.true.) to use nc4 hooks,
 !                       otherwise read file as binary format
-! attributes:
-!   language: f90
-!   machine:  ibm RS/6000 SP
-!
-!$$$
+!   open_ozndiag        - open a diag file for reading
+!   close_ozndiag       - close an open diag file
 !------------------------------------------------------------
 !
 
 module read_diag
 
-  ! USE:
+  !--- use
+
   use kinds, only: r_single,r_double,i_kind
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close, & 
                            nc_diag_read_get_dim, nc_diag_read_get_global_attr, &
@@ -128,6 +126,9 @@ module read_diag
 
  contains
 
+  !------------------------------------------------------------
+  ! subroutine open_ozndiag
+  !------------------------------------------------------------
   subroutine open_ozndiag(filename, ftin, istatus)
      character*500,   intent(in) :: filename
 
@@ -211,6 +212,9 @@ module read_diag
   end subroutine open_ozndiag
 
 
+  !------------------------------------------------------------
+  ! subroutine close_ozndiag
+  !------------------------------------------------------------
   subroutine close_ozndiag(filename, ftin)
      character*500,   intent(in) :: filename
      integer(i_kind), intent(inout) :: ftin
@@ -249,6 +253,8 @@ module read_diag
 
 
   !------------------------------------------------------------
+  ! subroutine set_netcdf_read
+  !
   ! set the use_netcdf flag to read either binary (default) or
   !    netcdf formatted diagnostic files.
   !------------------------------------------------------------
@@ -265,7 +271,10 @@ module read_diag
 
 
   !------------------------------------------------------------
-  ! Read a header record of a diagnostic file
+  !  read_ozndiag_header
+  !
+  !  Read a header record of a diagnostic file in either 
+  !  NetCDF for binary format.
   !------------------------------------------------------------
   subroutine read_ozndiag_header( ftin, header_fix, header_nlev, new_hdr, istatus )
 
@@ -303,7 +312,11 @@ module read_diag
 
 
 
+  !------------------------------------------------------------
+  !  subroutine read_ozndiag_header_nc
+  !------------------------------------------------------------
   subroutine read_ozndiag_header_nc( ftin, header_fix, header_nlev, new_hdr, istatus )
+
     !--- interface
 
     integer                    ,intent(in)  :: ftin
@@ -332,8 +345,6 @@ module read_diag
  
     istatus = 0
     write(6,*) ''; write(6,*) ''
-    write(6,*) '============================================='
-    write(6,*) '============================================='
     write(6,*) '--> read_ozndiag_header_nc, ftin = ', ftin
 
 
@@ -360,26 +371,23 @@ module read_diag
     call nc_diag_read_get_global_attr(ftin, "gross", gross )
     call nc_diag_read_get_global_attr(ftin, "tnoise", tnoise )
 
-    write(6,*) 'tnoise = ', tnoise
-
     !-------------------------------------------------------------------
     !  The Anaysis_Use_Flag in the netcdf file resides in the 
-    !  obs data rather than global (equivalent of binary header location.  So we
-    !  need read that in a different way.  Also, iuse assignment by level is not
-    !  possible, so the first value is good for all (or so I've been told).
+    !  obs data rather than global (equivalent of binary file header 
+    !  location.  So we need read that in a different way.  Also, iuse 
+    !  assignment by level is not possible, so the first value is good 
+    !  for all (or so I've been told).
 
     idx = find_ncdiag_id(ftin)
+
     if( ncdiag_open_status(idx)%num_records > 0 ) then 
        allocate( iuse_flag( ncdiag_open_status(idx)%num_records ))
        call nc_diag_read_get_var( ftin, 'Analysis_Use_Flag', iuse_flag )
-       print*, ' iuse_flag = ', iuse_flag
-
        analysis_use_flag = iuse_flag(1)
        deallocate( iuse_flag )
     else
        analysis_use_flag = -1
     end if 
-!    print*, 'anaysis_use_flag = ', analysis_use_flag
 
     nlevs = SIZE( pobs )
     write(6,*) 'nlevs = ', nlevs
@@ -401,39 +409,29 @@ module read_diag
       allocate( header_nlev( header_fix%nlevs ) )
       nlevs_last = header_fix%nlevs
     endif
-!    write(6,*) 'header_nlev allocated'
 
     !--- read header (level part)
     
     do k=1,header_fix%nlevs
-       write(6,*) 'header_nlev load loop, iter = ', k
        header_nlev(k)%pob = pobs(k)
-       write(6,*) 'header_nlev(k)%pob   = ', k, header_nlev(k)%pob
-
        header_nlev(k)%grs = gross(k)
-       write(6,*) 'header_nlev(k)%grs   = ', k, header_nlev(k)%grs
-
        header_nlev(k)%err = tnoise(k)
-       write(6,*) 'header_nlev(k)%err   = ', k, header_nlev(k)%err
-
        header_nlev(k)%iouse = analysis_use_flag
-       write(6,*) 'header_nlev(k)%iouse = ', k, header_nlev(k)%iouse
 
     end do
-!    write(6,*) 'end header_nlev assignments'
     deallocate( pobs,gross,tnoise )
 
 
     write(6,*) '<-- read_ozndiag_header_nc'
-    write(6,*) ''
-    write(6,*) '============================================='
-    write(6,*) '============================================='
     write(6,*) ''; write(6,*) ''
 
   end subroutine read_ozndiag_header_nc
 
 
 
+  !------------------------------------------------------------
+  !  subroutine read_ozndiag_header_bin
+  !------------------------------------------------------------
   subroutine read_ozndiag_header_bin( ftin, header_fix, header_nlev, new_hdr, istatus )
 
     !--- interface
@@ -463,10 +461,8 @@ module read_diag
     !
     if ( new_hdr ) then
        read(ftin) isis,id,obstype,jiter,nlevs,ianldate,iint,ireal,iextra,ioff0
-       print*,'isis,id,obstype,jiter,nlevs,ianldate,iint,ireal,iextra,ioff0 = ', isis,id,obstype,jiter,nlevs,ianldate,iint,ireal,iextra,ioff0
     else
        read(ftin) isis,id,obstype,jiter,nlevs,ianldate,iint,ireal,iextra
-       print*,'isis,id,obstype,jiter,nlevs,ianldate,iint,ireal,iextra= ', isis,id,obstype,jiter,nlevs,ianldate,iint,ireal,iextra
     endif
 
 
@@ -480,16 +476,6 @@ module read_diag
     header_fix%ireal     = ireal
     header_fix%iextra    = iextra
     
-
-    print*,'header_fix%isis      = ', header_fix%isis
-    print*,'header_fix%id        = ', header_fix%id  
-    print*,'header_fix%obstype   = ', header_fix%obstype
-    print*,'header_fix%jiter     = ', header_fix%jiter
-    print*,'header_fix%nlevs     = ', header_fix%nlevs
-    print*,'header_fix%ianldate  = ', header_fix%ianldate
-    print*,'header_fix%iint      = ', header_fix%iint
-    print*,'header_fix%ireal     = ', header_fix%ireal
-    print*,'header_fix%iextra    = ', header_fix%iextra
 
     !--- check header
     
@@ -514,10 +500,27 @@ module read_diag
       endif
       allocate( header_nlev( header_fix%nlevs ) )
       nlevs_last = header_fix%nlevs
+    endif
+
+    !--- read header (level part)
+    
+    if(isis /= "ompslp_npp")then
       allocate (pob(header_fix%nlevs))
       allocate (grs(header_fix%nlevs))
       allocate (err(header_fix%nlevs))
       allocate (iouse(header_fix%nlevs))
+      read(ftin)  pob,grs,err,iouse
+      do k=1,header_fix%nlevs
+         header_nlev(k)%pob = pob(k)
+         header_nlev(k)%grs = grs(k)
+         header_nlev(k)%err = err(k)
+         header_nlev(k)%iouse = iouse(k)
+      end do
+      deallocate (pob,grs,err,iouse)
+!     print*,'header_nlev%pob=', header_nlev%pob
+!     print*,'header_nlev%grs=', header_nlev%grs
+!     print*,'header_nlev%err=', header_nlev%err
+!     print*,'header_nlev%iouse=', header_nlev%iouse
     endif
 
     !--- read header (level part)
@@ -542,7 +545,10 @@ module read_diag
 
 
   !------------------------------------------------------------
-  ! Read a data record of the diagnostic file
+  !  subroutine read_ozndiag_data
+  !
+  !  Read a data record of the diagnostic file in either
+  !  NetCDF or binary format.
   !------------------------------------------------------------
 
   subroutine read_ozndiag_data( ftin, header_fix, data_fix, data_nlev, data_extra, ntobs, iflag )
@@ -579,6 +585,9 @@ module read_diag
 
 
 
+  !------------------------------------------------  
+  !  subroutine read_ozndiag_data_nc
+  !------------------------------------------------  
   subroutine read_ozndiag_data_nc( ftin, header_fix, data_fix, data_nlev, data_extra, ntobs, iflag )
 
     !--- interface
@@ -614,17 +623,10 @@ module read_diag
     write(6,*) ''
     write(6,*) '============================================='
     write(6,*) '============================================='
+
     print*, '===> read_ozndiag_data_nc'
-    print*, '      ftin                            = ', ftin
-    print*, '      header_fix%nlevs                =',header_fix%nlevs
 
     cur_idx = ncdiag_open_id( nopen_ncdiag )
-
-!    write(6,*) '     ncdiag_open_id                      = ', ncdiag_open_id 
-!    write(6,*) '     cur_idx                             = ', cur_idx
-!    write(6,*) '     ncdiag_open_status(cur_idx)%nc_read = ', ncdiag_open_status(cur_idx)%nc_read
-!    write(6,*) '     nopen_ncdiag                        = ', nopen_ncdiag
-
 
     !----------------------------------------------------------
     !  The binary file read (the original version of the file
@@ -747,16 +749,17 @@ module read_diag
 
     end if
 
-    write(6,*) '' ; print*, '<=== read_ozndiag_data_nc'
-    write(6,*) ''
-    write(6,*) '============================================='
-    write(6,*) '============================================='
+    write(6,*) '' ; 
+    print*, '<=== read_ozndiag_data_nc'
     write(6,*) ''; write(6,*) ''
 
   end subroutine read_ozndiag_data_nc
 
 
 
+  !------------------------------------------------  
+  !  subroutine read_ozndiag_data_bin
+  !------------------------------------------------  
   subroutine read_ozndiag_data_bin( ftin, header_fix, data_fix, data_nlev, data_extra, ntobs, iflag )
   
     !--- interface
@@ -769,9 +772,11 @@ module read_diag
     !           routine is called and should not be deallocated
     !           here.  The time.f90 could deallocate them at the
     !           very end of the program, I think.
+
     type(diag_data_fix_list),   pointer     :: data_fix(:)
     type(diag_data_nlev_list)  ,pointer     :: data_nlev(:,:)
     type(diag_data_extra_list) ,pointer     :: data_extra(:,:)
+
     integer                    ,intent(out) :: iflag
     integer(i_kind)            ,intent(out) :: ntobs
     integer(i_kind)            ,pointer     :: data_mpi(:)
@@ -799,46 +804,31 @@ module read_diag
         deallocate( data_mpi )
       endif
 
-!      print*, 'attempt to allocate array data_fix, data_nlev, data_mpi'
       allocate( data_fix( ntobs ) )
-!      print*, 'data_fix( ntobs ) allocated', ntobs
       allocate( data_mpi( ntobs ) )
-!      print*, 'data_mpi( ntobs ) allocated', ntobs
       allocate( data_nlev( header_fix%nlevs,ntobs ) )
-!      print*, 'data_nlev( header_fix%nlevs, ntobs ) allocated', header_fix%nlevs, ntobs
       nlevs_last = header_fix%nlevs
     endif
 
-!------------------------------------------------------------------------
-!   looks like this might be the issue:
-!     data_extra is dimensioned by iextra and ntobs but is only
-!     de/allocated based on not agreeing with the iextra_last value
-!     but _obs_ will vary from call to call, so that won't always work.
-!------------------------------------------------------------------------
-    print*, 'header_fix%iextra, iextra_last =', header_fix%iextra, iextra_last
-!    if (header_fix%iextra /= iextra_last) then
-       if (iextra_last > 0) then
-          deallocate (data_extra)
-          print*, 'deallocated data_extra'
-       endif
-       allocate( data_extra(header_fix%iextra,ntobs) )
-       print*, 'allocated data_extra, iextra, ntobs', header_fix%iextra, ntobs
-       iextra_last = header_fix%iextra
-!    endif
+    if (iextra_last > 0) then
+       deallocate (data_extra)
+       print*, 'deallocated data_extra'
+    endif
+
+    allocate( data_extra(header_fix%iextra,ntobs) )
+    print*, 'allocated data_extra, iextra, ntobs', header_fix%iextra, ntobs
+    iextra_last = header_fix%iextra
 
     !--- read a record
 
-    print*, 'iextra=', header_fix%iextra
     allocate( tmp_fix(3,ntobs))
-    allocate( tmp_nlev(6,header_fix%nlevs,ntobs))
+    allocate( tmp_nlev(10,header_fix%nlevs,ntobs))
 
     if (header_fix%iextra == 0) then
        read(ftin,IOSTAT=iflag) data_mpi, tmp_fix, tmp_nlev
-       print*,'iflag = ', iflag
     else
        allocate(  tmp_extra(header_fix%iextra,ntobs) )
        read(ftin,IOSTAT=iflag) data_mpi, tmp_fix, tmp_nlev, tmp_extra
-       print*,'iflag =',iflag
 
        do j=1,ntobs
           do i=1,header_fix%iextra
@@ -851,28 +841,19 @@ module read_diag
 
     do j=1,ntobs
        data_fix(j)%lat     = tmp_fix(1,j)
-       print*, 'data_fix(j)%lat = ', j, data_fix(j)%lat
        data_fix(j)%lon     = tmp_fix(2,j)
-       print*, 'data_fix(j)%lon = ', j, data_fix(j)%lon
        data_fix(j)%obstime = tmp_fix(3,j)
-       print*, 'data_fix(j)%obstime = ', j, data_fix(j)%obstime
     end do
     deallocate(tmp_fix)
 
     do j=1,ntobs
        do i=1,header_fix%nlevs
-          data_nlev(i,j)%ozobs  = tmp_nlev(1,i,j)
-          write(6,*)' data_nlev(i,j)%ozobs = ', i, j, data_nlev(i,j)%ozobs
-          data_nlev(i,j)%ozone_inv= tmp_nlev(2,i,j)
-          write(6,*)' data_nlev(i,j)%ozone_inv = ', i, j, data_nlev(i,j)%ozone_inv
-          data_nlev(i,j)%varinv = tmp_nlev(3,i,j)
-          write(6,*)' data_nlev(i,j)%varinv = ', i, j, data_nlev(i,j)%varinv
-          data_nlev(i,j)%sza    = tmp_nlev(4,i,j)
-          write(6,*)' data_nlev(i,j)%sza = ', i, j, data_nlev(i,j)%sza
-          data_nlev(i,j)%fovn   = tmp_nlev(5,i,j)
-          write(6,*)' data_nlev(i,j)%fovn = ', i, j, data_nlev(i,j)%fovn
-          data_nlev(i,j)%toqf   = tmp_nlev(6,i,j)
-          write(6,*)' data_nlev(i,j)%toqf = ', i, j, data_nlev(i,j)%toqf
+          data_nlev(i,j)%ozobs     = tmp_nlev(1,i,j)
+          data_nlev(i,j)%ozone_inv = tmp_nlev(2,i,j)
+          data_nlev(i,j)%varinv    = tmp_nlev(3,i,j)
+          data_nlev(i,j)%sza       = tmp_nlev(4,i,j)
+          data_nlev(i,j)%fovn      = tmp_nlev(5,i,j)
+          data_nlev(i,j)%toqf      = tmp_nlev(6,i,j)
        end do
     end do
     deallocate(tmp_nlev)
@@ -883,8 +864,11 @@ module read_diag
   end subroutine read_ozndiag_data_bin
 
 
-  
+  !------------------------------------------------  
+  !  function find_ncdiag_id
+  !------------------------------------------------  
   integer( i_kind ) function find_ncdiag_id( ftin )
+
      integer(i_kind), intent(in) :: ftin
 
      integer(i_kind) :: i
