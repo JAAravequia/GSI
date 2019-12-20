@@ -101,9 +101,8 @@ program horiz
   call open_ozndiag( diag_oz, lndiag, istatus )
   write(6,*) 'istatus from open_ozndiag = ', istatus
 
-  write(6,*)'call read_ozndiag_header'
+  
   call read_ozndiag_header( lndiag, header_fix, header_nlev, new_hdr, istatus )
-  write(6,*) 'istatus from read_ozndiag_header = ', istatus
 
 
 !****************************************************
@@ -134,7 +133,6 @@ program horiz
 !******************************************************
 ! Allocate arrays to hold observational information
 !
-  write(6,*)'allocate arrays'
   allocate ( prs_nlev(n_levs))
   allocate (var(n_levs,ntype), iuse(n_levs), error(n_levs))
   allocate(maxval(n_levs))
@@ -148,19 +146,14 @@ program horiz
 !
   do j=1,n_levs
      error(j)     = real( header_nlev(j)%err, 4)
-     write(6,*) 'j,error(j) = ', j, error(j)
      prs_nlev(j)  = real( header_nlev(j)%pob, 4)
-     write(6,*) 'j,prs_nlev(j) = ', j, prs_nlev(j)
      iuse(j)      = real( header_nlev(j)%iouse, 4 )
-     write(6,*) 'j,iuse(j) = ', j, iuse(j)
   end do
 
 
 !**********************************************
 ! Create GrADS control file
 !
-  write(6,*)'call create_ctl_horiz'
-
   if( trim(ptype) == 'ges' )then
      var_list = ges_vars
   else
@@ -196,9 +189,7 @@ program horiz
   !
   loopd:  do while (iflag == 0)
 
-     write(6,*)' lndiag = ', lndiag
      call read_ozndiag_data( lndiag, header_fix, data_fix, data_nlev, data_extra, iread, iflag )
-     write(6,*)' iread, iflag = ', iread, iflag
 
      if( iflag /= 0 ) exit loopd
      nobs=nobs+iread
@@ -285,7 +276,6 @@ program horiz
         ! Write GrADS record
         !
         if (isave==1) then
-           print*, 'writing to outfile'
            if (first) then
               first=.false.
               open(lungrd,file=grad_file,form='unformatted')
@@ -386,12 +376,9 @@ program horiz
      call errexit(93)
   endif
      
-  write(6,*)'update date for control file'
   call update_ctl_horiz(n_levs,iyy,imm,idd,ihh,idhh,incr,&
        ctl_file,lunctl)
 
-  write(6,*)'load missing value ',rmiss,' into output arrays.  ',&
-       n_levs,ntype
   allocate(var(n_levs,ntype))
   do j=1,ntype
      do i=1,n_levs
@@ -408,7 +395,7 @@ program horiz
   write(lungrd) stid,rlat,rlon,rtim,nlev,nflag
   write(lungrd) ((var(i,j),i=1,n_levs),j=1,ntype)
   irite=1
-  write(6,*)'write output to lungrd=',lungrd,', file=',trim(grad_file)
+
   deallocate(var)
 
 

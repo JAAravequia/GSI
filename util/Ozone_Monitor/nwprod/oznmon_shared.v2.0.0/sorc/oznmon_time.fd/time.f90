@@ -4,6 +4,7 @@ program main
   use kinds, only: i_kind
 
   implicit none
+
   integer ntype,mregion,mls2_levs,mls3_levs
   parameter (ntype=4,mregion=25,mls2_levs=37,mls3_levs=55)
 
@@ -54,7 +55,6 @@ program main
   data luname,lungrd,lunctl,lndiag,lupen,lucnt / 5, 100, 51, 21, 52, 53 /
   data rmiss /-999./
   data stringd / '.%y4%m2%d2%h2' /
-!  data ftype / 'cnt', 'cpen', 'avgomg', 'sdvomg' /
   data anl_vars / 'cnt', 'cpen', 'avgoma', 'sdvoma' /
   data ges_vars / 'cnt', 'cpen', 'avgomg', 'sdvomg' /
 
@@ -103,18 +103,12 @@ program main
 
   call set_netcdf_read( netcdf )
   call open_ozndiag( diag_oz, lndiag, istatus )
-!  write(6,*) 'istatus from open_ozndiag = ', istatus
 
 
 ! File exists.  Read header
 
-  write(6,*)'call read_ozndiag_header'
   call read_ozndiag_header( lndiag, header_fix, header_nlev, new_hdr, istatus )
-!  write(6,*)'after read_ozndiag_header, new_hdr = ', new_hdr 
-!  write(6,*) 'istatus from read_ozndiag_header = ', istatus
   
-!  call close_ozndiag( diag_oz, lndiag )
-!  goto 950
 
 ! Extract observation type, satellite id, and number of levels
   satype = header_fix%obstype
@@ -129,20 +123,17 @@ program main
     n_levs = mls3_levs
   end if
 
-!  write(6,*)'satype,dplat,n_levs=',satype,' ',dplat,n_levs
 
   string = trim(satype)//'_'//trim(dplat)
-!  write(6,*)'string,satname=',string,' ',satname
   if ( trim(string) /= trim(satname) ) then
      write(6,*)'***ERROR*** inconsistent instrument types'
      write(6,*)'  satname,string  =',satname,' ',string
      call errexit(92)
   endif
 
-
-! Allocate arrays to hold observational information
-!  write(6,*)' '
-!  write(6,*)'allocate arrays'
+!------------------------------------------------------
+!   Allocate arrays to hold observational information
+!
   allocate ( prs_nlev(n_levs))
   allocate (omg_cor(n_levs,mregion,2), &
        cnt(n_levs,mregion), & 
@@ -174,9 +165,6 @@ program main
   end do
         
 
-! Create GrADS control file
-!  write(6,*)'call create_ctl_oz'
-
 ! ----------------------------------------------------
 ! Set the var_list list to use either the ges or anl 
 ! version per the ptype value
@@ -190,20 +178,19 @@ program main
 !-----------------------------------------------------
 !  create GrADS contol file
 !
-!  call create_ctl_oz(ntype,ptype, var_list,n_levs,iyy,imm,idd,ihh,idhh,&
-!       incr,ctl_file,lunctl,rmiss,satname,satype,dplat,nregion,&
-!       region,rlonmin,rlonmax,rlatmin,rlatmax,prs_nlev,use(1,1),error(1,1))
+  call create_ctl_oz(ntype,ptype, var_list,n_levs,iyy,imm,idd,ihh,idhh,&
+       incr,ctl_file,lunctl,rmiss,satname,satype,dplat,nregion,&
+       region,rlonmin,rlonmax,rlatmin,rlatmax,prs_nlev,use(1,1),error(1,1))
 
 
 ! Loop to read entries in diagnostic file
   iflag = 0
-  if(index(satype,'mls')/=0 ) then
-     print*, 'deal with MLS data'
-  end if
 
   loopd:  do while (iflag == 0)
 
-!    Read a record.  If read flag, iflag does not equal zero, exit loopd
+     !---------------------------------------------------------------------
+     ! Read a record.  If read flag, iflag does not equal zero, exit loopd
+     !
      call read_ozndiag_data( lndiag, header_fix, data_fix, data_nlev, data_extra, iread, iflag )
      if( iflag /= 0 ) exit loopd
      nobs=nobs+iread
@@ -214,7 +201,6 @@ program main
      rlat   = data_fix(iobs)%lat
      rlon   = data_fix(iobs)%lon
      if (rlon>180.) rlon = rlon - 360.
-!    print*,'rlat,rlon=',rlat,rlon
 
 !    Detemine subdomain based on observation location
      ii=0; jsub=0
@@ -231,45 +217,49 @@ program main
 
 !       Level loop
         do j = 1, n_levs
-!          If observation was assimilated, accumulate sums in appropriate regions
-!          if (data_nlev(j,iobs)%varinv > 1.e-6) then
-              pen         =  data_nlev(j,iobs)%varinv*(data_nlev(j,iobs)%ozone_inv)**2
-              cor_omg(1)  =  data_nlev(j,iobs)%ozone_inv
-              cor_omg(2)  =  (cor_omg(1))**2
-              do i=1,nreg
-                 k=jsub(i)
-                 cnt(j,k) = cnt(j,k) +1.0 
-                 penalty(j,k) = penalty(j,k) + pen
-                 do ii=1,2
-                    omg_cor(j,k,ii)  = omg_cor(j,k,ii)  + cor_omg(ii)
-                 end do
+
+           !-------------------------------------------------
+           ! If observation was assimilated, accumulate 
+           !     sums in appropriate regions
+           pen         =  data_nlev(j,iobs)%varinv*(data_nlev(j,iobs)%ozone_inv)**2
+           cor_omg(1)  =  data_nlev(j,iobs)%ozone_inv
+           cor_omg(2)  =  (cor_omg(1))**2
+
+           do i=1,nreg
+              k=jsub(i)
+              cnt(j,k) = cnt(j,k) +1.0 
+              penalty(j,k) = penalty(j,k) + pen
+
+              do ii=1,2
+                 omg_cor(j,k,ii)  = omg_cor(j,k,ii)  + cor_omg(ii)
               end do
-!          endif
+
+           end do
         enddo ! level loop
      else
 
-!       -----------------------------------------------------------------------
-!       If observation was assimilated, accumulate sums in appropriate regions
-!
+        !------------------------------------------------------------------------
+        ! If observation was assimilated, accumulate sums in appropriate regions
+        !
         if (data_nlev(1,iobs)%varinv > 1.e-6) then
-!       since the old gsi executable contains the case where the obs is above model top and ratio_error is set to 0 
-!       but varinv is not set to 0 and the ozone_inv is still calculated.
-!       if (abs(data_nlev(1,iobs)%ozone_inv) < 1.0e+02 .and. data_nlev(1,iobs)%varinv<1.0e+04) then  
-!       if (abs(data_nlev(1,iobs)%ozone_inv) < 1.0e+02 ) then  
+
            pen         =  data_nlev(1,iobs)%varinv*(data_nlev(1,iobs)%ozone_inv)**2
            cor_omg(1)  =  data_nlev(1,iobs)%ozone_inv
            cor_omg(2)  =  (cor_omg(1))**2
            j=mod(iobs,n_levs)
            if(j==0) j=n_levs
+
            do i=1,nreg
               k=jsub(i)
               cnt(j,k) = cnt(j,k) +1.0 
               penalty(j,k) = penalty(j,k) + pen
+
               do ii=1,2
                  omg_cor(j,k,ii)  = omg_cor(j,k,ii)  + cor_omg(ii)
               end do
            end do
         endif
+
      endif
 
    enddo   ! END do iobs=1,iread
@@ -277,29 +267,19 @@ program main
   enddo loopd !  End of loop over diagnostic file
 
 
-!  close(lndiag)
   call close_ozndiag( diag_oz, lndiag )
 
-  print*, 'read in ', nobs, ' observations in total',cnt(12,1),cnt(12,4),sum(omg_cor),sum(penalty)
   write(6,*)' '
+  print*, 'read in ', nobs, ' observations in total'
   write(6,*)' '
 
 ! Compute average and standard deviation
   do k=1,nregion
      do j=1,n_levs
         call avgsdv(cnt(j,k),omg_cor(j,k,1), omg_cor(j,k,2), rmiss)
-!          write(6,*)'level j=',j,', region k=',k,' with cnt,avg,sdv=', &
-!               cnt(j,k),omg_cor(j,k,1),omg_cor(j,k,2)
+
         if (cnt(j,k)>0) then
-
-
-           write(6,*)'converting pen to cpen, level,region ',j,k,':'
-           write(6,*)' pen, cnt cpen = ', &
-                  penalty(j,k), cnt(j,k), penalty(j,k)/cnt(j,k)
-
            penalty(j,k)=penalty(j,k)/cnt(j,k) ! convert penalty to cpen
-           write(6,*)' now pen = ', penalty(j,k)
-
         else
            cnt(j,k)=rmiss
            penalty(j,k)=rmiss
@@ -310,7 +290,6 @@ program main
 ! Do validation
   if( validate == .TRUE. ) then
      call load_base( satname, ier )
-     write(6,*) 'ier from load_base = ', ier
 
      open(lupen,file=bad_pen_file,form='formatted')
      open(lucnt,file=bad_cnt_file,form='formatted')
@@ -352,19 +331,21 @@ program main
      close( lupen )
      close( lucnt )
   endif
+
+  !------------------------------------  
+  ! Write output to GrADS ready file
+  !
   
-! Write output to GrADS ready file
-  write(6,*)' '
   open(lungrd,file=grad_file,form='unformatted')
   write(lungrd) ((cnt(j,k),j=1,n_levs),k=1,nregion)
   write(lungrd) ((penalty(j,k),j=1,n_levs),k=1,nregion)
 
-if(index(satype,'mls')/=0 ) then
-  print*,  ' write out the data to temp.txt'
-  open(8,file='temp.txt',form='formatted')
-  write(8,*) ((cnt(j,k),j=1,n_levs),k=1,nregion)
-  write(8,*) ((penalty(j,k),j=1,n_levs),k=1,nregion)
-end if
+  if(index(satype,'mls')/=0 ) then
+     print*,  ' write out the data to temp.txt'
+     open(8,file='temp.txt',form='formatted')
+     write(8,*) ((cnt(j,k),j=1,n_levs),k=1,nregion)
+     write(8,*) ((penalty(j,k),j=1,n_levs),k=1,nregion)
+  end if
 
   do ii=1,2
      write(lungrd) ((omg_cor (j,k,ii),j=1,n_levs),k=1,nregion)
@@ -372,20 +353,23 @@ end if
           write(8,*) 'ii=',ii, ((omg_cor (j,k,ii),j=1,n_levs),k=1,nregion)
      end if
   end do
+
+  write(6,*)''
   write(6,*)'write output to lungrd=',lungrd,', file=',trim(grad_file)
+
   close(lungrd)
-if(index(satype,'mls')/=0 ) then
-  close(8)
-end if
+  if(index(satype,'mls')/=0 ) then
+     close(8)
+  end if
 
-
-! Deallocate arrays
-  write(6,*)' '
-  write(6,*)'deallocate arrays'
+  !------------------------
+  ! Deallocate arrays
+  !
   deallocate(prs_nlev,omg_cor,cnt,penalty,error,use)
   goto 950
 
-! Jump to here if eof or error reading diagnostic file.
+  !--------------------------------------------------------
+  ! Jump to here if eof or error reading diagnostic file.
 900 continue
   write(6,*)'***PROBLEM reading diagnostic file.  diag_oz=',diag_oz
   close(lndiag)
@@ -419,25 +403,33 @@ end if
   open(lungrd,file=grad_file,form='unformatted')
   write(lungrd) ((cnt(j,k),j=1,n_levs),k=1,nregion)
   write(lungrd) ((penalty(j,k),j=1,n_levs),k=1,nregion)
-if(index(satype,'mls')/=0 ) then
-  open(8,file='temp.txt',form='formatted',status='new')
-  write(8,*) ((cnt(j,k),j=1,n_levs),k=1,nregion)
-  write(8,*) ((penalty(j,k),j=1,n_levs),k=1,nregion)
-end if
+
+  if(index(satype,'mls')/=0 ) then
+     open(8,file='temp.txt',form='formatted',status='new')
+     write(8,*) ((cnt(j,k),j=1,n_levs),k=1,nregion)
+     write(8,*) ((penalty(j,k),j=1,n_levs),k=1,nregion)
+  end if
+
   do ii=1,2
      write(lungrd) ((omg_cor (j,k,ii),j=1,n_levs),k=1,nregion)
-if(index(satype,'mls')/=0 ) then
-     write(8,*) 'ii=',ii,((omg_cor (j,k,ii),j=1,n_levs),k=1,nregion)
-end if
+     if(index(satype,'mls')/=0 ) then
+        write(8,*) 'ii=',ii,((omg_cor (j,k,ii),j=1,n_levs),k=1,nregion)
+     end if
   end do
+
   write(6,*)'write output to lungrd=',lungrd,', file=',trim(grad_file)
+
   close(lungrd)
-if(index(satype,'mls')/=0 ) then
-  close(8)
-end if
+
+  if(index(satype,'mls')/=0 ) then
+     close(8)
+  end if
+
   deallocate(cnt,penalty,omg_cor)
 
-! End of program
+  !-------------------
+  ! End of program
 950 continue
+
   stop
 end program main

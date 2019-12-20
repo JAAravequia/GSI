@@ -107,14 +107,20 @@ module read_diag
     real(r_single) :: extra              ! extra information
   end type diag_data_extra_list
 
-  logical,save     ::  netcdf = .false.
+  logical,save                  ::  netcdf          = .false.
+  integer(i_kind),save          :: num_global_attrs = 0
+  integer(i_kind),save          :: attr_name_mlen   = 0
+  integer(i_kind),save          :: num_vars         = 0
+  integer(i_kind),save          :: var_name_mlen    = 0
+
+  character(len=:),dimension(:), allocatable,save :: var_names,attr_names
 
   type ncdiag_status
      logical :: nc_read
      integer(i_kind) :: cur_ob_idx
      integer(i_kind) :: num_records
-     type(diag_data_fix_list),  allocatable  :: all_data_fix(:)
-     type(diag_data_nlev_list), allocatable  :: all_data_nlev(:,:)  ! rad nchan= ozn nlev
+     type(diag_data_fix_list), allocatable   :: all_data_fix(:)
+     type(diag_data_nlev_list), allocatable  :: all_data_nlev(:,:) 
      type(diag_data_extra_list), allocatable :: all_data_extra(:,:,:)
   end type ncdiag_status
 
@@ -140,18 +146,14 @@ module read_diag
      !  but that doesn't make it right.  I'll clean this up when all is working.
      !
      integer(i_kind), intent(inout) :: ftin             
-     integer(i_kind), intent(out):: istatus
-     
-     integer(i_kind) :: i,ncd_nobs
+     integer(i_kind), intent(out)   :: istatus
+     integer(i_kind)                :: i,ncd_nobs
 
-     write(6,*)'--> open_ozndiag'
-     write(6,*)'      filename, ftin = ', TRIM(filename), ftin
+
      istatus = -999
 
-     if (netcdf) then
 
-        write(6,*) '  nopen_ncdiag, MAX_OPEN_NCDIAG = ', nopen_ncdiag, MAX_OPEN_NCDIAG
-        write(6,*) '  ncdiag_open_id = ', ncdiag_open_id
+     if (netcdf) then
 
         if (nopen_ncdiag >= MAX_OPEN_NCDIAG) then
            write(6,*) 'OPEN_RADIAG:  ***ERROR*** Cannot open more than ', &
@@ -161,17 +163,13 @@ module read_diag
 
         if ( istatus /= 0 ) then
            call nc_diag_read_init(filename,ftin)
-           write(6,*) 'after nc_diag_read_init, ftin = ', ftin
            istatus=0
 
            do i = 1, MAX_OPEN_NCDIAG
-              write(6,*) 'top of 1..MAX_OPEN_NCDIAG loop, i = ', i
-              write(6,*) '  and ncdiag_open_id(i) = ', ncdiag_open_id(i)
 
               if (ncdiag_open_id(i) < 0) then
                  
                  ncdiag_open_id(i) = ftin
-                 write(6,*) 'now i, ncdiag_open_id(i), ftin = ', i, ncdiag_open_id(i), ftin
                  ncdiag_open_status(i)%nc_read = .false.
                  ncdiag_open_status(i)%cur_ob_idx = 1 
 
@@ -188,12 +186,14 @@ module read_diag
                  ncdiag_open_status(i)%num_records = nc_diag_read_get_dim(ftin,'nobs')
                  nopen_ncdiag = nopen_ncdiag + 1
 
+                 write(6,*) ''
                  write(6,*) 'ncdiag_open_status(i) dump, i     = ', i
                  write(6,*) '                      %nc_read    = ', ncdiag_open_status(i)%nc_read
                  write(6,*) '                      %cur_ob_idx = ', ncdiag_open_status(i)%cur_ob_idx
                  write(6,*) '                      %num_records= ', ncdiag_open_status(i)%num_records
                  write(6,*) 'nopen_ncdiag = ', nopen_ncdiag
                  write(6,*) 'ncdiag_open_id(i) = ', ncdiag_open_id(i)
+                 write(6,*) ''
                  exit
 
               endif
@@ -201,13 +201,12 @@ module read_diag
            enddo
         endif
 
+        call load_file_vars_nc( ftin )
+
      else
        open(ftin,form="unformatted",file=filename,iostat=istatus)
        rewind(ftin)
      endif
-
-     write(6,*)'<-- open_ozndiag'
-     write(6,*)'                '
 
   end subroutine open_ozndiag
 
@@ -221,13 +220,11 @@ module read_diag
 
      integer(i_kind) :: id
 
-     write(6,*)'--> close_ozndiag'
      if (netcdf) then
         id = find_ncdiag_id(ftin)
         if (id < 0) then
            write(6,*) 'CLOSE_RADIAG:  ***ERROR*** ncdiag file ', filename,   &
                       ' was not opened'
-!           call stop2(456)
         endif
         call nc_diag_read_close(filename)
         ncdiag_open_id(id) = -1
@@ -244,11 +241,19 @@ module read_diag
            deallocate(ncdiag_open_status(id)%all_data_extra)
         endif
         nopen_ncdiag = nopen_ncdiag - 1
+
+        num_global_attrs = 0
+        attr_name_mlen   = 0
+        attr_names       = ''
+
+        num_vars         = 0
+        var_name_mlen    = 0
+        var_names        = ''
+
      else
         close(ftin)
      endif
 
-     write(6,*)'<-- close_ozndiag'
   end subroutine close_ozndiag
 
 
@@ -259,13 +264,10 @@ module read_diag
   !    netcdf formatted diagnostic files.
   !------------------------------------------------------------
   subroutine set_netcdf_read( use_netcdf )
-
      logical,intent(in)                     :: use_netcdf
 
-     write(6,*)'--> set_netcdf, use_netcdf = ', use_netcdf
+
      netcdf = use_netcdf
-     write(6,*)'netcdf = ', netcdf
-     write(6,*)'<-- set_netcdf'
 
   end subroutine set_netcdf_read
 
@@ -287,7 +289,6 @@ module read_diag
     integer(i_kind),intent(out)             :: istatus
 
   
-    write(6,*) '--> read_ozndiag_header'
     istatus = 0
  
     if ( netcdf ) then
@@ -308,7 +309,7 @@ module read_diag
     print*, 'header_fix%iextra   = ',        header_fix%iextra   
 
     print*, 'istatus             = ',        istatus
-    write(6,*) '<-- read_ozndiag_header'
+    print*, ''
  
   end subroutine read_ozndiag_header
 
@@ -340,38 +341,65 @@ module read_diag
     integer(i_kind)                          :: nsdim,k,idate
     integer(i_kind),dimension(:),allocatable :: iuse_flag
     integer(i_kind)                          :: analysis_use_flag,idx
-    integer(i_kind)                          :: num_vars, var_name_mlen
-    integer(i_kind)                          :: num_global_attrs, attr_name_mlen
-    character(len=:),dimension(:), allocatable :: var_names,attr_names
 
  
     istatus = 0
-    write(6,*) ''; write(6,*) ''
-    write(6,*) '--> read_ozndiag_header_nc, ftin = ', ftin
 
+    !--- get global attr
+    !
+    !    This may look like overkill with a check on each variable
+    !    name, but due to the genius of the ncdiag library, a
+    !    failure on these read operations is fatal, because, reasons
+    !    I guess.  Thus, this abundance of caution.
+    !
+    if( verify_var_name_nc( "date_time" ) ) then
+       call nc_diag_read_get_global_attr(ftin, "date_time", idate)    
+    else
+       write(6,*) 'WARNING:  unable to read global var data_time from file '
+    end if
 
-    call nc_diag_read_get_global_attr_names(ftin, num_global_attrs, &
-                attr_name_mlen, attr_names)
-    do k=1,num_global_attrs
-       write(6,*) 'k, attr_names = ', k, attr_names(k)
-    end do 
+    if( verify_var_name_nc( "Satellite_Sensor" ) ) then
+       call nc_diag_read_get_global_attr(ftin, "Satellite_Sensor", isis)      
+    else
+       write(6,*) 'WARNING:  unable to read global var Satellite_Sensor from file '
+    end if
 
-    call nc_diag_read_get_var_names(ftin, num_vars, var_name_mlen, var_names)
-    write(6,*) ' num_vars = ', num_vars
+    if( verify_var_name_nc( "Satellite" ) ) then
+       call nc_diag_read_get_global_attr(ftin, "Satellite", sat) 
+    else
+       write(6,*) 'WARNING:  unable to read global var Satellite from file '
+    end if
 
-    do k=1,num_vars
-       write(6,*) 'k, var_names = ', k, var_names(k)
-    end do 
+    if( verify_var_name_nc( "Observation_type" ) ) then
+       call nc_diag_read_get_global_attr(ftin, "Observation_type", obstype)   ;
+    else
+       write(6,*) 'WARNING:  unable to read global var Observation_type from file '
+    end if
 
-    call nc_diag_read_get_global_attr(ftin, "date_time", idate)            ;
-    call nc_diag_read_get_global_attr(ftin, "Satellite_Sensor", isis)      ;
-    call nc_diag_read_get_global_attr(ftin, "Satellite", sat) 
-    call nc_diag_read_get_global_attr(ftin, "Observation_type", obstype)   ;
-    call nc_diag_read_get_global_attr(ftin, "Number_of_state_vars", nsdim )
+    if( verify_var_name_nc( "Number_of_state_vars" ) ) then
+       call nc_diag_read_get_global_attr(ftin, "Number_of_state_vars", nsdim )
+    else
+       write(6,*) 'WARNING:  unable to read global var Number_of_state_vars from file '
+    end if
 
-    call nc_diag_read_get_global_attr(ftin, "pobs", pobs )
-    call nc_diag_read_get_global_attr(ftin, "gross", gross )
-    call nc_diag_read_get_global_attr(ftin, "tnoise", tnoise )
+    if( verify_var_name_nc( "pobs" ) ) then
+       call nc_diag_read_get_global_attr(ftin, "pobs", pobs )
+    else
+       write(6,*) 'WARNING:  unable to read global var pobs from file '
+    end if
+
+    if( verify_var_name_nc( "gross" ) ) then
+       call nc_diag_read_get_global_attr(ftin, "gross", gross )
+    else
+       write(6,*) 'WARNING:  unable to read global var gross from file '
+    end if
+
+    if( verify_var_name_nc( "tnoise" ) ) then
+       call nc_diag_read_get_global_attr(ftin, "tnoise", tnoise )
+    else
+       write(6,*) 'WARNING:  unable to read global var tnoise from file '
+    end if
+
 
     !-------------------------------------------------------------------
     !  The Anaysis_Use_Flag in the netcdf file resides in the 
@@ -382,25 +410,30 @@ module read_diag
 
     idx = find_ncdiag_id(ftin)
 
-    if( ncdiag_open_status(idx)%num_records > 0 ) then 
-       allocate( iuse_flag( ncdiag_open_status(idx)%num_records ))
-       call nc_diag_read_get_var( ftin, 'Analysis_Use_Flag', iuse_flag )
-       analysis_use_flag = iuse_flag(1)
-       deallocate( iuse_flag )
+    if( verify_var_name_nc( "Analysis_Use_Flag" ) ) then
+       if( ncdiag_open_status(idx)%num_records > 0 ) then 
+          allocate( iuse_flag( ncdiag_open_status(idx)%num_records ))
+
+          call nc_diag_read_get_var( ftin, 'Analysis_Use_Flag', iuse_flag )
+          analysis_use_flag = iuse_flag(1)
+
+          deallocate( iuse_flag )
+       else
+          analysis_use_flag = -1
+       end if 
     else
-       analysis_use_flag = -1
-    end if 
+       write(6,*) 'WARNING:  unable to read global var Analysis_Use_Flag from file '
+    end if
 
     nlevs = SIZE( pobs )
-    write(6,*) 'nlevs = ', nlevs
 
     header_fix%isis      = isis
     header_fix%id        = sat
     header_fix%obstype   = obstype
-!    header_fix%jiter     = jiter
+!    header_fix%jiter     = jiter   ! This is not in the NetCDF file.  It's not
+				    ! used by the OznMon so no loss.
     header_fix%nlevs     = nlevs
     header_fix%ianldate  = idate
-!    write(6,*) 'header_fix asignments complete'
 
     !--- allocate if necessary
 
@@ -423,9 +456,6 @@ module read_diag
     end do
     deallocate( pobs,gross,tnoise )
 
-
-    write(6,*) '<-- read_ozndiag_header_nc'
-    write(6,*) ''; write(6,*) ''
 
   end subroutine read_ozndiag_header_nc
 
@@ -456,7 +486,6 @@ module read_diag
     real(r_single),dimension(:),allocatable:: pob,grs,err
     
     istatus = 0
-    write(6,*) '--> read_ozndiag_header_bin'
 
     !--- read header (fix part)
     !--- the new header format contains one additional integer value 
@@ -466,7 +495,6 @@ module read_diag
     else
        read(ftin) isis,id,obstype,jiter,nlevs,ianldate,iint,ireal,iextra
     endif
-    write(6,*) 'isis, nlevs = ', isis, nlevs
 
     header_fix%isis      = isis
     header_fix%id        = id
@@ -477,7 +505,6 @@ module read_diag
     header_fix%iint      = iint
     header_fix%ireal     = ireal
     header_fix%iextra    = iextra
-    print *, 'header_fix has been assigned'   
 
     !--- check header
     
@@ -506,46 +533,19 @@ module read_diag
 
     !--- read header (level part)
     
-    if(isis /= "ompslp_npp")then
-      allocate (pob(header_fix%nlevs))
-      allocate (grs(header_fix%nlevs))
-      allocate (err(header_fix%nlevs))
-      allocate (iouse(header_fix%nlevs))
-      read(ftin)  pob,grs,err,iouse
-      do k=1,header_fix%nlevs
-         header_nlev(k)%pob = pob(k)
-         header_nlev(k)%grs = grs(k)
-         header_nlev(k)%err = err(k)
-         header_nlev(k)%iouse = iouse(k)
-      end do
-      deallocate (pob,grs,err,iouse)
-      print*,'header_nlev%pob=', header_nlev%pob
-      print*,'header_nlev%grs=', header_nlev%grs
-      print*,'header_nlev%err=', header_nlev%err
-      print*,'header_nlev%iouse=', header_nlev%iouse
-    else
-      print*,'OMPSLP_NPP detected, but not handled'
-    endif
+    allocate (pob(header_fix%nlevs))
+    allocate (grs(header_fix%nlevs))
+    allocate (err(header_fix%nlevs))
+    allocate (iouse(header_fix%nlevs))
+    read(ftin)  pob,grs,err,iouse
+    do k=1,header_fix%nlevs
+       header_nlev(k)%pob = pob(k)
+       header_nlev(k)%grs = grs(k)
+       header_nlev(k)%err = err(k)
+       header_nlev(k)%iouse = iouse(k)
+    end do
+    deallocate (pob,grs,err,iouse)
 
-    !--- read header (level part)
-
-!    write(6,*) ' reading pob,grs,err,iouse' 
-!    read(ftin)  pob,grs,err,iouse
-!    write(6,*) ' pob,grs,err,iouse have been read' 
-!    do k=1,header_fix%nlevs
-!       header_nlev(k)%pob = pob(k)
-!       header_nlev(k)%grs = grs(k)
-!       header_nlev(k)%err = err(k)
-!       header_nlev(k)%iouse = iouse(k)
-!       write(6,*) 'header_nlev(k)%pob   = ', k, header_nlev(k)%pob
-!       write(6,*) 'header_nlev(k)%grs   = ', k, header_nlev(k)%grs
-!       write(6,*) 'header_nlev(k)%err   = ', k, header_nlev(k)%err
-!       write(6,*) 'header_nlev(k)%iouse = ', k, header_nlev(k)%iouse
-!    end do
-!    deallocate (pob,grs,err,iouse)
-
-
-    write(6,*) '<-- read_ozndiag_header_bin'
   end subroutine read_ozndiag_header_bin
 
 
@@ -565,10 +565,9 @@ module read_diag
     type(diag_header_fix_list ),intent(in)  :: header_fix
 
     !--- NOTE:  These pointers are used to build an array numbering
-    !           iobs.  So they should be allocated every time this
+    !           iobs.  They should be allocated every time this
     !           routine is called and should not be deallocated
-    !           here.  The time.f90 could deallocate them at the
-    !           very end of the program, I think.
+    !           here.  
     type(diag_data_fix_list),   pointer     :: data_fix(:)
     type(diag_data_nlev_list)  ,pointer     :: data_nlev(:,:)
     type(diag_data_extra_list) ,pointer     :: data_extra(:,:)
@@ -576,9 +575,6 @@ module read_diag
     integer(i_kind)            ,intent(out) :: ntobs
    
  
-    write(6,*) '===> read_ozndiag_data'
-    write(6,*) '  netcdf = ', netcdf
-
     if ( netcdf ) then
        call read_ozndiag_data_nc( ftin, header_fix, data_fix, data_nlev, data_extra, ntobs, iflag )
     else
@@ -586,7 +582,6 @@ module read_diag
     end if 
 
 
-    print*, '<=== read_ozndiag_data'
   end subroutine read_ozndiag_data
 
 
@@ -602,13 +597,14 @@ module read_diag
     type(diag_header_fix_list ),intent(in)  :: header_fix
 
     !--- NOTE:  These pointers are used to build an array numbering
-    !           iobs.  So they should be allocated every time this
+    !           iobs.  They should be allocated every time this
     !           routine is called and should not be deallocated
-    !           here.  The time.f90 could deallocate them at the
-    !           very end of the program, I think.
+    !           here.  
+    !
     type(diag_data_fix_list),   pointer     :: data_fix(:)
     type(diag_data_nlev_list)  ,pointer     :: data_nlev(:,:)
     type(diag_data_extra_list) ,pointer     :: data_extra(:,:)
+
     integer                    ,intent(out) :: iflag
     integer(i_kind)            ,intent(out) :: ntobs
     integer(i_kind)                         :: id,ii,jj,cur_idx
@@ -624,13 +620,8 @@ module read_diag
     real(r_single),allocatable              :: sza(:)            ! solar zenith angle   
     real(r_single),allocatable              :: fovn(:)           ! scan position (fielf of view)
     real(r_single),allocatable              :: toqf(:)           ! row anomaly index
-
-    write(6,*) ''
-    write(6,*) ''
-    write(6,*) '============================================='
-    write(6,*) '============================================='
-
-    print*, '===> read_ozndiag_data_nc'
+    
+    logical                                 :: test
 
     cur_idx = ncdiag_open_id( nopen_ncdiag )
 
@@ -651,7 +642,8 @@ module read_diag
     !  It's not as clear or clean as it should be, so I'll 
     !  leave this comment in as a note-to-self to redesign this
     !  when able.
-    
+   
+
     if( ncdiag_open_status(cur_idx)%nc_read == .true. ) then 
        iflag = -1  
     else  
@@ -673,60 +665,97 @@ module read_diag
        !
        allocate( lat(ntobs) ) 
        allocate( lon(ntobs) )
-       allocate( obstime(ntobs) ) 
-       call nc_diag_read_get_var( ftin, 'Latitude', lat )
-       call nc_diag_read_get_var( ftin, 'Longitude', lon )
-       call nc_diag_read_get_var( ftin, 'Time', obstime )
+       allocate( obstime(ntobs) )
+
+       !--- get obs data
+       !
+       !    This may look like overkill with a check on each variable
+       !    name, but due to the genius of the ncdiag library, a
+       !    failure on these read operations is fatal, because, reasons
+       !    I guess.  Thus, this abundance of caution.
+       !
+
+       if( verify_var_name_nc( "Latitude" ) ) then
+          call nc_diag_read_get_var( ftin, 'Latitude', lat )
+       else
+          write(6,*) 'WARNING:  unable to read global var Latitude from file '
+       end if
+
+       if( verify_var_name_nc( "Longitude" ) ) then
+          call nc_diag_read_get_var( ftin, 'Longitude', lon )
+       else
+          write(6,*) 'WARNING:  unable to read global var Longitude from file '
+       end if
+
+       if( verify_var_name_nc( "Time" ) ) then
+          call nc_diag_read_get_var( ftin, 'Time', obstime )
+       else
+          write(6,*) 'WARNING:  unable to read global var Time from file '
+       end if
 
        do ii=1,ntobs
           data_fix(ii)%lat     = lat(ii)
-          print*, 'data_fix(ii)%lat = ', ii, data_fix(ii)%lat
           data_fix(ii)%lon     = lon(ii)
-          print*, 'data_fix(ii)%lon = ', ii, data_fix(ii)%lon
           data_fix(ii)%obstime = obstime(ii)
-          print*, 'data_fix(ii)%obstime = ', ii, data_fix(ii)%obstime
        end do
  
        deallocate( lat, lon, obstime )
-
 
        !---------------------------------
        ! load data_nlev structure
        !
        allocate( data_nlev( header_fix%nlevs,ntobs ) )
-
        allocate( ozobs(ntobs) ) 
-       call nc_diag_read_get_var( ftin, 'Observation', ozobs )
-
        allocate( ozone_inv(ntobs) ) 
-       call nc_diag_read_get_var( ftin, 'Obs_Minus_Forecast_adjusted', ozone_inv )
-
        allocate( varinv(ntobs) ) 
-       call nc_diag_read_get_var( ftin, 'Inverse_Observation_Error', varinv )
-
        allocate( sza(ntobs) ) 
-       call nc_diag_read_get_var( ftin, 'Solar_Zenith_Angle', sza )
-
        allocate( fovn(ntobs) )
-       call nc_diag_read_get_var( ftin, 'Scan_Position', fovn )
-
        allocate( toqf(ntobs) )
-       call nc_diag_read_get_var( ftin, 'Row_Anomaly_Index', toqf )
+
+       if( verify_var_name_nc( "Observation" ) ) then
+          call nc_diag_read_get_var( ftin, 'Observation', ozobs )
+       else
+          write(6,*) 'WARNING:  unable to read var Observation from file '
+       end if
+
+       if( verify_var_name_nc( "Obs_Minus_Forecast_adjusted" ) ) then
+          call nc_diag_read_get_var( ftin, 'Obs_Minus_Forecast_adjusted', ozone_inv )
+       else
+          write(6,*) 'WARNING:  unable to read var Obs_Minus_Forecast_adjusted from file '
+       end if
+
+       if( verify_var_name_nc( "Inverse_Observation_Error" ) ) then
+          call nc_diag_read_get_var( ftin, 'Inverse_Observation_Error', varinv )
+       else
+          write(6,*) 'WARNING:  unable to read var Invers_Observation_Error from file '
+       end if
+
+       if( verify_var_name_nc( "Solar_Zenith_Angle" ) ) then
+          call nc_diag_read_get_var( ftin, 'Solar_Zenith_Angle', sza )
+       else
+          write(6,*) 'WARNING:  unable to read var Solar_Zenith_Angle from file '
+       end if
+
+       if( verify_var_name_nc( "Scan_Position" ) ) then
+          call nc_diag_read_get_var( ftin, 'Scan_Position', fovn )
+       else
+          write(6,*) 'WARNING:  unable to read var Scan_Position from file '
+       end if
+
+       if( verify_var_name_nc( "Row_Anomaly_Index" ) ) then
+          call nc_diag_read_get_var( ftin, 'Row_Anomaly_Index', toqf )
+       else
+          write(6,*) 'WARNING:  unable to read var Row_Anomaly_Index from file '
+       end if
 
        do jj=1,ntobs
           do ii=1,header_fix%nlevs
              data_nlev(ii,jj)%ozobs     =     ozobs( jj )
-             write(6,*) 'data_nlev(ii,jj)%ozobs     = ',ii,jj,data_nlev(ii,jj)%ozobs
              data_nlev(ii,jj)%ozone_inv = ozone_inv( jj )
-             write(6,*) 'data_nlev(ii,jj)%ozone_inv     = ',ii,jj,data_nlev(ii,jj)%ozone_inv
              data_nlev(ii,jj)%varinv    =    varinv( jj )
-             write(6,*) 'data_nlev(ii,jj)%varinv     = ',ii,jj,data_nlev(ii,jj)%varinv
              data_nlev(ii,jj)%sza       =       sza( jj )
-             write(6,*) 'data_nlev(ii,jj)%sza     = ',ii,jj,data_nlev(ii,jj)%sza
              data_nlev(ii,jj)%fovn      =      fovn( jj )
-             write(6,*) 'data_nlev(ii,jj)%fovn     = ',ii,jj,data_nlev(ii,jj)%fovn
              data_nlev(ii,jj)%toqf      =      toqf( jj )
-             write(6,*) 'data_nlev(ii,jj)%toqf     = ',ii,jj,data_nlev(ii,jj)%toqf
           end do
        end do
 
@@ -739,25 +768,7 @@ module read_diag
 
        ncdiag_open_status(cur_idx)%nc_read = .true.
 
-       !!------------------------------------------------
-       !!   Contents of NetCDF file:
-       !!
-       !!        float Reference_Pressure(nobs) ;
-       !!        int Analysis_Use_Flag(nobs) ;
-       !!        float Observation(nobs) ;
-       !!        float Inverse_Observation_Error(nobs) ;
-       !!        float Obs_Minus_Forecast_adjusted(nobs) ;
-       !!        float Obs_Minus_Forecast_unadjusted(nobs) ;
-       !!        float Solar_Zenith_Angle(nobs) ;
-       !!        float Scan_Position(nobs) ;
-       !!        float Row_Anomaly_Index(nobs) ;
-
-
     end if
-
-    write(6,*) '' ; 
-    print*, '<=== read_ozndiag_data_nc'
-    write(6,*) ''; write(6,*) ''
 
   end subroutine read_ozndiag_data_nc
 
@@ -796,15 +807,11 @@ module read_diag
     real(r_single),allocatable,dimension(:,:)  :: tmp_extra
 
     !--- allocate if necessary
-    print*, '===> read_ozndiag_data_bin'
-    print*, 'nlevs_last, header_fix%nlevs=',nlevs_last,header_fix%nlevs
 
     read(ftin,IOSTAT=iflag) ntobs
-    print*,'ntobs, iflag =',ntobs, iflag
 
     if( header_fix%nlevs /= nlevs_last )then
       if( nlevs_last > 0 )then
-        print*, 'deallocate array data_nlev, data_mpi and data_fix'
         deallocate( data_nlev )
         deallocate( data_fix )
         deallocate( data_mpi )
@@ -818,11 +825,9 @@ module read_diag
 
     if (iextra_last > 0) then
        deallocate (data_extra)
-       print*, 'deallocated data_extra'
     endif
 
     allocate( data_extra(header_fix%iextra,ntobs) )
-    print*, 'allocated data_extra, iextra, ntobs', header_fix%iextra, ntobs
     iextra_last = header_fix%iextra
 
     !--- read a record
@@ -866,7 +871,6 @@ module read_diag
 
     nlevs_last = -1
 
-    print*, '<=== read_ozndiag_data_bin'
   end subroutine read_ozndiag_data_bin
 
 
@@ -889,6 +893,55 @@ module read_diag
 
      return
   end function find_ncdiag_id
+
+
+  !------------------------------------------------  
+  !  load_file_vars_nc
+  !
+  !  Query the netcdf file and load all the global
+  !  and variable attribute names into memory.
+  !------------------------------------------------  
+  subroutine load_file_vars_nc( ftin )
+     integer(i_kind), intent(in) :: ftin
+
+
+   
+     call nc_diag_read_get_global_attr_names(ftin, num_global_attrs, &
+                attr_name_mlen, attr_names)
+
+     call nc_diag_read_get_var_names(ftin, num_vars, var_name_mlen, var_names)
+
+  end subroutine load_file_vars_nc
+
+
+  !------------------------------------------------  
+  !  function verify_var_name_nc
+  !------------------------------------------------  
+  logical function verify_var_name_nc( test_name )
+
+     character(*),intent(in)       :: test_name
+     integer(i_kind)               :: k
+ 
+     verify_var_name_nc = .false.
+
+     
+     do k=1,num_global_attrs
+        if( test_name == attr_names(k) ) then
+           verify_var_name_nc = .true.
+           exit
+        end if 
+     end do 
+
+     if( verify_var_name_nc == .false. ) then
+        do k=1,num_vars
+           if( test_name == var_names(k) ) then
+              verify_var_name_nc = .true.
+              exit
+           end if 
+        end do 
+     end if
+
+  end function verify_var_name_nc
 
 
 end module read_diag
