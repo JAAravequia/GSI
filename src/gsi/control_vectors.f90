@@ -133,7 +133,7 @@ public ntracer
 
 type control_vector
    integer(i_kind) :: lencv
-   real(r_kind), pointer :: values(:) => NULL()
+   real(r_kind), contiguous, pointer :: values(:) => NULL()
    type(GSI_Grid)  :: grid_step
    type(GSI_Bundle), pointer :: step(:)
    type(GSI_Bundle), pointer :: motley(:)

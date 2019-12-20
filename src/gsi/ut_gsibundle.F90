@@ -585,10 +585,10 @@ public control
 type control
 #ifdef _BUNDLE_R4_
   integer :: mykind = r_single
-  real(r_single),pointer :: values(:) => null()
+  real(r_single),contiguous,pointer :: values(:) => null()
 #else /* _BUNDLE_R4_ */
   integer :: mykind = r_kind
-  real(r_kind),  pointer :: values(:) => null()
+  real(r_kind),  contiguous,pointer :: values(:) => null()
 #endif /* _BUNDLE_R4_ */
   type(GSI_Grid)   :: grid_main
   type(GSI_Bundle),pointer :: main(:)
