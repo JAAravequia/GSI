@@ -46,10 +46,11 @@ module m_dbzNode
                                       !  to original obs error
      real(r_kind)    :: jqr           !  for TL and ADJ !modified:
      real(r_kind)    :: jqs           !  for TL and ADJ
-     !real(r_kind)    :: jqi           !  for TL and ADJ
+     !real(r_kind)    :: jqi          !  for TL and ADJ
      real(r_kind)    :: jqg           !  for TL and ADJ
-     !real(r_kind)    :: jnr           !  for TL and ADJ
-     !real(r_kind)    :: jni           !  for TL and ADJ
+     real(r_kind)    :: jqnr          !  for TL and ADJ    ! CAPS chenll
+     !real(r_kind)    :: jnr          !  for TL and ADJ
+     !real(r_kind)    :: jni          !  for TL and ADJ
      real(r_kind)    :: jqli          !  for TL and ADJ
      !real(r_kind)    :: time          !  observation time in sec
      real(r_kind)    :: b             !  variational quality control parameter

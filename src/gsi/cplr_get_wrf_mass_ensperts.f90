@@ -62,8 +62,11 @@ contains
       use mpeu_util, only: getindex
       use guess_grids,   only: ntguessig,ifilesig
       use gsi_4dvar,     only: nhr_assimilation
-      use caps_radaruse_mod, only: l_use_log_qx, l_use_log_nt, cld_nt_updt ! CAPS
-      use caps_radaruse_mod, only: l_use_dbz_caps                          ! CAPS
+! --- CAPS --->
+      use caps_radaruse_mod, only: l_use_log_qx, l_use_log_qx_pval, l_use_log_nt, cld_nt_updt ! chenll
+      use caps_radaruse_mod, only: l_use_dbz_caps                                             
+! <--- CAPS ---
+   
 
       implicit none
       class(get_wrf_mass_ensperts_class), intent(inout) :: this
@@ -99,6 +102,26 @@ contains
       logical :: bad_input
       real(r_kind),dimension(:,:,:),allocatable :: gg_u,gg_v,gg_tv,gg_rh
       real(r_kind),dimension(:,:),allocatable :: gg_ps
+
+! --- CAPS --->
+     !add by chenll
+      integer,parameter   :: USEZG = 1
+      real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig,n_ens):: qr_4d_tmp,qs_4d_tmp,qg_4d_tmp
+
+      if ( l_use_dbz_caps ) then ! JP: Set flag to run this for CAPS only
+         do n=1,n_ens,1
+            do k=1,grd_ens%nsig
+               do i=1,grd_ens%lon2
+                  do j=1,grd_ens%lat2
+                     qr_4d_tmp(j,i,k,n)=zero
+                     qs_4d_tmp(j,i,k,n)=zero
+                     qg_4d_tmp(j,i,k,n)=zero
+                  end do
+               end do
+            end do
+         end do
+      end if
+! <--- CAPS ----
 
       call gsi_gridcreate(grid_ens,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)
       call gsi_bundlecreate(en_bar,grid_ens,'ensemble',istatus,names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
@@ -226,7 +249,8 @@ contains
                    write(6,'(a,a)') 'CALL READ_WRF_MASS_ENSPERTS FOR ENS DATA : ',trim(filename)
                 endif
                 if ( l_use_dbz_caps) then ! CAPS
-                   call this%general_read_wrf_mass3(filename,ps,u,v,tv,rh,cwmr,oz,qr,qs,qg,qnr,mype)
+                  ! call this%general_read_wrf_mass3(filename,ps,u,v,tv,rh,cwmr,oz,qr,qs,qg,qnr,mype)
+                   call this%general_read_wrf_mass3(filename,ps,u,v,tv,rh,cwmr,oz,qr,qs,qg,qnr,w,mype)
                 else
                    if( do_radar )then
                       call this%general_read_wrf_mass2(filename,ps,u,v,tv,rh,cwmr,oz,w,dbz,qs,qg,qi,qr,qnc,qni,qnr,mype) 
@@ -316,10 +340,15 @@ contains
                         do j=1,grd_ens%lat2
                            if (l_use_log_qx) then ! CAPS
                                if(mype==0 .and. i==10 .and. j==10 .and. k==10) write(6,*)'log transform for qr : from member-->',n
-                               if (qr(j,i,k) <= 5.0E-5_r_kind) then
-                                   qr(j,i,k) = 5.0E-5_r_kind
+                               if (qr(j,i,k) <= 1.0E-5_r_kind) then  !Originally Gang used 5.0E-5
+                                  qr(j,i,k) = 1.0E-5_r_kind         !Rong Kong
                                end if
-                               qr(j,i,k) = log(qr(j,i,k))
+                               if (l_use_log_qx_pval .gt. 0.0_r_kind ) then ! CVpq
+                                  qr(j,i,k) =((qr(j,i,k)**l_use_log_qx_pval)-1)/l_use_log_qx_pval  !chenll
+                                  qr_4d_tmp(j,i,k,n)=qr(j,i,k) !chenll
+                               else  ! CVlogq
+                                  qr(j,i,k) = log(qr(j,i,k))
+                               end if
                            end if
                            w3(j,i,k) = qr(j,i,k)
                            x3(j,i,k)=x3(j,i,k)+qr(j,i,k)
@@ -334,10 +363,15 @@ contains
                         do j=1,grd_ens%lat2
                            if (l_use_log_qx) then
                                if(mype==0 .and. i==10 .and. j==10 .and. k==10) write(6,*)'log transform for qs : from member-->',n
-                               if (qs(j,i,k) <= 5.0E-5_r_kind) then
-                                   qs(j,i,k) = 5.0E-5_r_kind
+                               if (qs(j,i,k) <= 1.0E-5_r_kind) then
+                                   qs(j,i,k) = 1.0E-5_r_kind
                                end if
-                               qs(j,i,k) = log(qs(j,i,k))
+                               if (l_use_log_qx_pval .gt. 0.0_r_kind ) then ! CVpq
+                                  qs(j,i,k)=((qs(j,i,k)**l_use_log_qx_pval)-1)/l_use_log_qx_pval !chenll
+                                  qs_4d_tmp(j,i,k,n)=qs(j,i,k) !chenll
+                               else  ! CVlogq
+                                  qs(j,i,k) = log(qs(j,i,k))
+                               end if
                            end if
                            w3(j,i,k) = qs(j,i,k)
                            x3(j,i,k)=x3(j,i,k)+qs(j,i,k)
@@ -432,10 +466,15 @@ contains
                         do j=1,grd_ens%lat2
                            if (l_use_log_qx) then ! CAPS
                                if(mype==0 .and. i==10 .and. j==10 .and. k==10) write(6,*)'log transform for qg : from member-->',n
-                               if (qg(j,i,k) <= 5.0E-5_r_kind) then
-                                   qg(j,i,k) = 5.0E-5_r_kind
+                               if (qg(j,i,k) <= 1.0E-5_r_kind) then
+                                   qg(j,i,k) = 1.0E-5_r_kind
                                end if
-                               qg(j,i,k) = log(qg(j,i,k))
+                               if (l_use_log_qx_pval .gt. 0.0_r_kind ) then ! CVpq
+                                  qg(j,i,k)=((qg(j,i,k)**l_use_log_qx_pval)-1)/l_use_log_qx_pval !chenll
+                                  qg_4d_tmp(j,i,k,n)=qg(j,i,k) !chenll
+                               else  ! CVlogq
+                                  qg(j,i,k) = log(qg(j,i,k))
+                               end if
                            end if
                            w3(j,i,k) = qg(j,i,k)
                            x3(j,i,k)=x3(j,i,k)+qg(j,i,k)
@@ -505,6 +544,10 @@ contains
                end select
             end do member_mass_loop
          enddo ens_main_loop
+
+! if ( 1 == 0) then  ! CAPS
+!   call calc_num_rms_caps(qr_4d_tmp,qs_4d_tmp,qg_4d_tmp,l_use_log_qx_pval)
+! end if
 
   !
   ! CALCULATE ENSEMBLE MEAN
@@ -1772,7 +1815,7 @@ contains
 
 ! --- CAPS ---
   subroutine general_read_wrf_mass3 (this,filename,g_ps,g_u,g_v,g_tv,g_rh,g_cwmr,g_oz, &
-                                                 g_qr,g_qs,g_qg,g_qnr,mype)
+                                                 g_qr,g_qs,g_qg,g_qnr,g_w,mype)
   !$$$  subprogram documentation block
   !                .      .    .                                       .
   ! subprogram:    general_read_wrf_mass3  read arw model ensemble members
@@ -1818,7 +1861,8 @@ contains
       use hybrid_ensemble_parameters, only: grd_ens,q_hyb_ens
       use mpimod, only: mpi_comm_world,ierror,mpi_rtype
       use netcdf_mod, only: nc_check
-  
+      use caps_radaruse_mod, only: l_use_log_qx,l_use_log_qx_pval     !chenll
+
       implicit none
   !
   ! Declare passed variables
@@ -1827,6 +1871,7 @@ contains
                                                     g_u,g_v,g_tv,g_rh,g_cwmr,g_oz, &
                                                     g_qr,g_qs,g_qg,g_qnr
       real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2),intent(out):: g_ps
+      real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig),intent(out)::g_w
       character(255),intent(in):: filename
   !
   ! Declare local parameters
@@ -1844,6 +1889,7 @@ contains
        gg_u,gg_v,gg_tv,gg_rh
       real(r_kind),allocatable,dimension(:,:,:):: gg_qr,gg_qs,gg_qg
       real(r_kind),allocatable,dimension(:,:,:):: gg_qnr
+      real(r_kind),allocatable,dimension(:,:,:):: gg_w
       real(r_kind),allocatable,dimension(:):: wrk_fill_2d
       integer(i_kind),allocatable,dimension(:):: dim,dim_id
   
@@ -1872,6 +1918,7 @@ contains
       allocate(gg_qs(grd_ens%nlat,grd_ens%nlon,grd_ens%nsig))
       allocate(gg_qg(grd_ens%nlat,grd_ens%nlon,grd_ens%nsig))
       allocate(gg_qnr(grd_ens%nlat,grd_ens%nlon,grd_ens%nsig))
+      allocate(gg_w  (grd_ens%nlat,grd_ens%nlon,grd_ens%nsig))
       allocate(gg_ps(grd_ens%nlat,grd_ens%nlon))
       call nc_check( nf90_open(trim(filename),nf90_nowrite,file_id),&
           myname_,'open '//trim(filename) )
@@ -2188,6 +2235,7 @@ contains
       call nc_check( nf90_get_var(file_id,var_id,temp_3d),&
           myname_,'get_var QRAIN '//trim(filename) )
       gg_qr = reshape(temp_3d,(/dim(dim_id(2)),dim(dim_id(1)),dim(dim_id(3))/),order=(/2,1,3/))
+      print *,'min/max QRIAN',minval(gg_qr),maxval(gg_qr)
       deallocate(temp_3d)
       deallocate(dim_id)
 
@@ -2207,6 +2255,7 @@ contains
       call nc_check( nf90_get_var(file_id,var_id,temp_3d),&
           myname_,'get_var QSNOW '//trim(filename) )
       gg_qs = reshape(temp_3d,(/dim(dim_id(2)),dim(dim_id(1)),dim(dim_id(3))/),order=(/2,1,3/))
+      print *,'min/max QSNOW',minval(gg_qs),maxval(gg_qs)
       deallocate(temp_3d)
       deallocate(dim_id)
 
@@ -2226,13 +2275,14 @@ contains
       call nc_check( nf90_get_var(file_id,var_id,temp_3d),&
           myname_,'get_var QGRAUP '//trim(filename) )
       gg_qg = reshape(temp_3d,(/dim(dim_id(2)),dim(dim_id(1)),dim(dim_id(3))/),order=(/2,1,3/))
+      print *,'min/max QGRAUP',minval(gg_qg),maxval(gg_qg)
       deallocate(temp_3d)
       deallocate(dim_id)
 
 ! READ QNRAIN (#/kg)
       !print *, 'read QNRAIN ',filename
       call nc_check( nf90_inq_varid(file_id,'QNRAIN',var_id),&
-          myname_,'inq_varid QRAIN '//trim(filename) )
+          myname_,'inq_varid QNRAIN '//trim(filename) )
 
       call nc_check( nf90_inquire_variable(file_id,var_id,ndims=ndim),&
           myname_,'inquire_variable QNRAIN '//trim(filename) )
@@ -2245,8 +2295,37 @@ contains
       call nc_check( nf90_get_var(file_id,var_id,temp_3d),&
           myname_,'get_var QNRAIN '//trim(filename) )
       gg_qnr = reshape(temp_3d,(/dim(dim_id(2)),dim(dim_id(1)),dim(dim_id(3))/),order=(/2,1,3/))
+      print *,'min/max QNRAIN',minval(gg_qnr),maxval(gg_qnr)
+      deallocate(temp_3d)
+      deallocate(dim_id)
+
+! READ w (m/s)
+      print *, 'read W ',filename
+      call nc_check( nf90_inq_varid(file_id,'W',var_id),&
+          myname_,'inq_varid W'//trim(filename) )
+
+      call nc_check( nf90_inquire_variable(file_id,var_id,ndims=ndim),&
+          myname_,'inquire_variable W'//trim(filename) )
+      allocate(dim_id(ndim))
+
+      call nc_check( nf90_inquire_variable(file_id,var_id,dimids=dim_id),&
+          myname_,'inquire_variable W'//trim(filename) )
+      allocate(temp_3d(dim(dim_id(1)),dim(dim_id(2)),dim(dim_id(3))))
+
+      call nc_check( nf90_get_var(file_id,var_id,temp_3d),&
+          myname_,'get_var W'//trim(filename) )
+!
+! INTERPOLATE TO MASS GRID
+      do k=1,dim(dim_id(3))-1
+         do j=1,dim(dim_id(2))
+            do i=1,dim(dim_id(1))
+                gg_w(j,i,k)=0.5*(temp_3d(i,j,k)+temp_3d(i,j,k+1))
+            enddo
+         enddo
+      enddo
       deallocate(temp_3d)
       deallocate(dim_id,dim)
+      print *,'min/max W',minval(gg_w),maxval(gg_w)
 
       call nc_check( nf90_close(file_id),&
           myname_,'close '//trim(filename) )
@@ -2263,7 +2342,7 @@ contains
     call mpi_scatterv(wrk_fill_2d,grd_ens%ijn_s,grd_ens%displs_s,mpi_rtype, &
     g_ps,grd_ens%ijn_s(mype+1),mpi_rtype,0,mpi_comm_world,ierror)       
   ! then TV,U,V,RH
-  !               ,and qr,qs,qg, qnr
+  !               ,and qr,qs,qg, qnr, and w
     do k=1,grd_ens%nsig
        if (mype==0) call this%fill_regional_2d(gg_tv(1,1,k),wrk_fill_2d)
        call mpi_scatterv(wrk_fill_2d,grd_ens%ijn_s,grd_ens%displs_s,mpi_rtype, &
@@ -2290,6 +2369,11 @@ contains
        if (mype==0) call fill_regional_2d(gg_qnr(1,1,k),wrk_fill_2d)
        call mpi_scatterv(wrk_fill_2d,grd_ens%ijn_s,grd_ens%displs_s,mpi_rtype, &
        g_qnr(1,1,k),grd_ens%ijn_s(mype+1),mpi_rtype,0,mpi_comm_world,ierror)
+
+       if (mype==0) call fill_regional_2d(gg_w(1,1,k),wrk_fill_2d)
+       call mpi_scatterv(wrk_fill_2d,grd_ens%ijn_s,grd_ens%displs_s,mpi_rtype, &
+       g_w(1,1,k),grd_ens%ijn_s(mype+1),mpi_rtype,0,mpi_comm_world,ierror)
+
     enddo
   ! for now, don't do anything with oz, cwmr
     g_oz = 0.; g_cwmr = 0.
@@ -2297,6 +2381,7 @@ contains
     if (mype==0) deallocate(gg_u,gg_v,gg_tv,gg_rh,gg_ps)
     if (mype==0) deallocate(gg_qr,gg_qs,gg_qg)
     if (mype==0) deallocate(gg_qnr)
+    if (mype==0) deallocate(gg_w)
   
   return       
   end subroutine general_read_wrf_mass3
@@ -2973,6 +3058,8 @@ end subroutine write_spread_dualres_qcld_regional
             end do
       enddo ! n ensemble mem loop
   !
+
+
   ! CALCULATE ENSEMBLE MEAN
       bar_norm = one/float(n_ens)
       en_bar%values=en_bar%values*bar_norm
@@ -3694,4 +3781,1685 @@ end subroutine write_spread_dualres_qcld_regional
 
   end subroutine general_read_fv3_mass
 
+! --- CAPS --->
+  subroutine calc_num_rms_caps(qr_4d_temp,qs_4d_temp,qg_4d_temp,log_qx_pval)
+   use hybrid_ensemble_parameters, only: n_ens,grd_ens
+   use kinds, only: r_kind
+   use guess_grids, only: ges_tsen  !chenll
+   use guess_grids, only: nfldsig   !chenll
+   use constants, only: zero
+
+   real(r_kind),dimension(:,:,:,:),intent(in)                    :: qr_4d_temp,qs_4d_temp,qg_4d_temp
+   real(r_kind),                   intent(in)                    :: log_qx_pval
+   real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2,grd_ens%nsig):: qr_mean_tmp,qs_mean_tmp,qg_mean_tmp
+   real(r_kind),dimension(31)    :: rms_qr_tmp,rms_qs_tmp,rms_qg_tmp
+   real(r_kind),dimension(31)    :: num_qr_tmp,num_qs_tmp,num_qg_tmp
+   real(r_kind)                  :: ges_tsen_tmp
+   real(r_kind)                  :: qval_tmp
+   integer                       :: i,j,k,n
+
+! initialization
+   do k=1,grd_ens%nsig
+      do i=1,grd_ens%lon2
+         do j=1,grd_ens%lat2
+            qr_mean_tmp(j,i,k)=zero
+            qs_mean_tmp(j,i,k)=zero
+            qg_mean_tmp(j,i,k)=zero
+         end do
+      end do
+   end do
+   do i=1,31
+      rms_qr_tmp(i)=zero
+      rms_qs_tmp(i)=zero
+      rms_qg_tmp(i)=zero
+      num_qr_tmp(i)=zero
+      num_qs_tmp(i)=zero
+      num_qg_tmp(i)=zero
+   end do
+   qval_tmp=(5.0E-4_r_kind**log_qx_pval-1.0_r_kind)/log_qx_pval
+!
+! add by chenll
+      !calculate ensemble mean of qr qs qg
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           qr_mean_tmp(j,i,k)=qr_mean_tmp(j,i,k)+qr_4d_temp(j,i,k,n)
+           qs_mean_tmp(j,i,k)=qs_mean_tmp(j,i,k)+qs_4d_temp(j,i,k,n)
+           qg_mean_tmp(j,i,k)=qg_mean_tmp(j,i,k)+qg_4d_temp(j,i,k,n)
+         end do
+       end do
+     end do
+   end do
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+           qr_mean_tmp(j,i,k)=qr_mean_tmp(j,i,k)/float(n_ens)
+           qs_mean_tmp(j,i,k)=qs_mean_tmp(j,i,k)/float(n_ens)
+           qg_mean_tmp(j,i,k)=qg_mean_tmp(j,i,k)/float(n_ens)
+           !write(6,*) 'qr_mean_tmp=',qr_mean_tmp(j,i,k)
+       end do
+     end do
+   end do
+
+   !calculate rms for qr 
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         !write(6,*) 'ges(i,j,k£©=', ges_tsen(j,i,k,nfldsig)
+         do n=1,n_ens 
+           !ges_tsen_tmp=ges_tsen(j,i,k,nfldsig)-273.15_r_kind  
+           !if((ges_tsen_tmp .le. -62.0_r_kind)&        
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -62.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(1)=rms_qr_tmp(1)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2            
+              num_qr_tmp(1)=num_qr_tmp(1)+1.0_r_kind              
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(1)=sqrt(rms_qr_tmp(1)/num_qr_tmp(1))
+
+
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -62.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -54.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(2)=rms_qr_tmp(2)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(2)=num_qr_tmp(2)+1.0_r_kind
+            end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(2)=sqrt(rms_qr_tmp(2)/num_qr_tmp(2))
+   
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -54.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -46.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(3)=rms_qr_tmp(3)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2              
+              num_qr_tmp(3)=num_qr_tmp(3)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(3)=sqrt(rms_qr_tmp(3)/num_qr_tmp(3))
+
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -46.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -38.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(4)=rms_qr_tmp(4)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(4)=num_qr_tmp(4)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(4)=sqrt(rms_qr_tmp(4)/num_qr_tmp(4))
+
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -38.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -30.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(5)=rms_qr_tmp(5)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(5)=num_qr_tmp(5)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(5)=sqrt(rms_qr_tmp(5)/num_qr_tmp(5))
+
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -30.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -26.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(6)=rms_qr_tmp(6)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(6)=num_qr_tmp(6)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(6)=sqrt(rms_qr_tmp(6)/num_qr_tmp(6))
+
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -26.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -22.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(7)=rms_qr_tmp(7)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(7)=num_qr_tmp(7)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(7)=sqrt(rms_qr_tmp(7)/num_qr_tmp(7))
+
+         
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -22.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -18.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(8)=rms_qr_tmp(8)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(8)=num_qr_tmp(8)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(8)=sqrt(rms_qr_tmp(8)/num_qr_tmp(8))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -18.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -14.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(9)=rms_qr_tmp(9)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(9)=num_qr_tmp(9)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(9)=sqrt(rms_qr_tmp(9)/num_qr_tmp(9))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -14.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -10.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(10)=rms_qr_tmp(10)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(10)=num_qr_tmp(10)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(10)=sqrt(rms_qr_tmp(10)/num_qr_tmp(10))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -10.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -8.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(11)=rms_qr_tmp(11)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(11)=num_qr_tmp(11)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(11)=sqrt(rms_qr_tmp(11)/num_qr_tmp(11))
+
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -8.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -6.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(12)=rms_qr_tmp(12)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(12)=num_qr_tmp(12)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(12)=sqrt(rms_qr_tmp(12)/num_qr_tmp(12))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -6.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -4.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(13)=rms_qr_tmp(13)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(13)=num_qr_tmp(13)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(13)=sqrt(rms_qr_tmp(13)/num_qr_tmp(13))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -4.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -2.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(14)=rms_qr_tmp(14)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(14)=num_qr_tmp(14)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(14)=sqrt(rms_qr_tmp(14)/num_qr_tmp(14))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -2.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 0.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(15)=rms_qr_tmp(15)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(15)=num_qr_tmp(15)+1.0_r_kind
+            end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(15)=sqrt(rms_qr_tmp(15)/num_qr_tmp(15))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 0.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 2.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(16)=rms_qr_tmp(16)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(16)=num_qr_tmp(16)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(16)=sqrt(rms_qr_tmp(16)/num_qr_tmp(16))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 2.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 4.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(17)=rms_qr_tmp(17)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(17)=num_qr_tmp(17)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(17)=sqrt(rms_qr_tmp(17)/num_qr_tmp(17))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 4.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 6.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(18)=rms_qr_tmp(18)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(18)=num_qr_tmp(18)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(18)=sqrt(rms_qr_tmp(18)/num_qr_tmp(18))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 6.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 8.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(19)=rms_qr_tmp(19)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(19)=num_qr_tmp(19)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(19)=sqrt(rms_qr_tmp(19)/num_qr_tmp(19))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 8.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 10.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(20)=rms_qr_tmp(20)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(20)=num_qr_tmp(20)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(20)=sqrt(rms_qr_tmp(20)/num_qr_tmp(20))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 10.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 12.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(21)=rms_qr_tmp(21)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2              
+              num_qr_tmp(21)=num_qr_tmp(21)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(21)=sqrt(rms_qr_tmp(21)/num_qr_tmp(21))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 12.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 14.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(22)=rms_qr_tmp(22)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(22)=num_qr_tmp(22)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(22)=sqrt(rms_qr_tmp(22)/num_qr_tmp(22))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 14.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 16.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(23)=rms_qr_tmp(23)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(23)=num_qr_tmp(23)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(23)=sqrt(rms_qr_tmp(23)/num_qr_tmp(23))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 16.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 18.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(24)=rms_qr_tmp(24)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(24)=num_qr_tmp(24)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(24)=sqrt(rms_qr_tmp(24)/num_qr_tmp(24))
+
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 18.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 20.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(25)=rms_qr_tmp(25)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(25)=num_qr_tmp(25)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(25)=sqrt(rms_qr_tmp(25)/num_qr_tmp(25))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 20.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 22.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(26)=rms_qr_tmp(26)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(26)=num_qr_tmp(26)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(26)=sqrt(rms_qr_tmp(26)/num_qr_tmp(26))
+
+         
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 22.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 24.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(27)=rms_qr_tmp(27)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(27)=num_qr_tmp(27)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(27)=sqrt(rms_qr_tmp(27)/num_qr_tmp(27))
+
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 24.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 26.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(28)=rms_qr_tmp(28)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(28)=num_qr_tmp(28)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(28)=sqrt(rms_qr_tmp(28)/num_qr_tmp(28))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 26.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 28.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(29)=rms_qr_tmp(29)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(29)=num_qr_tmp(29)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(29)=sqrt(rms_qr_tmp(29)/num_qr_tmp(29))
+
+       
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 28.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 30.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(30)=rms_qr_tmp(30)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(30)=num_qr_tmp(30)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(30)=sqrt(rms_qr_tmp(30)/num_qr_tmp(30))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 30.0_r_kind)&
+            .and. (qr_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qr_tmp(31)=rms_qr_tmp(31)+(qr_4d_temp(j,i,k,n)-qr_mean_tmp(j,i,k))**2
+              num_qr_tmp(31)=num_qr_tmp(31)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qr_tmp(31)=sqrt(rms_qr_tmp(31)/num_qr_tmp(31))
+
+   
+   
+   
+!calculate rms for qs 
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         !write(6,*) 'ges(i,j,k£©=', ges_tsen(j,i,k,nfldsig)
+         do n=1,n_ens 
+           !ges_tsen_tmp=ges_tsen(j,i,k,nfldsig)-273.15_r_kind  
+           !if((ges_tsen_tmp .le. -62.0_r_kind)&        
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -62.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(1)=rms_qs_tmp(1)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2            
+              num_qs_tmp(1)=num_qs_tmp(1)+1.0_r_kind              
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(1)=sqrt(rms_qs_tmp(1)/num_qs_tmp(1))
+
+
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -62.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -54.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(2)=rms_qs_tmp(2)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(2)=num_qs_tmp(2)+1.0_r_kind
+            end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(2)=sqrt(rms_qs_tmp(2)/num_qs_tmp(2))
+   
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -54.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -46.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(3)=rms_qs_tmp(3)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2              
+              num_qs_tmp(3)=num_qs_tmp(3)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(3)=sqrt(rms_qs_tmp(3)/num_qs_tmp(3))
+
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -46.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -38.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(4)=rms_qs_tmp(4)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(4)=num_qs_tmp(4)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(4)=sqrt(rms_qs_tmp(4)/num_qs_tmp(4))
+
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -38.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -30.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(5)=rms_qs_tmp(5)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(5)=num_qs_tmp(5)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(5)=sqrt(rms_qs_tmp(5)/num_qs_tmp(5))
+
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -30.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -26.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(6)=rms_qs_tmp(6)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(6)=num_qs_tmp(6)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(6)=sqrt(rms_qs_tmp(6)/num_qs_tmp(6))
+
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -26.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -22.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(7)=rms_qs_tmp(7)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(7)=num_qs_tmp(7)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(7)=sqrt(rms_qs_tmp(7)/num_qs_tmp(7))
+
+         
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -22.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -18.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(8)=rms_qs_tmp(8)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(8)=num_qs_tmp(8)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(8)=sqrt(rms_qs_tmp(8)/num_qs_tmp(8))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -18.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -14.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(9)=rms_qs_tmp(9)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(9)=num_qs_tmp(9)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(9)=sqrt(rms_qs_tmp(9)/num_qs_tmp(9))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -14.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -10.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(10)=rms_qs_tmp(10)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(10)=num_qs_tmp(10)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(10)=sqrt(rms_qs_tmp(10)/num_qs_tmp(10))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -10.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -8.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(11)=rms_qs_tmp(11)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(11)=num_qs_tmp(11)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(11)=sqrt(rms_qs_tmp(11)/num_qs_tmp(11))
+
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -8.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -6.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(12)=rms_qs_tmp(12)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(12)=num_qs_tmp(12)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(12)=sqrt(rms_qs_tmp(12)/num_qs_tmp(12))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -6.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -4.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(13)=rms_qs_tmp(13)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(13)=num_qs_tmp(13)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(13)=sqrt(rms_qs_tmp(13)/num_qs_tmp(13))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -4.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -2.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(14)=rms_qs_tmp(14)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(14)=num_qs_tmp(14)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(14)=sqrt(rms_qs_tmp(14)/num_qs_tmp(14))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -2.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 0.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(15)=rms_qs_tmp(15)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(15)=num_qs_tmp(15)+1.0_r_kind
+            end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(15)=sqrt(rms_qs_tmp(15)/num_qs_tmp(15))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 0.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 2.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(16)=rms_qs_tmp(16)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(16)=num_qs_tmp(16)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(16)=sqrt(rms_qs_tmp(16)/num_qs_tmp(16))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 2.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 4.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(17)=rms_qs_tmp(17)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(17)=num_qs_tmp(17)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(17)=sqrt(rms_qs_tmp(17)/num_qs_tmp(17))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 4.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 6.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(18)=rms_qs_tmp(18)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(18)=num_qs_tmp(18)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(18)=sqrt(rms_qs_tmp(18)/num_qs_tmp(18))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 6.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 8.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(19)=rms_qs_tmp(19)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(19)=num_qs_tmp(19)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(19)=sqrt(rms_qs_tmp(19)/num_qs_tmp(19))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 8.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 10.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(20)=rms_qs_tmp(20)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(20)=num_qs_tmp(20)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(20)=sqrt(rms_qs_tmp(20)/num_qs_tmp(20))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 10.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 12.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(21)=rms_qs_tmp(21)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2              
+              num_qs_tmp(21)=num_qs_tmp(21)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(21)=sqrt(rms_qs_tmp(21)/num_qs_tmp(21))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 12.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 14.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(22)=rms_qs_tmp(22)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(22)=num_qs_tmp(22)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(22)=sqrt(rms_qs_tmp(22)/num_qs_tmp(22))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 14.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 16.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(23)=rms_qs_tmp(23)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(23)=num_qs_tmp(23)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(23)=sqrt(rms_qs_tmp(23)/num_qs_tmp(23))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 16.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 18.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(24)=rms_qs_tmp(24)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(24)=num_qs_tmp(24)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(24)=sqrt(rms_qs_tmp(24)/num_qs_tmp(24))
+
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 18.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 20.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(25)=rms_qs_tmp(25)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(25)=num_qs_tmp(25)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(25)=sqrt(rms_qs_tmp(25)/num_qs_tmp(25))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 20.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 22.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(26)=rms_qs_tmp(26)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(26)=num_qs_tmp(26)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(26)=sqrt(rms_qs_tmp(26)/num_qs_tmp(26))
+
+         
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 22.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 24.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(27)=rms_qs_tmp(27)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(27)=num_qs_tmp(27)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(27)=sqrt(rms_qs_tmp(27)/num_qs_tmp(27))
+
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 24.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 26.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(28)=rms_qs_tmp(28)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(28)=num_qs_tmp(28)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(28)=sqrt(rms_qs_tmp(28)/num_qs_tmp(28))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 26.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 28.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(29)=rms_qs_tmp(29)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(29)=num_qs_tmp(29)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(29)=sqrt(rms_qs_tmp(29)/num_qs_tmp(29))
+
+       
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 28.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 30.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(30)=rms_qs_tmp(30)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(30)=num_qs_tmp(30)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(30)=sqrt(rms_qs_tmp(30)/num_qs_tmp(30))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 30.0_r_kind)&
+            .and. (qs_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qs_tmp(31)=rms_qs_tmp(31)+(qs_4d_temp(j,i,k,n)-qs_mean_tmp(j,i,k))**2
+              num_qs_tmp(31)=num_qs_tmp(31)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qs_tmp(31)=sqrt(rms_qs_tmp(31)/num_qs_tmp(31))
+
+
+
+
+!calculate rms for qg 
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         !write(6,*) 'ges(i,j,k£©=', ges_tsen(j,i,k,nfldsig)
+         do n=1,n_ens 
+           !ges_tsen_tmp=ges_tsen(j,i,k,nfldsig)-273.15_r_kind  
+           !if((ges_tsen_tmp .le. -62.0_r_kind)&        
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -62.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(1)=rms_qg_tmp(1)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2            
+              num_qg_tmp(1)=num_qg_tmp(1)+1.0_r_kind              
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(1)=sqrt(rms_qg_tmp(1)/num_qg_tmp(1))
+
+
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -62.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -54.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(2)=rms_qg_tmp(2)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(2)=num_qg_tmp(2)+1.0_r_kind
+            end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(2)=sqrt(rms_qg_tmp(2)/num_qg_tmp(2))
+   
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -54.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -46.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(3)=rms_qg_tmp(3)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2              
+              num_qg_tmp(3)=num_qg_tmp(3)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(3)=sqrt(rms_qg_tmp(3)/num_qg_tmp(3))
+
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -46.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -38.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(4)=rms_qg_tmp(4)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(4)=num_qg_tmp(4)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(4)=sqrt(rms_qg_tmp(4)/num_qg_tmp(4))
+
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -38.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -30.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(5)=rms_qg_tmp(5)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(5)=num_qg_tmp(5)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(5)=sqrt(rms_qg_tmp(5)/num_qg_tmp(5))
+
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -30.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -26.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(6)=rms_qg_tmp(6)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(6)=num_qg_tmp(6)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(6)=sqrt(rms_qg_tmp(6)/num_qg_tmp(6))
+
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -26.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -22.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(7)=rms_qg_tmp(7)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(7)=num_qg_tmp(7)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(7)=sqrt(rms_qg_tmp(7)/num_qg_tmp(7))
+
+         
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -22.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -18.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(8)=rms_qg_tmp(8)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(8)=num_qg_tmp(8)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(8)=sqrt(rms_qg_tmp(8)/num_qg_tmp(8))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -18.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -14.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(9)=rms_qg_tmp(9)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(9)=num_qg_tmp(9)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(9)=sqrt(rms_qg_tmp(9)/num_qg_tmp(9))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -14.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -10.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(10)=rms_qg_tmp(10)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(10)=num_qg_tmp(10)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(10)=sqrt(rms_qg_tmp(10)/num_qg_tmp(10))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -10.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -8.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(11)=rms_qg_tmp(11)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(11)=num_qg_tmp(11)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(11)=sqrt(rms_qg_tmp(11)/num_qg_tmp(11))
+
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -8.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -6.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(12)=rms_qg_tmp(12)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(12)=num_qg_tmp(12)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(12)=sqrt(rms_qg_tmp(12)/num_qg_tmp(12))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -6.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -4.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(13)=rms_qg_tmp(13)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(13)=num_qg_tmp(13)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(13)=sqrt(rms_qg_tmp(13)/num_qg_tmp(13))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -4.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. -2.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(14)=rms_qg_tmp(14)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(14)=num_qg_tmp(14)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(14)=sqrt(rms_qg_tmp(14)/num_qg_tmp(14))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. -2.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 0.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(15)=rms_qg_tmp(15)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(15)=num_qg_tmp(15)+1.0_r_kind
+            end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(15)=sqrt(rms_qg_tmp(15)/num_qg_tmp(15))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 0.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 2.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(16)=rms_qg_tmp(16)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(16)=num_qg_tmp(16)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(16)=sqrt(rms_qg_tmp(16)/num_qg_tmp(16))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 2.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 4.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(17)=rms_qg_tmp(17)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(17)=num_qg_tmp(17)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(17)=sqrt(rms_qg_tmp(17)/num_qg_tmp(17))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 4.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 6.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(18)=rms_qg_tmp(18)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(18)=num_qg_tmp(18)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(18)=sqrt(rms_qg_tmp(18)/num_qg_tmp(18))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 6.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 8.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(19)=rms_qg_tmp(19)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(19)=num_qg_tmp(19)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(19)=sqrt(rms_qg_tmp(19)/num_qg_tmp(19))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 8.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 10.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(20)=rms_qg_tmp(20)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(20)=num_qg_tmp(20)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(20)=sqrt(rms_qg_tmp(20)/num_qg_tmp(20))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 10.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 12.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(21)=rms_qg_tmp(21)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2              
+              num_qg_tmp(21)=num_qg_tmp(21)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(21)=sqrt(rms_qg_tmp(21)/num_qg_tmp(21))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 12.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 14.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(22)=rms_qg_tmp(22)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(22)=num_qg_tmp(22)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(22)=sqrt(rms_qg_tmp(22)/num_qg_tmp(22))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 14.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 16.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(23)=rms_qg_tmp(23)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(23)=num_qg_tmp(23)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(23)=sqrt(rms_qg_tmp(23)/num_qg_tmp(23))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 16.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 18.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(24)=rms_qg_tmp(24)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(24)=num_qg_tmp(24)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(24)=sqrt(rms_qg_tmp(24)/num_qg_tmp(24))
+
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 18.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 20.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(25)=rms_qg_tmp(25)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(25)=num_qg_tmp(25)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(25)=sqrt(rms_qg_tmp(25)/num_qg_tmp(25))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 20.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 22.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(26)=rms_qg_tmp(26)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(26)=num_qg_tmp(26)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(26)=sqrt(rms_qg_tmp(26)/num_qg_tmp(26))
+
+         
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 22.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 24.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(27)=rms_qg_tmp(27)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(27)=num_qg_tmp(27)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(27)=sqrt(rms_qg_tmp(27)/num_qg_tmp(27))
+
+   
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 24.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 26.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(28)=rms_qg_tmp(28)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(28)=num_qg_tmp(28)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(28)=sqrt(rms_qg_tmp(28)/num_qg_tmp(28))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 26.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 28.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(29)=rms_qg_tmp(29)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(29)=num_qg_tmp(29)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(29)=sqrt(rms_qg_tmp(29)/num_qg_tmp(29))
+
+       
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 28.0_r_kind)&
+            .and. ((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .le. 30.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(30)=rms_qg_tmp(30)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(30)=num_qg_tmp(30)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(30)=sqrt(rms_qg_tmp(30)/num_qg_tmp(30))
+
+      
+   do k=1,grd_ens%nsig
+     do i=1,grd_ens%lon2
+       do j=1,grd_ens%lat2
+         do n=1,n_ens
+           if(((ges_tsen(j,i,k,nfldsig)-273.15_r_kind) .gt. 30.0_r_kind)&
+            .and. (qg_4d_temp(j,i,k,n) .ge. qval_tmp)) then
+              rms_qg_tmp(31)=rms_qg_tmp(31)+(qg_4d_temp(j,i,k,n)-qg_mean_tmp(j,i,k))**2
+              num_qg_tmp(31)=num_qg_tmp(31)+1.0_r_kind
+           end if
+         end do
+       end do
+     end do
+   end do
+   rms_qg_tmp(31)=sqrt(rms_qg_tmp(31)/num_qg_tmp(31))
+  
+   !output
+   write(6,*)' nownow output rms_qr'
+   do i=1,31
+     write(6,*) rms_qr_tmp(i) 
+   end do
+   write(6,*)' now output rms_qs'
+   do i=1,31
+     write(6,*) rms_qs_tmp(i) 
+   end do   
+   write(6,*)' now output rms_qg'
+   do i=1,31
+     write(6,*) rms_qg_tmp(i) 
+   end do 
+   write(6,*)' now output num_qr'  
+   do i=1,31
+     write(6,*) num_qr_tmp(i) 
+   end do 
+   write(6,*)' now output num_qs'   
+   do i=1,31
+     write(6,*) num_qs_tmp(i) 
+   end do  
+   write(6,*)' now output num_qg'     
+   do i=1,31
+     write(6,*) num_qg_tmp(i) 
+   end do
+  end subroutine calc_num_rms_caps
+! <--- CAPS ---
 end module get_wrf_mass_ensperts_mod

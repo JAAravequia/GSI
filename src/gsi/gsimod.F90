@@ -176,6 +176,7 @@
                                rw_obs4wrd_bmwth, lvldbg,                            &
                                l_correct_azmu, l_correct_tilt, i_correct_tilt,      &
                                l_azm_east1st, l_use_log_qx,                         &
+                               l_use_log_qx_pval,                                   & ! chenll
                                l_plt_be_stats, l_be_T_dep, l_gpht2gmht,             &
                                l_plt_diag_rw, l_chk_bmwth,                          &
                                i_melt_snow, i_melt_graupel,                         &
@@ -957,7 +958,8 @@
                          l_decouple_sf_vp,l_decouple_sf_tps,              &
                          rw_obs4wrd_bmwth, lvldbg,                        &
                          l_correct_azmu, l_correct_tilt, i_correct_tilt,  &
-                         l_azm_east1st, l_use_log_qx, l_plt_be_stats,     &
+                         l_azm_east1st, l_use_log_qx, l_use_log_qx_pval,  & ! chenll
+                         l_plt_be_stats,                                  &
                          l_be_T_dep, l_gpht2gmht,                         &
                          refl_lowbnd_rw, refl_lowbnd_dbz,                 &
                          l_plt_diag_rw, l_chk_bmwth,                      &
@@ -1721,7 +1723,8 @@
 !    re-set some options based on some conditions
 !    log transform is only applied to dbz operator based on single-moment MP
 !    scheme
-     if (mphyopt  .gt. 7 .or. mphyopt  .lt. 2) l_use_log_qx = .FALSE.
+!     if (mphyopt  .gt. 7 .or. mphyopt  .lt. 2) l_use_log_qx = .FALSE.
+!     if (mphyopt  .gt. 7 .or. mphyopt  .lt. 2) l_use_log_qx_pval = .FALSE. ! comment by Cliu
 
   endif
 ! --- CAPS ---

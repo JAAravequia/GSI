@@ -58,6 +58,7 @@ contains
   !                               over snow  
   !   2017-03-23  Hu      - add code to use hybrid vertical coodinate in WRF MASS
   !                               core
+  !   2018-10-24 Liu     -add code to read in w fields(for CAPS version)
   !
   !   input argument list:
   !     mype     - pe number
@@ -1807,6 +1808,26 @@ contains
   !                               concentration)
   !   2017-03-23  Hu     - add code to use hybrid vertical coodinate in WRF MASS
   !                        core
+  !   2017-03-30  g.zhao - special treatment to final analysis of qr/qs/qg, re-set
+  !                        to zero value if no update or only trivial update
+  !                         assign different tiny values to qr/qs/qg (~0dbz)
+  !                         (match the configuration in read_wrf_mass_guess)
+  !                         if T > 274.15
+  !                                qr_min=2.9E-6
+  !                                qs_min=0.0E-6
+  !                                qg_min=3.1E-7
+  !                         if T < 274.15  and  T > 272.15
+  !                                qr_min=2.0E-6
+  !                                qs_min=1.3E-7
+  !                                qg_min=3.1E-7
+  !                         if T < 272.15
+  !                                qr_min=0.0E-6
+  !                                qs_min=6.3E-6
+  !                                qg_min=3.1E-7
+  !   2018-02-xx  g.zhao - only reset the value for log transformed qx
+  !                        for regular qx, the non-zero tiny value is applied to
+  !                        qx on obs point in setupdbz
+  !   2018-10-23   C.Liu   add w 
   !   2019-04-18  cTong  - add code of treatments for logarithmic q conversion
   !   2019-05-30  cTong  - add w analysis output 
   !
@@ -1844,7 +1865,7 @@ contains
 ! --- CAPS ---
     use constants, only: zero,r0_01
     use constants, only: rd
-    use caps_radaruse_mod, only: l_use_log_qx, l_use_log_nt, cld_nt_updt
+    use caps_radaruse_mod, only: l_use_log_qx, l_use_log_qx_pval, l_use_log_nt, cld_nt_updt !chenll
     use caps_radaruse_mod, only: l_use_dbz_caps
     use caps_radaruse_mod, only: init_mm_qnr
 ! --- CAPS ---
@@ -1930,6 +1951,8 @@ contains
     real(r_kind) :: qnr_tmp
 
     real(r_kind) :: P1D,T1D,Q1D,RHO,QR1D
+
+    integer,parameter   :: USEZG = 1
 ! --- CAPS ---
   
     associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
@@ -1962,13 +1985,13 @@ contains
   
     num_mass_fields_base=2+4*lm + 1
     num_mass_fields=num_mass_fields_base
-!    The 9 3D cloud analysis fields are: ql,qi,qr,qs,qg,qnr,qni,qnc,tt
     if ( l_use_dbz_caps ) then ! CAPS
 !!CCT command-out
 !    if(l_cloud_analysis .or. n_actual_clouds>0) num_mass_fields=num_mass_fields + 9*lm   !CCT command-out
 !    The 8 3D cloud analysis fields are: ql,qi,qr,qs,qg,qnr,w,tt (1 extra vert. lv for w)    !CCT modified  
        if(l_hydrometeor_bkio .or. n_actual_clouds>0) num_mass_fields=num_mass_fields + 7*lm +lm+1 !CCT modified
     else
+!    The 9 3D cloud analysis fields are: ql,qi,qr,qs,qg,qnr,qni,qnc,tt
        if(l_hydrometeor_bkio .and. n_actual_clouds>0) num_mass_fields=num_mass_fields + 9*lm
     end if
     if(l_gsd_soilTQ_nudge) num_mass_fields=num_mass_fields+2*nsig_soil+1
@@ -2258,7 +2281,7 @@ contains
              all_loc(j,i,kq)= ges_q(j,i,k)/(one-ges_q(j,i,k))
 
   ! for hydrometeors      
-             ! Since CAPS use .or. for the conditnioal statement, temporary fix is set on l_hydrometeor_bkio
+             ! Since CAPS use .or. for the conditional statement, temporary fix is set on l_hydrometeor_bkio
              if(l_use_dbz_caps) l_hydrometeor_bkio=.true.    ! turn on
              if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
 ! --- CAPS ---
@@ -2277,60 +2300,125 @@ contains
                    qg_tmp=zero
 
                    if ( l_use_log_qx ) then
+                      if ( l_use_log_qx_pval .eq. 0. ) then ! CVlogq
+                         if (ges_tsen(j,i,k,it) .gt. 274.15) then
+                            qr_min=2.9E-6_r_kind
+                            qr_thrshd=qr_min * one_tenth
+                            qs_min=0.1E-9_r_kind
+                            qs_thrshd=qs_min
+                            qg_min=3.1E-7_r_kind
+                            qg_thrshd=qg_min * one_tenth
+                         else if (ges_tsen(j,i,k,it) .le. 274.15 .and. ges_tsen(j,i,k,it) .ge. 272.15) then
+                            qr_min=2.0E-6_r_kind
+                            qr_thrshd=qr_min * one_tenth
+                            qs_min=1.3E-7_r_kind
+                            qs_thrshd=qs_min * one_tenth
+                            qg_min=3.1E-7_r_kind
+                            qg_thrshd=qg_min * one_tenth
+                         else if (ges_tsen(j,i,k,it) .lt. 272.15) then
+                            qr_min=0.1E-9_r_kind
+                            qr_thrshd=qr_min
+                            qs_min=6.3E-6_r_kind
+                            qs_thrshd=qs_min * one_tenth
+                            qg_min=3.1E-7_r_kind
+                            qg_thrshd=qg_min * one_tenth
+                         end if
+!                        convert log(qr/qs/qg) back to qr/qs/qg
+                         if (mype==0 .AND. i==3 .AND. j==3 .AND. k==3) then
+                            write(6,*)'wrwrfmass_netcdf: convert log(qr/qs/qg) back to qr/qs/qg.'
+                            write(6,*)'wrwrfmass_netcdf: then reset (qr/qs/qg) to 0.0 for some cases.'
+                         end if
 
-                      if (ges_tsen(j,i,k,it) .gt. 274.15) then
-                         qr_min=2.9E-6_r_kind
-                         qr_thrshd=qr_min * one_tenth
-                         qs_min=0.1E-9_r_kind
-                         qs_thrshd=qs_min
-                         qg_min=3.1E-7_r_kind
-                         qg_thrshd=qg_min * one_tenth
-                      else if (ges_tsen(j,i,k,it) .le. 274.15 .and. ges_tsen(j,i,k,it) .ge. 272.15) then
-                         qr_min=2.0E-6_r_kind
-                         qr_thrshd=qr_min * one_tenth
-                         qs_min=1.3E-7_r_kind
-                         qs_thrshd=qs_min * one_tenth
-                         qg_min=3.1E-7_r_kind
-                         qg_thrshd=qg_min * one_tenth
-                      else if (ges_tsen(j,i,k,it) .lt. 272.15) then
-                         qr_min=0.1E-9_r_kind
-                         qr_thrshd=qr_min
-                         qs_min=6.3E-6_r_kind
-                         qs_thrshd=qs_min * one_tenth
-                         qg_min=3.1E-7_r_kind
-                         qg_thrshd=qg_min * one_tenth
+                         qr_tmp=exp(ges_qr(j,i,k))
+                         qs_tmp=exp(ges_qs(j,i,k))
+                         qg_tmp=exp(ges_qg(j,i,k))
+
+!                        if no update or very tiny value of qr/qs/qg, re-set/clear it off to zero
+                         if ( abs(qr_tmp - qr_min) .lt. (qr_min*r0_01) ) then
+                            qr_tmp=zero
+                         else if (qr_tmp .lt. qr_thrshd) then
+                            qr_tmp=zero
+                         end if
+
+                         if ( abs(qs_tmp - qs_min) .lt. (qs_min*r0_01) ) then
+                            qs_tmp=zero
+                         else if (qs_tmp .lt. qs_thrshd) then
+                            qs_tmp=zero
+                         end if
+
+                         if ( abs(qg_tmp - qg_min) .lt. (qg_min*r0_01) ) then
+                            qg_tmp=zero
+                         else if (qg_tmp .lt. qg_thrshd) then
+                            qg_tmp=zero
+                         end if
+
+                      else if ( l_use_log_qx_pval .gt. 0. ) then   ! CVpq
+!                        convert log(qr/qs/qg) back to qr/qs/qg
+                         if (mype==0 .AND. i==3 .AND. j==3 .AND. k==3) then
+                            write(6,*)'wrwrfmass_netcdf: convert log(qr/qs/qg) back to qr/qs/qg.'
+                            write(6,*)'wrwrfmass_netcdf: then reset (qr/qs/qg) to 0.0 for some cases.'
+                         end if
+
+                         if(USEZG==1)then
+                           !qr_tmp=max(exp(ges_qr(j,i,k))-1.0E-6_r_kind,0.0)
+                           !qs_tmp=max(exp(ges_qs(j,i,k))-1.0E-6_r_kind,0.0)
+                           !qg_tmp=max(exp(ges_qg(j,i,k))-1.0E-6_r_kind,0.0)
+                           !chenll
+                            qr_tmp=max((l_use_log_qx_pval*ges_qr(j,i,k)+1)**(1/l_use_log_qx_pval)-1.0E-6_r_kind,0.0)
+                            qs_tmp=max((l_use_log_qx_pval*ges_qs(j,i,k)+1)**(1/l_use_log_qx_pval)-1.0E-6_r_kind,0.0)
+                            qg_tmp=max((l_use_log_qx_pval*ges_qg(j,i,k)+1)**(1/l_use_log_qx_pval)-1.0E-6_r_kind,0.0)
+                         else
+                            qr_tmp=max(ges_qr(j,i,k)-1.0E-6_r_kind,0.0)
+                            qs_tmp=max(ges_qs(j,i,k)-1.0E-6_r_kind,0.0)
+                            qg_tmp=max(ges_qg(j,i,k)-1.0E-6_r_kind,0.0)
+                         endif
+
+                         !Rong Kong add a upper limit to hydrometeors to disable overshooting
+                         if ( 1 == 2 ) then  !threshold test 1
+                            qr_tmp=min(qr_tmp,2E-2_r_kind)
+                            qs_tmp=min(qs_tmp,2E-2_r_kind)
+                            qg_tmp=min(qg_tmp,3E-2_r_kind)
+                         else
+                            qr_tmp=min(qr_tmp,1E-2_r_kind)
+                            qs_tmp=min(qs_tmp,1.5E-2_r_kind)
+                            qg_tmp=min(qg_tmp,2E-2_r_kind)
+                         endif
+                         !Rong Kong added above
                       end if
+                   else   ! For CVq
 
-!                     convert log(qr/qs/qg) back to qr/qs/qg
-                      if (mype==0 .AND. i==3 .AND. j==3 .AND. k==3) then
-                         write(6,*)'wrwrfmass_netcdf: convert log(qr/qs/qg) back to qr/qs/qg.'
-                         write(6,*)'wrwrfmass_netcdf: then reset (qr/qs/qg) to 0.0 for some cases.'
-                      end if
-                      qr_tmp=exp(ges_qr(j,i,k))
-                      qs_tmp=exp(ges_qs(j,i,k))
-                      qg_tmp=exp(ges_qg(j,i,k))
- 
-
-!                     if no update or very tiny value of qr/qs/qg, re-set/clear it off to zero
-                      if ( abs(qr_tmp - qr_min) .lt. (qr_min*r0_01) ) then
-                         qr_tmp=zero
-                      else if (qr_tmp .lt. qr_thrshd) then
-                         qr_tmp=zero
-                      end if
-
-                      if ( abs(qs_tmp - qs_min) .lt. (qs_min*r0_01) ) then
-                         qs_tmp=zero
-                      else if (qs_tmp .lt. qs_thrshd) then
-                         qs_tmp=zero
-                      end if
-
-                      if ( abs(qg_tmp - qg_min) .lt. (qg_min*r0_01) ) then
-                         qg_tmp=zero
-                      else if (qg_tmp .lt. qg_thrshd) then
-                         qg_tmp=zero
-                      end if
-
-                   else
+!                     temperature match the setup in read_wrf_mass_guess and
+!                     prewgt_reg (based on Drs. Chengsi Liu and Rong's work in ARPS-3DVar)
+!                     if (ges_tsen(j,i,k,it) .gt. 278.15) then
+!                        qr_min=1.0E-5_r_kind
+!                        qr_thrshd=qr_min * one_tenth
+!                        qs_min=0.1E-9_r_kind
+!                        qs_thrshd=qs_min
+!                        qg_min=1.0E-7_r_kind
+!                        qg_thrshd=qg_min * one_tenth
+!                     else if (ges_tsen(j,i,k,it) .le. 278.15 .and.
+!                        ges_tsen(j,i,k,it) .ge. 243.15) then
+!                        qs_min=1.0E-7_r_kind
+!                        qs_thrshd=qs_min * one_tenth
+!                        qg_min=6.0E-7_r_kind
+!                        qg_thrshd=qg_min * one_tenth
+!                        if (ges_tsen(j,i,k,it) .le. 278.15 .and.
+!                           ges_tsen(j,i,k,it) .ge. 268.15) then
+!                           qr_min=5.0E-6_r_kind
+!                           qr_thrshd=qr_min * one_tenth
+!                        else if (ges_tsen(j,i,k,it) .lt. 268.15 .and.
+!                           ges_tsen(j,i,k,it) .ge. 243.15) then
+!                           qr_min=0.1E-9_r_kind
+!                           qr_thrshd=qr_min * one_tenth
+!                        end if
+!                     else if (ges_tsen(j,i,k,it) .lt. 243.15) then
+!                        qr_min=0.1E-9_r_kind
+!                        qr_thrshd=qr_min
+!                        qs_min=9.3E-6_r_kind
+!                        qs_thrshd=qs_min * one_tenth
+!                        qg_min=7.1E-7_r_kind
+!                        qg_thrshd=qg_min * one_tenth
+!                     end if
 
                       qr_min=zero
                       qs_min=zero
@@ -2340,9 +2428,10 @@ contains
                          write(6,*)'wrwrfmass_netcdf: only reset (qr/qs/qg) to 0.0 for negative analysis value. (regular qx)'
                       end if
 
-                      qr_tmp=ges_qr(j,i,k)
-                      qs_tmp=ges_qs(j,i,k)
-                      qg_tmp=ges_qg(j,i,k)
+                      qr_tmp=ges_qr(j,i,k)-1.0E-8_r_kind
+                      qs_tmp=ges_qs(j,i,k)-1.0E-8_r_kind
+                      qg_tmp=ges_qg(j,i,k)-1.0E-8_r_kind
+
 
                       qr_tmp=max(qr_tmp,qr_min)
                       qs_tmp=max(qs_tmp,qs_min)
@@ -2377,8 +2466,12 @@ contains
 
 !                     log_transform to QNRAIN 
                       if (l_use_log_nt) then
-                          qnr_tmp=exp(ges_qnr(j,i,k))
-                          if (qnr_tmp <= one ) qnr_tmp = zero
+                         if(USEZG==1)then
+                            qnr_tmp=max(exp(ges_qnr(j,i,k))-1.0E-2_r_kind,0.0)
+                         else
+                            qnr_tmp=max(ges_qnr(j,i,k)-1.0E-2_r_kind,0.0)
+                         endif
+                         ! if (qnr_tmp <= one ) qnr_tmp = zero
                       else
                           qnr_tmp=ges_qnr(j,i,k)
                       end if

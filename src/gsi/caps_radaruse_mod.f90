@@ -29,7 +29,7 @@ MODULE caps_radaruse_mod
   public :: l_set_oerr_ratio_rw, l_set_oerr_ratio_dbz
   public :: rw_obs4wrd_bmwth
   public :: l_correct_azmu, l_correct_tilt, i_correct_tilt, l_azm_east1st
-  public :: l_plt_be_stats, l_be_T_dep, l_use_log_qx
+  public :: l_plt_be_stats, l_be_T_dep, l_use_log_qx, l_use_log_qx_pval ! chenll
   public :: l_gpht2gmht
   public :: lvldbg
   public :: l_plt_diag_rw, l_chk_bmwth    ! moreopts
@@ -54,6 +54,7 @@ MODULE caps_radaruse_mod
 
 ! logical, save   :: l_qltn
   logical :: l_use_log_qx                ! do log transformation of qx(qr/qs/qg)
+  real(r_kind) :: l_use_log_qx_pval      ! chenll: parameter p value for do log transformation of qx(qr/qs/qg)
   logical :: l_use_rw_caps               ! assimilation of radar radial wind(rw) data of CAPS 
   logical :: l_use_dbz_caps              ! assimilation of radar reflectivity(dbz) data of CAPS 
   logical :: l_decouple_sf_vp            ! de-couple balance correlation coef.  between s.f. and t, ps
@@ -133,6 +134,8 @@ contains
     l_decouple_sf_vp    = .FALSE.           ! (not) de-couple/zero-out balance between sf and vp
     l_decouple_sf_tps   = .FALSE.           ! (not) de-couple/zero-out balance among   sf and t/ps
     l_use_log_qx        = .FALSE.           ! (not) use log transform to qx(qr/qs/qg) 
+    l_use_log_qx_pval   = 0.000001          ! chenll:nearly the same as  use log transform to qx(qr/qs/qg) 
+
     l_plt_be_stats      = .TRUE.            ! output BE stats for plot
     l_be_T_dep          = .FALSE.
 
@@ -200,7 +203,7 @@ contains
 
     cld_cv      = 0
 
-    cld_nt_updt = 0          ! number concentration is NOT re-initialized after analsysis
+    cld_nt_updt = 1          ! number concentration is NOT re-initialized after analsysis
                              ! 0: no update to number concentration
                              ! 1: updated through analysis (for now, only in hybrid analysis)
                              ! 2: re-initialized after analysis with mixing-ratioi(qx) and intercept parameter(N0)
@@ -346,12 +349,21 @@ contains
       case (2,3,4)
           ! hail
           Zehnegf = ((m3todBZ * Zefact) * Ki2  /  &
-              ((pi ** pipowf) * Kw2 * (N0h ** N0xpowf) *  &
-              (rhoh ** rhoxpowf)))
+             ((pi ** pipowf) * Kw2 * (N0h ** N0xpowf) *  &
+             (rhoh ** rhoxpowf)))
           Zehposf = (((m3todBZ * Zefact) /  &
-              ((pi ** pipowf) * (N0h ** N0xpowf) *  &
-              (rhoh ** rhoxpowf))) ** approxpow)
+             ((pi ** pipowf) * (N0h ** N0xpowf) *  &
+             (rhoh ** rhoxpowf))) ** approxpow)
           iret = 0
+          
+          !!Rong Kong temporily  changed the density of hail to graupel to make it consistent with WRF Lin scheme
+          !    Zehnegf = ((m3todBZ * Zefact) * Ki2  /  &
+          !        ((pi ** pipowf) * Kw2 * (4.0E+06 ** N0xpowf) *  &
+          !        (400. ** rhoxpowf)))
+          !    Zehposf = (((m3todBZ * Zefact) /  &
+          !        ((pi ** pipowf) * (4.0E+06 ** N0xpowf) *  &
+          !        (400. ** rhoxpowf))) ** approxpow)
+          !    iret = 0
       case (5,6,7)
           ! graupel
           Zehnegf = ((m3todBZ * Zefact) * Ki2  /  &
@@ -379,7 +391,7 @@ contains
       Pg_dry    = rqhnpowf                           ! <= 273.15K
       Pg_wet    = rqhppowf                           ! >  273.15K (melting)
 
-      if (mype == 0) then
+       if (mype == 0) then
           WRITE(6,*)'*****************************************************************'
           write(6,*)'COEF4DBZFWRD: mphyopt==',mphyopt
           write(6,*)'COEF4DBZFWRD: rain:    ',' Cr    =',Cr,    '  Pr    =',Pr

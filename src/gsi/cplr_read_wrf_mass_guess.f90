@@ -1392,7 +1392,7 @@ contains
     use wrf_vars_mod, only : w_exist, dbz_exist
     use setupdbz_lib,only: hx_dart
     use obsmod,only: if_model_dbz
-    use caps_radaruse_mod, only: l_use_log_qx, l_use_log_nt, l_use_dbz_caps ! CAPS
+    use caps_radaruse_mod, only: l_use_log_qx, l_use_log_qx_pval, l_use_log_nt, l_use_dbz_caps ! CAPS ! chenll
 
     implicit none
     class(read_wrf_mass_guess_class),intent(inout) :: this
@@ -1448,6 +1448,7 @@ contains
   ! Logarithmic q option related variables
     real(r_kind) :: qr_min, qs_min, qg_min
     real(r_kind) :: qr_thrshd, qs_thrshd, qg_thrshd
+    integer,parameter   :: USEZG = 1
 ! --- CAPS ---
   
     real(r_kind), pointer :: ges_ps_it (:,:  )=>NULL()
@@ -2341,6 +2342,7 @@ contains
                    end if
 ! --- CAPS ---
 ! Logarithmic q related treatments begin here====================================================!
+! g.zhao
 !                  hydrometeors (reset zero cloud variables to tiny but ~0dbz)
   !                Since CAPS use .or. for the conditnioal statement, temporary fix is set on l_hydrometeor_bkio
                   if(l_use_dbz_caps) l_hydrometeor_bkio=.true.    ! turn on
@@ -2348,44 +2350,115 @@ contains
                      if(l_use_dbz_caps) l_hydrometeor_bkio=.false. ! turn off
                     ! =====================================================================!
                      if (l_use_log_qx) then
+                         if ( l_use_log_qx_pval .eq. 0. ) then ! CVlogq
+                            if (ges_tsen(j,i,k,it) .gt. 274.15) then
+                               qr_min=2.9E-6_r_kind
+                               qr_thrshd=qr_min * one_tenth
+                               qs_min=0.1E-9_r_kind
+                               qs_thrshd=qs_min
+                               qg_min=3.1E-7_r_kind
+                               qg_thrshd=qg_min * one_tenth
+                            else if (ges_tsen(j,i,k,it) .le. 274.15 .and. ges_tsen(j,i,k,it) .ge. 272.15) then
+                               qr_min=2.0E-6_r_kind
+                               qr_thrshd=qr_min * one_tenth
+                               qs_min=1.3E-7_r_kind
+                               qs_thrshd=qs_min * one_tenth
+                               qg_min=3.1E-7_r_kind
+                               qg_thrshd=qg_min * one_tenth
+                            else if (ges_tsen(j,i,k,it) .lt. 272.15) then
+                               qr_min=0.1E-9_r_kind
+                               qr_thrshd=qr_min
+                               qs_min=6.3E-6_r_kind
+                               qs_thrshd=qs_min * one_tenth
+                               qg_min=3.1E-7_r_kind
+                               qg_thrshd=qg_min * one_tenth
+                            end if
+                            if ( ges_qr(j,i,k) .le. qr_thrshd )  ges_qr(j,i,k) = qr_min
+                            if ( ges_qs(j,i,k) .le. qs_thrshd )  ges_qs(j,i,k) = qs_min
+                            if ( ges_qg(j,i,k) .le. qg_thrshd )  ges_qg(j,i,k) = qg_min
 
-                         if (ges_tsen(j,i,k,it) .gt. 274.15) then
-                             qr_min=2.9E-6_r_kind
-                             qr_thrshd=qr_min * one_tenth
-                             qs_min=0.1E-9_r_kind
-                             qs_thrshd=qs_min
-                             qg_min=3.1E-7_r_kind
-                             qg_thrshd=qg_min * one_tenth
-                         else if (ges_tsen(j,i,k,it) .le. 274.15 .and. ges_tsen(j,i,k,it) .ge. 272.15) then
-                             qr_min=2.0E-6_r_kind
-                             qr_thrshd=qr_min * one_tenth
-                             qs_min=1.3E-7_r_kind
-                             qs_thrshd=qs_min * one_tenth
-                             qg_min=3.1E-7_r_kind
-                             qg_thrshd=qg_min * one_tenth
-                         else if (ges_tsen(j,i,k,it) .lt. 272.15) then
-                             qr_min=0.1E-9_r_kind
-                             qr_thrshd=qr_min
-                             qs_min=6.3E-6_r_kind
-                             qs_thrshd=qs_min * one_tenth
-                             qg_min=3.1E-7_r_kind
-                             qg_thrshd=qg_min * one_tenth
-                         end if
-                         if ( ges_qr(j,i,k) .le. qr_thrshd )  ges_qr(j,i,k) = qr_min
-                         if ( ges_qs(j,i,k) .le. qs_thrshd )  ges_qs(j,i,k) = qs_min
-                         if ( ges_qg(j,i,k) .le. qg_thrshd )  ges_qg(j,i,k) = qg_min
-!                        Logarithmic conversion of cloud hydrometer variables (qr,qs and qg)
-                         if(mype==0 .AND. i==3 .AND. j==3 .AND. k==3)then
-                             write(6,*)'read_wrf_mass_guess_netcdf: ',                   &
-                                 ' reset zero of qr/qs/qg to specified values (~0dbz) ', &
-                                 'before log transformation. (for dbz assimilation)'
-                             write(6,*)'read_wrf_mass_guess_netcdf: convert qr/qs/qg to log.'
-                         end if
-                         ges_qr(j,i,k) = log(ges_qr(j,i,k))
-                         ges_qs(j,i,k) = log(ges_qs(j,i,k))
-                         ges_qg(j,i,k) = log(ges_qg(j,i,k))
+!                           Logarithmic conversion of cloud hydrometer variables (qr,qs and qg)
+                            if(mype==0 .AND. i==3 .AND. j==3 .AND. k==3)then
+                                write(6,*)'read_wrf_mass_guess_netcdf: ',                   &
+                                    ' reset zero of qr/qs/qg to specified values (~0dbz) ', &
+                                    'before log transformation. (for dbz assimilation)'
+                                write(6,*)'read_wrf_mass_guess_netcdf: convert qr/qs/qg to log.'
+                            end if
+                            ges_qr(j,i,k) = log(ges_qr(j,i,k))
+                            ges_qs(j,i,k) = log(ges_qs(j,i,k))
+                            ges_qg(j,i,k) = log(ges_qg(j,i,k))
+                         else if ( l_use_log_qx_pval .gt. 0. ) then   ! CVpq
+!                           convert cloud hydrometer variables (qr,qs and qg) to log
+                            if(mype==0 .AND. i==3 .AND. j==3 .AND. k==3)then
+                                write(6,*)'read_wrf_mass_guess_netcdf: ',                   &
+                                    ' reset zero of qr/qs/qg to specified values (~0dbz) ', &
+                                    'before log transformation. (for dbz assimilation)'
+                                write(6,*)'read_wrf_mass_guess_netcdf: convert qr/qs/qg to log.'
+                            end if
+                            !RONG KONG modified below to tranform the ges_qr in
+                            !logq space (Gang's version) to q space (arps version)
+                            !so that we don't need to make change to the origial
+                            !background field....
+                            if(USEZG==1)then
+                               ! chenll
+                            !  ges_qr(j,i,k) = log(max(ges_qr(j,i,k),1.0E-6_r_kind))
+                            !  ges_qs(j,i,k) = log(max(ges_qs(j,i,k),1.0E-6_r_kind))
+                            !  ges_qg(j,i,k) = log(max(ges_qg(j,i,k),1.0E-6_r_kind))
+                               ges_qr(j,i,k)=((max(ges_qr(j,i,k),1.0E-6_r_kind))**l_use_log_qx_pval-1)/l_use_log_qx_pval
+                               ges_qs(j,i,k)=((max(ges_qs(j,i,k),1.0E-6_r_kind))**l_use_log_qx_pval-1)/l_use_log_qx_pval
+                               ges_qg(j,i,k)=((max(ges_qg(j,i,k),1.0E-6_r_kind))**l_use_log_qx_pval-1)/l_use_log_qx_pval
 
-                     else
+                              !cliu for test 0 hydrometeor mixing ratio background
+
+                             ! ges_qr(j,i,k) = log(1.0E-6_r_kind)
+                             ! ges_qs(j,i,k) = log(1.0E-6_r_kind)
+                             ! ges_qg(j,i,k) = log(1.0E-6_r_kind)
+                            else
+                               ges_qr(j,i,k) = ges_qr(j,i,k) + 1.0E-6_r_kind
+                               ges_qs(j,i,k) = ges_qs(j,i,k) + 1.0E-6_r_kind
+                               ges_qg(j,i,k) = ges_qg(j,i,k) + 1.0E-6_r_kind
+                            endif
+                            !Rong Kong commented off above!
+                         end if
+
+                     else   ! CVq
+!                        2018/02 comment off the following part of code
+!                        Following Dr. Xue's suggestion, 
+!                        temperature is set up based on Dr.s Chengsi Liu and Rong Kong's work in ARPS-3DVar
+!                        (Match the values in prewgt_reg and wrwrfmassa)
+
+!                        if (ges_tsen(j,i,k,it) .gt. 278.15) then
+!                            qr_min=1.0E-5_r_kind
+!                            qr_thrshd=qr_min * one_tenth
+!                            qs_min=0.1E-9_r_kind
+!                            qs_thrshd=qs_min
+!                            qg_min=1.0E-7_r_kind
+!                            qg_thrshd=qg_min * one_tenth
+!                        else if (ges_tsen(j,i,k,it) .le. 278.15 .and. ges_tsen(j,i,k,it) .ge. 243.15) then
+!                            qs_min=1.0E-7_r_kind
+!                            qs_thrshd=qs_min * one_tenth
+!                            qg_min=6.0E-7_r_kind
+!                            qg_thrshd=qg_min * one_tenth
+!                            if (ges_tsen(j,i,k,it) .le. 278.15 .and. ges_tsen(j,i,k,it) .ge. 268.15) then
+!                                qr_min=5.0E-6_r_kind
+!                                qr_thrshd=qr_min * one_tenth
+!                            else if (ges_tsen(j,i,k,it) .lt. 268.15 .and. ges_tsen(j,i,k,it) .ge. 243.15) then
+!                                qr_min=0.1E-9_r_kind
+!                                qr_thrshd=qr_min * one_tenth
+!                            end if
+!                        else if (ges_tsen(j,i,k,it) .lt. 243.15) then
+!                            qr_min=0.1E-9_r_kind
+!                            qr_thrshd=qr_min
+!                            qs_min=9.3E-6_r_kind
+!                            qs_thrshd=qs_min * one_tenth
+!                            qg_min=7.1E-7_r_kind
+!                            qg_thrshd=qg_min * one_tenth
+!                        end if
+
+!                        if ( ges_qr(j,i,k) .le. qr_thrshd )  ges_qr(j,i,k) = qr_min
+!                        if ( ges_qs(j,i,k) .le. qs_thrshd )  ges_qs(j,i,k) = qs_min
+!                        if ( ges_qg(j,i,k) .le. qg_thrshd )  ges_qg(j,i,k) = qg_min
+
                          qr_min=zero
                          qs_min=zero
                          qg_min=zero

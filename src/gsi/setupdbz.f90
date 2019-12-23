@@ -139,6 +139,7 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
 !                       non-zero Ze and Jacobian for TLM/ADM.
 !   2017-02-20  G.ZHao  - using log(Qr/s/g) interpolation, not Qr/s/g interpolation
 !   2019-02-19  ctong   - modified to comply with new type structure used for GSIv3.7      
+!   2019-12-xx  cliu and chenll - add thompson operator for dBZ (CAPS, mpopt=108)
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -207,13 +208,12 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
   use constants, only: rd
   use qcmod, only: ptopq,pbotq
   use converr, only: ptabl
-  use caps_radaruse_mod, only: l_use_log_qx, l_gpht2gmht, lvldbg, l_set_oerr_ratio_dbz                  
+  use caps_radaruse_mod, only: l_use_log_qx, l_use_log_qx_pval, l_gpht2gmht, lvldbg, l_set_oerr_ratio_dbz ! chenll
   use caps_radaruse_mod, only: i_melt_snow, i_melt_graupel
   use caps_radaruse_mod, only: Cr,     Pr,                     &
                                Cs_dry, Ps_dry, Cs_wet, Ps_wet, &
                                Cg_dry, Pg_dry, Cg_wet, Pg_wet
-! modules added by Tim Supinie for dbz operator based on CAPS multi-moments
-! microphysics schemes
+! modules added by Tim Supinie for dbz operator based on CAPS multi-moments microphysics schemes
   use radaremul_cst
   use dualpara, only: t_obs_dual, t_para_dsd, init_refl, init_para_dsd, calcMDR, &
                       qgh_opt, calcConstants
@@ -244,12 +244,9 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
 ! Note: the following parameters are computed in subroutine coef4dbzfwrd
 !-----------PARAMETERS FOR Lin single moment scheme---------!
 ! real(r_kind), parameter   :: Cr=3.6308e9_r_kind          ! Rain constant coef.
-! real(r_kind), parameter   :: Csneg=9.5889e8_r_kind       ! Precip. snow
-! constant coef.  (below 273.15K)
-! real(r_kind), parameter   :: Cspos=4.2607e11_r_kind      ! Precip. snow
-! constant coef.  (above 273.15K)
-! real(r_kind), parameter   :: Cg=6.1264e10_r_kind         ! Precip. hail
-! constant coef.
+! real(r_kind), parameter   :: Csneg=9.5889e8_r_kind       ! Precip. snow constant coef.  (below 273.15K)
+! real(r_kind), parameter   :: Cspos=4.2607e11_r_kind      ! Precip. snow constant coef.  (above 273.15K)
+! real(r_kind), parameter   :: Cg=6.1264e10_r_kind         ! Precip. hail constant coef.
 !------------------------------------------------!
 ! real(r_kind)              :: Cs, Cg, Ps, Pg
   real(r_kind)              :: Cs_tmp, Cg_tmp              ! temperary coefficients for check-up               
@@ -268,6 +265,15 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
   real(r_kind) Ze_orig, Zer, Zes, Zeg
   real(r_kind) Zeg_dry, Zeg_wet
   real(r_kind) qrexp, qsexp, qgexp
+
+  integer,parameter   :: USEZG = 1                       ! TM operator
+  REAL, PARAMETER :: pi = 3.141592   ! pi
+  REAL, PARAMETER :: rhor=1000. ! Density of rain (kg m**-3)
+  REAL, PARAMETER :: rhoh=913.  ! Density of hail (kg m**-3)
+  REAL, PARAMETER :: rhos=100.  ! Density of snow (kg m**-3)
+  REAL, PARAMETER :: rhog=400.  ! Density of graupel (kg m**-3)
+  REAL            :: Zero1, Zeso, Zego, Zro, Zso, Zgo,Zo,Zeo
+  Integer         :: aaa,bbb
 ! --- CAPS ---
 
 ! Declare external calls for code analysis
@@ -279,6 +285,7 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
 ! Declare local variables
   real(r_kind) rlow,rhgh,rsig
 !  real(r_kind) dz,denom,jqr_num,jqli_num,jqr,jqli !modified
+  real(r_kind) jqnr_num,jqnr           
   real(r_kind) dz,jqr,jqs,jqg
   real(r_kind) dlnp,pobl,zob
   real(r_kind) sin2,termg,termr,termrg
@@ -473,6 +480,8 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
     isprvd=24   ! index of observation subprovider
     icat =25    ! index of data level category
     iptrb=26    ! index of dbz perturbation
+    aaa=0
+    bbb=0
 
     do i=1,nobs
        muse(i)=nint(data(iuse,i)) <= jiter
@@ -523,8 +532,6 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
 
   end if
 
-! CAPS uses conv_diagsave, but master uses radardbz_diagsave. the latter is used.
-! However, parameters were slightly different from each other.
 !
 ! If requested, save select data for output to diagnostic file
   if(radardbz_diagsave)then
@@ -548,7 +555,7 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
   scale=one
   rsig=nsig
 
-! CAPS : these two subroutines were already done in the cpase of CAPS
+! CAPS : these two subroutines were already done in the case of CAPS
   if ( .not. l_use_dbz_caps ) then
 !   Check to see if required guess fields are available
     call check_vars_(proceed)
@@ -796,7 +803,7 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
         qgges=zero
         call tintrp31(ges_qg,qgges,dlat,dlon,dpres,dtime, &
            hrdifsig,mype,nfldsig)
-        if (mphyopt == 108) then
+        if (mphyopt == 108 .or. mphyopt == 2 ) then
            call tintrp31(ges_nr,qscalar(P_NR),dlat,dlon,dpres,dtime, &
               hrdifsig,mype,nfldsig)
            qscalar(P_NR)=qscalar(P_NR)*RHO  ! convert qnr to unit demanded by operators
@@ -818,12 +825,45 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
         if ( l_use_log_qx ) then
 !        Note: the zero qx or very tiny value of qx is re-set to be non-zero
 !        "bigger" tiny value in read_wrf_mass_guess.F90 for log-transformed qx
-            qrexp = exp(qrges)
-            qsexp = exp(qsges)
-            qgexp = exp(qgges)
-        else
-!        Note: the zero qx or very tiny value of qx needs to be re-set to
-!        non-zero
+           if ( l_use_log_qx_pval .eq. 0. ) then ! CVlogq
+              qrexp = exp(qrges)
+              qsexp = exp(qsges)
+              qgexp = exp(qgges)
+           else if ( l_use_log_qx_pval .gt. 0. ) then ! CVpq
+              if(USEZG==1)then
+                 !chenll
+                 !qrexp = exp(qrges)
+                 !qsexp = exp(qsges)
+                 !qgexp = exp(qgges)
+
+                 qrexp=(l_use_log_qx_pval*qrges+1)**(1/l_use_log_qx_pval)
+                 qsexp=(l_use_log_qx_pval*qsges+1)**(1/l_use_log_qx_pval)
+                 qgexp=(l_use_log_qx_pval*qgges+1)**(1/l_use_log_qx_pval)
+                 qr_min = 1.0E-8_r_kind
+                 qs_min = 1.0E-8_r_kind
+                 qg_min = 1.0E-8_r_kind
+                 qrexp = max(qrexp, qr_min)
+                 qsexp = max(qsexp, qs_min)
+                 qgexp = max(qgexp, qg_min)
+                !if(lvldbg>1)then
+                   !if (NINT(dlat) .eq. 105 .and. NINT(dlon) .eq. 175) then
+                     ! write(6,*)'pval=',l_use_log_qx_pval
+                     ! write(6,*)'qrges=',qrges
+                     ! write(6,*)'qrexp=',qrexp
+                     ! write(6,*)'qsges=',qsges
+                     ! write(6,*)'qsexp=',qsexp
+                     ! write(6,*)'qgges=',qgges
+                     ! write(6,*)'qgexp=',qgexp
+                   !end if
+                !end if
+              else
+                 qrexp = qrges
+                 qsexp = qsges
+                 qgexp = qgges
+              endif
+           end if
+        else  ! CV_q
+!        Note: the zero qx or very tiny value of qx needs to be re-set to non-zero
 !        "bigger" tiny value here for log10(Zer + Zes + Zeg)
             qr_min = 1.0E-8_r_kind
             qs_min = 1.0E-8_r_kind
@@ -849,6 +889,7 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
         Zeg_dry = zero ;     Zeg_wet = zero ;
         jqg_num_dry = zero ; jqg_num_wet = zero ;
         denom = zero;
+        jqnr = zero ; jqnr_num = zero
 
 !    Compute simulated *equivalent* radar reflectivity
 !    also Jacobian used for TLM and ADM
@@ -856,6 +897,7 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
         select case (mphyopt)
         case (2,3,4,5,6,7)
 !          mphyopt = 2/3/4/5/6/7 : single moment MicroPhyics scheme
+
 !          rain
 !          Zer = Cr  * (RHO * qrexp)**(1.75_r_kind)
            Zer = Cr  * (RHO * qrexp)**(Pr)
@@ -909,6 +951,47 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
               end if
            end if
 !
+!           if ( 1 == 0 ) then    ! Jun
+!             rain
+!             Zer = Cr  * (RHO * qrexp)**(1.75_r_kind)
+!              Zero1 = Cr  * (RHO * qrexp)**(Pr)
+!              if ( qrexp > 10E-7 .and. qscalar(P_NR) > 1 ) then
+!                  Zer = 720 * (RHO*qrexp)**2_r_kind*10**18_r_kind/(pi**2_r_kind*rhor**2_r_kind*qscalar(P_NR))
+!              else
+!                  Zer = 10E-8
+!              endif
+!
+!!             snow
+!              Zeso  = Cs_dry * (RHO * qsexp)**(Ps_dry)
+!              if (qsexp > 10E-7) then
+!                 Zes = 10 **(1.602_r_kind*(qsexp*1000)**0.56_r_kind)
+!              else
+!                 Zes = 10E-8
+!              endif
+!
+!!             graupel/hail
+!              Zego  = Cg_dry * (RHO * qgexp)**(Pg_dry)
+!              if ( qgexp > 10E-7 ) then
+!                 Zeg=10**18_r_kind*(RHO*qgexp)**1.75_r_kind*720/(pi**1.75_r_kind*(200/(qgexp*0.1*0.2))**0.75_r_kind*rhog**1.9_r_kind)
+!              else
+!                 Zeg=10E-8
+!              endif
+!
+!              Zeo=Zero1+Zeso+Zego
+!
+!              if(Zeo <1.0_r_kind) then
+!                 Zeo=Zeo + 1.0_r_kind
+!              end if
+!
+!              Zo = ten * log10(Zeo)
+!              Zro = ten * log10(Zero1)
+!              Zso = ten * log10(Zeso)
+!              Zgo = ten * log10(Zego)
+!
+!
+!           endif
+
+!
            Ze=Zer+Zes+Zeg
 
            if(lvldbg>1)then
@@ -917,13 +1000,22 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
                  write(6,*)'setupdbz (debugging): qsexp Zes T1D Cs:',qsexp,Zes, T1D, Cs_tmp
                  write(6,*)'setupdbz (debugging): qgexp Zeg T1D Cg:',qgexp,Zeg, T1D, Cg_tmp
                  write(6,*)'setupdbz (debugging): Ze:',Ze
+                 write(6,*)'setupdbz (debugging): qrges:',qrges
+                 write(6,*)'setupdbz (debugging): qsges:',qsges
+                 write(6,*)'setupdbz (debugging): qgges:',qgges
               end if
            end if
 
 
-!          if(Ze <1.0_r_kind) then
-!             Ze=Ze + 1.0_r_kind
-!          end if
+
+!          
+!          Zelim treatment for CVq Cliu  
+!          if ( .not. l_use_log_qx )then ! Jun : is this applied for CVq, CVpq, and CVlogq?
+              if(Ze <1.0_r_kind) then
+                 Ze=Ze + 1.0_r_kind
+              end if
+!          endif
+
 !          Convert to simulated radar reflectivity in units of dBZ
            Ze_orig = Ze
            rdBZ = ten * log10(Ze)
@@ -946,7 +1038,13 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
 !             ten*Cr*((RHO)**1.75_r_kind)*1.75_r_kind*((qrexp)**(1.75_r_kind))             
 !             jqr_num = ten*Cr*1.75_r_kind*((RHO*qrexp)**(1.75_r_kind))
 !             jqr_num = ten*1.75_r_kind*Zer
-              jqr_num = ten*Pr*Zer
+              if ( l_use_log_qx_pval .eq. 0. ) then ! CVlogq
+                 jqr_num = ten*Pr*Zer
+              else if ( l_use_log_qx_pval .gt. 0. ) then ! CVpq
+                 !jqr_num = ten*Pr*Zer
+                 jqr_num = ten*Cr*((RHO)**Pr)*Pr*((qrexp)**(Pr-l_use_log_qx_pval)) !chenll
+              end if
+
 
 !             snow
 !             jqs_num =
@@ -955,16 +1053,36 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
 !             jqs_num = ten*1.75_r_kind*Zes
               if ( i_melt_snow < 0 ) then
 !                no melting: dry snow at any temperature
-                 jqs_num = ten*Ps_dry*Zes
+                 if ( l_use_log_qx_pval .eq. 0. ) then ! CVlogq
+                    jqs_num = ten*Ps_dry*Zes
+                 else if ( l_use_log_qx_pval .gt. 0. ) then ! CVpq
+!                   jqs_num = ten*Ps_dry*Zes
+                    jqs_num =ten*Cs_dry*((RHO)**Ps_dry)*Ps_dry*((qsexp)**(Ps_dry-l_use_log_qx_pval)) !chenll
+                 end if
               else if ( i_melt_snow  .eq. 100 ) then
 !                melting: wet snow at any temperature
-                 jqs_num = ten*Ps_wet*Zes
+                 if ( l_use_log_qx_pval .eq. 0. ) then ! CVlogq
+                    jqs_num = ten*Ps_wet*Zes
+                 else if ( l_use_log_qx_pval .gt. 0. ) then ! CVpq
+!                   jqs_num = ten*Ps_wet*Zes
+                    jqs_num=ten*Cs_wet*((RHO)**Ps_wet)*Ps_wet*((qsexp)**(Ps_wet-l_use_log_qx_pval)) !chenll
+                 end if
               else
 !                melting: depending on temperature
                  if (T1D < 273.15_r_kind) then
-                     jqs_num = ten*Ps_dry*Zes
+                    if ( l_use_log_qx_pval .eq. 0. ) then ! CVlogq
+                       jqs_num = ten*Ps_dry*Zes
+                    else if ( l_use_log_qx_pval .gt. 0. ) then ! CVpq
+!                      jqs_num = ten*Ps_dry*Zes
+                       jqs_num=ten*Cs_dry*((RHO)**Ps_dry)*Ps_dry*((qsexp)**(Ps_dry-l_use_log_qx_pval)) !chenll
+                    end if
                  else
-                     jqs_num = ten*Ps_wet*Zes
+                    if ( l_use_log_qx_pval .eq. 0. ) then ! CVlogq
+                       jqs_num = ten*Ps_wet*Zes
+                    else if ( l_use_log_qx_pval .gt. 0. ) then ! CVpq
+!                      jqs_num = ten*Ps_wet*Zes
+                       jqs_num=ten*Cs_wet*((RHO)**Ps_wet)*Ps_wet*((qsexp)**(Ps_wet-l_use_log_qx_pval)) !chenll
+                    end if
                  end if
               end if
 
@@ -975,26 +1093,53 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
 !             jqg_num = ten*(1.75_r_kind*0.95_r_kind)*Zeg
               if ( i_melt_graupel < 0 ) then
 !                no melting: dry grauple/hail at any temperature
-                 jqg_num = ten*Pg_dry*Zeg
+                 if ( l_use_log_qx_pval .eq. 0. ) then ! CVlogq
+                    jqg_num = ten*Pg_dry*Zeg
+                 else if ( l_use_log_qx_pval .gt. 0. ) then ! CVpq
+!                   jqg_num = ten*Pg_dry*Zeg
+                    jqg_num=ten*Cg_dry*((RHO)**Pg_dry)*Pg_dry*((qgexp)**(Pg_dry-l_use_log_qx_pval)) !chenll
+                 end if
               else if ( i_melt_graupel  .eq. 100 ) then
 !                melting: wet graupel at any temperature
-                 jqg_num = ten*Pg_wet*Zeg
+                 if ( l_use_log_qx_pval .eq. 0. ) then ! CVlogq
+                    jqg_num = ten*Pg_wet*Zeg
+                 else if ( l_use_log_qx_pval .gt. 0. ) then ! CVpq
+!                   jqg_num = ten*Pg_wet*Zeg
+                    jqg_num=ten*Cg_wet*((RHO)**Pg_wet)*Pg_wet*((qgexp)**(Pg_wet-l_use_log_qx_pval)) !chenll 
+                 end if
               else
 !                melting: depending on the temperature
                  if (T1D < (273.15_r_kind - 2.5_r_kind)) then
-                     jqg_num = ten*Pg_dry*Zeg
+                    if ( l_use_log_qx_pval .eq. 0. ) then ! CVlogq
+                       jqg_num = ten*Pg_dry*Zeg
+                    else if ( l_use_log_qx_pval .gt. 0. ) then ! CVpq
+!                      jqg_num = ten*Pg_dry*Zeg
+                       jqg_num=ten*Cg_dry*((RHO)**Pg_dry)*Pg_dry*((qgexp)**(Pg_dry-l_use_log_qx_pval)) !chenll
+                    end if
                  else if (T1D > (273.15_r_kind + 2.5_r_kind)) then
-                     jqg_num = ten*Pg_wet*Zeg
+                    if ( l_use_log_qx_pval .eq. 0. ) then ! CVlogq
+                       jqg_num = ten*Pg_wet*Zeg
+                    else if ( l_use_log_qx_pval .gt. 0. ) then ! CVpq
+!                      jqg_num = ten*Pg_wet*Zeg
+                       jqg_num=ten*Cg_wet*((RHO)**Pg_wet)*Pg_wet*((qgexp)**(Pg_wet-l_use_log_qx_pval)) !chenll
+                    end if
                  else
                      wgt_dry = abs(T1D - (273.15_r_kind + 2.5_r_kind))/5.0_r_kind
                      wgt_wet = abs(T1D - (273.15_r_kind - 2.5_r_kind))/5.0_r_kind
-                     jqg_num_dry = ten*Pg_dry*Zeg
-                     jqg_num_wet = ten*Pg_wet*Zeg
+                     if ( l_use_log_qx_pval .eq. 0. ) then ! CVlogq
+                        jqg_num_dry = ten*Pg_dry*Zeg
+                        jqg_num_wet = ten*Pg_wet*Zeg
+                     else if ( l_use_log_qx_pval .gt. 0. ) then ! CVpq
+!                       jqg_num_dry = ten*Pg_dry*Zeg
+!                       jqg_num_wet = ten*Pg_wet*Zeg
+                        jqg_num_dry=ten*Cg_dry*((RHO)**Pg_dry)*Pg_dry*((qgexp)**(Pg_dry-l_use_log_qx_pval)) !chenll
+                        jqg_num_wet=ten*Cg_wet*((RHO)**Pg_wet)*Pg_wet*((qgexp)**(Pg_wet-l_use_log_qx_pval)) !chenll
+                     end if
                      jqg_num = wgt_dry*jqg_num_dry + wgt_wet*jqg_num_wet
                  end if
               end if
 
-           else
+           else ! CVq
 !             rain
 !             Zer = Cr  * (RHO * qrexp)**(Pr)
 !             jqr_num = ten*1.75_r_kind*Zer/qrexp
@@ -1072,21 +1217,224 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
 
         case (108)
 !          mphyopt = 108 :   Thompson MP scheme with double moment
+         
+          if ( miter == 0 ) then ! For EnKF
+             qgh_opt = get_qgh_opt(1, 0)
 
-           qgh_opt = get_qgh_opt(1, 0)
+             call set_dsd_para()
+             call calcMDR()
+             if (firstcalled) then
+                CALL calcConstants()
+                firstcalled = .false.
+             end if
 
-           call set_dsd_para()
-           call calcMDR()
-           if (firstcalled) then
-              CALL calcConstants()
-              firstcalled = .false.
-           end if
+             obs_dual = init_refl()
+             var_dsd = init_para_dsd()
+             call rdr_obs(real(RHO), real(qscalar), 0., obs_dual, var_dsd, 1, 1)
+             rdBZ = real(obs_dual%T_log_ref, kind=r_kind)
+             Ze = 10 ** (rdBZ / 10)
 
-           obs_dual = init_refl()
-           var_dsd = init_para_dsd()
-           call rdr_obs(real(RHO), real(qscalar), 0., obs_dual, var_dsd, 1, 1)
-           rdBZ = real(obs_dual%T_log_ref, kind=r_kind)
-           Ze = 10 ** (rdBZ / 10)
+          else                   ! For Variational DA
+
+             Cr=3630803456.00000
+             Pr=1.75
+             Cs_dry=958893312.000000
+             Cg_dry=5743808512.00000
+             pg_dry=1.75
+             Ps_dry=1.75
+!----Lin--------
+!            Cg_wet=9079493632.00000 
+!            Pg_wet=1.66250002384186
+!----TM-------------
+             Cg_wet= 1.105111849650809e+12
+             Pg_wet=2.5
+!            Cg_wet=37.5*1000**0.215
+!            Pg_wet=0.215
+
+!            rain
+!            Zer = Cr  * (RHO * qrexp)**(1.75_r_kind)
+             Zero1 = Cr  * (RHO * qrexp)**(Pr)
+             if (  qrexp > 10E-7 .and. qscalar(P_NR) > 20  ) then
+                Zer = 720 *(RHO*qrexp)**2_r_kind*ten**18_r_kind/(pi**2_r_kind*rhor**2_r_kind*qscalar(P_NR))
+       !        Zer = Cr  * (RHO * qrexp)**(Pr)
+             else
+                Zer = 10E-8
+             endif
+
+!            snow
+             Zeso  = Cs_dry * (RHO * qsexp)**(Ps_dry)
+             if (qsexp > 10E-7) then
+                Zes = ten**(1.602_r_kind*(qsexp*1000)**0.56_r_kind)
+!               Zes =  Cs_dry * (RHO * qsexp)**(Ps_dry)
+             else
+                Zes = 10E-8
+             endif
+
+!            graupel/hail
+             Zego  = Cg_dry * (RHO * qgexp)**(Pg_dry)
+             if ( qgexp > 10E-7 ) then
+!               Zeg=ten**18_r_kind*(RHO*qgexp)**1.75_r_kind*720/(pi**1.75_r_kind*(200/(qgexp*0.1*0.2))**0.75_r_kind*rhog**1.9_r_kind)
+!               Zeg = Cg_wet * (RHO * qgexp)**(Pg_wet)
+                Zeg = Cg_wet*RHO**1.75_r_kind*qgexp**Pg_wet
+!               Zeg = ten**(3.75_r_kind*(qgexp*1000)**0.215_r_kind)
+!               Cg_tmp  = Cg_wet
+             else
+                Zeg=10E-8
+             endif
+
+             Zeo=Zero1+Zeso+Zego
+
+             if(Zeo <1.0_r_kind) then
+                Zeo=Zeo + 1.0_r_kind
+             end if
+
+             Zo = ten * log10(Zeo)
+             Zro = ten * log10(Zero1)
+             Zso = ten * log10(Zeso)
+             Zgo = ten * log10(Zego)
+
+             Ze=Zer+Zes+Zeg
+
+         !   Zelim treatment for CVq Cliu   ! Jun : is this applied for CVq, CVpq, and CVlogq?
+!            if ( .not. l_use_log_qx )then
+               if(Ze <1.0_r_kind) then
+                  Ze=Ze + 1.0_r_kind
+               end if
+!            endif
+!            Convert to simulated radar reflectivity in units of dBZ
+             Ze_orig = Ze
+             rdBZ = ten * log10(Ze)
+             rdBZr = ten * log10(Zer)
+             rdBZs = ten * log10(Zes)
+             rdBZg = ten * log10(Zeg)
+
+             if ( (rdBZ - Zo) > 15 ) then
+
+                aaa=aaa+1
+
+                print*, 'rdBZ, rdBZr, rdBZs,rdBZg',rdBZ, rdBZr, rdBZs,rdBZg
+                print*, 'Zo,Zro,Zso,Zgo',Zo,Zro,Zso,Zgo
+
+!               print*, 'Zer, Zero1',Zer, Zero1
+!               print*, 'Cr, RHO, qrexp, Pr',Cr, RHO, qrexp, Pr
+!               print*, 'qscalar(P_NR)',qscalar(P_NR)
+                print*, 'Zeg, Zego', Zeg, Zego
+                print*, 'qgexp',qgexp
+
+                print*, 'aaa',aaa
+             endif
+
+             if ( (Zo - rdBZ) > 15 ) then
+  
+                bbb=bbb+1
+ 
+                print*, 'rdBZ, rdBZr, rdBZs,rdBZg',rdBZ, rdBZr, rdBZs,rdBZg
+                print*, 'Zo,Zro,Zso,Zgo',Zo,Zro,Zso,Zgo
+
+!               print*, 'Zer, Zero1',Zer, Zero1
+!               print*, 'Cr, RHO, qrexp, Pr',Cr, RHO, qrexp, Pr
+!               print*, 'qscalar(P_NR)',qscalar(P_NR)
+                print*, 'Zeg, Zego', Zeg, Zego
+                print*, 'qgexp',qgexp
+
+                print*, 'bbb',bbb
+             endif
+
+!            find dqr/ddBZ, dqs/ddBZ, dqg/ddBZ (used in inner loop routine)
+!            Jacobian used for TLM and ADM
+!            denom=(log(ten))*Ze
+             if ( l_use_log_qx ) then
+!               rain
+                if ( qrexp > 10E-7 .and. qscalar(P_NR) > 20 ) then
+                   jqr_num = (2*720*RHO**2_r_kind*qrexp**(2_r_kind-l_use_log_qx_pval)/(pi**2_r_kind*rhor**2_r_kind*qscalar(P_NR)))*ten**12_r_kind*ten**6_r_kind !cliu
+!                  jqr_num = ten*Cr*((RHO)**Pr)*Pr*((qrexp)**(Pr-l_use_log_qx_pval)) !chenll
+                   if ( jqr_num > 1000000 .and. 1 == 0 ) then
+                      print*, 'jqr_num, jqr_num_10', jqr_num, (2*720*RHO**2_r_kind*qrexp**(2_r_kind-l_use_log_qx_pval)/(pi**2_r_kind*rhor**2_r_kind*qscalar(P_NR)))*10**12_r_kind*10**6_r_kind
+                      print*, 'RHO, qrexp, rhor, qscalar(P_NR)', RHO, qrexp, rhor,qscalar(P_NR)
+                      print*, 'jqr,jqr_num,denom', jqr,jqr_num,denom
+                      print*, 'mphyopt,l_use_log_qx',mphyopt,l_use_log_qx
+                      print*, 'ten*Cr*((RHO)**Pr)*Pr*((qrexp)**(Pr-l_use_log_qx_pval))', & 
+                              ten*Cr*((RHO)**Pr)*Pr*((qrexp)**(Pr-l_use_log_qx_pval))
+                      print*,'(2*720*RHO**2_r_kind*qrexp**(2_r_kind-l_use_log_qx_pval)/(pi**2_r_kind*rhor**2_r_kind*qscalar(P_NR)))*10**12_r_kind*10**6_r_kind',(2*720*RHO**2_r_kind*qrexp**(2_r_kind-l_use_log_qx_pval)/(pi**2_r_kind*rhor**2_r_kind*qscalar(P_NR)))*10**12_r_kind*10**6_r_kind
+                      print*,'(2*720*RHO**2_r_kind*qrexp**(2_r_kind-l_use_log_qx_pval)/(pi**2_r_kind*rhor**2_r_kind*qscalar(P_NR)))*10**12_r_kind',(2*720*RHO**2_r_kind*qrexp**(2_r_kind-l_use_log_qx_pval)/(pi**2_r_kind*rhor**2_r_kind*qscalar(P_NR)))*10**12_r_kind
+                      print*, 'rdBZ, rdBZr, rdBZs,rdBZg',rdBZ, rdBZr, rdBZs,rdBZg
+                      print*, 'Zo,Zro,Zso,Zgo',Zo,Zro,Zso,Zgo
+                      print*, 'Zer, Zero1',Zer, Zero1
+                      print*, 'Cr, RHO, qrexp, Pr',Cr, RHO, qrexp, Pr
+                      print*, 'qscalar(P_NR)',qscalar(P_NR)
+                   endif
+
+                   jqnr_num = (-720*RHO**2_r_kind*qrexp**2_r_kind/(pi**2_r_kind*rhor**2_r_kind*qscalar(P_NR)**2_r_kind))*ten**12_r_kind*ten**6_r_kind
+                else
+                   jqr_num = 10E-8
+                   jqnr_num = 10E-8
+                endif
+
+!               snow
+                if (qsexp > 10E-7) then
+                   jqs_num=ten**(1.602_r_kind*qsexp**0.56_r_kind*1000**0.56_r_kind)*log(ten)*1.602*0.56*1000**0.56_r_kind*qsexp**(0.56_r_kind-l_use_log_qx_pval) !cliu
+!                  jqs_num=ten*Cs_dry*((RHO)**Ps_dry)*Ps_dry*((qsexp)**(Ps_dry-l_use_log_qx_pval)) !chenll
+                else
+                   jqs_num = 10E-8
+                endif
+
+!               graupel/hail
+
+               if ( qgexp > 10E-7 ) then
+!                 jqg_num=(ten**12_r_kind*qgexp**(2.5-l_use_log_qx_pval)*RHO**1.75_r_kind*720*2.5/(pi**1.75_r_kind*(200/(0.1*0.2))**0.75_r_kind*rhog**1.9_r_kind))*ten**6_r_kind !cliu
+!                 jqg_num=ten*Cg_wet*((RHO)**Pg_wet)*Pg_wet*((qgexp)**(Pg_wet-l_use_log_qx_pval)) !chenll
+                  jqg_num=ten*Cg_wet*((RHO)**1.75_r_kind)*Pg_wet*((qgexp)**(Pg_wet-l_use_log_qx_pval)) !chenll
+!                 jqg_num=ten**(3.75_r_kind*qgexp**0.215_r_kind*1000**0.215_r_kind)*log(ten)*3.75*0.215*1000**0.215_r_kind*qgexp**(0.215_r_kind-l_use_log_qx_pval) !cliu
+
+                  if ( jqg_num > 1000000 ) then
+                     print*,'jqg_num, jqg_num_lin', jqg_num,ten*Cg_wet*((RHO)**Pg_wet)*Pg_wet*((qgexp)**(Pg_wet-l_use_log_qx_pval))
+                     print*,'Zeg, Zeg_lin',Zeg,  Cg_wet * (RHO * qgexp)**(Pg_wet)
+                     print*,'qgexp,l_use_log_qx_pval, RHO, pi,rhog',qgexp,l_use_log_qx_pval, RHO, pi, rhog
+                     print*,'Cg_wet,RHO,Pg_wet', Cg_wet,RHO,Pg_wet
+                  endif
+               else
+                  jqg_num=10E-8
+               endif
+ 
+             else ! CVq
+
+!              rain
+!              Zer =
+!              720*(RHO*qrexp)**2_r_kind*10**18_r_kind/(pi**2_r_kind*rhor**2_r_kind*qscalar(P_NR))
+               if ( qrexp > 10E-7 .and. qscalar(P_NR) > 1 ) then
+                  jqr_num = (2_r_kind*720*RHO**2_r_kind*qrexp/(pi**2_r_kind*rhor**2_r_kind*qscalar(P_NR)))*ten**12_r_kind*ten**6_r_kind !cliu
+                  jqnr_num = (-720*RHO**2_r_kind*qrexp**2_r_kind/(pi**2_r_kind*rhor**2_r_kind*qscalar(P_NR)**2_r_kind))*ten**12_r_kind*ten**6_r_kind
+               else
+                  jqr_num = 10E-8
+                  jqnr_num = 10E-8
+               endif
+
+!              snow
+!              Zes = 10 **(1.602_r_kind*(qsexp*1000)**0.56_r_kind)
+               if (qsexp > 10E-7) then
+                  jqs_num = ten**(1.602_r_kind*(qsexp*1000)**0.56_r_kind)*log(ten)*1.602*0.56*1000**0.56*qsexp**(-0.44) !cliu
+               else
+                  jqs_num = 10E-8
+               endif
+
+!            graupel/hail
+               if ( qgexp > 10E-7 ) then
+!                 Zeg=ten**18_r_kind*(RHO*qgexp)**1.75_r_kind*720/(pi**1.75_r_kind*(200/(qgexp*0.1*0.2))**0.75_r_kind*rhog**1.9_r_kind)
+                  jqg_num = (ten**12_r_kind*RHO**1.75_r_kind*qgexp**1.5_r_kind*720*2.5/(pi**1.75_r_kind*(200/(0.1*0.2))**0.75_r_kind*rhog**1.9_r_kind))*ten**6_r_kind !cliu 
+               else
+                  jqg_num=10E-8
+               endif
+
+             end if
+
+             denom=(log(ten))*Ze
+  
+             jqr  = jqr_num/denom
+             jqs  = jqs_num/denom
+             jqg  = jqg_num/denom
+             jqnr = jqnr_num/denom
+
+          end if
 
         case default
            write(6,*) 'not recognized mphyopt-->',mphyopt
@@ -1095,6 +1443,7 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
 
 ! --- CAPS ---
      else
+
 
 !    Interpolate guess dbz to observation location and time.
         if(if_model_dbz) then
@@ -1181,6 +1530,71 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
         IF(dlon==105 .and. dlat==28 )WRITE(*,*)'------------------Cr,Cs,Cg=',Cr,Cs_tmp,Cg_tmp
         IF(dlon==105 .and. dlat==28 )WRITE(*,*)'------------------Pr,Ps,pg=',Pr,Ps_dry,Pg_dry
         IF(dlon==105 .and. dlat==28 )WRITE(*,*)'-----------------------rho=',RHO
+
+        ! cliu and chenll
+        if ( ddiff > 10000 ) then
+           print*, 'ddiff, data(idbzob,i), rdBZ', ddiff, data(idbzob,i), rdBZ
+        else if ( ddiff <= 1000 ) then
+        else
+           print*, 'ddiff, data(idbzob,i), rdBZ', ddiff, data(idbzob,i), rdBZ
+        endif
+
+        if ( jqr > 10000000 ) then
+           print*, 'RHO, qrexp, rhor, qscalar(P_NR)', RHO, qrexp, rhor,qscalar(P_NR)
+           print*, 'jqr,jqr_num,denom', jqr,jqr_num,denom
+           print*, 'mphyopt,l_use_log_qx',mphyopt,l_use_log_qx
+           print*, 'ten*Cr*((RHO)**Pr)*Pr*((qrexp)**(Pr-l_use_log_qx_pval))', ten*Cr*((RHO)**Pr)*Pr*((qrexp)**(Pr-l_use_log_qx_pval))
+           print*,'(2*720*RHO**2_r_kind*qrexp**(2_r_kind-l_use_log_qx_pval)/(pi**2_r_kind*rhor**2_r_kind*qscalar(P_NR)))*10**12_r_kind*10**6_r_kind',(2*720*RHO**2_r_kind*qrexp**(2_r_kind-l_use_log_qx_pval)/(pi**2_r_kind*rhor**2_r_kind*qscalar(P_NR)))*10**12_r_kind*10**6_r_kind
+           print*, '(2*720*RHO**2_r_kind*qrexp**(2_r_kind-l_use_log_qx_pval)/(pi**2_r_kind*rhor**2_r_kind*qscalar(P_NR)))*10**12_r_kind',(2*720*RHO**2_r_kind*qrexp**(2_r_kind-l_use_log_qx_pval)/(pi**2_r_kind*rhor**2_r_kind*qscalar(P_NR)))*10**12_r_kind
+           print*, 'rdBZ, rdBZr, rdBZs,rdBZg',rdBZ, rdBZr, rdBZs,rdBZg
+           print*, 'Zo,Zro,Zso,Zgo',Zo,Zro,Zso,Zgo
+           print*, 'Zer, Zero1',Zer, Zero1
+
+           print*, 'Cr, RHO, qrexp, Pr',Cr, RHO, qrexp, Pr
+           print*, 'qscalar(P_NR)',qscalar(P_NR)
+        else if ( jqr <= 10000000 ) then
+        else
+           print*, 'RHO, qrexp, rhor, qscalar(P_NR)', RHO, qrexp, rhor, qscalar(P_NR)
+           print*, 'jqr', jqr
+           stop
+        endif
+
+        if ( jqs > 100 ) then
+        else if ( jqs <= 100 ) then
+        else
+           print*, 'jqs', jqs
+        endif
+
+        if ( jqg > 100 ) then
+        else if ( jqg <= 100 ) then
+        else
+           print*, 'jqg', jqg
+        endif
+
+        if ( jqnr > 100 ) then
+        else if ( jqnr <= 100 ) then
+        else
+           print*, 'jqnr', jqnr
+        endif
+
+!       if ( abs(rdBZ - Zo) > 25.0   ) then
+        if (  Zro > 1500 ) then
+           aaa=aaa+1
+           print*,'aaa',aaa
+           print*,'data(idbzob,i)=',data(idbzob,i),'rdBZ=',rdBZ,'ddiff=',ddiff
+           print*, 'Ze, Zer, Zes, Zeg', Ze, Zer, Zes, Zeg
+           print*, 'Zeo, Zero1, Zeso, Zego', Zeo, Zero1, Zeso, Zego
+           print*, 'RHO,qgexp,pi,rhog',RHO,qgexp,pi,rhog
+
+           print*, 'rdBZ, rdBZr, rdBZs,rdBZg',rdBZ, rdBZr, rdBZs,rdBZg
+           print*, 'Zo,Zro,Zso,Zgo',Zo,Zro,Zso,Zgo
+
+           print*, 'RHO, qrexp,PI,RHOR,qscalar(P_NR)',RHO,qrexp,PI,RHOR,qscalar(P_NR)
+
+           print*, 'Cr, Pr', Cr, Pr
+           print*, 'qsexp, Cs_dry, Ps_dry', qsexp, Cs_dry, Ps_dry
+           print*, 'qgexp, rhog, Cg_dry, Pg_dry', qgexp, rhog, Cg_dry,Pg_dry
+        endif
 
         if(lvldbg>1) then
            if (NINT(dlat) .eq. 105 .and. NINT(dlon) .eq. 175) then
@@ -1376,6 +1790,10 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
         my_head%raterr2 = ratio_errors**2
         if ( l_use_dbz_caps ) then           !! CAPS
            my_head%ddiff   = ddiff   ! CAPS uses ddiff, not res
+          my_head%jqr     = jqr                 ! for TL and ADJ
+          my_head%jqs     = jqs                 ! for TL and ADJ
+          my_head%jqg     = jqg                 ! for TL and ADJ
+           my_head%jqnr    = jqnr
         else
            my_head%res     = ddiff
         end if
@@ -1512,7 +1930,9 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
         endif
      endif
      if(init_pass .and. mype == 0) then
-        write(lu_diag) ianldate
+        if ( .not. l_use_dbz_caps ) then    ! CAPS uses these diagnostics for EnKF, EnKF uses single OBS file for now.
+           write(lu_diag) ianldate          ! So do not write analysis date for binary in case of using CAPS EnKF DA.
+        end if
         write(6,*)'SETUPDBZ:   write time record to file ',&
                 trim(diag_file), ' ',ianldate
      endif
@@ -1563,7 +1983,7 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
      proceed=proceed.and.ivar>0
   end if
 ! --- CAPS ---
-  if ( mphyopt == 108 ) then
+  if ( mphyopt == 2 .or. mphyopt == 108 ) then
       call gsi_metguess_get ('var::qnr', ivar, istatus )
       proceed=proceed.and.ivar>0
   end if
@@ -1744,7 +2164,7 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
          call stop2(999)
      endif
 !    get qnr ...
-     if ( mphyopt == 108 ) then
+     if ( mphyopt == 2 .or. mphyopt == 108 ) then
          varname='qnr'
          call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus) 
          if (istatus==0) then

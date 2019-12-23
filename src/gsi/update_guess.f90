@@ -282,7 +282,9 @@ subroutine update_guess(sval,sbias)
            endif
            icloud=getindex(cloud,guess(ic))
            if(icloud>0) then
-              if (trim(guess(ic))=='qr' .or. & trim(guess(ic))=='qs' .or. & trim(guess(ic))=='qg') then
+              if (trim(guess(ic))=='qr' .or. &
+                  trim(guess(ic))=='qs' .or. & 
+                  trim(guess(ic))=='qg') then
                   if ( l_use_log_qx ) then
 !                      using log transformation for qr/qs/qg, no qcmin check
                      !  write(6,*)'sub update_guess: no qcmin check for cloud variable:',trim(guess(ic)),'(mype=',mype,')'
@@ -331,8 +333,22 @@ subroutine update_guess(sval,sbias)
                   cycle
               end if
            else
+! --- CAPS ----
+!-------cliu part update--------
+          ! if ( (jiter==1 .or. jiter==2 .or. jiter==3 ) .and. &
+          !    (trim(guess(ic))=='u' .or. trim(guess(ic))=='v' .or.
+          !    trim(guess(ic))=='tv'.or.
+          !    trim(guess(ic))=='q'.or.trim(guess(ic))=='div' .or.
+          !    trim(guess(ic))=='vor' ) ) then
+          !     ptr3dges = ptr3dges
+          ! else
+          !    ptr3dges = ptr3dges + ptr3dinc
+          !    cycle
+          ! endif
+! --- CAPS ---
               ptr3dges = ptr3dges + ptr3dinc
               cycle
+! ------------------------------------------------------------
            endif
         else  ! Case when met_guess and state vars do not map one-to-one 
            if (trim(guess(ic))=='div') then
