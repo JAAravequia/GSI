@@ -94,6 +94,9 @@ fi
 export OZN_TANKDIR=$OZN_STATS_TANKDIR
 export DATAROOT=${STMP_USER}
 
+if [[ -e ${OZN_TANKDIR}/info/gdas_oznmon_satype.txt ]]; then
+   export satype_file=${satype_file:-${OZN_TANKDIR}/info/gdas_oznmon_satype.txt}
+fi
 
 #--------------------------------------------------------------
 #  Determine next cycle

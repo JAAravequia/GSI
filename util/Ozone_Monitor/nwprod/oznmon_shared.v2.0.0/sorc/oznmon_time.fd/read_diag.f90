@@ -23,7 +23,7 @@
 
 module read_diag
 
-  !--- use
+  !--- use ---!
 
   use kinds, only: r_single,r_double,i_kind
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close, & 
@@ -35,12 +35,12 @@ module read_diag
   use ncdr_vars, only:     nc_diag_read_check_var
 
 
-  !--- implicit
+  !--- implicit ---!
 
   implicit none
 
 
-  !--- public & private
+  !--- public & private ---!
 
   private
 
@@ -58,7 +58,7 @@ module read_diag
   public :: set_netcdf_read
 
 
-  !--- diagnostic file format - header
+  !--- diagnostic file format - header ---!
   
   type diag_header_fix_list
     sequence
@@ -81,7 +81,7 @@ module read_diag
     integer(i_kind):: iouse		! use flag
   end type diag_header_nlev_list
 
-  !--- diagnostic file format - data
+  !--- diagnostic file format - data ---!
 
   integer,parameter :: IREAL_RESERVE  = 3
   
@@ -91,6 +91,7 @@ module read_diag
     real(r_single) :: lon            ! longitude (deg)
     real(r_single) :: obstime        ! observation time relative to analysis
   end type diag_data_fix_list
+  integer(i_kind), parameter    :: fix_list_size = 3
 
   type diag_data_nlev_list
     sequence
@@ -101,13 +102,14 @@ module read_diag
     real(r_single) :: fovn               ! scan position (field of view)
     real(r_single) :: toqf               ! omi row anomaly index or MLS o3mr precision
   end type diag_data_nlev_list
+  integer(i_kind), parameter    :: nlev_list_size = 6
 
   type diag_data_extra_list
   sequence
     real(r_single) :: extra              ! extra information
   end type diag_data_extra_list
 
-  logical,save                  ::  netcdf          = .false.
+  logical,save                  :: netcdf           = .false.
   integer(i_kind),save          :: num_global_attrs = 0
   integer(i_kind),save          :: attr_name_mlen   = 0
   integer(i_kind),save          :: num_vars         = 0
@@ -147,7 +149,7 @@ module read_diag
      !
      integer(i_kind), intent(inout) :: ftin             
      integer(i_kind), intent(out)   :: istatus
-     integer(i_kind)                :: i,ncd_nobs
+     integer(i_kind)                :: i  !,ncd_nobs
 
 
      istatus = -999
@@ -431,7 +433,7 @@ module read_diag
     header_fix%id        = sat
     header_fix%obstype   = obstype
 !    header_fix%jiter     = jiter   ! This is not in the NetCDF file.  It's not
-				    ! used by the OznMon so no loss.
+				    ! used by the OznMon so, fortunately, no loss.
     header_fix%nlevs     = nlevs
     header_fix%ianldate  = idate
 
@@ -574,13 +576,12 @@ module read_diag
     integer                    ,intent(out) :: iflag
     integer(i_kind)            ,intent(out) :: ntobs
    
- 
+
     if ( netcdf ) then
        call read_ozndiag_data_nc( ftin, header_fix, data_fix, data_nlev, data_extra, ntobs, iflag )
     else
        call read_ozndiag_data_bin( ftin, header_fix, data_fix, data_nlev, data_extra, ntobs, iflag )
     end if 
-
 
   end subroutine read_ozndiag_data
 
@@ -787,8 +788,7 @@ module read_diag
     !--- NOTE:  These pointers are used to build an array numbering
     !           ntobs.  So they should be allocated every time this
     !           routine is called and should not be deallocated
-    !           here.  The time.f90 could deallocate them at the
-    !           very end of the program, I think.
+    !           here.  
 
     type(diag_data_fix_list),   pointer     :: data_fix(:)
     type(diag_data_nlev_list)  ,pointer     :: data_nlev(:,:)
@@ -809,9 +809,11 @@ module read_diag
     !--- allocate if necessary
 
     read(ftin,IOSTAT=iflag) ntobs
+    write(6,*) ' READ 1, ntobs, iflag = ', ntobs, iflag
 
     if( header_fix%nlevs /= nlevs_last )then
       if( nlevs_last > 0 )then
+        write(6,*) ' DEALLOCATING data_nlev, data_fix, data_mpi'
         deallocate( data_nlev )
         deallocate( data_fix )
         deallocate( data_mpi )
@@ -832,8 +834,8 @@ module read_diag
 
     !--- read a record
 
-    allocate( tmp_fix(3,ntobs))
-    allocate( tmp_nlev(10,header_fix%nlevs,ntobs))
+    allocate( tmp_fix( fix_list_size, ntobs ))
+    allocate( tmp_nlev( nlev_list_size, header_fix%nlevs,ntobs ))
 
     if (header_fix%iextra == 0) then
        read(ftin,IOSTAT=iflag) data_mpi, tmp_fix, tmp_nlev
@@ -904,12 +906,12 @@ module read_diag
   subroutine load_file_vars_nc( ftin )
      integer(i_kind), intent(in) :: ftin
 
-
    
      call nc_diag_read_get_global_attr_names(ftin, num_global_attrs, &
                 attr_name_mlen, attr_names)
 
      call nc_diag_read_get_var_names(ftin, num_vars, var_name_mlen, var_names)
+
 
   end subroutine load_file_vars_nc
 
