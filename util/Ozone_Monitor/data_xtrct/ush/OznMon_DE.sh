@@ -151,7 +151,7 @@ export COMROOT=${PTMP_USER}
 
 #-------------------------------------------------------------
 #  This is default for wcoss/cray machines.  Need to reset 
-#  COM_IN in parm files for theia.
+#  COM_IN in parm files for hera.
 #
 export COM_IN=${COM_IN:-/gpfs/hps/nco/ops/com/gfs/prod}
 
@@ -204,7 +204,7 @@ echo "jobfile = $jobfile"
 echo "out:  $OZN_LOGdir/DE.$PDY.$cyc.log"
 echo "err:  $OZN_LOGdir/DE.$PDY.$cyc.err"
 
-if [[ $MY_MACHINE = "theia" ]]; then
+if [[ $MY_MACHINE = "hera" ]]; then
    $SUB --account=${ACCOUNT} --time=05 -J ${job} -D . \
         -o ${OZN_LOGdir}/DE.${PDY}.${cyc}.log \
 	--ntasks=1 --mem=5g \
