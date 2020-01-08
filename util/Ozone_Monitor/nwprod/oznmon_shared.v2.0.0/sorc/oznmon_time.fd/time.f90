@@ -235,35 +235,51 @@ program main
 
             do j = 1, n_levs
 
-               !-------------------------------------------------
-               ! If observation was assimilated, accumulate 
-               !     sums in appropriate regions
+               !------------------------------------------------------------------
+               ! Accumulate sums in appropriate regions.
+               ! This is done for all obs, assimilated or not.  
+               ! Earlier versions of this code included a commented out line
+               ! which contained a check for assimlated status:
                !
-               if (data_nlev(j,iobs)%varinv > 1.e-6) then
-                  write(6,*) 'data_nlev(j,iobs)%varinv = ', j, iobs, data_nlev(j,iobs)%varinv
-                  pen         =  data_nlev(j,iobs)%varinv*(data_nlev(j,iobs)%ozone_inv)**2
-                  cor_omg(1)  =  data_nlev(j,iobs)%ozone_inv
-                  cor_omg(2)  =  (cor_omg(1))**2
+               !    if (data_nlev(j,iobs)%varinv > 1.e-6) then
+               !
+               ! around the code (below) encompassing everything with this 
+               ! do loop (above).  Adding this check back into the code 
+               ! results in all non-assimilates sources producing
+               ! zeroed out plots, which isn't desireable.  I've preserved the
+               ! check in this comment just in case it's needed some day.
+               !
 
-                  do i=1,nreg
-                     k=jsub(i)
-                     cnt(j,k) = cnt(j,k) +1.0 
-                     penalty(j,k) = penalty(j,k) + pen
+               write(6,*) 'data_nlev(j,iobs)%varinv = ', j, iobs, data_nlev(j,iobs)%varinv
+               pen         =  data_nlev(j,iobs)%varinv*(data_nlev(j,iobs)%ozone_inv)**2
+               cor_omg(1)  =  data_nlev(j,iobs)%ozone_inv
+               cor_omg(2)  =  (cor_omg(1))**2
 
-                     do ii=1,2
-                        omg_cor(j,k,ii)  = omg_cor(j,k,ii)  + cor_omg(ii)
-                     end do
+               do i=1,nreg
+                  k=jsub(i)
+                  cnt(j,k) = cnt(j,k) +1.0 
+                  penalty(j,k) = penalty(j,k) + pen
 
+                  do ii=1,2
+                     omg_cor(j,k,ii)  = omg_cor(j,k,ii)  + cor_omg(ii)
                   end do
-               end if
+
+               end do
 
             enddo 
 
-         else           !  all other data sources
+         else           !  mls data sources
 
             !------------------------------------------------------------------------
             ! If observation was assimilated, accumulate sums in appropriate regions
             !
+            ! Note that this block still has a check for assimilated data.  This
+            ! is only used by mls data sources.  Currently there are no mls data
+            ! sources.  If they do get added at some point be advised that this
+            ! check will produce zeroed output files if the sources are not
+            ! assimilated. 
+            !
+
             if (data_nlev(1,iobs)%varinv > 1.e-6) then
 
                pen         =  data_nlev(1,iobs)%varinv*(data_nlev(1,iobs)%ozone_inv)**2

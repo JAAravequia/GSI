@@ -22,8 +22,7 @@ data_map=${scripts}/data_map.xml
 #export NDATE=/nwprod/util/exec/ndate
 export NDATE=/gpfs/dell1/nco/ops/nwprod/prod_util.v1.1.0/exec/ips/ndate
 
-#export MAIL_CC="russ.treadon@noaa.gov, andrew.collard@noaa.gov, haixia.liu@noaa.gov"
-#export MAIL_CC="edward.c.safford@gmail.com"
+export MAIL_CC="russ.treadon@noaa.gov, andrew.collard@noaa.gov, haixia.liu@noaa.gov"
 export MAIL_TO="edward.safford@noaa.gov"
 
 export OZN_USE_RUN=1
