@@ -93,14 +93,14 @@ CONTAINS
            IF (npefiles .EQ. 0) THEN
               obsfile = TRIM(ADJUSTL(obspath))//"/"//&
                    &datestring//"/"//TRIM(ADJUSTL(id))//&
-                   &"/"//TRIM(sattypes_aod(nsat))//"_fmo"//".nc4"
+                   &"/"//TRIM(sattypes_aod(nsat))//"_hofx"//".nc4"
               
               INQUIRE(file=obsfile,exist=fexist)
               IF (.NOT. fexist) CALL stop2(704)
 
            ELSE ! read raw, unconcatenated pe* files.
               obsfile = TRIM(ADJUSTL(obspath))//TRIM(sattypes_aod(nsat))//&
-                   &"_fmo_"//datestring//"_"//TRIM(ADJUSTL(id))//&
+                   &"_hof_"//datestring//"_"//TRIM(ADJUSTL(id))//&
                    &"_"//pe_name//".nc4"
               INQUIRE(file=obsfile,exist=fexist)
               IF (.NOT. fexist) CALL stop2(705)
@@ -273,12 +273,12 @@ CONTAINS
           IF (npefiles .EQ. 0) THEN
              obsfile = TRIM(ADJUSTL(obspath))//"/"//&
                   &datestring//"/"//TRIM(ADJUSTL(id))//&
-                  &"/"//TRIM(sattypes_aod(nsat))//"_fmo"//".nc4"
+                  &"/"//TRIM(sattypes_aod(nsat))//"_hofx"//".nc4"
              INQUIRE(file=obsfile,exist=fexist)
              IF (.NOT. fexist) CALL stop2(704)
           ELSE ! read raw, unconcatenated pe* files.
              obsfile = TRIM(ADJUSTL(obspath))//TRIM(sattypes_aod(nsat))&
-                  &//"_fmo_"//datestring//"_"//TRIM(ADJUSTL(id))//&
+                  &//"_hofx_"//datestring//"_"//TRIM(ADJUSTL(id))//&
                   &"_"//pe_name//".nc4"
              INQUIRE(file=obsfile,exist=fexist)
              IF (.NOT. fexist) CALL stop2(705)
@@ -303,7 +303,7 @@ CONTAINS
 
           CALL nc_diag_read_get_var(iunit, 'latitude@MetaData', Latitude)
           CALL nc_diag_read_get_var(iunit, 'longitude@MetaData', Longitude)
-          CALL nc_diag_read_get_var(iunit, 'dtime@MetaData', Time)
+          CALL nc_diag_read_get_var(iunit, 'time@MetaData', Time)
 !          CALL nc_diag_read_get_var(iunit, 'Reference_Pressure', Pressure)
 !@mzp not present - set to 100000 Pa so that everybody is within localization
           Pressure=100000_r_kind
@@ -313,8 +313,8 @@ CONTAINS
           Errinv=1_r_kind/Errinv
           CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@ObsValue', Observation)
 !@mzp until fix ombg found use hofx0
-          CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@hofx0', Obs_Minus_Forecast_adjusted)
-          CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@hofx0', Obs_Minus_Forecast_unadjusted)
+          CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@Hofx', Obs_Minus_Forecast_adjusted)
+          CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@Hofx', Obs_Minus_Forecast_unadjusted)
           CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@ObsBias',bias)
           
           IF (lobsdiag_forenkf) THEN
@@ -332,12 +332,12 @@ CONTAINS
              IF (npefiles .EQ. 0) THEN
                 obsfile2 = TRIM(ADJUSTL(obspath))//"/"//&
                      &datestring//"/"//TRIM(ADJUSTL(id2))//&
-                     &"/"//TRIM(sattypes_aod(nsat))//"_fmo"//".nc4"
+                     &"/"//TRIM(sattypes_aod(nsat))//"_hofx"//".nc4"
                 INQUIRE(file=obsfile2,exist=fexist2)
                 IF (.NOT. fexist2) CALL stop2(714)
              ELSE ! read raw, unconcatenated pe* files.
                 obsfile2 = TRIM(ADJUSTL(obspath))//TRIM(sattypes_aod(nsat))&
-                     &//"_fmo_"//datestring//"_"//TRIM(ADJUSTL(id2))//&
+                     &//"_hofx_"//datestring//"_"//TRIM(ADJUSTL(id2))//&
                      &"_"//pe_name//".nc4"
                 INQUIRE(file=obsfile2,exist=fexist2)
                 IF (.NOT. fexist2) CALL stop2(715)
@@ -346,7 +346,7 @@ CONTAINS
              CALL nc_diag_read_init(obsfile2, iunit2)
              
              ALLOCATE(Obs_Minus_Forecast_adjusted2(nobs_curr))
-             CALL nc_diag_read_get_var(iunit2, 'aerosol_optical_depth_4@hofx0', Obs_Minus_Forecast_adjusted2)
+             CALL nc_diag_read_get_var(iunit2, 'aerosol_optical_depth_4@Hofx', Obs_Minus_Forecast_adjusted2)
              
              CALL nc_diag_read_close(obsfile2)
              
