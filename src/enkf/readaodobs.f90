@@ -93,7 +93,7 @@ CONTAINS
            IF (npefiles .EQ. 0) THEN
               obsfile = TRIM(ADJUSTL(obspath))//"/"//&
                    &datestring//"/"//TRIM(ADJUSTL(id))//&
-                   &"/"//TRIM(sattypes_aod(nsat))//"_hofx"//".nc4"
+                   &"/"//TRIM(sattypes_aod(nsat))//"_hofx.nc4"
               
               INQUIRE(file=obsfile,exist=fexist)
               IF (.NOT. fexist) CALL stop2(704)
@@ -273,7 +273,7 @@ CONTAINS
           IF (npefiles .EQ. 0) THEN
              obsfile = TRIM(ADJUSTL(obspath))//"/"//&
                   &datestring//"/"//TRIM(ADJUSTL(id))//&
-                  &"/"//TRIM(sattypes_aod(nsat))//"_hofx"//".nc4"
+                  &"/"//TRIM(sattypes_aod(nsat))//"_hofx.nc4"
              INQUIRE(file=obsfile,exist=fexist)
              IF (.NOT. fexist) CALL stop2(704)
           ELSE ! read raw, unconcatenated pe* files.
@@ -332,7 +332,7 @@ CONTAINS
              IF (npefiles .EQ. 0) THEN
                 obsfile2 = TRIM(ADJUSTL(obspath))//"/"//&
                      &datestring//"/"//TRIM(ADJUSTL(id2))//&
-                     &"/"//TRIM(sattypes_aod(nsat))//"_hofx"//".nc4"
+                     &"/"//TRIM(sattypes_aod(nsat))//"_hofx.nc4"
                 INQUIRE(file=obsfile2,exist=fexist2)
                 IF (.NOT. fexist2) CALL stop2(714)
              ELSE ! read raw, unconcatenated pe* files.

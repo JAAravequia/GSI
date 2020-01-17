@@ -1,6 +1,6 @@
 module fv3_netcdf_mod
 
-use kinds, only: r_single, i_kind, r_double, r_single
+use kinds, only: r_single, i_kind
 use netcdf, only: nf90_get_var,nf90_inq_varid
 use netcdf_mod, only: nc_check
 
