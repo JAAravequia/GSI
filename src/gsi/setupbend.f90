@@ -258,6 +258,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
 !750-755 => COSMIC-2 Equatorial
 !724-729 => COSMIC-2 Polar
 !825 => KOMPSAT-5
+!5   => MetOpC
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
@@ -561,8 +562,8 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
          if((data(isatid,i)==41).or.(data(isatid,i)==722).or.&
            (data(isatid,i)==723).or.(data(isatid,i)==4).or.(data(isatid,i)==42).or.&
            (data(isatid,i)==3).or.(data(isatid,i)==821.or.(data(isatid,i)==421)).or.&
-           (data(isatid,i)==440).or.(data(isatid,i)==43)) then
-                    
+           (data(isatid,i)==440).or.(data(isatid,i)==43).or.&
+           (data(isatid,i)==5)) then
            if((data(ilate,i)> r40).or.(data(ilate,i)< -r40)) then
               if(alt>r12) then
                 repe_gps=0.19032_r_kind+0.287535_r_kind*alt-0.00260813_r_kind*alt**2
