@@ -100,7 +100,7 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
 
 ! Declare local parameters  
   integer(i_kind),parameter:: maxlevs=500
-  integer(i_kind),parameter:: maxinfo=16
+  integer(i_kind),parameter:: maxinfo=19 ! to read more info - H. Zhang
   real(r_kind),parameter:: r10000=10000.0_r_kind
   real(r_kind),parameter:: r360=360.0_r_kind
 
@@ -133,17 +133,19 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
   real(r_kind) dlat_earth_deg,dlon_earth_deg
   real(r_kind) height,rlat,rlon,ref,bend,impact,roc,geoid,&
                bend_error,ref_error,bend_pccf,ref_pccf
-
+! to read more info - H. Zhang
+  integer(i_kind) sclf, ascd
+  real(r_kind) azim
   real(r_kind),allocatable,dimension(:,:):: cdata_all
  
-  integer(i_kind),parameter:: n1ahdr=10
+  integer(i_kind),parameter:: n1ahdr=11 ! read extra "SCLF" from bufr header - H. Zhang
   real(r_double),dimension(n1ahdr):: bfr1ahdr
   real(r_double),dimension(50,maxlevs):: data1b
   real(r_double),dimension(50,maxlevs):: data2a
   real(r_double),dimension(maxlevs):: nreps_this_ROSEQ2
  
   data lnbufr/10/
-  data hdr1a / 'YEAR MNTH DAYS HOUR MINU PCCF ELRC SAID PTID GEODU' / 
+  data hdr1a / 'YEAR MNTH DAYS HOUR MINU PCCF ELRC SAID PTID GEODU SCLF' /
   data nemo /'QFRO'/
   
 !***********************************************************************************
@@ -222,6 +224,7 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
         said=bfr1ahdr(8)        ! Satellite identifier
         ptid=bfr1ahdr(9)        ! Platform transmitter ID number
         geoid=bfr1ahdr(10)      ! Geoid undulation
+        sclf=bfr1ahdr(11)       ! gnss satellite classification: 401 gps - H. Zhang
         call w3fs21(idate5,minobs)
 
 ! Locate satellite id in convinfo file
@@ -292,6 +295,17 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
            endif
         endif
 
+        ascd = -1
+!       read ascending flag - H. Zhang
+        call upftbv(lnbufr,nemo,qfro,mxib,ibit,nib)
+        if(nib > 0) then
+          do i=1,nib
+               if(ibit(i)== 3) then
+                 ascd = 1
+                 exit
+               endif
+           enddo
+        endif
 
 ! Read bending angle information
 ! Get the number of occurences of sequence ROSEQ2 in this subset
@@ -341,6 +355,7 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
            nread=nread+1  ! count observations
            rlat=data1b(1,k)  ! earth relative latitude (degrees)
            rlon=data1b(2,k)  ! earth relative longitude (degrees)
+           azim=data1b(3,k)
            height=data2a(1,k)
            ref=data2a(2,k)
            ref_error=data2a(4,k)
@@ -370,7 +385,7 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
                  good=.false.
               endif
            else
-              if ((bend>=1.e+9_r_kind).or.(bend<=zero).or.(impact>=1.e+9_r_kind).or.(impact<roc)) then
+              if ((bend>=1.e+9_r_kind).or.(bend<=zero).or.(impact>=1.e+9_r_kind).or.(impact<roc).or.abs(azim)>360.) then
                  good=.false.
               endif
            endif
@@ -436,7 +451,9 @@ subroutine read_gps(nread,ndata,nodata,infile,lunout,obstype,twind, &
               cdata_all(14,ndata)= dlon_earth_deg  ! earth relative longitude (degrees)
               cdata_all(15,ndata)= dlat_earth_deg  ! earth relative latitude (degrees)
               cdata_all(16,ndata)= geoid           ! geoid undulation (m)
-
+              cdata_all(17,ndata)= sclf
+              cdata_all(18,ndata)= ascd
+              cdata_all(19,ndata)= azim
            else
               notgood = notgood + 1
            end if
