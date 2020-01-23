@@ -86,7 +86,7 @@ subroutine stpdbz(dbzhead,rval,sval,out,sges,nstep)
   use constants, only: half,one,two,tiny_r_kind,cg_term,zero_quad,r3600
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
-  use gridmod, only: wrf_mass_regional
+  use gridmod, only: wrf_mass_regional, fv3_regional
   use wrf_vars_mod, only : dbz_exist
   use m_obsNode, only: obsNode
   use m_dbzNode , only: dbzNode
@@ -94,6 +94,7 @@ subroutine stpdbz(dbzhead,rval,sval,out,sges,nstep)
   use m_dbzNode , only: dbzNode_nextcast
   use qcmod, only: nlnqc_iter,varqc_iter,njqc,vqc !CAPS
   use caps_radaruse_mod, only: l_use_dbz_caps  ! CAPS
+  use radaremul_cst, only: mphyopt ! CAPS
 
   implicit none
 
@@ -108,13 +109,13 @@ subroutine stpdbz(dbzhead,rval,sval,out,sges,nstep)
   integer(i_kind) ier,istatus
   integer(i_kind) j1,j2,j3,j4,j5,j6,j7,j8,kk
   real(r_kind) w1,w2,w3,w4,w5,w6,w7,w8
-  real(r_kind) valqr, valqs, valqg, valdbz
-  real(r_kind) qrcur, qscur, qgcur, dbzcur
+  real(r_kind) valqr, valqs, valqg, valqnr, valdbz
+  real(r_kind) qrcur, qscur, qgcur, qnrcur, dbzcur
   real(r_kind) cg_dbz,dbz,wgross,wnotgross
   real(r_kind),dimension(max(1,nstep))::pen
   real(r_kind) pg_dbz
-  real(r_kind),pointer,dimension(:) :: sqr,sqs,sqg,sdbz
-  real(r_kind),pointer,dimension(:) :: rqr,rqs,rqg,rdbz
+  real(r_kind),pointer,dimension(:) :: sqr,sqs,sqg,sqnr,sdbz
+  real(r_kind),pointer,dimension(:) :: rqr,rqs,rqg,rqnr,rdbz
   type(dbzNode), pointer :: dbzptr
 
   out=zero_quad
@@ -130,15 +131,22 @@ subroutine stpdbz(dbzhead,rval,sval,out,sges,nstep)
     call gsi_bundlegetpointer(rval,'dbz',rdbz,istatus);ier=istatus+ier
   else
     call gsi_bundlegetpointer(sval,'qr',sqr,istatus);ier=istatus+ier
-    if (wrf_mass_regional) then
+    if (wrf_mass_regional .or. fv3_regional ) then
       call gsi_bundlegetpointer(sval,'qs',sqs,istatus);ier=istatus+ier
       call gsi_bundlegetpointer(sval,'qg',sqg,istatus);ier=istatus+ier
+      if ( mphyopt .eq. 108 .and. l_use_dbz_caps .eqv. .true. ) then  ! CAPS/ TM operator also use qnr for TL/AJ
+         call gsi_bundlegetpointer(sval,'qnr',sqnr,istatus);ier=istatus+ier
+      end if
+
     end if
 
     call gsi_bundlegetpointer(rval,'qr',rqr,istatus);ier=istatus+ier
-    if (wrf_mass_regional) then
+    if (wrf_mass_regional .or. fv3_regional ) then
       call gsi_bundlegetpointer(rval,'qs',rqs,istatus);ier=istatus+ier
       call gsi_bundlegetpointer(rval,'qg',rqg,istatus);ier=istatus+ier
+      if ( mphyopt .eq. 108 .and. l_use_dbz_caps .eqv. .true. ) then  ! CAPS/ TM operator also use qnr for TL/AJ
+         call gsi_bundlegetpointer(rval,'qnr',rqnr,istatus);ier=istatus+ier
+      end if
     end if
   end if
   if(ier/=0)return
@@ -179,7 +187,7 @@ subroutine stpdbz(dbzhead,rval,sval,out,sges,nstep)
              qrcur=(w1* sqr(j1)+w2* sqr(j2)+w3* sqr(j3)+w4* sqr(j4)+       &
                     w5* sqr(j5)+w6* sqr(j6)+w7* sqr(j7)+w8* sqr(j8))
 
-             if (wrf_mass_regional)then
+             if (wrf_mass_regional .or. fv3_regional)then
                valqs=(w1* rqs(j1)+w2* rqs(j2)+w3* rqs(j3)+w4* rqs(j4)+ &
                       w5* rqs(j5)+w6* rqs(j6)+w7* rqs(j7)+w8* rqs(j8))
 
@@ -192,11 +200,29 @@ subroutine stpdbz(dbzhead,rval,sval,out,sges,nstep)
                qgcur=(w1* sqg(j1)+w2* sqg(j2)+w3* sqg(j3)+w4* sqg(j4)+ &
                       w5* sqg(j5)+w6* sqg(j6)+w7* sqg(j7)+w8* sqg(j8))
 
-               valdbz = valqr * dbzptr%jqr + valqs *  dbzptr%jqs +     &
-                        valqg * dbzptr%jqg
+               if ( mphyopt .eq. 108 .and. l_use_dbz_caps .eqv. .true. ) then  ! CAPS/ TM operator also use qnr for TL/AJ
+
+                  valqnr=(w1* rqnr(j1)+w2* rqnr(j2)+w3* rqnr(j3)+w4* rqnr(j4)+  &
+                          w5* rqnr(j5)+w6* rqnr(j6)+w7* rqnr(j7)+w8* rqnr(j8))
+
+                  qnrcur=(w1* sqnr(j1)+w2* sqnr(j2)+w3* sqnr(j3)+w4* sqnr(j4)+ &
+                          w5* sqnr(j5)+w6* sqnr(j6)+w7* sqnr(j7)+w8* sqnr(j8))
+
+                  valdbz = valqr * dbzptr%jqr + valqs *  dbzptr%jqs +     &
+                           valqg * dbzptr%jqg + valqnr * dbzptr%jqnr
+               else ! original calculation ; qr, qs, and qg
+                  valdbz = valqr * dbzptr%jqr + valqs *  dbzptr%jqs +     &
+                           valqg * dbzptr%jqg
+               end if
+
                if (l_use_dbz_caps) then !CAPS uses ddiff
-                  dbzcur = qrcur * dbzptr%jqr + qscur * dbzptr%jqs +      &
-                           qgcur * dbzptr%jqg - dbzptr%ddiff
+                  if ( mphyopt .eq. 108 ) then  ! TM operator also use qnr for TL/AJ
+                     dbzcur = qrcur * dbzptr%jqr + qscur * dbzptr%jqs +      &
+                              qgcur * dbzptr%jqg + qnrcur * dbzptr%jqnr - dbzptr%ddiff
+                  else
+                     dbzcur = qrcur * dbzptr%jqr + qscur * dbzptr%jqs +      &
+                              qgcur * dbzptr%jqg - dbzptr%ddiff
+                  end if
                else
                   dbzcur = qrcur * dbzptr%jqr + qscur * dbzptr%jqs +      &
                            qgcur * dbzptr%jqg - dbzptr%res

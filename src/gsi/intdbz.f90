@@ -98,13 +98,13 @@ subroutine intdbz_(dbzhead,rval,sval)
   use constants, only: half,one,tiny_r_kind,cg_term,r3600
   use obsmod, only: lsaveobsens,l_do_adjoint,luse_obsdiag
   use qcmod, only: nlnqc_iter,varqc_iter
-  use gridmod, only: wrf_mass_regional
+  use gridmod, only: wrf_mass_regional, fv3_regional
   use jfunc, only: jiter
   use gsi_bundlemod, only: gsi_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use gsi_4dvar, only: ladtest_obs
   use caps_radaruse_mod, only: l_use_dbz_caps ! CAPS
-
+  use radaremul_cst, only: mphyopt ! CAPS
   use wrf_vars_mod, only : dbz_exist
   implicit none
 
@@ -116,11 +116,11 @@ subroutine intdbz_(dbzhead,rval,sval)
 ! Declare local variables
   integer(i_kind) j1,j2,j3,j4,j5,j6,j7,j8,ier,istatus
 ! real(r_kind) penalty
-  real(r_kind) val,w1,w2,w3,w4,w5,w6,w7,w8,valqr,valqs,valqg,valdbz
+  real(r_kind) val,w1,w2,w3,w4,w5,w6,w7,w8,valqr,valqs,valqg,valdbz,valqnr
   real(r_kind) cg_dbz,p0,grad,wnotgross,wgross,pg_dbz
-  real(r_kind) qrtl,qstl, qgtl
-  real(r_kind),pointer,dimension(:) :: sqr,sqs,sqg,sdbz
-  real(r_kind),pointer,dimension(:) :: rqr,rqs,rqg,rdbz
+  real(r_kind) qrtl,qstl, qgtl, qnrtl
+  real(r_kind),pointer,dimension(:) :: sqr,sqs,sqg,sdbz,sqnr
+  real(r_kind),pointer,dimension(:) :: rqr,rqs,rqg,rdbz,rqnr
   type(dbzNode), pointer :: dbzptr
 
 !  If no dbz obs type data return
@@ -134,15 +134,25 @@ subroutine intdbz_(dbzhead,rval,sval)
     call gsi_bundlegetpointer(rval,'dbz',rdbz,istatus);ier=istatus+ier
   else
     call gsi_bundlegetpointer(sval,'qr',sqr,istatus);ier=istatus+ier
-    if (wrf_mass_regional) then
+
+    if (wrf_mass_regional .or. fv3_regional) then
       call gsi_bundlegetpointer(sval,'qs',sqs,istatus);ier=istatus+ier
       call gsi_bundlegetpointer(sval,'qg',sqg,istatus);ier=istatus+ier
+
+      if ( mphyopt .eq. 108 .and. l_use_dbz_caps .eqv. .true. ) then  ! CAPS/ TM operator also use qnr for TL/AJ
+         call gsi_bundlegetpointer(sval,'qnr',sqnr,istatus);ier=istatus+ier
+      end if
     end if
 
+
     call gsi_bundlegetpointer(rval,'qr',rqr,istatus);ier=istatus+ier
-    if (wrf_mass_regional) then
+    if (wrf_mass_regional .or. fv3_regional) then
       call gsi_bundlegetpointer(rval,'qs',rqs,istatus);ier=istatus+ier
       call gsi_bundlegetpointer(rval,'qg',rqg,istatus);ier=istatus+ier
+
+      if ( mphyopt .eq. 108 .and. l_use_dbz_caps .eqv. .true. ) then  ! CAPS/ TM operator also use qnr for TL/AJ
+         call gsi_bundlegetpointer(rval,'qnr',rqnr,istatus);ier=istatus+ier
+      end if
     end if
   end if
 
@@ -178,14 +188,20 @@ subroutine intdbz_(dbzhead,rval,sval)
      else
        qrtl = w1* sqr(j1)+w2* sqr(j2)+w3* sqr(j3)+w4* sqr(j4)+      &
               w5* sqr(j5)+w6* sqr(j6)+w7* sqr(j7)+w8* sqr(j8)
-       if ( wrf_mass_regional )then
+       if ( wrf_mass_regional .or. fv3_regional )then
          qstl  = w1* sqs(j1)+w2* sqs(j2)+w3* sqs(j3)+w4* sqs(j4)+  &
                  w5* sqs(j5)+w6* sqs(j6)+w7* sqs(j7)+w8* sqs(j8)
           
          qgtl  = w1* sqg(j1)+w2* sqg(j2)+w3* sqg(j3)+w4* sqg(j4)+  &
                  w5* sqg(j5)+w6* sqg(j6)+w7* sqg(j7)+w8* sqg(j8)
 
-         val   = (dbzptr%jqr)*qrtl + (dbzptr%jqs)*qstl + (dbzptr%jqg)*qgtl
+         if ( mphyopt .eq. 108 .and. l_use_dbz_caps .eqv. .true. ) then  ! CAPS/ TM operator also use qnr for TL/AJ
+            qnrtl  = w1* sqnr(j1)+w2* sqnr(j2)+w3* sqnr(j3)+w4* sqnr(j4)+      &
+                     w5* sqnr(j5)+w6* sqnr(j6)+w7* sqnr(j7)+w8* sqnr(j8)
+            val   = (dbzptr%jqr)*qrtl + (dbzptr%jqs)*qstl + (dbzptr%jqg)*qgtl +(dbzptr%jqnr)*qnrtl
+         else ! Original calculation: qr, qs, and qg
+            val   = (dbzptr%jqr)*qrtl + (dbzptr%jqs)*qstl + (dbzptr%jqg)*qgtl
+         end if
        end if
   
      end if
@@ -252,7 +268,7 @@ subroutine intdbz_(dbzhead,rval,sval)
           rqr(j6)=rqr(j6)+w6*valqr
           rqr(j7)=rqr(j7)+w7*valqr
           rqr(j8)=rqr(j8)+w8*valqr
-          if ( wrf_mass_regional )then
+          if ( wrf_mass_regional .or. fv3_regional )then
             valqs=dbzptr%jqs*grad
             valqg=dbzptr%jqg*grad
 
@@ -273,6 +289,19 @@ subroutine intdbz_(dbzhead,rval,sval)
             rqg(j6)=rqg(j6)+w6*valqg
             rqg(j7)=rqg(j7)+w7*valqg
             rqg(j8)=rqg(j8)+w8*valqg
+
+            if ( mphyopt .eq. 108 .and. l_use_dbz_caps .eqv. .true. ) then  ! CAPS/ TM operator also use qnr for TL/AJ
+               valqnr=dbzptr%jqnr*grad
+
+               rqnr(j1)=rqnr(j1)+w1*valqnr
+               rqnr(j2)=rqnr(j2)+w2*valqnr
+               rqnr(j3)=rqnr(j3)+w3*valqnr
+               rqnr(j4)=rqnr(j4)+w4*valqnr
+               rqnr(j5)=rqnr(j5)+w5*valqnr
+               rqnr(j6)=rqnr(j6)+w6*valqnr
+               rqnr(j7)=rqnr(j7)+w7*valqnr
+               rqnr(j8)=rqnr(j8)+w8*valqnr
+            end if
           end if
         end if
  
