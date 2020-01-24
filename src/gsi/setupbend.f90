@@ -195,6 +195,8 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   
   integer(i_kind) ier,ilon,ilat,ihgt,igps,itime,ikx,iuse, &
                   iprof,ipctc,iroc,isatid,iptid,ilate,ilone,ioff,igeoid
+! additional info needed by jedi - H. Zhang
+  integer(i_kind) iazim, iascd, isclf
   integer(i_kind) i,j,k,kk,mreal,nreal,jj,ikxx,ibin
   integer(i_kind) mm1,nsig_up,ihob,istatus,nsigstart
   integer(i_kind) kprof,istat,k1,k2,nobs_out,top_layer_SR,bot_layer_SR,count_SR
@@ -269,7 +271,6 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
 
 ! Read and reformat observations in work arrays.
   read(lunin)data,luse,ioid
-
   ier=1        ! index of obs error in data array (now 1/(original obs error))
   ilon=2       ! index of grid relative obs location (x)
   ilat=3       ! index of grid relative obs location (y)
@@ -286,7 +287,10 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   ilone=14     ! index of earth relative longitude (degrees)
   ilate=15     ! index of earth relative latitude (degrees)
   igeoid=16    ! index of geoid undulation (a value per profile, m) 
-
+! additional info needed by jedi - H. Zhang
+  isclf=17
+  iascd=18
+  iazim=19
 ! Intialize variables
   nsig_up=nsig+nsig_ext ! extend nsig_ext levels above interface level nsig
   rsig=float(nsig)
@@ -299,7 +303,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
 
 
 ! Allocate arrays for output to diagnostic file
-  mreal=22
+  mreal=27
   nreal=mreal
   if (lobsdiagsave) nreal=nreal+4*miter+1
   if (save_jacobian) then
@@ -382,6 +386,7 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
           mype,nfldsig)
 
      prsltmp_o(1:nsig,i)=prsltmp(1:nsig) ! needed in minimization
+
 
 ! Compute refractivity index-radius product at interface
 !
@@ -502,8 +507,9 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
 
      rdiagbuf(:,i)         = zero
 
+!   to include jedi needed variables - H. Zhang
      rdiagbuf(1,i)         = ictype(ikx)        ! observation type
-     rdiagbuf(20,i)        = one                ! uses gps_ref (one = use of bending angle)
+!!   rdiagbuf(20,i)        = one                ! uses gps_ref (one = use of bending angle)
      rdiagbuf(2,i)         = data(iprof,i)      ! profile identifier
      rdiagbuf(3,i)         = data(ilate,i)      ! lat in degrees
      rdiagbuf(4,i)         = data(ilone,i)      ! lon in degrees
@@ -516,6 +522,12 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
      rdiagbuf(17,i)        = data(igps,i)       ! bending angle observation (radians)
      rdiagbuf(19,i)        = hob                ! model vertical grid (interface) if monotone grid
      rdiagbuf(22,i)        = 1.e+10_r_kind      ! spread (filled in by EnKF)
+     rdiagbuf(20,i)        = data(iptid,i)
+     rdiagbuf(23,i)        = data(isclf,i)  ! GNSS satellite classification
+     rdiagbuf(24,i)        = data(iascd,i)
+     rdiagbuf(25,i)        = data(iazim,i)  ! GNSS->LEO line of sight
+     rdiagbuf(26,i)        = data(igeoid,i) ! Geoid height above WGS-84 ellipsoid
+     rdiagbuf(27,i)        = rocprof        ! Earth’s local radius of curvature
 
      if(ratio_errors(i) > tiny_r_kind)  then ! obs inside model grid
 

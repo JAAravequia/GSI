@@ -754,41 +754,43 @@ end subroutine contents_binary_diag_
 subroutine contents_netcdf_diag_
   use sparsearr, only: sparr2, readarray, fullarray
   integer(i_kind),dimension(miter) :: obsdiag_iuse
-  integer(i_kind)                  :: obstype, obssubtype
+  integer(i_kind)                  :: stid, ptid, sclf, preqc, ascd, proid
   type(sparr2) :: dhx_dx
-
+  real(r_kind) :: obserradjust, obserfinal
 ! Observation class
   character(7),parameter     :: obsclass = '    gps'
 
-           call nc_diag_metadata("Station_ID",                            gps_allptr%cdiag             )
-           call nc_diag_metadata("Observation_Class",                     obsclass                     )
-           obstype    = gps_allptr%rdiag(1) 
-           obssubtype = gps_allptr%rdiag(2)
-           call nc_diag_metadata("Observation_Type",                      obstype                      )
-           call nc_diag_metadata("Observation_Subtype",                   obssubtype                   )
-           call nc_diag_metadata("Latitude",                              sngl(gps_allptr%rdiag(3))    )
-           call nc_diag_metadata("Longitude",                             sngl(gps_allptr%rdiag(4))    )
-           call nc_diag_metadata("Incremental_Bending_Angle",             sngl(gps_allptr%rdiag(5))    )
-           call nc_diag_metadata("Pressure",                              sngl(gps_allptr%rdiag(6))    )
-           call nc_diag_metadata("Height",                                sngl(gps_allptr%rdiag(7))    )
-           call nc_diag_metadata("Time",                                  sngl(gps_allptr%rdiag(8))    )
-           call nc_diag_metadata("Model_Elevation",                       sngl(gps_allptr%rdiag(9))    )
-           call nc_diag_metadata("Setup_QC_Mark",                         sngl(gps_allptr%rdiag(10))   )
-           call nc_diag_metadata("Prep_Use_Flag",                         sngl(gps_allptr%rdiag(11))   )
-           call nc_diag_metadata("Analysis_Use_Flag",                     sngl(gps_allptr%rdiag(12))   )
-
-           call nc_diag_metadata("Nonlinear_QC_Rel_Wgt",                  sngl(gps_allptr%rdiag(13))   )
-           call nc_diag_metadata("Errinv_Input",                          sngl(gps_allptr%rdiag(14))   )
-           call nc_diag_metadata("Errinv_Adjust",                         sngl(gps_allptr%rdiag(15))   )
-           call nc_diag_metadata("Errinv_Final",                          sngl(gps_allptr%rdiag(16))   )
-           call nc_diag_metadata("Observation",                           sngl(gps_allptr%rdiag(17))   )
-           call nc_diag_metadata("Obs_Minus_Forecast_adjusted",           sngl(gps_allptr%rdiag(17))*sngl(gps_allptr%rdiag(5)) )
-           call nc_diag_metadata("Obs_Minus_Forecast_unadjusted",         sngl(gps_allptr%rdiag(17))*sngl(gps_allptr%rdiag(5)) )
-           call nc_diag_metadata("Forecast_adjusted", sngl(gps_allptr%rdiag(17)-(gps_allptr%rdiag(17)*gps_allptr%rdiag(5))))
-           call nc_diag_metadata("Forecast_unadjusted", sngl(gps_allptr%rdiag(17)-(gps_allptr%rdiag(17)*gps_allptr%rdiag(5))))
-           call nc_diag_metadata("GPS_Type",                              sngl(gps_allptr%rdiag(20))   )
-           call nc_diag_metadata("Temperature_at_Obs_Location",           sngl(gps_allptr%rdiag(18))   )
-           call nc_diag_metadata("Specific_Humidity_at_Obs_Location",     sngl(gps_allptr%rdiag(21))   )
+  stid    = gps_allptr%rdiag(1)
+  proid   = gps_allptr%rdiag(2)
+  preqc   = gps_allptr%rdiag(10)
+  ptid    = gps_allptr%rdiag(20)
+  sclf    = gps_allptr%rdiag(23)
+  ascd    = gps_allptr%rdiag(24)
+  if(gps_allptr%rdiag(15).ne.0.0)    obserradjust = 1.0/gps_allptr%rdiag(15)
+  if(gps_allptr%rdiag(16).ne.0.0)    obserrfinal  = 1.0/gps_allptr%rdiag(16)
+  call nc_diag_metadata("occulting_sat_id@MetaData",             stid )
+  call nc_diag_metadata("reference_sat_id",                      ptid )
+  call nc_diag_metadata("gnss_sat_class@MetaData",               sclf )
+  call nc_diag_metadata("record_number@MetaData",                proid )
+  call nc_diag_metadata("latitude@MetaData",                     sngl(gps_allptr%rdiag(3))  )
+  call nc_diag_metadata("longitude@MetaData",                    sngl(gps_allptr%rdiag(4))  )
+  call nc_diag_metadata("time@MetaData",                         sngl(gps_allptr%rdiag(8))  )
+  call nc_diag_metadata("impact_height@MetaData",                sngl(gps_allptr%rdiag(7))  )
+  call nc_diag_metadata("impact_parameter@MetaData",             sngl(gps_allptr%rdiag(7)) + sngl(gps_allptr%rdiag(27)) )
+  call nc_diag_metadata("Model_Elevation",                       sngl(gps_allptr%rdiag(9))    )
+  call nc_diag_metadata("geoid_height_above_reference_ellipsoid@MetaData",          sngl(gps_allptr%rdiag(26))  )
+  call nc_diag_metadata("earth_radius_of_curvature@MetaData",                       sngl(gps_allptr%rdiag(27))  )
+  call nc_diag_metadata("ascending_flag@MetaData",               ascd  )
+  call nc_diag_metadata("sensor_azimuth_angle@MetaData",         sngl(gps_allptr%rdiag(25))  )
+  call nc_diag_metadata("air_pressure_at_Obs_Location@MetaData", sngl(gps_allptr%rdiag(6)*100.0)   )
+  call nc_diag_metadata("bending_angle@ObsValue",                sngl(gps_allptr%rdiag(17))  )
+  call nc_diag_metadata("bending_angle@ObsError",                obserrfinal )
+  call nc_diag_metadata("bending_angle@PreQC",                   preqc  )  ! gsi QCed  flag
+  call nc_diag_metadata("bending_angle@GsiHofX",                 sngl(gps_allptr%rdiag(17))*(one-sngl(gps_allptr%rdiag(5)) ) )
+  call nc_diag_metadata("bending_angle@GsiAdjustObsError",       obserradjust )
+  call nc_diag_metadata("bending_angle@GsiFinalObsError",        obserrfinal )
+  call nc_diag_metadata("Temperature_at_Obs_Location",           sngl(gps_allptr%rdiag(18)) )
+  call nc_diag_metadata("Specific_Humidity_at_Obs_Location",     sngl(gps_allptr%rdiag(21)) )
 
            if (save_jacobian) then
               call readarray(dhx_dx, gps_allptr%rdiag(ioff+1:nreal))
