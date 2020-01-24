@@ -756,7 +756,7 @@ subroutine contents_netcdf_diag_
   integer(i_kind),dimension(miter) :: obsdiag_iuse
   integer(i_kind)                  :: stid, ptid, sclf, preqc, ascd, proid
   type(sparr2) :: dhx_dx
-  real(r_kind) :: obserradjust, obserfinal
+  real(r_kind) :: obserradjust, obserrfinal
 ! Observation class
   character(7),parameter     :: obsclass = '    gps'
 
