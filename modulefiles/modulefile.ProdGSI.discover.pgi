@@ -1,6 +1,6 @@
 #%Module######################################################################
 proc ModulesHelp { } {
-    puts stderr "Set environment veriables for GSI"
+    puts stderr "Set environment variables for GSI"
     puts stderr "This module initializes the environment "
     puts stderr "for building and testing GSI on NCCS Discover:PGI\n"
 }
