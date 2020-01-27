@@ -58,11 +58,14 @@ module m_gpsStats
       real(r_kind),dimension(:),pointer :: rdiag => NULL()
 
       real(r_kind),dimension(:),pointer :: tges
+      real(r_kind),dimension(:),pointer :: hges
       real(r_kind),dimension(:),pointer :: hgesl
+      real(r_kind),dimension(:),pointer :: hgesi
       real(r_kind),dimension(:),pointer :: qges
       real(r_kind),dimension(:),pointer :: prsltmp
-      real(r_kind),dimension(:),pointer ::hges
       real(r_kind) :: zsges
+      real(r_kind),dimension(:),pointer :: prsgesi
+      real(r_kind),dimension(:),pointer :: prsgesl
 
       integer(i_kind) :: kprof
       logical         :: luse          !  flag indicating if ob is used in pen.
@@ -782,9 +785,9 @@ subroutine contents_netcdf_diag_
   call nc_diag_metadata("time@MetaData",                         sngl(gps_allptr%rdiag(8))  )
   call nc_diag_metadata("impact_height@MetaData",                sngl(gps_allptr%rdiag(7))  )
   call nc_diag_metadata("impact_parameter@MetaData",             sngl(gps_allptr%rdiag(7)) + sngl(gps_allptr%rdiag(27)) )
-  call nc_diag_metadata("Model_Elevation",                       sngl(gps_allptr%rdiag(9))    )
-  call nc_diag_metadata("geoid_height_above_reference_ellipsoid@MetaData",          sngl(gps_allptr%rdiag(26))  )
-  call nc_diag_metadata("earth_radius_of_curvature@MetaData",                       sngl(gps_allptr%rdiag(27))  )
+  call nc_diag_metadata("surface_geopotential_height",           sngl(gps_allptr%rdiag(9)) )
+  call nc_diag_metadata("geoid_height_above_reference_ellipsoid@MetaData", sngl(gps_allptr%rdiag(26))  )
+  call nc_diag_metadata("earth_radius_of_curvature@MetaData",              sngl(gps_allptr%rdiag(27))  )
   call nc_diag_metadata("ascending_flag@MetaData",               ascd  )
   call nc_diag_metadata("sensor_azimuth_angle@MetaData",         sngl(gps_allptr%rdiag(25))  )
   call nc_diag_metadata("air_pressure_at_Obs_Location@MetaData", sngl(gps_allptr%rdiag(6)*100.0)   )
@@ -803,17 +806,13 @@ subroutine contents_netcdf_diag_
               call nc_diag_data2d("Observation_Operator_Jacobian", dhx_dx_array)
            endif
 
+  call nc_diag_data2d("air_temperature",            sngl(gps_allptr%tges) )
+  call nc_diag_data2d("specific_humidity",          sngl(gps_allptr%qges) )
+  call nc_diag_data2d("geopotential_height",        sngl(gps_allptr%hgesl) )
+  call nc_diag_data2d("geopotential_height_levels", sngl(gps_allptr%hgesi) )
+  call nc_diag_data2d("air_pressure",               sngl(gps_allptr%prsgesl) )
+  call nc_diag_data2d("air_pressure_levels",        sngl(gps_allptr%prsgesi) )
 
-!           call nc_diag_data2d("atmosphere_ln_pressure_coordinate_i", gps_allptr%prsltmp)
-!           call nc_diag_data2d("geopotential_height_i", gps_allptr%hges)
-
-!           call nc_diag_data2d("virtual_temperature", gps_allptr%tges)
-!           call nc_diag_data2d("geopotential_height", gps_allptr%hgesl)
-!           call nc_diag_data2d("specific_humidity", gps_allptr%qges)
-
-!           call nc_diag_metadata("surface_geopotential_height", gps_allptr%zsges )
-
-!           call nc_diag_data2d("T_Jacobian",                              gps_allptr%mmpoint%jac_t             )
            if (lobsdiagsave) then
               print *,'ERROR: OBSDIAGSAVE SKIPPED IN NCDIAG DEVELOPMENT.  STOPPING.'
               call stop2(55)

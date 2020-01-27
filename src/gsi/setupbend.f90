@@ -116,6 +116,8 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
 
   use gsi_4dvar, only: nobs_bins,hr_obsbin
   use guess_grids, only: ges_lnprsi,hrdifsig,geop_hgti,nfldsig
+! additional fields for geovals - H. Zhang
+  use guess_grids, only: ges_lnprsl,geop_hgtl,ges_tsen,pt_ll,pbl_height
   use guess_grids, only: nsig_ext,gpstop
   use gridmod, only: nsig
   use gridmod, only: get_ij,latlon11
@@ -233,6 +235,10 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
+
+! define geoval arrays - H. Zhang
+  real(r_kind),dimension(nsig,  nobs):: tsentmp, sphmtmp, prstmpl, hgttmpl
+  real(r_kind),dimension(nsig+1,nobs):: prstmpi, hgttmpi
 
   save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
@@ -387,6 +393,14 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
 
      prsltmp_o(1:nsig,i)=prsltmp(1:nsig) ! needed in minimization
 
+!    get mid level variables - H. Zhang
+     call tintrp2a1(ges_tsen,   tsentmp(1:nsig,i),  dlat, dlon, dtime, hrdifsig, nsig, mype,nfldsig)
+     call tintrp2a1(ges_lnprsl, prstmpl(1:nsig,i),  dlat, dlon, dtime, hrdifsig, nsig, mype,nfldsig)
+     call tintrp2a1(geop_hgtl,  hgttmpl(1:nsig,i),  dlat, dlon, dtime, hrdifsig, nsig, mype,nfldsig)
+     sphmtmp(1:nsig,i)    = qges
+     prstmpi(1:nsig+1,i)  = prsltmp ! interface pressure
+     hgttmpl(1:nsig,i)    = hgttmpl(1:nsig,i) +  zsges
+     hgttmpi(1:nsig+1,i)  = hges +  zsges
 
 ! Compute refractivity index-radius product at interface
 !
@@ -947,6 +961,14 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
         allocate(gps_alltail(ibin)%head%rdiag(nreal),stat=istatus)
         if (istatus/=0) write(6,*)'SETUPBEND:  allocate error for gps_alldiag, istatus=',istatus
 
+!       set up geovals - H. Zhang
+        allocate(gps_alltail(ibin)%head%tges(nsig),stat=istatus)
+        allocate(gps_alltail(ibin)%head%qges(nsig),stat=istatus)
+        allocate(gps_alltail(ibin)%head%prsgesl(nsig),stat=istatus)
+        allocate(gps_alltail(ibin)%head%hgesl(nsig),stat=istatus)
+        allocate(gps_alltail(ibin)%head%prsgesi(nsig+1),stat=istatus)
+        allocate(gps_alltail(ibin)%head%hgesi(nsig+1),stat=istatus)
+
         gps_alltail(ibin)%head%ratio_err= ratio_errors(i)
         gps_alltail(ibin)%head%obserr   = data(ier,i)
         gps_alltail(ibin)%head%dataerr  = data(ier,i)*data(igps,i)
@@ -993,6 +1015,18 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
  
         do j=1,nreal
            gps_alltail(ibin)%head%rdiag(j)= rdiagbuf(j,i)
+        end do
+
+!       write geovals for JEDI - H. Zhang
+        do j= 1, nsig
+          gps_alltail(ibin)%head%tges(j)     = tsentmp(j,i)
+          gps_alltail(ibin)%head%qges(j)     = sphmtmp(j,i)
+          gps_alltail(ibin)%head%prsgesl(j)  = 1000.0*exp(prstmpl(j,i))
+          gps_alltail(ibin)%head%hgesl(j)    = hgttmpl(j,i)
+        end do
+        do j= 1, nsig + 1
+          gps_alltail(ibin)%head%prsgesi(j)  = 1000.0*exp(prstmpi(j,i))
+          gps_alltail(ibin)%head%hgesi(j)    = hgttmpi(j,i)
         end do
 
 ! If obs is "acceptable", load array with obs info for use
