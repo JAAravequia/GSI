@@ -260,7 +260,7 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
                           nc_diag_write, nc_diag_data2d
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_get_dim, nc_diag_read_close
   use gridmod, only: nsig,regional
-  use constants, only: tiny_r_kind,half,wgtlim,one,two,zero,five,four
+  use constants, only: tiny_r_kind,half,wgtlim,one,two,zero,five,four,huge_single
   use qcmod, only: npres_print,ptop,pbot
   use mpimod, only: ierror,mpi_comm_world,mpi_rtype,mpi_sum,mpi_max
   use jfunc, only: jiter,miter,jiterstart
@@ -756,7 +756,7 @@ subroutine contents_netcdf_diag_
   integer(i_kind),dimension(miter) :: obsdiag_iuse
   integer(i_kind)                  :: stid, ptid, sclf, preqc, ascd, proid
   type(sparr2) :: dhx_dx
-  real(r_kind) :: obserradjust, obserrfinal
+  real(r_single) :: obserradjust, obserrfinal
 ! Observation class
   character(7),parameter     :: obsclass = '    gps'
 
@@ -766,8 +766,13 @@ subroutine contents_netcdf_diag_
   ptid    = gps_allptr%rdiag(20)
   sclf    = gps_allptr%rdiag(23)
   ascd    = gps_allptr%rdiag(24)
-  if(gps_allptr%rdiag(15).ne.0.0)    obserradjust = 1.0/gps_allptr%rdiag(15)
-  if(gps_allptr%rdiag(16).ne.0.0)    obserrfinal  = 1.0/gps_allptr%rdiag(16)
+
+  obserradjust = huge_single
+  obserrfinal  = huge_single
+
+  if(gps_allptr%rdiag(15)>tiny_r_kind)  obserradjust = sngl(1.0/gps_allptr%rdiag(15))
+  if(gps_allptr%rdiag(16)>tiny_r_kind)  obserrfinal  = sngl(1.0/gps_allptr%rdiag(16))
+
   call nc_diag_metadata("occulting_sat_id@MetaData",             stid )
   call nc_diag_metadata("reference_sat_id",                      ptid )
   call nc_diag_metadata("gnss_sat_class@MetaData",               sclf )
@@ -786,7 +791,7 @@ subroutine contents_netcdf_diag_
   call nc_diag_metadata("bending_angle@ObsValue",                sngl(gps_allptr%rdiag(17))  )
   call nc_diag_metadata("bending_angle@ObsError",                obserrfinal )
   call nc_diag_metadata("bending_angle@PreQC",                   preqc  )  ! gsi QCed  flag
-  call nc_diag_metadata("bending_angle@GsiHofX",                 sngl(gps_allptr%rdiag(17))*(one-sngl(gps_allptr%rdiag(5)) ) )
+  call nc_diag_metadata("bending_angle@GsiHofX",                 sngl(gps_allptr%rdiag(17)*(one-gps_allptr%rdiag(5)) ) )
   call nc_diag_metadata("bending_angle@GsiAdjustObsError",       obserradjust )
   call nc_diag_metadata("bending_angle@GsiFinalObsError",        obserrfinal )
   call nc_diag_metadata("Temperature_at_Obs_Location",           sngl(gps_allptr%rdiag(18)) )
