@@ -26,6 +26,8 @@ subroutine setuplag(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
 !                       . removed (%dlat,%dlon) debris.
 !   2017-02-09  guo     - Remove m_alloc, n_alloc.
 !                       . Remove my_node with corrected typecast().
+!   2020-01-23  guo     - removed laghead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -87,8 +89,8 @@ subroutine setuplag(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
   implicit none
 
 ! Declare passed variables
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
   logical                                          ,intent(in   ) :: conv_diagsave
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
@@ -136,8 +138,6 @@ subroutine setuplag(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
   type(obs_diag),pointer :: my_diag
   type(obs_diag),pointer :: my_diagLon,my_diagLat
   type(obs_diags),pointer :: my_diagLL
-  type(obsLList),pointer,dimension(:):: laghead
-  laghead => obsLL(:)
 
   call die('setuplag','I don''t believe this code is working -- J.Guo')
   ! Problems include, data(ilone) and data(ilate) are expected to be in degrees
@@ -464,7 +464,7 @@ subroutine setuplag(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
      if (.not. last .and. muse(i)) then
  
         allocate(my_head)
-        call lagNode_appendto(my_head,laghead(ibin))
+        call lagNode_appendto(my_head,obsLL(ibin))
 
         my_head%idv = is
         my_head%iob = ioid(i)

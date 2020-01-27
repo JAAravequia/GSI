@@ -32,6 +32,9 @@ module m_obsdiags
 !   2018-01-23  k apodaca - Add a new observation type i.e. lightning (light) 
 !                           suitable for the GOES/GLM instrument
 !   2019-12-12  j guo   - Edited some runtime messages.
+!   2020-01-14  j guo   - Restore to source= in allocate(mold=) for PGI support.
+!   2020-01-23  j guo   - use a new obOper%init() interface with full pointers
+!                         not array sections as targets for PGI Fortran support.
 !
 !   input argument list: see Fortran 90 style document below
 !
@@ -288,8 +291,9 @@ function createbyindex_(ioper) result(self)
 
   mold_ => obOper_typeMold(ioper)
   if(associated(mold_)) then
-    allocate(self,mold=mold_)
+    allocate(self,source=mold_)
     call self%clean()
+    mold_ => null()
 
         if(ioper<lbound(obsLLists,1) .or. ioper>ubound(obsLLists,1)) then
           call perr(myname_,'unexpected value, ioper =',ioper)
@@ -308,9 +312,10 @@ function createbyindex_(ioper) result(self)
           call  die(myname_)
         endif
 
-    call self%init(obsLLists(ioper,:), &
-                    obsdiags(ioper,:)  )
-    mold_ => null()
+        ! whole pointers are passed, not just their sections.
+    call self%init(ioper,obsLLists,obsdiags)
+        ASSERT(associated(self%odiagLL, obsdiags(ioper,:)))
+        ASSERT(associated(self%obsLL  ,obsLLists(ioper,:)))
 
   else
         call perr(myname_,'.not.associated, ioper =',ioper)
@@ -338,7 +343,7 @@ function createbyvmold_(mold) result(self)
 
   self => mold
   if(associated(self)) then
-    allocate(self,mold=mold)
+    allocate(self,source=mold)
     call self%clean()
 
     ! Get its corresponding obsNode type name, then convert to its type-index
@@ -361,8 +366,10 @@ function createbyvmold_(mold) result(self)
           call  die(myname_)
         endif
 
-    call self%init(obsLLists(itype,:), &
-                    obsdiags(itype,:)  )
+        ! whole pointers are passed, not just their sections.
+    call self%init(itype,obsLLists,obsdiags)
+        ASSERT(associated(self%odiagLL, obsdiags(itype,:)))
+        ASSERT(associated(self%obsLL  ,obsLLists(itype,:)))
   endif
 
 #ifdef DEBUG_VERBOSE
@@ -1229,6 +1236,7 @@ subroutine gather_write_(title,lobss,ldiag,nobss,ndiag,root,comm)
   integer(kind=i_kind) :: mtyp,mbin,mPEs
   integer(kind=i_kind),allocatable,dimension(:,:,:):: ldiagm,ndiagm
   integer(kind=i_kind),allocatable,dimension(:,:,:):: lobssm,nobssm
+  integer(kind=i_kind),allocatable,dimension(:    ):: gobssm,gdiagm
 
 _ENTRY_(myname_)
 _TIMER_ON_(myname_)
@@ -1244,6 +1252,8 @@ _TIMER_ON_(myname_)
   mPEs=0        ! its value is significant only on root
   if(myPE==root) mPEs=nPE
 
+  allocate(gobssm(mtyp))
+  allocate(gdiagm(mtyp))
   allocate(lobssm(mtyp,mbin,0:mPEs-1))
   allocate(ldiagm(mtyp,mbin,0:mPEs-1))
   allocate(nobssm(mtyp,mbin,0:mPEs-1))
@@ -1255,18 +1265,28 @@ _TIMER_ON_(myname_)
   call iMPI_gather_(ndiag,ndiagm,root,comm)
 
   if(myPE==root) then
+    do jj=1,mtyp
+      gobssm(jj)=sum(lobssm(jj,:,:))
+      gdiagm(jj)=sum(ldiagm(jj,:,:))
+    enddo
+
     do iPE=0,nPE-1
-      write(stdout,'(2a,i6)'     ) title,'(): local obs/diag counts, iPE =',iPE
-      write(stdout,'(2a,9(1x,a))') title,'(): typ', ('|  -----lo -----ld  -----no -----nd',ii=1,mbin)
+      write(stdout,'(2a,i6)'     ) title,'(): global-obs/diag : luse-obs/diag : local-obs/diag counts, iPE =',iPE
+      write(stdout,'(2a,9(1x,a))') title,'(): typ','|  -----go -----gd',('|  -----lo -----ld  -----no -----nd',ii=1,min(8,mbin))
       do jj=1,mtyp
-        write(stdout,'(2a,i3,9(1x,a,2(1x,2i8)))') &
-                                   title,'(): ',jj , &
+        if(gobssm(jj)==0.and.gdiagm(jj)==0) cycle
+
+        write(stdout,'(2a,i3,1x,a,1x,2i8,8(1x,a,2(1x,2i8)))') &
+                                   title,'(): ',jj, &
+           "|",gobssm(jj)       ,gdiagm(jj), &
           ("|",lobssm(jj,ii,iPE),ldiagm(jj,ii,iPE), &
-               nobssm(jj,ii,iPE),ndiagm(jj,ii,iPE), ii=1,mbin)
+               nobssm(jj,ii,iPE),ndiagm(jj,ii,iPE), ii=1,min(8,mbin))
       enddo
     enddo
   endif
 
+  deallocate(gobssm)
+  deallocate(gdiagm)
   deallocate(lobssm)
   deallocate(ldiagm)
   deallocate(nobssm)

@@ -22,6 +22,7 @@ module m_obsLList
 !                         (isValid_ and isValid1_) for debuging switches.
 !                       . Restored source= to mold=, since it does not seem to
 !                         be a problem anymore for recent compilers.
+!   2020-01-14  j guo   - Restore to source= in allocate(mold=) for PGI support.
 !
 !   input argument list: see Fortran 90 style document below
 !
@@ -99,7 +100,7 @@ module m_obsLList
   character(len=*),parameter:: MYNAME="m_obsLList"
 
 !#define DEBUG_TRACE
-#define NDEBUG
+!#define NDEBUG
 #include "myassert.H"
 #include "mytrace.H"
 contains
@@ -251,7 +252,7 @@ _ENTRY_(myname_)
         endif
   endif
 
-  allocate(headLL%mold, mold=mold)
+  allocate(headLL%mold, source=mold)
   call headLL%mold%clean()
 _EXIT_(myname_)
 return
@@ -915,7 +916,7 @@ function alloc_nodeCreate_(mold) result(ptr_)
   implicit none
   class(obsNode),pointer:: ptr_
   class(obsNode),target,intent(in):: mold
-  allocate(ptr_,mold=mold)
+  allocate(ptr_,source=mold)
   call ptr_%init()
 return
 end function alloc_nodeCreate_

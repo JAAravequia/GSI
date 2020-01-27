@@ -30,6 +30,8 @@ subroutine setuptd2m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diag
 !   2017-02-06  todling - add netcdf_diag capability; hidden as contained code
 !   2017-02-09  guo     - Remove m_alloc, n_alloc.
 !                       . Remove my_node with corrected typecast().
+!   2020-01-23  guo     - removed td2mhead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -83,8 +85,8 @@ subroutine setuptd2m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diag
   implicit none
 
 ! Declare passed variables
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
   logical                                          ,intent(in   ) :: conv_diagsave
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
@@ -146,9 +148,6 @@ subroutine setuptd2m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diag
   real(r_kind),allocatable,dimension(:,:,:) :: ges_ps    !will probably need at some poin
   real(r_kind),allocatable,dimension(:,:,:) :: ges_z     !will probably need at some poin
   real(r_kind),allocatable,dimension(:,:,:) :: ges_td2m
-
-  type(obsLList),pointer,dimension(:):: td2mhead
-  td2mhead => obsLL(:)
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
@@ -371,7 +370,7 @@ subroutine setuptd2m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diag
      if (.not. last .and. muse(i)) then
 
         allocate(my_head)
-        call td2mNode_appendto(my_head,td2mhead(ibin))
+        call td2mNode_appendto(my_head,obsLL(ibin))
 
         my_head%idv = is
         my_head%iob = ioid(i)

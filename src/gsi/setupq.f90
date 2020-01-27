@@ -98,6 +98,8 @@ subroutine setupq(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
 !                                     for coastline area
 !   2018-04-09  pondeca -  introduce duplogic to correctly handle the characterization of
 !                          duplicate obs in twodvar_regional applications
+!   2020-01-23  guo     - removed qhead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !
 !   input argument list:
@@ -163,8 +165,8 @@ subroutine setupq(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
   implicit none
 
 ! Declare passed variables
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
   logical                                          ,intent(in   ) :: conv_diagsave
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
@@ -254,8 +256,6 @@ subroutine setupq(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
 
   logical:: l_pbl_pseudo_itype
   integer(i_kind):: ich0
-  type(obsLList),pointer,dimension(:):: qhead
-  qhead => obsLL(:)
 
   save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
@@ -700,7 +700,7 @@ subroutine setupq(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
      if (.not. last .and. muse(i)) then
 
         allocate(my_head)
-        call qNode_appendto(my_head,qhead(ibin))
+        call qNode_appendto(my_head,obsLL(ibin))
 
         my_head%idv = is
         my_head%iob = ioid(i)
@@ -789,7 +789,7 @@ subroutine setupq(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
            ratio_PBL_height=1.0_r_kind-(prestsfc-prest)/(prestsfc-thisPBL_height)
 
            allocate(my_head)
-           call qNode_appendto(my_head,qhead(ibin))
+           call qNode_appendto(my_head,obsLL(ibin))
            my_head%idv = is
            my_head%iob = ioid(i)
            my_head%ich0= qNode_ich0_PBL_pseudo  ! a marker of GSI created PBL_pseudo obs.

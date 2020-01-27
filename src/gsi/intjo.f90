@@ -14,6 +14,11 @@ module intjomod
 !   2016-08-29  J Guo   - Separated calls to intozlay() and intozlev()
 !   2018-08-10  guo     - a new generic intjo() implementation replaced type
 !                         specific intXYZ() calls with polymorphic %intjo().
+!   2019-01-23  Guo     - Split double loop in intjo_() to avoid OMP crashing,
+!                         by packing the inner loop into a subroutine.  This is
+!                         a workaround for PGI Fortran support.  This change
+!                         hides polymorphic pointer it_obOper and its TBP call
+!                         away from OMP PARALLEL section.
 !
 ! subroutines included:
 !   sub intjo_
@@ -253,15 +258,41 @@ type(predictors),                 intent(in   ) :: sbias
 character(len=*),parameter:: myname_=myname//"::intjo_"
 
 ! Declare local variables
-integer(i_kind):: ibin,it,ix
-class(obOper),pointer:: it_obOper
+integer(i_kind):: ibin
 
 !******************************************************************************
   call setrad(sval(1))
 
 ! "RHS for jo", as it was labeled in intall().
-!$omp parallel do  schedule(dynamic,1) private(ibin,it,ix,it_obOper)
+!$omp parallel do  schedule(dynamic,1) private(ibin)
   do ibin=1,size(sval)
+    call intjo_ibin_(ibin,rval(ibin),qpred(:,ibin),sval(ibin),sbias)
+  end do
+
+return
+end subroutine intjo_
+
+subroutine intjo_ibin_(ibin,rval,qpred,sval,sbias)
+use kinds, only: i_kind,r_quad
+use gsi_bundlemod, only: gsi_bundle
+use bias_predictors, only: predictors
+use m_obsdiags, only: obOper_create
+use m_obsdiags, only: obOper_destroy
+use gsi_obOper, only: obOper
+
+implicit none
+
+! Declare passed variables
+integer(i_kind ), intent(in   ) :: ibin
+type(gsi_bundle), intent(inout) :: rval         ! (ibin)
+type(gsi_bundle), intent(in   ) :: sval         ! (ibin)
+real(r_quad    ), dimension(:), intent(inout) :: qpred        ! (:,ibin)
+type(predictors), intent(in   ) :: sbias
+
+character(len=*),parameter:: myname_=myname//"::intjo_ibin_"
+integer(i_kind):: it,ix
+class(obOper),pointer:: it_obOper
+    
     do it=1,obOper_count
       !ix=ix_obtype(it)  ! Use this line to ensure the same jo summartion
                          ! sequence as intjo was in its early implementation,
@@ -295,13 +326,12 @@ class(obOper),pointer:: it_obOper
           call  die(myname_)
         endif
 
-      call it_obOper%intjo(ibin,rval(ibin),sval(ibin),qpred(:,ibin),sbias)
+      call it_obOper%intjo(ibin,rval,sval,qpred(:),sbias)
       call obOper_destroy(it_obOper)
     enddo
-  end do
 
 return
-end subroutine intjo_
+end subroutine intjo_ibin_
 
 subroutine intjo_reduced_(rval,qpred,sval,sbias)
   use kinds, only: i_kind,r_quad

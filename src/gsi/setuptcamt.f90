@@ -33,6 +33,8 @@ subroutine setuptcamt(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_dia
 !                       . Remove my_node with corrected typecast().
 !   2018-01-08  pondeca - addd option l_closeobs to use closest obs to analysis
 !                                     time in analysis
+!   2020-01-23  guo     - removed tcamthead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -88,8 +90,8 @@ subroutine setuptcamt(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_dia
   implicit none
 
 ! Declare passed variables
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
   logical                                          ,intent(in   ) :: conv_diagsave
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
@@ -146,9 +148,6 @@ subroutine setuptcamt(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_dia
   equivalence(rstation_id,station_id)
   equivalence(r_prvstg,c_prvstg)
   equivalence(r_sprvstg,c_sprvstg)
-
-  type(obsLList),pointer,dimension(:):: tcamthead
-  tcamthead => obsLL(:)
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
@@ -378,7 +377,7 @@ subroutine setuptcamt(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_dia
      if (.not. last .and. muse(i)) then
 
         allocate(my_head)
-        call tcamtNode_appendto(my_head,tcamthead(ibin))
+        call tcamtNode_appendto(my_head,obsLL(ibin))
 
         my_head%idv = is
         my_head%iob = ioid(i)

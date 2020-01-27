@@ -17,6 +17,8 @@ module timermod
 !                         objects typemold_ and this_timer_.  This ensures its
 !                         portability to compilers where null-reference is strickly
 !                         undefined and invalid.
+!   2020-01-14  guo     - Restore to source= in allocate(mold=) for PGI support.
+!                       . Remove unnecessary typemold_%reset()
 !
 !  subroutines included: see Fortran style document below.
 !
@@ -163,18 +165,16 @@ subroutine typedef_(mold)
 
   if(allocated(typemold_)) then
     if(verbose) call tell(myname_,'deallocating, typemold_%mytype() = '//typemold_%mytype())
-    call typemold_%reset()
     deallocate(typemold_)
   endif
 
         ! allocate and reset the new typemold_
   if(present(mold)) then
-    allocate(typemold_,mold=mold)
+    allocate(typemold_,source=mold)
   else
     allocate(stubTimer::typemold_)
   endif
   if(verbose) call tell(myname_,'allocated, typemold_%mytype() = '//typemold_%mytype())
-  call typemold_%reset()
 return
 end subroutine typedef_
 
@@ -223,10 +223,9 @@ subroutine ifn_alloc_()
     ! Allocate stubTimer::typemold_, if typemold_ has not been type-defined.
   if(.not.allocated(typemold_)) then
     allocate(stubTimer::typemold_)
-    call typemold_%reset()
   endif
 
-  allocate(this_timer_,mold=typemold_)
+  allocate(this_timer_,source=typemold_)
   call this_timer_%reset()    ! initialize it.
 return
 end subroutine ifn_alloc_

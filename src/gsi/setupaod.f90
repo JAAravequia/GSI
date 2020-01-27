@@ -30,6 +30,8 @@ subroutine setupaod(obsLL,odiagLL,lunin,mype,nchanl,nreal,nobs,&
 !                       . Remove my_node with corrected typecast().
 !   2018-05-19  eliu    - updated crtm interface 
 !   2019-03-20  martin  - added VIIRS AOD and ncdiag (from S-W Wei and M. Pagowski)
+!   2020-01-23  guo     - removed aerohead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
@@ -96,8 +98,8 @@ subroutine setupaod(obsLL,odiagLL,lunin,mype,nchanl,nreal,nobs,&
   implicit none
 
 ! Declare passed variables
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
   logical                           ,intent(in   ) :: aero_diagsave
   character(10)                     ,intent(in   ) :: obstype
   character(20)                     ,intent(in   ) :: isis
@@ -183,10 +185,6 @@ subroutine setupaod(obsLL,odiagLL,lunin,mype,nchanl,nreal,nobs,&
   real(r_kind),dimension(nsigaerojac,nchanl):: jacobian_aero
   real(r_kind),dimension(nsig,nchanl):: layer_od
   real(r_kind) :: clw_guess, tzbgr, sfc_speed,ciw_guess,rain_guess,snow_guess
-
-  type(obsLList),pointer,dimension(:):: aerohead
-  aerohead => obsLL(:)
-
 
   if ( .not. laeroana_gocart ) then
      return
@@ -459,7 +457,7 @@ subroutine setupaod(obsLL,odiagLL,lunin,mype,nchanl,nreal,nobs,&
               nchan_total=nchan_total+icc
 
               allocate(my_head)
-              call aeroNode_appendto(my_head,aerohead(ibin))
+              call aeroNode_appendto(my_head,obsLL(ibin))
 
               my_head%idv = is
               my_head%iob = ioid(n)
@@ -521,7 +519,7 @@ subroutine setupaod(obsLL,odiagLL,lunin,mype,nchanl,nreal,nobs,&
               if (ii==1) obsptr => my_diag      ! this is the lead node
 
               if (in_curbin.and.icc>0) then
-                 my_head => tailNode_typecast_(aerohead(ibin))
+                 my_head => tailNode_typecast_(obsLL(ibin))
                  if(.not.associated(my_head)) &
                     call die(myname,'unexpected, associated(my_head) =',associated(my_head))
 

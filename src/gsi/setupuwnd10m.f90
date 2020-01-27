@@ -31,6 +31,8 @@ subroutine setupuwnd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
 !   2017-09-28  todling - add netcdf_diag capability; hidden as contained code
 !   2018-01-08  pondeca - addd option l_closeobs to use closest obs to analysis
 !                                     time in analysis
+!   2020-01-23  guo     - removed uwnd10mhead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -90,8 +92,8 @@ subroutine setupuwnd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
   implicit none
 
 ! Declare passed variables
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
   logical                                          ,intent(in   ) :: conv_diagsave
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
@@ -173,9 +175,6 @@ subroutine setupuwnd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_vwnd10m
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_wspd10m
-
-  type(obsLList),pointer,dimension(:):: uwnd10mhead
-  uwnd10mhead => obsLL(:)
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
@@ -613,7 +612,7 @@ subroutine setupuwnd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
 !    in inner loop minimization (int* and stp* routines)
      if (.not. last .and. muse(i)) then
         allocate(my_head)
-        call uwnd10mNode_appendto(my_head,uwnd10mhead(ibin))
+        call uwnd10mNode_appendto(my_head,obsLL(ibin))
 
         my_head%idv = is
         my_head%iob = ioid(i)

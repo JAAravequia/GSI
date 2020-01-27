@@ -35,6 +35,8 @@ subroutine setupcldch(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_dia
 !                      the  original "dup"-based implementation of the option to
 !                      assimilate the closest ob to the analysis time only with
 !                      Ming Hu's "muse"-based implementationusing.
+!   2020-01-23  guo     - removed cldchhead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -92,8 +94,8 @@ subroutine setupcldch(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_dia
   implicit none
 
 ! Declare passed variables
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL 
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
   logical                                          ,intent(in   ) :: conv_diagsave
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
   real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
@@ -157,9 +159,6 @@ subroutine setupcldch(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_dia
   real(r_kind),allocatable,dimension(:,:,:) :: ges_ps
   real(r_kind),allocatable,dimension(:,:,:) :: ges_cldch
   real(r_kind),allocatable,dimension(:,:,:) :: ges_z
-
-  type(obsLList),pointer,dimension(:):: cldchhead
-  cldchhead => obsLL(:)
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
@@ -420,7 +419,7 @@ subroutine setupcldch(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_dia
      if (.not. last .and. muse(i)) then
 
         allocate(my_head)
-        call cldchNode_appendto(my_head,cldchhead(ibin))
+        call cldchNode_appendto(my_head,obsLL(ibin))
 
         my_head%idv = is
         my_head%iob = ioid(i)

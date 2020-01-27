@@ -229,6 +229,10 @@ subroutine stpjo(dval,dbias,xval,xbias,sges,pbcjo,nstep)
 !                         minimum fix in stpjo_setup() below, to let output
 !                         pbcjo(:,:,:) to reflect individual ob-types correctly.
 !   2018-01-01  apodaca - add lightning (light) call
+!   2020-01-23  guo     - wrapped in-loop code into a procedure to hide its
+!                         polymorphic pointer it_obOper and its TBP call away
+!                         from its OMP PARALLEL section, for PGI compiler
+!                         support.
 !
 !   input argument list:
 !     yobs
@@ -262,16 +266,9 @@ subroutine stpjo(dval,dbias,xval,xbias,sges,pbcjo,nstep)
   use bias_predictors, only: predictors
   use gsi_bundlemod, only: gsi_bundle
 
-  use gsi_obOper, only: obOper
-  use m_obsdiags, only: obOper_create
-  use m_obsdiags, only: obOper_destroy
-  use gsi_obOperTypeManager, only: obOper_typeInfo
-
   use intradmod, only: setrad
 
   use mpeu_util, only: perr,die
-  use mpeu_util, only: tell
-  use mpeu_mpif, only: MPI_comm_world
   implicit none
 
 ! Declare passed variables
@@ -287,44 +284,77 @@ subroutine stpjo(dval,dbias,xval,xbias,sges,pbcjo,nstep)
   character(len=*),parameter:: myname_=myname//"::stpjo"
 
   integer(i_kind) :: ll,mm,ib
-  class(obOper),pointer:: it_obOper
 !************************************************************************************  
 
   call setrad(xval(1))
 
-!$omp parallel do  schedule(dynamic,1) private(ll,mm,ib,it_obOper)
+!$omp parallel do  schedule(dynamic,1) private(ll,mm,ib)
   do mm=1,stpcnt
     ll=ll_jo(mm)
     ib=ib_jo(mm)
+    call stpjo_ibin_(ll,ib,dval(ib),xval(ib),pbcjo(:,ll,ib),sges,nstep,dbias,xbias) 
+  enddo
 
-    it_obOper => obOper_create(ll)
+return
+end subroutine stpjo
+
+subroutine stpjo_ibin_(ioper,ibin,dval,xval,pbcjo,sges,nstep,dbias,xbias)
+!>  Wrapped in-loop code into a procedure to hide its polymorphic pointer
+!>  it_obOper and its type-bound-procedure call away from OMP PARALLEL. Some
+!>  compiler does not handle polymorphic pointer/object or its TBP calls well
+!>  within a !$OMP section.
+
+  use kinds, only: i_kind,r_kind,r_quad
+  use bias_predictors, only: predictors
+  use gsi_bundlemod, only: gsi_bundle
+
+  use gsi_obOper, only: obOper
+  use m_obsdiags, only: obOper_create
+  use m_obsdiags, only: obOper_destroy
+  use gsi_obOperTypeManager, only: obOper_typeInfo
+
+  use mpeu_util, only: perr,die
+  implicit none
+
+! Declare passed variables
+  integer(i_kind ),intent(in) :: iOper       ! obOper type index
+  integer(i_kind ),intent(in) :: ibin        ! obOper bin index
+
+  type(gsi_bundle),intent(in) :: dval        ! of ibin
+  type(gsi_bundle),intent(in) :: xval        ! of ibin
+  real(r_quad),dimension(:),intent(inout) :: pbcjo      ! of (:,ioper,ibin)
+
+  real(r_kind),dimension(max(1,nstep)) ,intent(in) :: sges
+  integer(i_kind) ,intent(in) :: nstep
+  type(predictors),intent(in) :: dbias
+  type(predictors),intent(in) :: xbias
+
+! Declare local variables
+  character(len=*),parameter:: myname_=myname//"::stpjo_ibin_"
+  class(obOper),pointer:: it_obOper
+
+    it_obOper => obOper_create(iOper)
 
         if(.not.associated(it_obOper)) then
           call perr(myname_,'unexpected obOper, associated(it_obOper) =',associated(it_obOper))
-          call perr(myname_,'                  obOper_typeInfo(ioper) =',obOper_typeInfo(ll))
-          call perr(myname_,'                                   iOper =',ll)
-          call perr(myname_,'                                    ibin =',ib)
-          call perr(myname_,'                                      mm =',mm)
-          call perr(myname_,'                                  stpcnt =',stpcnt)
+          call perr(myname_,'                  obOper_typeInfo(ioper) =',obOper_typeInfo(iOper))
+          call perr(myname_,'                                   iOper =',iOper)
+          call perr(myname_,'                                    ibin =',ibin)
           call  die(myname_)
         endif
 
         if(.not.associated(it_obOper%obsLL)) then
           call perr(myname_,'unexpected components, associated(%obsLL) =',associated(it_obOper%obsLL))
-          call perr(myname_,'                   obOper_typeInfo(ioper) =',obOper_typeInfo(ll))
-          call perr(myname_,'                                    iOper =',ll)
-          call perr(myname_,'                                     ibin =',ib)
-          call perr(myname_,'                                       mm =',mm)
-          call perr(myname_,'                                   stpcnt =',stpcnt)
+          call perr(myname_,'                  obOper_typeInfo(ioper) =',obOper_typeInfo(iOper))
+          call perr(myname_,'                                   iOper =',iOper)
+          call perr(myname_,'                                    ibin =',ibin)
           call  die(myname_)
         endif
 
-    call it_obOper%stpjo(ib,dval(ib),xval(ib),pbcjo(:,ll,ib),sges,nstep,dbias,xbias) 
+    call it_obOper%stpjo(ibin,dval,xval,pbcjo(:),sges,nstep,dbias,xbias) 
     call obOper_destroy(it_obOper)
-  enddo
-
 return
-end subroutine stpjo
+end subroutine stpjo_ibin_
 
 subroutine stpjo_setup(nobs_bins)
 
@@ -363,7 +393,6 @@ subroutine stpjo_setup(nobs_bins)
   use m_obsNode , only: obsNode
   use m_obsLList, only: obsLList_headNode
   use mpeu_util , only: perr, die
-  use mpeu_util , only: tell
   implicit none
 
 ! Declare passed variables
