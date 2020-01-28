@@ -324,8 +324,9 @@ subroutine stpjo_ibin_(ioper,ibin,dval,xval,pbcjo,sges,nstep,dbias,xbias)
   type(gsi_bundle),intent(in) :: xval        ! of ibin
   real(r_quad),dimension(:),intent(inout) :: pbcjo      ! of (:,ioper,ibin)
 
-  real(r_kind),dimension(max(1,nstep)) ,intent(in) :: sges
-  integer(i_kind) ,intent(in) :: nstep
+  integer(i_kind),                        intent(in) :: nstep
+  real(r_kind   ),dimension(max(1,nstep)),intent(in) :: sges
+
   type(predictors),intent(in) :: dbias
   type(predictors),intent(in) :: xbias
 
