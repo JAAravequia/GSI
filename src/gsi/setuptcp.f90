@@ -30,6 +30,8 @@ subroutine setuptcp(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
 !   2016-11-29  shlyaeva - save linearized H(x) for EnKF
 !   2017-02-09  guo     - Remove m_alloc, n_alloc.
 !                       . Remove my_node with corrected typecast().
+!   2020-01-23  guo     - removed tcphead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !   input argument list:
 !
@@ -78,8 +80,8 @@ subroutine setuptcp(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
   use gsi_metguess_mod, only : gsi_metguess_get,gsi_metguess_bundle
   implicit none
 
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
   integer(i_kind)                                  ,intent(in   ) :: is ! ndat index
@@ -140,9 +142,6 @@ subroutine setuptcp(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
-
-  type(obsLList),pointer,dimension(:):: tcphead
-  tcphead => obsLL(:)
 
   save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
@@ -398,7 +397,7 @@ subroutine setuptcp(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
      if (.not. last .and. muse(i)) then
 
         allocate(my_head)
-        call tcpNode_appendto(my_head,tcphead(ibin))
+        call tcpNode_appendto(my_head,obsLL(ibin))
 
         my_head%idv = is
         my_head%iob = ioid(i)

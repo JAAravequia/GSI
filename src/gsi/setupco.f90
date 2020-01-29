@@ -38,6 +38,8 @@ subroutine setupco(obsLL,odiagLL,lunin,mype,stats_co,nlevs,nreal,nobs,&
 !                       . removed (%dlat,%dlon) debris.
 !   2017-02-09  guo     - Remove m_alloc, n_alloc.
 !                       . Remove my_node with corrected typecast().
+!   2020-01-23  guo     - removed colvkhead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !   input argument list:
 !     lunin          - unit from which to read observations
@@ -108,8 +110,8 @@ subroutine setupco(obsLL,odiagLL,lunin,mype,stats_co,nlevs,nreal,nobs,&
   implicit none
   
 ! !INPUT PARAMETERS:
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
   integer(i_kind)                  , intent(in   ) :: lunin  ! unit from which to read observations
   integer(i_kind)                  , intent(in   ) :: mype   ! mpi task id
@@ -182,9 +184,6 @@ subroutine setupco(obsLL,odiagLL,lunin,mype,stats_co,nlevs,nreal,nobs,&
   type(colvkNode),pointer:: my_head
   type(obs_diag),pointer:: my_diag
   type(obs_diags),pointer:: my_diagLL
-
-  type(obsLList),pointer,dimension(:):: colvkhead
-  colvkhead => obsLL(:)
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
@@ -492,7 +491,7 @@ endif   ! (in_curbin)
           if (.not. last .and. ikeep==1) then
    
              allocate(my_head)
-             call colvkNode_appendto(my_head,colvkhead(ibin))
+             call colvkNode_appendto(my_head,obsLL(ibin))
 
              my_head%idv = is
              my_head%iob = ioid(i)
@@ -589,7 +588,7 @@ endif   ! (in_curbin)
               endif
    
               if (.not. last .and. ikeep==1) then
-                 my_head => tailNode_typecast_(colvkhead(ibin))
+                 my_head => tailNode_typecast_(obsLL(ibin))
                  if(.not.associated(my_head)) &
                     call die(myname,'unexpected, associated(my_head) =',associated(my_head))
 

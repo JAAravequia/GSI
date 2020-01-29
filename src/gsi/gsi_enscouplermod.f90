@@ -37,6 +37,11 @@ private
   interface GSI_EnsCoupler_create_sub2grid_info ; module procedure  create_s2gi; end interface
   interface GSI_EnsCoupler_destroy_sub2grid_info; module procedure destroy_s2gi; end interface
 
+! program history log:
+!   (before)    ()      - earlier implementation
+!   2020-01-14  j guo   - added this document block
+!                       . Restore to source= in allocate(mold=) for PGI support.
+!
 ! !CLASSES:
 
   class(abstractEnsemble),allocatable,target,save:: typemold_
@@ -66,7 +71,7 @@ subroutine typedef_(mold)
 
         ! allocate the new typemold_
   if(present(mold)) then
-    allocate(typemold_,mold=mold)
+    allocate(typemold_,source=mold)
   else
     allocate(stub_ensemble::typemold_)
   endif
@@ -155,7 +160,7 @@ end function typename_
 
     ! Then, instantiate this_ensemble_, according to typemold_
 
-   allocate(this_ensemble_,mold=typemold_)
+   allocate(this_ensemble_,source=typemold_)
   end subroutine ifn_alloc_
 
 ! !DESCRIPTION: This module provides general interface for

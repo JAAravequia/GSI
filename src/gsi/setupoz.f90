@@ -83,6 +83,8 @@ subroutine setupozlay(obsLL,odiagLL,lunin,mype,stats_oz,nlevs,nreal,nobs,&
 !   2017-02-09  guo     - Remove m_alloc, n_alloc.
 !                       . Remove my_node with corrected typecast().
 !   2017-10-27  todling - revised netcdf output for lay case; obs-sens needs attention
+!   2020-01-23  guo     - removed ozhead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !   input argument list:
 !     lunin          - unit from which to read observations
@@ -155,8 +157,8 @@ subroutine setupozlay(obsLL,odiagLL,lunin,mype,stats_oz,nlevs,nreal,nobs,&
   implicit none
   
 ! !INPUT PARAMETERS:
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
   integer(i_kind)                  , intent(in   ) :: lunin  ! unit from which to read observations
   integer(i_kind)                  , intent(in   ) :: mype   ! mpi task id
@@ -240,8 +242,6 @@ subroutine setupozlay(obsLL,odiagLL,lunin,mype,stats_oz,nlevs,nreal,nobs,&
   type(obs_diags),pointer:: my_diagLL
 
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_oz
-  type(obsLList),pointer,dimension(:):: ozhead
-  ozhead => obsLL(:)
 
   save_jacobian = ozone_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
@@ -622,7 +622,7 @@ subroutine setupozlay(obsLL,odiagLL,lunin,mype,stats_oz,nlevs,nreal,nobs,&
            if (.not. last .and. ikeep==1) then
  
               allocate(my_head)
-              call ozNode_appendto(my_head,ozhead(ibin))
+              call ozNode_appendto(my_head,obsLL(ibin))
 
               my_head%idv = is
               my_head%iob = ioid(i)
@@ -709,7 +709,7 @@ subroutine setupozlay(obsLL,odiagLL,lunin,mype,stats_oz,nlevs,nreal,nobs,&
               endif
  
               if (.not. last .and. ikeep==1) then
-                 my_head => tailNode_typecast_(ozhead(ibin))
+                 my_head => tailNode_typecast_(obsLL(ibin))
                  if(.not.associated(my_head)) &
                     call die(myname,'unexpected, associated(my_head) =',associated(my_head))
 
@@ -974,6 +974,8 @@ subroutine setupozlev(obsLL,odiagLL,lunin,mype,stats_oz,nlevs,nreal,nobs,&
 !   2016-12-09  mccarty - add netcdf_diag capability
 !   2017-02-09  guo     - Remove m_alloc, n_alloc.
 !                       . Remove my_node with corrected typecast().
+!   2020-01-23  guo     - removed o3lhead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !   input argument list:
 !     lunin          - unit from which to read observations
@@ -1045,8 +1047,8 @@ subroutine setupozlev(obsLL,odiagLL,lunin,mype,stats_oz,nlevs,nreal,nobs,&
   implicit none
   
 ! !INPUT PARAMETERS:
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
   integer(i_kind)                  , intent(in   ) :: lunin  ! unit from which to read observations
   integer(i_kind)                  , intent(in   ) :: mype   ! mpi task id
@@ -1120,8 +1122,6 @@ subroutine setupozlev(obsLL,odiagLL,lunin,mype,stats_oz,nlevs,nreal,nobs,&
 
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_oz
-  type(obsLList),pointer,dimension(:):: o3lhead
-  o3lhead => obsLL(:)
 
   save_jacobian = ozone_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
@@ -1380,7 +1380,7 @@ subroutine setupozlev(obsLL,odiagLL,lunin,mype,stats_oz,nlevs,nreal,nobs,&
      if (.not. last .and. muse(i) ) then
 
         allocate(my_head)
-        call o3lNode_appendto(my_head,o3lhead(ibin))
+        call o3lNode_appendto(my_head,obsLL(ibin))
 
         my_head%idv = is
         my_head%iob = ioid(i)

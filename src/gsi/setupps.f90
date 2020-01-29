@@ -80,6 +80,8 @@ subroutine setupps(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsa
 !                       . Remove my_node with corrected typecast().
 !   2017-03-31  Hu      -  addd option l_closeobs to use closest obs to analysis
 !                                     time in analysis
+!   2020-01-23  guo     - removed pshead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !
 !   input argument list:
@@ -140,8 +142,8 @@ subroutine setupps(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsa
   implicit none
 
 ! Declare passed variables
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
   real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
   real(r_kind),dimension(npres_print,nconvtype,5,3),intent(inout) :: bwork
@@ -209,9 +211,6 @@ subroutine setupps(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsa
   type(sparr2) :: dhx_dx
   real(r_single), dimension(nsdim) :: dhx_dx_array
   integer(i_kind) :: ps_ind, nnz, nind
-
-  type(obsLList),pointer,dimension(:):: pshead
-  pshead => obsLL(:)
 
   save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
@@ -579,7 +578,7 @@ subroutine setupps(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsa
 !    if no minimization (inner loop), do not load arrays
 
         allocate(my_head)
-        call psNode_appendto(my_head,pshead(ibin))
+        call psNode_appendto(my_head,obsLL(ibin))
 
         my_head%idv = is
         my_head%iob = ioid(i)

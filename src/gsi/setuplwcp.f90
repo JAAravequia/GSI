@@ -29,6 +29,8 @@ subroutine setuplwcp(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diag
 !                                operator = f(ql,qr) partition6
 !   2018-05-10  guo     - Remove m_alloc, n_alloc.
 !                       . Remove my_node with corrected typecast().
+!   2020-01-23  guo     - removed lwcphead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -89,8 +91,8 @@ subroutine setuplwcp(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diag
   implicit none
 
 ! Declare passed variables
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
   logical                                          ,intent(in   ) :: conv_diagsave
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
@@ -163,9 +165,6 @@ subroutine setuplwcp(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diag
   real(r_kind) :: tupper, tlower, tcenter
   real(r_kind),dimension(lat2,lon2,nsig,nfldsig)::qv, esi, esl, es, qvsl, ssqvl
   real(r_kind),dimension(lat2,lon2,nsig,nfldsig)::ges_tr, ges_w
-
-  type(obsLList),pointer,dimension(:):: lwcphead
-  lwcphead => obsLL(:)
 
   save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
@@ -486,7 +485,7 @@ subroutine setuplwcp(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diag
      if ( .not. last .and. muse(i)) then
 
         allocate(my_head)
-        call lwcpNode_appendto(my_head,lwcphead(ibin))
+        call lwcpNode_appendto(my_head,obsLL(ibin))
 
         my_head%idv = is
         my_head%iob = ioid(i)

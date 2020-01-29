@@ -214,6 +214,8 @@ contains
 !   2019-03-13  eliu    - add components to handle precipitation-affected radiances 
 !   2019-03-13  eliu    - add calculation of scattering index for MHS/ATMS 
 !   2019-03-27  h. liu  - add ABI assimilation
+!   2020-01-23  guo     - removed radhead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !  input argument list:
 !     lunin   - unit from which to read radiance (brightness temperature, tb) obs
@@ -304,8 +306,8 @@ contains
   implicit none
 
 ! Declare passed variables
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
   logical                           ,intent(in   ) :: rad_diagsave
   character(10)                     ,intent(in   ) :: obstype
   character(20)                     ,intent(in   ) :: isis
@@ -430,7 +432,6 @@ contains
   type(obs_diags),pointer:: my_diagLL
   type(rad_obs_type) :: radmod
 
-  type(obsLList),pointer,dimension(:):: radhead
   type(fptr_obsdiagNode),dimension(nchanl):: odiags
 
   logical:: muse_ii
@@ -443,8 +444,6 @@ contains
 ! And for all instruments
 ! jpch_rad      : sum(nchanl)
 ! nchanl_total  : subset of jpch_rad, sum(icc)
-
-  radhead => obsLL(:)
 
   save_jacobian = rad_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
@@ -1864,7 +1863,7 @@ contains
               nchan_total=nchan_total+icc
  
               allocate(my_head)
-              call radNode_appendto(my_head,radhead(ibin))
+              call radNode_appendto(my_head,obsLL(ibin))
 
               my_head%idv = is
               my_head%iob = ioid(n)
@@ -1990,7 +1989,7 @@ contains
 
                ! Associate corresponding obs_diag pointer to the obsdiagLList structure
             if(in_curbin.and.icc>0) then
-               my_head => tailNode_typecast_(radhead(ibin))
+               my_head => tailNode_typecast_(obsLL(ibin))
                if(.not.associated(my_head)) &
                   call die(myname,'unexpected, associated(my_head) =',associated(my_head))
 
@@ -2439,6 +2438,8 @@ contains
                     call obsdiagNode_assert(obsptr,idv,iob,ich_diag(ii), &
                       myname_,'obsptr::(idv,iob,ich_diag(ii)')
 
+                    ioff = ioff0
+                    if (save_jacobian) ioff=ioff0+size(dhx_dx)
                     do jj=1,miter
                        ioff=ioff+1
                        if (obsptr%muse(jj)) then

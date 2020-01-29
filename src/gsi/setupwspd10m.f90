@@ -33,6 +33,8 @@ subroutine setupwspd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
 !                       . Remove my_node with corrected typecast().
 !   2018-01-08  pondeca - addd option l_closeobs to use closest obs to analysis
 !                                     time in analysis
+!   2020-01-23  guo     - removed wspd10mhead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -91,8 +93,8 @@ subroutine setupwspd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
   implicit none
 
 ! Declare passed variables
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
   logical                                          ,intent(in   ) :: conv_diagsave
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
@@ -173,9 +175,6 @@ subroutine setupwspd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_wspd10m
-
-  type(obsLList),pointer,dimension(:):: wspd10mhead
-  wspd10mhead => obsLL(:)
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
@@ -597,7 +596,7 @@ subroutine setupwspd10m(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_d
      if (.not. last .and. muse(i)) then
 
         allocate(my_head)
-        call wspd10mNode_appendto(my_head,wspd10mhead(ibin))
+        call wspd10mNode_appendto(my_head,obsLL(ibin))
 
         my_head%idv = is
         my_head%iob = ioid(i)

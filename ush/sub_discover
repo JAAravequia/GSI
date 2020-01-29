@@ -122,6 +122,29 @@ echo "#SBATCH --partition=$queue"          >> $cfile
 #. $exec                                   >> $cfile
 #echo "/bin/sh -x $exec"                   >> $cfile
 
+case $jobname in
+(*_contrl)
+  mbin=$gsiexec_contrl ;;
+(*_updat)
+  mbin=$gsiexec_updat  ;;
+esac
+mdir=$(readlink -m $mbin)
+mdir=$(dirname $mdir)
+mdir=$(dirname $mdir)
+modulefile=$mdir/modulefile.ProdGSI.discover.this-build
+muse=""
+if [ ! -r $modulefile ]; then
+  muse="module use -a $gsisrc/modulefiles"
+  modulefile="$gsisrc/modulefiles"
+fi
+
+echo "module purge"			>> $cfile
+echo "$muse"				>> $cfile
+echo "module load $modulefile"		>> $cfile
+echo "(module -t list 2>&1)"		>> $cfile
+echo ""					>> $cfile
+
+
 echo "" >>$cfile
 echo "set -x"
 echo "" >>$cfile
@@ -129,18 +152,7 @@ echo "export OMP_NUM_THREADS=$threads"     >> $cfile
 echo "" >>$cfile
 echo ". "$(awk '{ print $1, $2, $3, $4, $5, $6, $7, $8, $9 }' $regdir/regression_var.out)  >>$cfile
 echo "" >>$cfile
-echo "module purge" >>$cfile
-echo "modulefile=$regdir/modulefile.ProdGSI.discover.this-build" >>$cfile
-echo "if [ -r \$modulefile ]; then" >>$cfile
-echo "  echo module load \$modulefile" >>$cfile
-echo "  module load \$modulefile" >>$cfile
-echo "else" >>$cfile
-echo "  module use -a $gsisrc/modulefiles"   >> $cfile
-echo "  module load modulefile.ProdGSI.discover" >> $cfile
-echo "fi" >> $cfile
-echo "(module -t list 2>&1)" >> $cfile
-echo "(module -t list 2>&1) > $regdir/modulefile.state" >> $cfile
-echo "" >>$cfile
+
 echo "jobname=$jobname" >>$cfile
 echo "" >>$cfile
 

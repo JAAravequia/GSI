@@ -90,8 +90,8 @@ subroutine setuppcp(obsLL,odiagLL,lunin,mype,aivals,nele,nobs,&
   implicit none    ! Turn off implicit typing
 
 ! !INPUT PARAMETERS:
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
   integer(i_kind)                , intent(in   ) :: lunin          ! unit from which to read 
                                                                    !   precpitation observations
@@ -182,6 +182,8 @@ subroutine setuppcp(obsLL,odiagLL,lunin,mype,aivals,nele,nobs,&
 !                       . removed (%dlat,%dlon) debris.
 !   2017-02-09  guo     - Remove m_alloc, n_alloc.
 !                       . Remove my_node with corrected typecast().
+!   2020-01-23  guo     - removed pcphead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !
 ! !REMARKS:  This routine is NOT correctly set up if running
@@ -304,8 +306,6 @@ subroutine setuppcp(obsLL,odiagLL,lunin,mype,aivals,nele,nobs,&
   real(r_kind),allocatable,dimension(:,:,:) :: ges_ps_lat
 
   data  rmiss / -999._r_kind /
-  type(obsLList),pointer,dimension(:):: pcphead
-  pcphead => obsLL(:)
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
@@ -976,7 +976,7 @@ endif
         ncnt  = ncnt+1
 
         allocate(my_head)
-        call pcpNode_appendto(my_head,pcphead(ibin))
+        call pcpNode_appendto(my_head,obsLL(ibin))
 
         my_head%idv = is
         my_head%iob = ioid(n)

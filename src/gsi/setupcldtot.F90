@@ -24,6 +24,8 @@ subroutine setupcldtot(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_di
 !
 ! program history log:
 !   2016-04-06  Ladwig new setup routine for METAR ceilometer obs
+!   2020-01-23  guo     - removed qhead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -84,8 +86,8 @@ subroutine setupcldtot(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_di
   implicit none
 
 ! Declare passed variables
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
   real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
@@ -212,11 +214,7 @@ subroutine setupcldtot(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_di
   logical:: lhere
   integer(i_kind):: istat1,istat2,istat3
 
-  type(obsLList),pointer,dimension(:):: qhead
-
   if(luse_obsdiag) call die(myname,'not implemented for luse_obsdiag =',luse_obsdiag)
-
-  qhead => obsLL(:)
 !
   awork=0.0_r_kind
   bwork=0.0_r_kind
@@ -538,7 +536,7 @@ subroutine setupcldtot(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_di
                    ! not be modified within this routine.
        
                    allocate(my_headq)
-                   call qNode_appendto(my_headq,qhead(ibin))
+                   call qNode_appendto(my_headq,obsLL(ibin))
        
                    my_headq%idv = is
                    my_headq%iob = i

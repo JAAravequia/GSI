@@ -48,6 +48,8 @@ subroutine setuplight(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,light_di
 !                          .  changed refereces to obsdiags(i_light_ob_type,ibin) to my_diagLL
 !                          .  changed refereces to obsdiags(i_light_ob_type,ibin)%tail to my_diag
 !                          .  made my_diag an argument of contents_xxxxx_diag_() routines.
+!   2020-01-23  guo     - removed lighthead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !---
 !
@@ -118,8 +120,8 @@ subroutine setuplight(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,light_di
   implicit none
 
 ! Declare passed variables
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
   logical                                           ,intent(in   ) :: light_diagsave
   integer(i_kind)                                   ,intent(in   ) :: lunin,mype,nele,nobs
@@ -241,8 +243,6 @@ subroutine setuplight(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,light_di
 
   real(r_kind),allocatable,dimension(:,:,:,:):: ges_cwmr_it 
 
-  type(obsLList),pointer,dimension(:):: lighthead
-  lighthead => obsLL(:)
 !--
 
   grsmlt=three  ! multiplier factor for gross check, an appropriate magnitude
@@ -708,7 +708,7 @@ subroutine setuplight(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,light_di
      if ( .not. last .and. muse(i)) then 
 
         allocate(my_head)
-        call lightNode_appendto(my_head,lighthead(ibin))
+        call lightNode_appendto(my_head,obsLL(ibin))
 
         my_head%idv = is
         my_head%iob = ioid(i)

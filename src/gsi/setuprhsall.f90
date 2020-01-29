@@ -100,6 +100,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
 !                         polymorphic implementation using %setup().
 !   2019-03-15  Ladwig  - add option for cloud analysis in observer
 !   2019-03-28  Ladwig  - add metar cloud obs as pseudo water vapor in var analysis
+!   2020-01-14  j guo   - Change to source= in allocate(mold=) for PGI support.
 !
 !   input argument list:
 !     ndata(*,1)- number of prefiles retained for further processing
@@ -267,7 +268,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
   conv_diagsave = write_diag(jiter) .and. diag_conv
 
   if(.not.rhs_allocated) call rhs_alloc()
-  allocate(awork1,mold=awork)
+  allocate(awork1,source=awork)
   awork1(:,:)=zero
 
 ! Reset observation pointers
@@ -461,7 +462,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
                 if(ier/=0) then
                   call perr(myname,'unexpected obs_setup read(1), iostat =',ier)
                   call perr(myname,'                                  is =',is)
-                  call perr(myname,'                           ndat1(is) =',nsat1(is))
+                  call perr(myname,'                           nsat1(is) =',nsat1(is))
                   call perr(myname,'                           dtype(is) =',trim(dtype(is)))
                   call  die(myname)
                 endif
@@ -470,7 +471,7 @@ subroutine setuprhsall(ndata,mype,init_pass,last_pass)
                 if(ier/=0) then
                   call perr(myname,'unexpected obs_setup read(2), iostat =',ier)
                   call perr(myname,'                                  is =',is)
-                  call perr(myname,'                           ndat1(is) =',nsat1(is))
+                  call perr(myname,'                           nsat1(is) =',nsat1(is))
                   call perr(myname,'                           dtype(is) =',trim(dtype(is)))
                   call perr(myname,'                             obstype =',trim(obstype))
                   call perr(myname,'                                isis =',trim(isis))

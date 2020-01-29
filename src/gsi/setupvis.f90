@@ -35,6 +35,8 @@ subroutine setupvis(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
 !   2017-02-06  todling - add netcdf_diag capability; hidden as contained code
 !   2017-02-09  guo     - Remove m_alloc, n_alloc.
 !                       . Remove my_node with corrected typecast().
+!   2020-01-23  guo     - removed vishead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !   2018-03-01  yang -  use module nltransf to convert vis 
 !   2018-03-21  pondeca/yang - for code consistency across all analyzed variables,replace
@@ -99,8 +101,8 @@ subroutine setupvis(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
   implicit none
 
 ! Declare passed variables
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
   logical                                          ,intent(in   ) :: conv_diagsave
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
@@ -164,9 +166,6 @@ subroutine setupvis(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
   real(r_kind),allocatable,dimension(:,:,:) :: ges_ps
   real(r_kind),allocatable,dimension(:,:,:) :: ges_vis
   real(r_kind),allocatable,dimension(:,:,:) :: ges_z
-
-  type(obsLList),pointer,dimension(:):: vishead
-  vishead => obsLL(:)
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
@@ -396,7 +395,7 @@ subroutine setupvis(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diags
      if (.not. last .and. muse(i)) then
 
         allocate(my_head)
-        call visNode_appendto(my_head,vishead(ibin))
+        call visNode_appendto(my_head,obsLL(ibin))
 
         my_head%idv = is
         my_head%iob = ioid(i)

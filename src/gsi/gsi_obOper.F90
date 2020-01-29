@@ -11,6 +11,8 @@ module gsi_obOper
 ! program history log:
 !   2018-06-26  j guo   - a new module for abstract GSI obOper.
 !   2019-12-12  j guo   - initialize pointer components of obOper to null().
+!   2020-01-23  j guo   - passed %init() arguments as full pointers, instead of
+!                         as targets of their array sections, for PGI Fortran.
 !
 !   input argument list: see Fortran 90 style document below
 !
@@ -287,14 +289,15 @@ end interface
 contains
 #include "myassert.H"
 
-subroutine init_(self,obsLL,odiagLL)
+subroutine init_(self,itype,obsLL,odiagLL)
   implicit none
   class(obOper),intent(inout):: self
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  integer(i_kind),intent(in):: itype
+  type(obsLList ),pointer,dimension(:,:),intent(in):: obsLL
+  type(obs_diags),pointer,dimension(:,:),intent(in):: odiagLL
 
-  self%odiagLL => odiagLL(:)
-  self%  obsLL => obsLL(:)
+  self%odiagLL => odiagLL(itype,:)
+  self%  obsLL => obsLL(itype,:)
 end subroutine init_
 
 subroutine clean_(self)

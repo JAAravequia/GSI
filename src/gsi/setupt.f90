@@ -83,8 +83,8 @@ subroutine setupt(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
 
   implicit none
 
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
 ! !INPUT PARAMETERS:
 
@@ -202,6 +202,8 @@ subroutine setupt(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
 !                       . Remove my_node with corrected typecast().
 !   2018-04-09  pondeca -  introduce duplogic to correctly handle the characterization of
 !                          duplicate obs in twodvar_regional applications
+!   2020-01-23  guo     - removed thead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 ! !REMARKS:
 !   language: f90
@@ -314,9 +316,6 @@ subroutine setupt(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
 
   logical:: l_pbl_pseudo_itype
   integer(i_kind):: ich0
-
-  type(obsLList),pointer,dimension(:):: thead
-  thead => obsLL(:)
 
   save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
@@ -940,7 +939,7 @@ subroutine setupt(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
      if (muse(i)) then
 
         allocate(my_head)
-        call tNode_appendto(my_head,thead(ibin))
+        call tNode_appendto(my_head,obsLL(ibin))
 
         my_head%idv = is
         my_head%iob = ioid(i)
@@ -1082,7 +1081,7 @@ subroutine setupt(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
            ratio_PBL_height=1.0_r_kind-(prestsfc-prest)/(prestsfc-thisPBL_height)
 
            allocate(my_head)
-           call tNode_appendto(my_head,thead(ibin))
+           call tNode_appendto(my_head,obsLL(ibin))
 
            allocate(my_head%pred(npredt))
 

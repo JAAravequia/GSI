@@ -22,6 +22,8 @@ module mpeu_util
 !                         readability.
 !                       . Added a description of the "code style" used
 !                         for this module.
+!   2020-01-27  guo     - Redefined std I/O units to ISO_Fortran_ENV,
+!                         with minor changes in stdERR/stdOUT ordering.
 !
 !   input argument list: see Fortran 90 style document below
 !
@@ -127,6 +129,9 @@ module mpeu_util
       use kinds, only: SP => r_single   ! default REAL kind
       use kinds, only: DP => r_double   ! DOUBLE PRECISION kind
 #endif
+      use, intrinsic :: ISO_Fortran_ENV, only:  INPUT_UNIT
+      use, intrinsic :: ISO_Fortran_ENV, only: OUTPUT_UNIT
+      use, intrinsic :: ISO_Fortran_ENV, only:  ERROR_UNIT
       implicit none
       private   ! except
 
@@ -155,13 +160,11 @@ module mpeu_util
       public :: stdout_lead
 #endif
 
-    integer,parameter :: STDIN = 5
-    integer,parameter :: STDOUT= 6
-#ifdef sysHP_UX
-    integer,parameter :: STDERR= 7
-#else
-    integer,parameter :: STDERR= 0
-#endif
+    integer,parameter :: STDIN =  INPUT_UNIT    ! 5
+    integer,parameter :: STDOUT= OUTPUT_UNIT    ! 6
+    integer,parameter :: STDERR=  ERROR_UNIT    ! 0
+    ! integer,parameter :: STDERR= STDOUT
+
     interface luavail; module procedure luavail_; end interface
 
     interface die; module procedure &
@@ -623,9 +626,10 @@ subroutine mype_get_(mype,npes,who,comm)
     if(ier/=0) then
       write(stderr,'(3a)') &
         trim(who),'>mype_get_(): >>> ERROR <<< ','MPI_comm_rank(), ier= ',ier
-      if(stderr==stdout) return
-      write(stdout,'(3a)') &
-        trim(who),'>mype_get_(): >>> ERROR <<< ','MPI_comm_rank(), ier= ',ier
+      if(stderr/=stdout) then
+        write(stdout,'(3a)') &
+          trim(who),'>mype_get_(): >>> ERROR <<< ','MPI_comm_rank(), ier= ',ier
+      endif
       call dropdead_()
     endif
 
@@ -633,9 +637,10 @@ subroutine mype_get_(mype,npes,who,comm)
     if(ier/=0) then
       write(stderr,'(3a)') &
         trim(who),'>mype_get_(): >>> ERROR <<< ','MPI_comm_size(), ier= ',ier
-      if(stderr==stdout) return
-      write(stdout,'(3a)') &
-        trim(who),'>mype_get_(): >>> ERROR <<< ','MPI_comm_size(), ier= ',ier
+      if(stderr/=stdout) then
+        write(stdout,'(3a)') &
+          trim(who),'>mype_get_(): >>> ERROR <<< ','MPI_comm_size(), ier= ',ier
+      endif
       call dropdead_()
     endif
 #endif
@@ -988,8 +993,9 @@ subroutine dropdead_()
   character(len=05):: czone
 
   call date_and_time(date=cdate,time=ctime,zone=czone)
-  call mprint(stdout,'dropdead','at '//cdate//':'//ctime//'(z'//czone//'00)')
   call mprint(stderr,'dropdead','at '//cdate//':'//ctime//'(z'//czone//'00)')
+  if(stderr/=stdout) &
+  call mprint(stdout,'dropdead','at '//cdate//':'//ctime//'(z'//czone//'00)')
 
 #ifdef USE_MPI_ABORT
   call mpi_abort(mpi_comm_world,myer,ier)

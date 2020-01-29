@@ -38,6 +38,8 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
 !                       . Removed my_node with corrected typecast().
 !   2017-05-12 Y. Wang and X. Wang - Following Guo replacing ob_type with polymorphic obsNode through type casting,
 !                                           POC: xuguang.wang@ou.edu
+!   2020-01-23  guo     - removed dbzhead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -102,8 +104,8 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
  
   implicit none
 ! Declare passed variables
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
   real(r_kind),dimension(100+7*nsig)               ,intent(inout) :: awork
@@ -184,9 +186,6 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
   real(r_kind),allocatable,dimension(:,:,:,: ) :: ges_qg
   real(r_kind),allocatable,dimension(:,:,:,: ) :: ges_qli
   real(r_kind),allocatable,dimension(:,:,:,: ) :: ges_dbz
-
-  type(obsLList),pointer,dimension(:):: dbzhead
-  dbzhead => obsLL(:)
 
 !******************************************************************************* 
   ! Read and reformat observations in work arrays.
@@ -567,7 +566,7 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
      if ( .not. last .and. muse(i)) then             
        
         allocate(my_head)
-        call dbzNode_appendto(my_head,dbzhead(ibin))
+        call dbzNode_appendto(my_head,obsLL(ibin))
 
         my_head%idv = is
         my_head%iob = ioid(i)

@@ -111,6 +111,8 @@ subroutine setupref(obsLL,odiagLL,lunin,mype,awork,nele,nobs,toss_gps_sub,is,ini
 !                     . removed (%dlat,%dlon) debris.
 !  2017-02-09 guo     - Remove m_alloc, n_alloc.
 !                     . Remove my_node with corrected typecast().
+!  2020-01-23 guo     - removed gpshead alias.
+!                     . changed intents of obsLL and odiagLL to intent(inout).
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -194,8 +196,8 @@ subroutine setupref(obsLL,odiagLL,lunin,mype,awork,nele,nobs,toss_gps_sub,is,ini
   real(r_kind),parameter:: crit_grad = 157.0_r_kind
 
 ! Declare passed variables
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
   integer(i_kind)                            ,intent(in   ) :: lunin,mype,nele,nobs
   real(r_kind),dimension(100+7*nsig)  ,intent(inout) :: awork
@@ -248,9 +250,6 @@ subroutine setupref(obsLL,odiagLL,lunin,mype,awork,nele,nobs,toss_gps_sub,is,ini
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
-
-  type(obsLList),pointer,dimension(:):: gpshead
-  gpshead => obsLL(:)
 
   save_jacobian = conv_diagsave .and. jiter==jiterstart .and. lobsdiag_forenkf
 
@@ -917,7 +916,7 @@ subroutine setupref(obsLL,odiagLL,lunin,mype,awork,nele,nobs,toss_gps_sub,is,ini
         if ( in_curbin .and. muse(i) ) then
  
            allocate(my_head)
-           call gpsNode_appendto(my_head,gpshead(ibin))
+           call gpsNode_appendto(my_head,obsLL(ibin))
 
            my_head%idv = is
            my_head%iob = ioid(i)

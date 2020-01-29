@@ -30,6 +30,8 @@ subroutine setuppm10(obsLL,odiagLL,lunin,mype,nreal,nobs,isis,is,conv_diagsave)
 !   2017-02-06  todling - add netcdf_diag capability; hidden as contained code
 !   2017-02-09  guo     - Remove m_alloc, n_alloc.
 !                       . Remove my_node with corrected typecast().
+!   2020-01-23  guo     - removed pm10head alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !   input argument list:
 !     lunin          - unit from which to read observations
@@ -108,8 +110,8 @@ subroutine setuppm10(obsLL,odiagLL,lunin,mype,nreal,nobs,isis,is,conv_diagsave)
 
   implicit none
   
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
 ! !input parameters:
 
@@ -172,9 +174,6 @@ subroutine setuppm10(obsLL,odiagLL,lunin,mype,nreal,nobs,isis,is,conv_diagsave)
   character(len=max_varname_length) :: aeroname
 
   integer(i_kind) :: ipm10,n_gocart_var
-  type(obsLList),pointer,dimension(:):: pm10head
-  pm10head => obsLL(:)
-
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
@@ -577,7 +576,7 @@ subroutine setuppm10(obsLL,odiagLL,lunin,mype,nreal,nobs,isis,is,conv_diagsave)
         if (.not. last .and. muse(i)) then
            
            allocate(my_head)
-           call pm10Node_appendto(my_head,pm10head(ibin))
+           call pm10Node_appendto(my_head,obsLL(ibin))
 
            my_head%idv = is
            my_head%iob = ioid(i)

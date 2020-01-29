@@ -30,6 +30,8 @@ subroutine setuplcbas(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_dia
 !                       . removed (%dlat,%dlon) debris.
 !   2017-02-09  guo     - Remove m_alloc, n_alloc.
 !                       . Remove my_node with corrected typecast().
+!   2020-01-23  guo     - removed lcbashead alias.
+!                       . changed intents of obsLL and odiagLL to intent(inout).
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -86,8 +88,8 @@ subroutine setuplcbas(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_dia
   implicit none
 
 ! Declare passed variables
-  type(obsLList ),target,dimension(:),intent(in):: obsLL
-  type(obs_diags),target,dimension(:),intent(in):: odiagLL
+  type(obsLList ),target,dimension(:),intent(inout):: obsLL
+  type(obs_diags),target,dimension(:),intent(inout):: odiagLL
 
   logical                                          ,intent(in   ) :: conv_diagsave
   integer(i_kind)                                  ,intent(in   ) :: lunin,mype,nele,nobs
@@ -146,9 +148,6 @@ subroutine setuplcbas(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_dia
   equivalence(r_prvstg,c_prvstg)
   equivalence(r_sprvstg,c_sprvstg)
   
-  type(obsLList),pointer,dimension(:):: lcbashead
-  lcbashead => obsLL(:)
-
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
  if(.not.proceed) then
@@ -381,7 +380,7 @@ subroutine setuplcbas(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_dia
      if (.not. last .and. muse(i)) then
 
         allocate(my_head)
-        call lcbasNode_appendto(my_head,lcbashead(ibin))
+        call lcbasNode_appendto(my_head,obsLL(ibin))
 
         my_head%idv = is
         my_head%iob = ioid(i)
