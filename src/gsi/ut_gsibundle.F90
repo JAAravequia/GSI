@@ -302,7 +302,6 @@ use gsi_bundlemod, only : GSI_BundleMerge
 use gsi_bundlemod, only : GSI_BundlePrint
 use gsi_bundlemod, only : GSI_BundleDestroy
 use gsi_bundlemod, only : assignment(=)
-use m_rerank, only : rerank
 
 implicit none
 
@@ -542,7 +541,6 @@ end subroutine edge
 ! !INTERFACE:
 !
 subroutine mimic_int_routines(Bundle)
-use m_rerank, only: rerank
 use kinds, only: i_kind,r_kind
 use gsi_bundlemod, only: gsi_bundle
 use gsi_bundlemod, only: gsi_bundlegetpointer
