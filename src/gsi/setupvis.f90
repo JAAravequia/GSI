@@ -32,7 +32,8 @@ subroutine setupvis(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 !                      the  original "dup"-based implementation of the option to
 !                      assimilate the closest ob to the analysis time only with
 !                      Ming Hu's "muse"-based implementation.
-
+!   2020-02-04  yang - for veia data, errinv_final is modified and the value is in NLTR space.
+!
 !   input argument list:
 !     lunin    - unit from which to read observations
 !     mype     - mpi task id
@@ -471,17 +472,21 @@ subroutine setupvis(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         errinv_input = huge_single
         errinv_adjst = huge_single
         errinv_final = huge_single
-!--------------------------------------------------------------------------------
-!For diag file, write out vis error statistics and the field in physical space.
-!NOTE:  No linear conversion in error stats between physical space and NLTR
-!space.
-!NOTE:  in RTMA post process only err_final is used.
-!--------------------------------------------------------------------------------
+!-------------------------------------------------------------------------------------
+!In the diag file, write out vis error statistics and the field in physical space, 
+!except for VEIA data. For VEIA errinv_final is adjusted and the value is in NLTR space.
+!No linear conversion in error stats between physical space and NLTR space.
+!-------------------------------------------------------------------------------------
         err_input = 4000.0_r_kind
         err_adjst = 4000.0_r_kind
         if (err_input>tiny_r_kind) errinv_input = one/err_input
         if (err_adjst>tiny_r_kind) errinv_adjst = one/err_adjst
         if (err_final>tiny_r_kind) errinv_final = one/err_final
+
+        if (ictype(ikx) == 999) then
+          errinv_final = one/data(ier,i)
+          write(6,*)'setupvis: ictype=', ictype (ikx),data(ier,i),errinv_final
+        endif
         if (binary_diag) call contents_binary_diag_
         if (netcdf_diag) call contents_netcdf_diag_
 
@@ -622,6 +627,7 @@ subroutine setupvis(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         call nc_diag_header("date_time",ianldate )
      endif
   end subroutine init_netcdf_diag_
+
   subroutine contents_binary_diag_
         cdiagbuf(ii)    = station_id         ! station id
  
@@ -647,6 +653,7 @@ subroutine setupvis(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
         rdiagbuf(14,ii) = errinv_input       ! prepbufr inverse obs error (m**-1)
         rdiagbuf(15,ii) = errinv_adjst       ! read_prepbufr inverse obs error (m**-1)
         rdiagbuf(16,ii) = errinv_final       ! final inverse observation error (m**-1)
+                                             ! for webcams, error in NLTR
         rdiagbuf(17,ii) = visobout           ! VIS observation (m)
         rdiagbuf(18,ii) = visdiff            ! obs-ges in physical space(m), for post process 
         rdiagbuf(19,ii) = ddiff              ! obs-ges used in analysis, g-space 

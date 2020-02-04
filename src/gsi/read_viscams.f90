@@ -8,6 +8,9 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 !
 ! program history log:
 !   2019-07-05 Yang  - use read_mitm_mxtm.f90 and read_satmar as templates
+!   2020-01-07 Yang  - compute the inflation values (see function computenorm).
+!                      The inflating value is converted into an integer and stored in visqm.
+!                      Remove qcthresd since the revised capping value is 10 miles.
 !
 !   input argument list:
 !     infile   - unit from which to read data
@@ -21,7 +24,7 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 !     nread    - number of obs read 
 !     ndata    - number of obs retained for further processing
 !     nodata   - number of obs retained for further processing
-!    nobs     - array of observations on each subdomain for each processor
+!     nobs     - array of observations on each subdomain for each processor
 !
 ! attributes:
 !   language: f95/2003
@@ -29,19 +32,7 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 !
 !$$$
 
-!============================================================
-! reminder:  temporary quality flag  
-!============================================================
-!   =1 --good image
-!   =-1 --not valid data, or bad data??
-!   late need to consider the monitoring data
 !
-! CHECK LIST:
-!=============
-! (1) in read_prepbufr, seems visibility is of a level, right?
-! (2) keep those write (6,*) for testing.  Remember to delete them after
-! finishing the test. 
-!============================================================
 
   use kinds, only: r_single,r_kind,r_double,i_kind
   use constants, only: zero,one_tenth,one,deg2rad,half,&
@@ -79,16 +70,14 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
   real(r_kind),parameter:: r1200= 1200.0_r_kind
   real(r_kind),parameter:: r6= 6.0_r_kind
   real(r_kind),parameter:: r360 = 360.0_r_kind
-
-! thresold for VEIA data 
-  real(r_kind),parameter:: qcthresd=4800.0_r_kind
+  real(r_kind),parameter:: adjcoef =1.0_r_kind
 
 ! Declare local variables
   character(len=12) :: myname
 
   character(len=8) :: c_prvstg='veiacams'
   character(len=8) :: c_sprvstg='veiacams'
-  character(len=25):: filename
+  character(len=82):: filename
 ! initializing c_station_id 
   character(len=8) :: c_station_id='VEIA1000'
 
@@ -99,7 +88,7 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
   integer(i_kind) :: nc,k,ilat,ilon,nchanl
   integer(i_kind) :: idate,iout,maxobs,icount,ierr
   integer(i_kind) :: stnelev4, nid
-  integer(i_kind) :: sunangle,veiaqc 
+  integer(i_kind) :: sunangle,veiaqc,index
   real(r_kind) :: dlat,dlon,dlat_earth,dlon_earth,toff,t4dv
   real(r_kind) :: dlat_earth_deg,dlon_earth_deg
   real(r_kind) :: visoe,tdiff,tempvis,visout
@@ -107,6 +96,7 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
   real(r_kind) :: stnelev
   real(r_kind)  :: rlon4,rlat4,obvalmi,rnid
   real(r_kind) :: usage,tsavg,ff10,sfcr,zz
+  real(r_kind) :: rinflate 
   real(r_kind),allocatable,dimension(:,:):: cdata_all,cdata_out
 
   integer(i_kind) :: thisobtype_usage   
@@ -170,8 +160,10 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 
   ! Find number of reports
   maxobs = 0
+! read in the header 
+  read(lunin,90) filename
   readloop: do 
-      read(lunin,90,end=101) filename,nid,rlat4,rlon4,stnelev4,y4m2d2,h2m2s2,obvalmi,sunangle,veiaqc
+      read(lunin,91,end=101) nid,rlat4,rlon4,stnelev4,y4m2d2,h2m2s2,obvalmi,sunangle,veiaqc
       maxobs=maxobs+1
   end do readloop
 101 continue
@@ -195,22 +187,30 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
   n_outside=0
 
   rewind(lunin)
+! read in the header 
+  read(lunin,90) filename
   loop_readobs: do icount=1,maxobs
-      read(lunin,90,end=101) filename,nid,rlat4,rlon4,stnelev4,y4m2d2,h2m2s2,obvalmi,sunangle,veiaqc
-90 format(A25,I4,5X,F7.4,4X,F9.4,3X,I4,3X,I8,3X,I6,5X,F5.2,7x,I3,3x,I3)
+      read(lunin,91,end=101) nid,rlat4,rlon4,stnelev4,y4m2d2,h2m2s2,obvalmi,sunangle,veiaqc
+90 format(a82)
+91 format(I4,5X,F7.4,4X,F9.4,3X,I4,3X,I8,3X,I6,5X,F5.2,7x,I3,3x,I3)
 !--------------------------------------------------------------------
-! Mike M. viscams provider the following information:
+! Information from Mike (viscams provider):
 !
 !  1) if the sunangle>105,i.e.,the sun is 15 degree below the horizontal level, the observation quality is not good.
 !  2) veiaqc is a metrics of the quality, from 1-100
-!  3) if visibility value > 5 miles, just assign it as 5 miles
+!  3) capping value: 
+!         vis_capping value =5 miles before Dec. 9 2019
+!         vis_capping value =10 miles after Dec. 9 2019
 !--------------------------------------------------------------------
-!  setup first part of the QC here
-!..............................
-!     1. if (sunangle>=105 .and. veiaqc<50) not use the data 
-!     
-!--------------------------------------------------------------------
-      if (sunangle>=105 .and. veiaqc<50) cycle loop_readobs
+      if (sunangle>=105 )  cycle loop_readobs
+!     compute the rinflate value
+      index=veiaqc
+      if (index < 26) index=26
+      if (index >100) index=100
+      rinflate=computenorm(index,adjcoef)
+      visqm=int(rinflate*10)
+
+
       !   date arrary
       ivisdate(1)=y4m2d2/10000            ! four-digit year
       ivisdate(2)=mod(y4m2d2,10000)/100   ! two-digit months
@@ -228,14 +228,12 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
                                       ! so, tdiff is the departure of
                                       ! observation time from
                                       ! the analysis time
-!
-!      write (6,*) myname, 'date=',
-!      ivisdate(1),ivisdate(2),ivisdate(3),ivisdate(4),ivisdate(5)
-!      write (6,*) myname,'usagerj rminobs,iwindbgn,gstime', rminobs,
-!      real(iwinbgn,r_kind),gstime
-!      write (6,*) myname,'4 get_usagerj t4dv,tdiff', t4dv,tdiff
+! TEST
+!       write (6,*) myname, 'date=', ivisdate(1),ivisdate(2),ivisdate(3),ivisdate(4),ivisdate(5)
+!       write (6,*) myname,'usagerj rminobs,iwindbgn,gstime', rminobs, real(iwinbgn,r_kind),gstime
+!       write (6,*) myname,'4 get_usagerj t4dv,tdiff', t4dv,tdiff
 
-! not consider the data that falls out the analysis time window
+! don't include the data that falls out the analysis time window
        if (abs(tdiff)>ctwind(nc).or.(abs(tdiff)>twind)) cycle loop_readobs
        rnid=float(nid)
        rrnid=dble(rnid)
@@ -285,14 +283,14 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
          call grdcrd1(dlat,rlats,nlat,1)
          call grdcrd1(dlon,rlons,nlon,1)
       endif
-         write(6,*)myname,': OUTSIDE, m_outside', outside ,n_outside
+         write(6,*)myname,': OUTSIDE, m_outside', outside,n_outside
       if (linvalidkx .or. linvalidob .or. outside)  cycle loop_readobs
 
 ! count the valid observation
 !--------------------------------
       iout=iout+1
 
-! Set usage variable    ! RY:  what this means?
+! Set usage variable   
       usage = zero
       if(icuse(nc) <= 0)usage=100._r_kind
 
@@ -323,7 +321,10 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 !viscams:
 !      visoe is in NLTR space, and is read in from the namelist. 
 !......................................................................
-      visoe=estvisoe
+
+! inflate the observation error 
+      visoe=estvisoe*(one+rinflate)
+!      write (6,*) myname,'inflating', rinflate,visoe
       cdata_all(1,iout)=visoe                   ! visibility error (cb)
       cdata_all(2,iout)=dlon                    ! grid relative longitude
       cdata_all(3,iout)=dlat                    ! grid relative latitude
@@ -337,21 +338,13 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 ! visthres is much smaller than bmiss
 ! do NLTR when this formula holds: (obval> zero .and. obval<=vis_thres)
 !......................................................................
-!RY:  add the second part of QC:
-!   QC one 10/18/2019:
-!   if visibility > 4.8 miles,i.e,vis >7680.00 meter,
-!   treat it as a missing record, but keep the inventory in the obs.listing file
-!-------------------------------------------------------------------------------
-!RY:  using strict QC:
-!   10/24/2019:
-!   if visibility > 3 miles (IFR),i.e,vis >=4800.00 meter,
-!   treat it as a missing record, but keep the inventory in the obs.listing file
+! 1/7/2020: the capping value=10 miles, equal to vis_thres
 !-------------------------------------------------------------------------------
 
       if(obval < zero)   cdata_all(4,iout)=bmiss
-      if(obval >= qcthresd) cdata_all(4,iout)=bmiss
+      if(obval > vis_thres) cdata_all(4,iout)=bmiss
       if(obval == zero)  obval=max(obval,one)
-      if(obval> zero .and. obval<= qcthresd) then
+      if(obval> zero .and. obval <= vis_thres) then
         tempvis=obval
         call nltransf_forward(tempvis,visout,pvis,scale_cv)
         cdata_all(4,iout) = visout
@@ -362,7 +355,7 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
       cdata_all(6,iout)=t4dv                    ! time
       cdata_all(7,iout)=nc                      ! type
       cdata_all(8,iout)=visoe*three             ! max error
-      cdata_all(9,iout)=visqm                   ! quality mark   !RY: need modifiy?
+      cdata_all(9,iout)=visqm                   ! quality mark   ! 10 times of inflating value
       cdata_all(10,iout)=usage                  ! usage parameter
       if (lhilbert) thisobtype_usage=10         ! save INDEX of where usage is stored 
                                                 !for hilbertcurve cross validation (if requested)
@@ -378,6 +371,7 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
       if(lhilbert) &
         call apply_hilbertcurve(maxobs,obstype,cdata_all(thisobtype_usage,1:maxobs))
   enddo loop_readobs
+
 
   nread=maxobs
   ndata=iout
@@ -403,6 +397,45 @@ subroutine read_viscams(nread,ndata,nodata,infile,obstype,lunout,gstime,twind,si
 
   close(lunin)
 
-  return
+contains
+
+  pure function computenorm(index,adjcoef) result (rinflate)
+
+  use kinds, only: r_kind,i_kind
+
+  implicit none
+  real(r_kind),parameter :: sigma=1.0 ! head of veia data
+  integer(i_kind),parameter :: nx=75   !
+  integer(i_kind), intent(in) :: index
+  real(r_kind), intent(in) :: adjcoef
+  real(r_kind) ::  rinflate, s2,cs2,y1,y2,y,x,x2,delta,pi
+!
+  pi=3.1416_r_kind
+
+!---------------------------------------------------------------------------------------------------------
+! Tentative formula of inflating values:
+! 1. curve is  
+!     f(x)= exp -[(x^2)/2*(sigma*sigma)] /[sqrt(2*pi)*sigma]
+!     sigma = 1.0 
+! 2. make the range of confidence index proportional to the range of 3*sigma,so
+!     the x interal is:  
+!     delta=3.0*sigma/float(nx) 
+!      here, nx is the range of confidence index, max-min
+!     minimum confidence index =26, max confidence index = 100
+! 3.  tuning the parameters or the formula as: make the inflating value large if an
+!     confidence index closes to the minimum; and make the inflating value small if an index closes 100.
+!---------------------------------------------------------------------------------------------------------
+
+  delta=3.0*sigma/float(nx)
+  s2= sigma*sigma
+
+  x=float(index-26)*delta
+  x2=x*x
+  cs2=2.0*s2
+  y1=exp(-1.*x2/cs2)
+  y2= sqrt(2.0*pi)*sigma
+  y= y1/y2
+  rinflate=y*adjcoef
+  end function computenorm
 
 end subroutine read_viscams
