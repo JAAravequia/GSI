@@ -67,7 +67,6 @@ subroutine  gsdcloudanalysis(mype)
   use mpimod, only: mpi_comm_world,ierror,mpi_real4
   use rapidrefresh_cldsurf_mod, only: dfi_radar_latent_heat_time_period,   &
                                       metar_impact_radius,                 &
-                                      metar_impact_radius_lowCloud,        &
                                       l_cleanSnow_WarmTs,l_conserve_thetaV,&
                                       r_cleanSnow_WarmTs_threshold,        &
                                       i_conserve_thetaV_iternum,           &
@@ -77,7 +76,8 @@ subroutine  gsdcloudanalysis(mype)
                                       iclean_hydro_withRef, iclean_hydro_withRef_allcol, &
                                       l_use_hydroretrieval_all, &
                                       i_lightpcp, l_numconc, qv_max_inc,ioption, &
-                                      l_precip_clear_only,l_fog_off,cld_bld_coverage,cld_clr_coverage
+                                      l_precip_clear_only,l_fog_off,cld_bld_coverage,cld_clr_coverage,&
+                                      l_T_Q_adjust
 
   use gsi_metguess_mod, only: GSI_MetGuess_Bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -182,8 +182,6 @@ subroutine  gsdcloudanalysis(mype)
   real(r_single),allocatable :: vis2qc(:,:)           ! fog
 
   real(r_kind)    ::  thunderRadius=2.5_r_kind
-  real(r_single)  ::  r_radius          ! influence radius of cloud based on METAR obs
-  real(r_single)  ::  r_radius_lowCloud ! influence radius of low cloud to cloud top pressure
   integer(i_kind) :: miss_obs_int
   real(r_kind)    :: miss_obs_real
   parameter ( miss_obs_int = -99999  )
@@ -289,8 +287,6 @@ subroutine  gsdcloudanalysis(mype)
 !
 !
   krad_bot=7.0_r_single
-  r_radius=metar_impact_radius
-  r_radius_lowCloud=metar_impact_radius_lowCloud
 
   opt_hydrometeor_retri=3       ! 1=Kessler 2=Lin 3=Thompson
   opt_cloudtemperature=3        ! 3=latent heat, 4,5,6 = adiabat profile
@@ -694,7 +690,7 @@ subroutine  gsdcloudanalysis(mype)
 !
 !
   if(istat_surface ==  1) then
-     call cloudCover_surface(mype,lat2,lon2,nsig,r_radius,thunderRadius,  &
+     call cloudCover_surface(mype,lat2,lon2,nsig,thunderRadius,  &
               cld_bld_hgt,t_bk,p_bk,q_bk,h_bk,zh,                         &
               numsao,nvarcld_p,numsao,oi,oj,ocld,owx,oelvtn,odist,        &
               cld_cover_3d,cld_type_3d,wthr_type_2d,pcp_type_3d,          &
@@ -1133,21 +1129,29 @@ subroutine  gsdcloudanalysis(mype)
 ! for Rapid Refresh application, turn off the hydrometeors 
 ! (Oct. 14, 2010)
 !
+  if(l_T_Q_adjust) then
+     do k=1,nsig
+        do j=1,lat2
+           do i=1,lon2
+              if(l_conserve_thetaV) then
+                 if(.not.twodvar_regional .or. .not.tsensible) then
+                    ges_tv(j,i,k)=t_bk(i,j,k)*(p_bk(i,j,k)/h1000)**rd_over_cp * &  ! t_bk is potential T
+                        (one+fv*q_bk(i,j,k))                                      ! convert T to virtual T
+                    ges_tsen(j,i,k,itsig) = ges_tv(j,i,k)/(one+fv*q_bk(i,j,k))
+                 else
+                    ges_tsen(j,i,k,itsig)=t_bk(i,j,k)*(p_bk(i,j,k)/h1000)**rd_over_cp    ! t_bk is potential T
+                    ges_tv(j,i,k) = ges_tsen(j,i,k,itsig)*(one+fv*q_bk(i,j,k))         ! convert virtual T to T
+                 endif
+              endif   ! l_conserve_thetaV
+              ges_q(j,i,k)=q_bk(i,j,k)/(1+q_bk(i,j,k))     ! Here q is mixing ratio kg/kg, 
+           enddo 
+        enddo
+     enddo
+  endif
+                                                        ! need to convert to specific humidity
   do k=1,nsig
      do j=1,lat2
         do i=1,lon2
-           if(l_conserve_thetaV) then
-              if(.not.twodvar_regional .or. .not.tsensible) then
-                 ges_tv(j,i,k)=t_bk(i,j,k)*(p_bk(i,j,k)/h1000)**rd_over_cp * &  ! t_bk is potential T
-                        (one+fv*q_bk(i,j,k))                                      ! convert T to virtual T
-                 ges_tsen(j,i,k,itsig) = ges_tv(j,i,k)/(one+fv*q_bk(i,j,k))
-              else
-                 ges_tsen(j,i,k,itsig)=t_bk(i,j,k)*(p_bk(i,j,k)/h1000)**rd_over_cp    ! t_bk is potential T
-                 ges_tv(j,i,k) = ges_tsen(j,i,k,itsig)*(one+fv*q_bk(i,j,k))         ! convert virtual T to T
-              endif
-           endif   ! l_conserve_thetaV
-           ges_q(j,i,k)=q_bk(i,j,k)/(1+q_bk(i,j,k))     ! Here q is mixing ratio kg/kg, 
-                                                        ! need to convert to specific humidity
            ges_qr(j,i,k)=rain_3d(i,j,k)
            ges_qs(j,i,k)=snow_3d(i,j,k)
            ges_qg(j,i,k)=graupel_3d(i,j,k)

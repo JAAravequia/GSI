@@ -125,6 +125,9 @@
   use rapidrefresh_cldsurf_mod, only: init_rapidrefresh_cldsurf, &
                             dfi_radar_latent_heat_time_period,metar_impact_radius,&
                             metar_impact_radius_lowcloud,l_gsd_terrain_match_surftobs, &
+                            l_metar_impact_radius_change, &
+                            metar_impact_radius_max,metar_impact_radius_min,&
+                            metar_impact_radius_max_height,metar_impact_radius_min_height,&
                             l_sfcobserror_ramp_t, l_sfcobserror_ramp_q, &
                             l_pbl_pseudo_surfobst,l_pbl_pseudo_surfobsq,l_pbl_pseudo_surfobsuv, &
                             pblh_ration,pps_press_incr,l_gsd_limit_ocean_q, &
@@ -138,7 +141,8 @@
                             i_lightpcp,i_sfct_gross,l_use_hydroretrieval_all,l_numconc,l_closeobs,&
                             i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off,&
                             cld_bld_coverage,cld_clr_coverage,&
-                            i_cloud_q_innovation,i_ens_mean,DTsTmax
+                            i_cloud_q_innovation,i_ens_mean,DTsTmax,&
+                            l_T_Q_adjust
   use gsi_metguess_mod, only: gsi_metguess_init,gsi_metguess_final
   use gsi_chemguess_mod, only: gsi_chemguess_init,gsi_chemguess_final
   use tcv_mod, only: init_tcps_errvals,tcp_refps,tcp_width,tcp_ermin,tcp_ermax
@@ -942,6 +946,17 @@
 !                             enhancement for RR appilcation  ):
 !      dfi_radar_latent_heat_time_period     -   DFI forward integration window in minutes
 !      metar_impact_radius  - metar low cloud observation impact radius in grid number
+!      l_metar_impact_radius_change - if .true. the impact radius will change
+!                            with height that set up with the metar_impact_radius_max, min,
+!                            max_height, min_height, (default:false)
+!      metar_impact_radius_max  - The max impact radius of metar cloud observation
+!                            in meter (default: 100000 m).
+!      metar_impact_radius_min  - The min impact radius of metar cloud observation
+!                            in meter (default: 10000 m).
+!      metar_impact_radius_max_height - The hight above which metar_impact_radius_max apply
+!                            in meter (default: 1200m).
+!      metar_impact_radius_min_height - The hight below which metar_impact_radius_min apply
+!                            in meter (default: 200m).
 !      l_gsd_terrain_match_surftobs - if .true., GSD terrain match for surface temperature observation
 !      l_sfcobserror_ramp_t  - namelist logical for adjusting surface temperature observation error
 !      l_sfcobserror_ramp_q  - namelist logical for adjusting surface moisture observation error
@@ -1043,10 +1058,14 @@
 !                           2=ensemble members
 !      DTsTmax       - maximum allowed difference between Tskin and the first
 !                           level T. This is to safety guard soil T adjustment.
-!
+!      l_T_Q_adjust - if .true. turn off the moisture and temperature adjustment
+!                           in cloud analysis (default:false).
+!       
   namelist/rapidrefresh_cldsurf/dfi_radar_latent_heat_time_period, &
                                 metar_impact_radius,metar_impact_radius_lowcloud, &
-                                l_gsd_terrain_match_surftobs, &
+                                l_metar_impact_radius_change,metar_impact_radius_max,&
+                                metar_impact_radius_min,metar_impact_radius_max_height,&
+                                metar_impact_radius_min_height,l_gsd_terrain_match_surftobs, &
                                 l_sfcobserror_ramp_t,l_sfcobserror_ramp_q, &
                                 l_pbl_pseudo_surfobst,l_pbl_pseudo_surfobsq,l_pbl_pseudo_surfobsuv, &
                                 pblh_ration,pps_press_incr,l_gsd_limit_ocean_q, &
@@ -1060,7 +1079,8 @@
                                 i_lightpcp,i_sfct_gross,l_use_hydroretrieval_all,l_numconc,l_closeobs,&
                                 i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off,&
                                 cld_bld_coverage,cld_clr_coverage,&
-                                i_cloud_q_innovation,i_ens_mean,DTsTmax
+                                i_cloud_q_innovation,i_ens_mean,DTsTmax, &
+                                l_T_Q_adjust
 
 ! chem(options for gsi chem analysis) :
 !     berror_chem       - .true. when background  for chemical species that require

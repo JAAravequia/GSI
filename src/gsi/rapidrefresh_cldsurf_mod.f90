@@ -33,6 +33,20 @@ module rapidrefresh_cldsurf_mod
 !   def metar_impact_radius - impact radius for METAR cloud observation
 !   def metar_impact_radius_lowCloud - impact radius for METAR cloud observation
 !                                      that indicate low cloud base
+!   def l_metar_impact_radius_change - if .true. the impact radius will change
+!                            with height that set up with the
+!                            metar_impact_radius_max, min, max_height,
+!                            min_height, (default:false)
+!   def metar_impact_radius_max  - The max impact radius of metar cloud
+!                            observation in meter (default: 100000 m).
+!   def metar_impact_radius_min  - The min impact radius of metar cloud
+!                            observation in meter (default: 10000 m).
+!   def metar_impact_radius_max_height - The hight above which
+!                            metar_impact_radius_max apply
+!                            in meter (default: 1200m).
+!   def metar_impact_radius_min_height - The hight below which
+!                            metar_impact_radius_min apply
+!                            in meter (default: 200m).
 !   def l_gsd_terrain_match_surfTobs - namelist logical for GSD terrain
 !                                       match for  surface temperature observation
 !   def l_sfcobserror_ramp_t  - namelist logical for adjusting surface temperature observation error
@@ -141,6 +155,9 @@ module rapidrefresh_cldsurf_mod
 !                           0=single model run
 !                           1=ensemble mean
 !                           2=ensemble members
+!      l_T_Q_adjust - if .true. turn on the moisture and temperature
+!                        adjustment in cloud analysis (default:true).
+!
 !
 ! attributes:
 !   language: f90
@@ -159,6 +176,11 @@ module rapidrefresh_cldsurf_mod
   public :: dfi_radar_latent_heat_time_period
   public :: metar_impact_radius
   public :: metar_impact_radius_lowCloud
+  public :: l_metar_impact_radius_change
+  public :: metar_impact_radius_max
+  public :: metar_impact_radius_min
+  public :: metar_impact_radius_max_height
+  public :: metar_impact_radius_min_height
   public :: l_gsd_terrain_match_surfTobs
   public :: l_sfcobserror_ramp_t
   public :: l_sfcobserror_ramp_q
@@ -203,11 +225,17 @@ module rapidrefresh_cldsurf_mod
   public :: i_cloud_q_innovation
   public :: i_ens_mean
   public :: DTsTmax 
+  public :: l_T_Q_adjust
 
   logical l_hydrometeor_bkio
   real(r_kind)  dfi_radar_latent_heat_time_period
   real(r_kind)  metar_impact_radius
   real(r_kind)  metar_impact_radius_lowCloud
+  logical l_metar_impact_radius_change
+  real(r_kind)  metar_impact_radius_max
+  real(r_kind)  metar_impact_radius_min
+  real(r_kind)  metar_impact_radius_max_height
+  real(r_kind)  metar_impact_radius_min_height
   logical l_gsd_terrain_match_surfTobs
   logical l_sfcobserror_ramp_t
   logical l_sfcobserror_ramp_q
@@ -252,6 +280,7 @@ module rapidrefresh_cldsurf_mod
   integer(i_kind)      i_cloud_q_innovation
   integer(i_kind)      i_ens_mean
   real(r_kind)         DTsTmax
+  logical              l_T_Q_adjust
 
 contains
 
@@ -293,6 +322,11 @@ contains
     dfi_radar_latent_heat_time_period = 30.0_r_kind   ! in minutes
     metar_impact_radius = 10.0_r_kind                 ! in grid
     metar_impact_radius_lowCloud = 4.0_r_kind         ! in grid
+    l_metar_impact_radius_change = .false.            ! .true. =radius change vertically
+    metar_impact_radius_max        = 100000.0_r_kind  ! in meter
+    metar_impact_radius_min        = 10000.0_r_kind   ! in meter
+    metar_impact_radius_max_height = 1200.0_r_kind    ! in meter
+    metar_impact_radius_min_height = 200.0_r_kind     ! in meter
     l_gsd_terrain_match_surfTobs = .false.            ! .true. = turn on GSD terrain 
                                                       !          match for  surface
                                                       !          temperature observation
@@ -351,6 +385,7 @@ contains
     i_cloud_q_innovation = 0                          ! 0 = no increments from cloud obs
     i_ens_mean = 0                                    ! typical ob behavior
     DTsTmax = 20.0_r_kind                             ! maximum allowed difference between Ts and T 1st level
+    l_T_Q_adjust= .true.
     return
   end subroutine init_rapidrefresh_cldsurf
 
