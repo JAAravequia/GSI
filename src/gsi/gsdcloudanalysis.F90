@@ -77,7 +77,7 @@ subroutine  gsdcloudanalysis(mype)
                                       l_use_hydroretrieval_all, &
                                       i_lightpcp, l_numconc, qv_max_inc,ioption, &
                                       l_precip_clear_only,l_fog_off,cld_bld_coverage,cld_clr_coverage,&
-                                      l_T_Q_adjust
+                                      l_T_Q_adjust,l_saturate_bkCloud
 
   use gsi_metguess_mod, only: GSI_MetGuess_Bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -1095,7 +1095,7 @@ subroutine  gsdcloudanalysis(mype)
 !
   call cloud_saturation(mype,l_conserve_thetaV,i_conserve_thetaV_iternum,  &
                  lat2,lon2,nsig,q_bk,t_bk,p_bk,      &
-                 cld_cover_3d,wthr_type_2d,cldwater_3d,cldice_3d,sumqci,qv_max_inc)
+                 cld_cover_3d,wthr_type_2d,cldwater_3d,cldice_3d,sumqci,qv_max_inc, l_saturate_bkCloud)
 
 
 !
@@ -1144,11 +1144,11 @@ subroutine  gsdcloudanalysis(mype)
                  endif
               endif   ! l_conserve_thetaV
               ges_q(j,i,k)=q_bk(i,j,k)/(1+q_bk(i,j,k))     ! Here q is mixing ratio kg/kg, 
+                                                           ! need to convert to specific humidity
            enddo 
         enddo
      enddo
   endif
-                                                        ! need to convert to specific humidity
   do k=1,nsig
      do j=1,lat2
         do i=1,lon2

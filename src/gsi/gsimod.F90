@@ -142,7 +142,7 @@
                             i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off,&
                             cld_bld_coverage,cld_clr_coverage,&
                             i_cloud_q_innovation,i_ens_mean,DTsTmax,&
-                            l_T_Q_adjust
+                            l_T_Q_adjust,l_saturate_bkCloud
   use gsi_metguess_mod, only: gsi_metguess_init,gsi_metguess_final
   use gsi_chemguess_mod, only: gsi_chemguess_init,gsi_chemguess_final
   use tcv_mod, only: init_tcps_errvals,tcp_refps,tcp_width,tcp_ermin,tcp_ermax
@@ -1058,8 +1058,10 @@
 !                           2=ensemble members
 !      DTsTmax       - maximum allowed difference between Tskin and the first
 !                           level T. This is to safety guard soil T adjustment.
-!      l_T_Q_adjust - if .true. turn off the moisture and temperature adjustment
-!                           in cloud analysis (default:false).
+!      l_T_Q_adjust - if .true. turn on the moisture and temperature adjustment
+!                           in cloud analysis (default:true).
+!      l_saturate_bkCloud - if .true. ensure saturation for all cloud 3-d points in background
+!                           where observed cloud cover is missing (default:true).
 !       
   namelist/rapidrefresh_cldsurf/dfi_radar_latent_heat_time_period, &
                                 metar_impact_radius,metar_impact_radius_lowcloud, &
@@ -1080,7 +1082,7 @@
                                 i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off,&
                                 cld_bld_coverage,cld_clr_coverage,&
                                 i_cloud_q_innovation,i_ens_mean,DTsTmax, &
-                                l_T_Q_adjust
+                                l_T_Q_adjust,l_saturate_bkCloud
 
 ! chem(options for gsi chem analysis) :
 !     berror_chem       - .true. when background  for chemical species that require

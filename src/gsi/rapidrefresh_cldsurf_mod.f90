@@ -157,7 +157,9 @@ module rapidrefresh_cldsurf_mod
 !                           2=ensemble members
 !      l_T_Q_adjust - if .true. turn on the moisture and temperature
 !                        adjustment in cloud analysis (default:true).
-!
+!      l_saturate_bkCloud - if .true. ensure saturation for all cloud 3-d points
+!                        in background where observed cloud cover is missing
+!                        (default:true).
 !
 ! attributes:
 !   language: f90
@@ -226,6 +228,7 @@ module rapidrefresh_cldsurf_mod
   public :: i_ens_mean
   public :: DTsTmax 
   public :: l_T_Q_adjust
+  public :: l_saturate_bkCloud
 
   logical l_hydrometeor_bkio
   real(r_kind)  dfi_radar_latent_heat_time_period
@@ -281,6 +284,7 @@ module rapidrefresh_cldsurf_mod
   integer(i_kind)      i_ens_mean
   real(r_kind)         DTsTmax
   logical              l_T_Q_adjust
+  logical              l_saturate_bkCloud
 
 contains
 
@@ -386,6 +390,7 @@ contains
     i_ens_mean = 0                                    ! typical ob behavior
     DTsTmax = 20.0_r_kind                             ! maximum allowed difference between Ts and T 1st level
     l_T_Q_adjust= .true.
+    l_saturate_bkCloud= .true.
     return
   end subroutine init_rapidrefresh_cldsurf
 
