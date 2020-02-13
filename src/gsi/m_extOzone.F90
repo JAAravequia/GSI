@@ -1,5 +1,4 @@
 module m_extOzone
-!#define NO_EXTRA_
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    module m_extOzone
@@ -31,6 +30,10 @@ module m_extOzone
 !   2016-09-19  guo     - moved function dfile_format() here from obsmod.F90.
 !   2018-05-21  j.jin   - added time-thinning. Moved the checking of thin4d into satthin.F90.  
 !   2018-05-25  wargan  - added OMPS and hooks for LIMS, UARS MLS, MIPAS
+!   2020-02-07  guo     - Removed layer/level class argument, and therefore
+!                         UseCase 2 and 3.  This feature is no longer needed
+!                         with polymorphic gsi_obOper.  Purpose of this module
+!                         is now for ozone reader routine selection only.
 !
 !   input argument list: see Fortran 90 style document below
 !
@@ -52,17 +55,8 @@ module m_extOzone
   public:: is_extOzone
   public:: extOzone_read
 
-!!  public:: extOzone_setupoz
-!!  public:: extOzone_setupozlev
-!!  public:: extOzone_setupoztot
-
-!!  public:: extOzone_intoz
-!!  public:: extOzone_intozlev
-!!  public:: extOzone_intoztot
-
   interface is_extOzone; module procedure is_extOzone_; end interface
   interface extOzone_read; module procedure read_; end interface
-
 
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   character(len=*) , parameter:: myname='m_extOzone'
@@ -77,7 +71,7 @@ module m_extOzone
   integer(kind=i_kind) :: ithin_time,n_tbin,it_mesh
 
 contains
-function is_extOzone_(dfile,dtype,dplat,class)
+function is_extOzone_(dfile,dtype,dplat)
 
   use mpeu_util, only: die,perr
   implicit none
@@ -85,42 +79,25 @@ function is_extOzone_(dfile,dtype,dplat,class)
   character(len=*),intent(in):: dfile   ! observation input filename (see gsiparm.anl:&OBSINPUT/)
   character(len=*),intent(in):: dtype   ! observation type (see gsiparm.anl:&OBSINPUT/)
   character(len=*),intent(in):: dplat   ! platform (see gsiparm.anl:&OBSINPUT/)
-  character(len=*),optional,intent(in):: class  ! specify either "level" or "layer" for sub-class
 
-! Use Case 1: (in read_obs())
+! Use Case: (in read_obs())
 !
-!   elseif(is_extOzone(dfile,obstype,dplat)) then
+!   if(is_extOzone(dfile,obstype,dplat)) then
+!     call extOzone_read(obstype,dplat,dsis,dfile,...)
+!   else
 !     call read_ozone(obstype,dplat,dsis,dfile,...)
-!
-!
-! Use Case 2: (in setuprhsall())
-!
-!   elseif(is_extOzone(dfile,obstype,dplat,class='level')) then
-!     call setupozlev(obstype,dplat,dsis,...)
-!   elseif(is_extOzone(dfile,obstype,dplat,class='layer')) then
-!     call setupozlay(obstype,dplat,dsis,...)
-!   elseif(is_extOzone(dfile,obstype,dplat,class='total')) then
-!     call setupozlay(obstype,dplat,dsis,...)
-!
-! Use Case 3: (where intoz() or stpoz() are called)
-!
-!   elseif(is_extOzone(dfile,obstype,dplat)) then
-!     call intoz(obstype,dplat,dsis,...)
+!   endif
 
   character(len=*), parameter:: myname_=myname//'::is_extOzone_'
 
   integer(kind=i_kind),parameter:: iANY    = 0
   integer(kind=i_kind),parameter:: iUNKNOWN=-1
 
-  integer(kind=i_kind),parameter:: iLEVEL  = 1
-  integer(kind=i_kind),parameter:: iLAYER  = 2
-  integer(kind=i_kind),parameter:: iTOTAL  = 3
-
   integer(kind=i_kind),parameter:: iTEXT   = 1
   integer(kind=i_kind),parameter:: iBUFR   = 2
   integer(kind=i_kind),parameter:: iNC     = 3
 
-  integer(kind=i_kind):: class_,ifile_
+  integer(kind=i_kind):: ifile_
 
   ifile_=iUNKNOWN
   select case(dfile_format(dfile))
@@ -132,29 +109,6 @@ function is_extOzone_(dfile,dtype,dplat,class)
     ifile_=iNC
   end select
 
-  class_=iANY
-  if(present(class)) then
-    select case(class)
-    case('level')
-      class_=iLEVEL
-    case('layer')
-      class_=iLAYER
-    case('total')
-      class_=iTOTAL
-    case default
-      class_=iUNKNOWN
-      call perr(myname_,'unknown ozone class, class =',class)
-      call perr(myname_,'                     dfile =',dfile)
-      call perr(myname_,'                     dtype =',dtype)
-      call perr(myname_,'                     dplat =',dplat)
-      call  die(myname_)
-    end select
-  endif
-    
-  is_extOzone_= .false.
-#ifndef NO_EXTRA_
-  select case(class_)
-  case(iANY)
     is_extOzone_= &
       ifile_==iBUFR .and. dtype == 'o3lev'     .or. &
       ifile_==iNC   .and. dtype == 'mls55'     .or. &
@@ -165,29 +119,6 @@ function is_extOzone_(dfile,dtype,dplat,class)
       ifile_==iNC   .and. dtype == 'mipas'     .or. &
       ifile_==iNC   .and. dtype == 'omieff'    .or. &
       ifile_==iNC   .and. dtype == 'tomseff'
-
-  case(iLEVEL)
-    is_extOzone_= &
-      ifile_==iBUFR .and. dtype == 'o3lev'     .or. &
-      ifile_==iNC   .and. dtype == 'mls55'     .or. &
-      ifile_==iNC   .and. dtype == 'ompslpvis' .or. &
-      ifile_==iNC   .and. dtype == 'ompslpuv'  .or. &
-      ifile_==iNC   .and. dtype == 'lims'      .or. &
-      ifile_==iNC   .and. dtype == 'uarsmls'   .or. &
-      ifile_==iNC   .and. dtype == 'mipas'
-
-  case(iLAYER)
-    is_extOzone_= .false.
-
-  case(iTOTAL)
-    is_extOzone_= &
-      ifile_==iNC   .and. dtype == 'omieff'  .or. &
-      ifile_==iNC   .and. dtype == 'tomseff'
-
-  case default
-    is_extOzone_= .false.
-  end select
-#endif
 
 end function is_extOzone_
 
