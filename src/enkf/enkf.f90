@@ -881,11 +881,11 @@ do nob1=1,numobsperproc(nproc+1)
 end do
 
 
-IF (nproc == 0) PRINT *,'obsprd_prior = ',obsprd_prior
+!IF (nproc == 0) PRINT *,'obsprd_prior = ',obsprd_prior
 call mpi_allreduce(buffertmp,obsprd_post,nobstot,mpi_real4,mpi_sum,mpi_comm_world,ierr)
 if (nproc == 0) print *,'time to broadcast obsprd_post = ',mpi_wtime()-t1
 
-IF (nproc == 0) PRINT *,'obsprd_posterior = ',obsprd_post
+!IF (nproc == 0) PRINT *,'obsprd_posterior = ',obsprd_post
 
 predx = predx + deltapredx ! add increment to bias coeffs.
 deltapredx = 0.0

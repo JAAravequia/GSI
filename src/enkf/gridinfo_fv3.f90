@@ -65,7 +65,7 @@ integer,public :: npts
 integer,public :: ntrunc
 ! supported variable names in anavinfo
 CHARACTER(len=max_varname_length),PUBLIC, DIMENSION(10), PARAMETER :: vars3d_supported_met = (/'u   ', 'v   ', 'tv  ', 'q   ', 'oz  ', 'cw  ', 'tsen', 'prse', 'ql  ', 'qi  '/)
-CHARACTER(len=max_varname_length),PUBLIC, DIMENSION(3), PARAMETER  :: vars2d_supported = (/'ps ', 'pst', 'sst' /)
+CHARACTER(len=max_varname_length),PUBLIC, DIMENSION(3), PARAMETER  :: vars2d_supported = (/'ps ', 'pst', 'sst', 'aod' /)
 
 !can include gases such as e.g. so2 at some point
 INTEGER, PARAMETER, PUBLIC :: ntracers_gocart=14

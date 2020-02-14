@@ -33,6 +33,7 @@ module gridio
   use params,   only: nx_res,ny_res,nlevs,ntiles
   use params,   only:  pseudo_rh
   USE params,   ONLY: fgfileprefixes,anlfileprefixes,datestring
+  USE params,   ONLY: aod_controlvar
   use mpeu_util, only: getindex
   USE read_fv3_restarts ,ONLY: &
        &read_fv3_restart_data2d,&
@@ -78,7 +79,7 @@ contains
 
     ! Define local variables 
     CHARACTER(len=:),ALLOCATABLE  :: filename_core,filename_tracer,&
-         &filename_in
+         &filename_aod,filename_in
     character(len=7)   :: charnanal
     INTEGER(i_kind) file_id,itracer
 
@@ -86,7 +87,7 @@ contains
                         vworkvar3d,tvworkvar3d,&
                         workprsi,qworkvar3d
     real(r_double),dimension(:,:,:),allocatable:: qsatworkvar3d
-    real(r_single), dimension(:,:),   allocatable ::pswork
+    REAL(r_single), DIMENSION(:,:),   ALLOCATABLE :: pswork, workvar2d
 
     ! Define variables required for netcdf variable I/O
     character(len=12) :: varstrname
@@ -99,8 +100,9 @@ contains
     INTEGER :: i,j, k,nn,ntile,nn_tile0, nb, ne, nanal
     integer :: u_ind, v_ind, tv_ind,tsen_ind, q_ind, oz_ind
     integer :: ps_ind, sst_ind
-    INTEGER(i_kind), DIMENSION(ntracers_gocart) :: aero_ind
-
+    INTEGER, DIMENSION(ntracers_gocart) :: aero_ind
+    integer :: aod_ind
+    
     integer :: ttind 
     logical :: ice
 
@@ -129,6 +131,8 @@ contains
 
     ps_ind  = getindex(vars2d, 'ps')  ! Ps (2D)
     sst_ind = getindex(vars2d, 'sst') ! SST (2D)
+
+    aod_ind  = getindex(vars2d, 'aod')  ! AOD (2D)
 
     DO i=1,ntracers_gocart
        aero_ind(i)=getindex(vars3d,vars3d_supported_aero(i))
@@ -168,6 +172,10 @@ contains
            &TRIM(fileprefix)//".fv_core.res.tile"//TRIM(char_tile)//".nc"
       filename_tracer = TRIM(datapath)//TRIM(datestring)//"/"//TRIM(charnanal)//"/"//&
            &TRIM(fileprefix)//".fv_tracer.res.tile"//TRIM(char_tile)//".nc"
+
+      filename_aod =  TRIM(datapath)//TRIM(datestring)//"/"//TRIM(charnanal)//"/"//&
+           &TRIM(fileprefix)//".fv_aod.res.tile"//TRIM(char_tile)//".nc"      
+
 
     !----------------------------------------------------------------------
       filename_in=filename_core
@@ -328,38 +336,81 @@ contains
        
     endif
 
-    filename_in=TRIM(filename_tracer)
-    CALL nc_check( nf90_open(TRIM(ADJUSTL(filename_in)),nf90_nowrite,file_id),&
-         myname_,'open: '//TRIM(ADJUSTL(filename_in)) )
-    
-    DO itracer=1,ntracers_gocart
+    IF (.NOT. aod_controlvar) THEN
 
-       IF (aero_ind(itracer) > 0) THEN
-          varstrname = vars3d_supported_aero(itracer)
-          CALL read_fv3_restart_data3d(varstrname,filename_in,file_id,workvar3d)
-          IF (cliptracers)  WHERE (workvar3d < clip) workvar3d = clip
-          DO k=1,nlevs
-             nn = nn_tile0
-             DO j=1,ny_res
-                DO i=1,nx_res
-                   nn=nn+1
-                   vargrid(nn,levels(aero_ind(itracer)-1)+k,nb,ne)=workvar3d(i,j,k) 
+       filename_in=TRIM(filename_tracer)
+       CALL nc_check( nf90_open(TRIM(ADJUSTL(filename_in)),nf90_nowrite,file_id),&
+            myname_,'open: '//TRIM(ADJUSTL(filename_in)) )
+       
+       DO itracer=1,ntracers_gocart
+          
+          IF (aero_ind(itracer) > 0) THEN
+             varstrname = vars3d_supported_aero(itracer)
+             CALL read_fv3_restart_data3d(varstrname,filename_in,file_id,workvar3d)
+             IF (cliptracers)  WHERE (workvar3d < clip) workvar3d = clip
+             DO k=1,nlevs
+                nn = nn_tile0
+                DO j=1,ny_res
+                   DO i=1,nx_res
+                      nn=nn+1
+                      vargrid(nn,levels(aero_ind(itracer)-1)+k,nb,ne)=workvar3d(i,j,k) 
+                   ENDDO
                 ENDDO
              ENDDO
-          ENDDO
-
+             
 !          DO k = levels(aero_ind(itracer)-1)+1, levels(aero_ind(itracer))
 !             IF (nproc .EQ. 0)                                               &
 !                  WRITE(6,*) 'READFV3 : '//trim(varstrname),                           &
 !                  & k, MINVAL(vargrid(:,k,nb,ne)), MAXVAL(vargrid(:,k,nb,ne))
 !          ENDDO
 
-       ENDIF
+          ENDIF
 
-    ENDDO
+       ENDDO
 
-    CALL nc_check( nf90_close(file_id),&
-         myname_,'close '//TRIM(filename_in) )
+       CALL nc_check( nf90_close(file_id),&
+            myname_,'close '//TRIM(filename_in) )
+       
+    ELSE
+
+       filename_in=TRIM(filename_aod)
+       CALL nc_check( nf90_open(TRIM(ADJUSTL(filename_in)),nf90_nowrite,file_id),&
+            myname_,'open: '//TRIM(ADJUSTL(filename_in)) )
+       
+       IF (aod_ind > 0) THEN
+          varstrname = 'aod'
+          ALLOCATE(workvar2d(nx_res,ny_res))
+          CALL read_fv3_restart_data2d(varstrname,filename_in,file_id,workvar2d)
+          IF (cliptracers)  WHERE (workvar2d < clip) workvar2d = clip
+
+          nn = nn_tile0
+          DO j=1,ny_res
+             DO i=1,nx_res
+                nn=nn+1
+                vargrid(nn,levels(n3d)+aod_ind, nb,ne) = workvar2d(i,j)
+             ENDDO
+          ENDDO
+             
+          IF (nproc .EQ. 0)                                               &
+               WRITE(6,*) 'READFV3 : '//TRIM(varstrname),                           &
+               &  MINVAL(vargrid(:,levels(n3d)+aod_ind,nb,ne)), &
+               &MAXVAL(vargrid(:,levels(n3d)+aod_ind,nb,ne))
+          
+          ENDIF
+
+       ELSE
+
+          IF (nproc .EQ. 0) &
+               &WRITE(6,*) 'aod_controlvar = T but aod_ind < 0'
+          
+          CALL stop2(713)
+          
+       ENDDO
+
+       CALL nc_check( nf90_close(file_id),&
+            myname_,'close '//TRIM(filename_in) )
+       
+    ENDIF
 
 ! set SST to zero for now
     if (sst_ind > 0) then
