@@ -142,6 +142,7 @@ contains
     allocate(qworkvar3d(nx_res,ny_res,nlevs))
     allocate(tvworkvar3d(nx_res,ny_res,nlevs))
     allocate(workvar3d(nx_res,ny_res,nlevs))
+    allocate(workvar2d(nx_res,ny_res))
     allocate(qsatworkvar3d(nx_res,ny_res,nlevs))
     ALLOCATE(workprsi(nx_res,ny_res,nlevsp1))
     ALLOCATE(pswork(nx_res,ny_res))
@@ -372,14 +373,13 @@ contains
             myname_,'close '//TRIM(filename_in) )
        
     ELSE
-
+       
        filename_in=TRIM(filename_aod)
        CALL nc_check( nf90_open(TRIM(ADJUSTL(filename_in)),nf90_nowrite,file_id),&
             myname_,'open: '//TRIM(ADJUSTL(filename_in)) )
        
        IF (aod_ind > 0) THEN
           varstrname = 'aod'
-          ALLOCATE(workvar2d(nx_res,ny_res))
           CALL read_fv3_restart_data2d(varstrname,filename_in,file_id,workvar2d)
           IF (cliptracers)  WHERE (workvar2d < clip) workvar2d = clip
 
@@ -390,23 +390,18 @@ contains
                 vargrid(nn,levels(n3d)+aod_ind, nb,ne) = workvar2d(i,j)
              ENDDO
           ENDDO
-             
-          IF (nproc .EQ. 0)                                               &
-               WRITE(6,*) 'READFV3 : '//TRIM(varstrname),                           &
-               &  MINVAL(vargrid(:,levels(n3d)+aod_ind,nb,ne)), &
-               &MAXVAL(vargrid(:,levels(n3d)+aod_ind,nb,ne))
           
-          ENDIF
+          IF (nproc .EQ. 0)         &
+               WRITE(6,*) 'READFV3 : '//TRIM(varstrname),      &
+               &MINVAL(vargrid(:,levels(n3d)+aod_ind,nb,ne)), &
+               &MAXVAL(vargrid(:,levels(n3d)+aod_ind,nb,ne))
 
        ELSE
-
           IF (nproc .EQ. 0) &
                &WRITE(6,*) 'aod_controlvar = T but aod_ind < 0'
-          
           CALL stop2(713)
-          
-       ENDDO
-
+       ENDIF
+       
        CALL nc_check( nf90_close(file_id),&
             myname_,'close '//TRIM(filename_in) )
        
@@ -499,7 +494,7 @@ contains
    if(allocated(tvworkvar3d)) deallocate(tvworkvar3d)
    if(allocated(qworkvar3d)) deallocate(qworkvar3d)
    if(allocated(qsatworkvar3d)) deallocate(qsatworkvar3d)
-   IF(ALLOCATED(workvar3d))             DEALLOCATE(workvar3d)
+   IF(ALLOCATED(workvar3d)) DEALLOCATE(workvar3d)
 
     return
 
@@ -539,7 +534,7 @@ contains
     ! Define variables computed within subroutine
 
     CHARACTER(len=:),ALLOCATABLE  :: filename_core,filename_tracer,&
-         &filename_in
+         &filename_aod,filename_in
     character(len=7)    :: charnanal
 
     !----------------------------------------------------------------------
@@ -547,9 +542,11 @@ contains
     integer(i_kind) :: w_ind, cw_ind, ph_ind
 
     INTEGER(i_kind), DIMENSION(ntracers_gocart) :: aero_ind
+    INTEGER(i_kind) :: aod_ind
 
     integer(i_kind) file_id
-    REAL(r_single), DIMENSION(:,:), ALLOCATABLE ::pswork,psworkinc
+    REAL(r_single), DIMENSION(:,:), ALLOCATABLE ::pswork,psworkinc,&
+         &workvar2d,workinc2d
     real(r_single), dimension(:,:,:), allocatable ::workvar3d,workinc3d,workinc3d2,uworkvar3d,&
                         vworkvar3d,tvworkvar3d,tsenworkvar3d,&
                         workprsi,qworkvar3d
@@ -598,6 +595,8 @@ contains
 
     ps_ind  = getindex(vars2d, 'ps')  ! Ps (2D)
 
+    aod_ind  = getindex(vars2d, 'aod')  ! AOD (2D)
+
     ALLOCATE(workinc3d(nx_res,ny_res,nlevs),&
          &workinc3d2(nx_res,ny_res,nlevsp1))
     allocate(workvar3d(nx_res,ny_res,nlevs))
@@ -605,7 +604,10 @@ contains
     allocate(tvworkvar3d(nx_res,ny_res,nlevs))
     ALLOCATE(workprsi(nx_res,ny_res,nlevsp1))
     ALLOCATE(pswork(nx_res,ny_res),psworkinc(nx_res,ny_res))
+    ALLOCATE(workvar2d(nx_res,ny_res),workinc2d(nx_res,ny_res))
     
+
+
     !----------------------------------------------------------------------
     if (nbackgrounds > 1) then
        write(6,*)'gridio/writegriddata: writing multiple backgrounds not yet supported'
@@ -634,6 +636,9 @@ contains
            &TRIM(fileprefix)//".fv_core.res.tile"//TRIM(char_tile)//".nc"
       filename_tracer = TRIM(datapath)//TRIM(datestring)//"/"//TRIM(charnanal)//"/"//&
            &TRIM(fileprefix)//".fv_tracer.res.tile"//TRIM(char_tile)//".nc"
+      filename_aod = TRIM(datapath)//TRIM(datestring)//"/"//TRIM(charnanal)//"/"//&
+           &TRIM(fileprefix)//".fv_aod.res.tile"//TRIM(char_tile)//".nc"
+
 
       goto 1000
 
@@ -765,40 +770,70 @@ contains
 
 1000 CONTINUE
 
-    filename_in=TRIM(filename_tracer)
 
-    CALL nc_check( nf90_open(TRIM(ADJUSTL(filename_in)),nf90_write,file_id),&
-         myname_,'open: '//TRIM(ADJUSTL(filename_in)) )
+    IF (.NOT. aod_controlvar) THEN
 
-    DO itracer=1,ntracers_gocart
-
-       IF (aero_ind(itracer) > 0) THEN
-
-          varstrname = vars3d_supported_aero(itracer)
-         
-          CALL read_fv3_restart_data3d(varstrname,filename_in,file_id,workvar3d)
-   
-          DO k=1,nlevs
-             nn = nn_tile0
-             DO j=1,ny_res
-                DO i=1,nx_res
-                   nn=nn+1
-                   workinc3d(i,j,k)=vargrid(nn,levels(aero_ind(itracer)-1)+k,nb,ne) 
+       filename_in=TRIM(filename_tracer)
+       
+       CALL nc_check( nf90_open(TRIM(ADJUSTL(filename_in)),nf90_write,file_id),&
+            myname_,'open: '//TRIM(ADJUSTL(filename_in)) )
+       
+       DO itracer=1,ntracers_gocart
+          
+          IF (aero_ind(itracer) > 0) THEN
+             
+             varstrname = vars3d_supported_aero(itracer)
+             
+             CALL read_fv3_restart_data3d(varstrname,filename_in,file_id,workvar3d)
+             
+             DO k=1,nlevs
+                nn = nn_tile0
+                DO j=1,ny_res
+                   DO i=1,nx_res
+                      nn=nn+1
+                      workinc3d(i,j,k)=vargrid(nn,levels(aero_ind(itracer)-1)+k,nb,ne) 
+                   ENDDO
                 ENDDO
              ENDDO
-          ENDDO
-          workvar3d=workvar3d+workinc3d
-          CALL write_fv3_restart_data3d(varstrname,filename_in,file_id,workvar3d)
+             workvar3d=workvar3d+workinc3d
+             CALL write_fv3_restart_data3d(varstrname,filename_in,file_id,workvar3d)
+             
+          ENDIF
           
+       ENDDO
+
+       CALL nc_check( nf90_close(file_id),&
+            myname_,'close '//TRIM(filename_in) )
+       
+
+    ELSE
+
+       filename_in=TRIM(filename_aod)
+       
+       CALL nc_check( nf90_open(TRIM(ADJUSTL(filename_in)),nf90_write,file_id),&
+            myname_,'open: '//TRIM(ADJUSTL(filename_in)) )
+       
+          varstrname = 'aod'
+
+          CALL read_fv3_restart_data2d(varstrname,filename_in,file_id,workvar2d)
+
+          nn = nn_tile0
+          DO j=1,ny_res
+             DO i=1,nx_res
+                nn=nn+1
+                workinc2d(i,j) = vargrid(nn,levels(n3d)+aod_ind, nb,ne)
+             ENDDO
+          ENDDO
+
+          workvar2d=workvar2d+workinc2d
+
+          CALL write_fv3_restart_data2d(varstrname,filename_in,file_id,workvar2d)
+
        ENDIF
 
-    ENDDO
 
-    CALL nc_check( nf90_close(file_id),&
-         myname_,'close '//TRIM(filename_in) )
-    
-    GOTO 1001
-
+       GOTO 1001
+       
     if (ps_ind > 0) then
        varstrname = 'delp'
 
@@ -851,7 +886,9 @@ contains
     IF(ALLOCATED(psworkinc))     DEALLOCATE(psworkinc)
     IF(ALLOCATED(tvworkvar3d)) DEALLOCATE(tvworkvar3d)
     IF(ALLOCATED(qworkvar3d)) DEALLOCATE(qworkvar3d)
-
+    IF(ALLOCATED(workvar3d)) DEALLOCATE(workvar3d)
+    IF(ALLOCATED(workvar2d)) DEALLOCATE(workvar2d)
+    IF(ALLOCATED(workinc2d))     DEALLOCATE(workinc2d)
 
     ! Return calculated values
     return
@@ -859,6 +896,5 @@ contains
     !======================================================================
 
   end subroutine writegriddata
-
 
 end module gridio

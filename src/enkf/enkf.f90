@@ -113,7 +113,7 @@ use loadbal, only: numobsperproc, numptsperproc, indxproc_obs, iprocob, &
                    obtime_chunk, grdloc_chunk, obloc_chunk, &
                    npts_max, anal_obchunk_prior, ensmean_chunk, anal_chunk, &
                    anal_obchunk_modens_prior, ensmean_chunk_prior
-use controlvec, only: cvars3d,  ncdim, index_pres
+USE controlvec, ONLY: cvars3d,  ncdim, index_pres, cvars2d
 use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, oblnp, &
                   nobstot, nobs_conv, nobs_oz, nobs_sat,&
                   obfit_prior, obfit_post, obsprd_prior, obsprd_post, obtime,&
@@ -124,7 +124,8 @@ use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, oblnp, &
 use constants, only: pi, one, zero
 use params, only: sprd_tol, paoverpb_thresh, datapath, nanals,&
                   iassim_order,sortinc,deterministic,numiter,nlevs,&
-                  zhuberleft,zhuberright,varqc,lupd_satbiasc,huber,univaroz,univartracers,&
+                  zhuberleft,zhuberright,varqc,lupd_satbiasc,huber,&
+                  univaroz,univartracers,aod_controlvar,&
                   covl_minfact,covl_efold,nbackgrounds,nhr_anal,fhr_assim,&
                   iseed_perturbed_obs,lupd_obspace_serial,fso_cycling,&
                   neigv,vlocal_evecs,denkf
@@ -133,8 +134,7 @@ use radbias, only: apply_biascorr, update_biascorr
 use gridinfo, only: nlevs_pres
 use sorting, only: quicksort, isort
 use mpeu_util, only: getindex
-use mpeu_util, only: getindex
-USE gridinfo, ONLY: ntracers_gocart,vars3d_supported_aero
+USE gridinfo, ONLY: ntracers_gocart,vars3d_supported_aero,vars2d_supported
 
 !use innovstats, only: print_innovstats
 
@@ -179,7 +179,7 @@ real(r_single), allocatable, dimension(:) :: paoverpb_min, paoverpb_min1, paover
 integer(i_kind) ierr
 ! kd-tree search results
 type(kdtree2_result),dimension(:),allocatable :: sresults1,sresults2 
-integer(i_kind) nanal,nn,nnn,nobm,nsame,nn1,nn2,oz_ind,nlev
+INTEGER(i_kind) nanal,nn,nnn,nobm,nsame,nn1,nn2,oz_ind,nlev,aod_ind
 INTEGER(i_kind),DIMENSION(ntracers_gocart) :: aero_ind
 real(r_single),dimension(nlevs_pres):: taperv
 logical lastiter, kdgrid, kdobs
@@ -275,6 +275,8 @@ kdobs=associated(kdtree_obs)
 DO i=1,ntracers_gocart
    aero_ind(i) = getindex(cvars3d, vars3d_supported_aero(i))
 ENDDO
+
+aod_ind  = getindex(cvars2d, 'aod') 
 
 do niter=1,numiter
 
@@ -619,12 +621,22 @@ do niter=1,numiter
          nn2 = oz_ind*nlevs
       ELSE IF (univartracers .AND. obtype(nob)(1:3) .EQ. 'aod') THEN
          loc_aero=.TRUE.
-         DO i=1,ntracers_gocart
-            IF (aero_ind(i) > 0) THEN ! aod obs only affect aerosols
-               nn1_aero(i) = (aero_ind(i)-1)*nlevs+1
-               nn2_aero(i) = aero_ind(i)*nlevs
-            END IF
-         ENDDO
+
+         IF (.NOT. aod_controlvar) THEN
+            DO i=1,ntracers_gocart
+               IF (aero_ind(i) > 0) THEN ! aod obs only affect aerosols
+                  nn1_aero(i) = (aero_ind(i)-1)*nlevs+1
+                  nn2_aero(i) = aero_ind(i)*nlevs
+               END IF
+            ENDDO
+         ELSE
+            IF (aod_ind > 0) THEN
+               
+            ELSE
+               IF (nproc == 0) WRITE(6,*) 'aod_ind < 0 and aod_controlvar=T'
+               call stop2(718)
+            ENDIF
+         ENDIF
       ELSE
          loc_aero=.FALSE.
          nn1 = 1
