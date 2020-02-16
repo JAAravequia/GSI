@@ -631,7 +631,8 @@ do niter=1,numiter
             ENDDO
          ELSE
             IF (aod_ind > 0) THEN
-               
+               nn1 = aod_ind
+               nn2 = aod_ind
             ELSE
                IF (nproc == 0) WRITE(6,*) 'aod_ind < 0 and aod_controlvar=T'
                call stop2(718)
@@ -674,32 +675,48 @@ do niter=1,numiter
 
                  IF (loc_aero) THEN
 
-                    taperv = zero
+                    IF (.NOT. aod_controlvar) THEN
 
-                    DO nn=1,nlevs_pres
-                       lnsig = ABS(lnp_chunk(i,nn)-lnp_chunk(i,1))
-                       IF(lnsig < lnsigl(nob))THEN
-                          taperv(nn)=taper1*taper(lnsig*lnsiglinv)
-                       END IF
-                    END DO
-
-                    DO iaero=1,ntracers_gocart
-                       DO nn=nn1_aero(iaero),nn2_aero(iaero)
-                          nnn=index_pres(nn)
-                          IF (taperv(nnn) > taper_thresh) THEN
+                       taperv = zero
+                       
+                       DO nn=1,nlevs_pres
+                          lnsig = ABS(lnp_chunk(i,nn)-lnp_chunk(i,1))
+                          IF(lnsig < lnsigl(nob))THEN
+                             taperv(nn)=taper1*taper(lnsig*lnsiglinv)
+                          END IF
+                       END DO
+                       
+                       DO iaero=1,ntracers_gocart
+                          DO nn=nn1_aero(iaero),nn2_aero(iaero)
+                             nnn=index_pres(nn)
+                             IF (taperv(nnn) > taper_thresh) THEN
 ! gain includes covariance localization.
 ! update all time levels
-                             kfgain=taperv(nnn)*SUM(anal_chunk(:,i,nn,nb)*anal_obtmp)
-
+                                kfgain=taperv(nnn)*SUM(anal_chunk(:,i,nn,nb)*anal_obtmp)
+                                
 ! update mean.
-                             ensmean_chunk(i,nn,nb) = ensmean_chunk(i,nn,nb) + kfgain*obinc_tmp
+                                ensmean_chunk(i,nn,nb) = ensmean_chunk(i,nn,nb) + kfgain*obinc_tmp
 ! update perturbations.
-                             anal_chunk(:,i,nn,nb) = anal_chunk(:,i,nn,nb) + kfgain*obganl(:)
+                                anal_chunk(:,i,nn,nb) = anal_chunk(:,i,nn,nb) + kfgain*obganl(:)
 
 
-                          END IF
-                       ENDDO
-                    END DO
+                             END IF
+                          ENDDO
+                       END DO
+
+                    ELSE
+
+                       DO nn=nn1,nn2
+                          kfgain=SUM(anal_chunk(:,i,nn,nb)*anal_obtmp)
+                                
+! update mean.
+                          ensmean_chunk(i,nn,nb) = ensmean_chunk(i,nn,nb) + kfgain*obinc_tmp
+! update perturbations.
+                          anal_chunk(:,i,nn,nb) = anal_chunk(:,i,nn,nb) + kfgain*obganl(:)
+
+                       END DO
+                    ENDIF
+
                  ELSE
                     
                     taperv = zero
