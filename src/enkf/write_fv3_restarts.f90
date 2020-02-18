@@ -1,8 +1,12 @@
 MODULE write_fv3_restarts
 
   USE kinds, ONLY: r_single, i_kind, r_double, r_single
-  USE netcdf, ONLY: nf90_put_var,nf90_inq_varid
+  USE netcdf, ONLY: nf90_put_var,nf90_inq_varid,nf90_inquire_variable
   USE netcdf_mod, ONLY: nc_check
+
+  INCLUDE 'netcdf.inc'
+
+  INTEGER :: xtype
 
   PUBLIC write_fv3_restart_data1d,write_fv3_restart_data2d
   PUBLIC write_fv3_restart_data3d,write_fv3_restart_data4d
@@ -36,10 +40,8 @@ CONTAINS
     INTEGER(i_kind) :: var_id
 
     ALLOCATE(tmp(SIZE(data_arr,1),SIZE(data_arr,2)))
-
     tmp=data_arr
     INCLUDE "write_fv3_restart_data_mzp.f90"
-
 
   END SUBROUTINE write_fv3_restart_data2d
 

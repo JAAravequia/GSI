@@ -804,7 +804,6 @@ contains
 
        CALL nc_check( nf90_close(file_id),&
             myname_,'close '//TRIM(filename_in) )
-       
 
     ELSE
 
@@ -818,6 +817,7 @@ contains
           CALL read_fv3_restart_data2d(varstrname,filename_in,file_id,workvar2d)
 
           nn = nn_tile0
+
           DO j=1,ny_res
              DO i=1,nx_res
                 nn=nn+1
@@ -829,6 +829,9 @@ contains
 
           CALL write_fv3_restart_data2d(varstrname,filename_in,file_id,workvar2d)
 
+          CALL nc_check( nf90_close(file_id),&
+               myname_,'close '//TRIM(filename_in) )
+          
        ENDIF
 
 
