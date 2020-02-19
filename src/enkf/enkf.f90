@@ -707,7 +707,7 @@ do niter=1,numiter
                     ELSE
 
                        DO nn=nn1,nn2
-                          kfgain=SUM(anal_chunk(:,i,nn,nb)*anal_obtmp)
+                          kfgain=taper1*SUM(anal_chunk(:,i,nn,nb)*anal_obtmp)
                                 
 ! update mean.
                           ensmean_chunk(i,nn,nb) = ensmean_chunk(i,nn,nb) + kfgain*obinc_tmp

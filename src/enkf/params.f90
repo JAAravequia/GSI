@@ -568,6 +568,12 @@ if (nproc == 0) then
      call stop2(19)
    end if
 
+   if (letkf_flag .and. aod_controlvar) then
+     PRINT *,'aod_controlvar is not supported in LETKF!'
+     call stop2(19)
+   end if
+
+
    if ((obtimelnh < 1.e10 .or. obtimeltr < 1.e10 .or. obtimelsh < 1.e10) .and. &
        letkf_flag) then
      print *,'warning: no time localization in LETKF!'
