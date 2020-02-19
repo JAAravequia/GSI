@@ -30,7 +30,7 @@
 #     file2		obs, penalty, or channel error file
 #                       required
 #     type              type of error file
-#                       choises are obs, pen, or chan; required
+#                       choices are obs, pen, chan, or cnt; required
 #     cycle1		first cycle processing date
 #                       yyyymmddcc format; required
 #     cycle2		second cycle processing date
@@ -151,6 +151,9 @@ fi
             fi
 
          done } < $file2
+     
+      elif [[ $type == "cnt" ]]; then
+         echo "processing cnt"
 
       else
          match=`gawk "/$satname/ && /channel= $channel / && /region= $region /" $file2`

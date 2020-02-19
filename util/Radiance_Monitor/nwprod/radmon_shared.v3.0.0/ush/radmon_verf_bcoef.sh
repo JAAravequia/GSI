@@ -72,9 +72,6 @@
 #  Command line arguments.
 export PDATE=${1:-${PDATE:?}}
 
-scr=radmon_verf_bcoef.sh
-msg="${scr} HAS STARTED"
-postmsg "$jlogfile" "$msg"
 
 netcdf_boolean=".false."
 if [[ $RADMON_NETCDF -eq 1 ]]; then
@@ -154,8 +151,6 @@ else
 
       for dtype in ${gesanl}; do
 
-         prep_step
-
          ctr=`expr $ctr + 1`
 
          if [[ $dtype == "anl" ]]; then
@@ -197,9 +192,8 @@ cat << EOF > input
   netcdf=${netcdf_boolean},
  /
 EOF
-         startmsg
          ./${bcoef_exec} < input >>${pgmout} 2>>errfile
-         export err=$?; err_chk
+         
          if [[ $err -ne 0 ]]; then
             fail=`expr $fail + 1`
          fi
@@ -246,7 +240,5 @@ if [[ "$VERBOSE" = "YES" ]]; then
    echo $(date) EXITING $0 with error code ${err} >&2
 fi
 
-msg="${scr} HAS ENDED"
-postmsg "$jlogfile" "$msg"
 
 exit ${err}

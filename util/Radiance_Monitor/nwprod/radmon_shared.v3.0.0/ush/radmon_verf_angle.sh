@@ -76,9 +76,6 @@ rgnTM=${rgnTM:-}
 
 export PDATE=${1:-${PDATE:?}}
 
-scr=radmon_verf_angle.sh
-msg="${scr} HAS STARTED"
-postmsg "$jlogfile" "$msg"
 echo " REGIONAL_RR, rgnHH, rgnTM = $REGIONAL_RR, $rgnHH, $rgnTM"
 netcdf_boolean=".false."
 if [[ $RADMON_NETCDF -eq 1 ]]; then
@@ -86,8 +83,6 @@ if [[ $RADMON_NETCDF -eq 1 ]]; then
 fi  
 echo " RADMON_NETCDF, netcdf_boolean = ${RADMON_NETCDF}, $netcdf_boolean"
 
-which prep_step
-which startmsg
 
 if [[ "$VERBOSE" = "YES" ]]; then
    set -ax
@@ -156,7 +151,6 @@ else
 
          echo "pgm    = $pgm"
          echo "pgmout = $pgmout"
-         prep_step
 
          ctr=`expr $ctr + 1`
 
@@ -201,9 +195,8 @@ cat << EOF > input
  /
 EOF
 
-	 startmsg
          ./${angle_exec} < input >>   ${pgmout} 2>>errfile
-         export err=$?; err_chk
+
          if [[ $err -ne 0 ]]; then
              fail=`expr $fail + 1`
          fi
@@ -263,8 +256,6 @@ if [[ "$VERBOSE" = "YES" ]]; then
    echo $(date) EXITING $0 error code ${err} >&2
 fi
 
-msg="${scr} HAS ENDED"
-postmsg "$jlogfile" "$msg"
 
 echo "<-- radmon_verf_angle.sh"
 exit ${err}

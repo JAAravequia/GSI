@@ -94,8 +94,6 @@ export RAD_AREA=${RAD_AREA:-glb}
 export biascr=${biascr:-$COMIN/gdas.t${cyc}z.abias}
 export radstat=${radstat:-$COMIN/gdas.t${cyc}z.radstat}
 
-msg="JOB HAS STARTED"
-postmsg "$jlogfile" "$msg"
 
 ########################################################
 # Execute the script.
@@ -103,8 +101,6 @@ ${RADMONSH:-${SCRgfs}/exgdas_vrfyrad.sh.ecf} ${PDY} ${cyc}
 err=$?
 [[ $err -ne 0 ]] && exit $err
 
-msg="JOB COMPLETED NORMALLY"
-postmsg "$jlogfile" "$msg"
 
 ################################
 # Remove the Working Directory

@@ -134,13 +134,14 @@ module valid
     !                 -2 = invalid region
     !                  1 = base file wasn't loaded, unable to validate
     !---------------------------------------------------------------
-    subroutine validate_count( channel, region, count, valid, iret )
+    subroutine validate_count( channel, region, count, valid, avg_cnt, iret )
 
       !--- interface
       integer, intent( in )		:: channel
       integer, intent( in )		:: region
       real, intent( in )                :: count
       logical, intent( out )            :: valid
+      real, intent( out )               :: avg_cnt
       integer, intent( out )		:: iret
 
       !--- vars
@@ -148,11 +149,13 @@ module valid
 
       write(*,*) '--> validate_count, channel, region, count ', channel, region, count
       !--- initialize vars
-      iret = 0 
+      iret = 0
       cnt = count
       valid = .FALSE.
+      avg_cnt = 0.00 
 
       if( base_loaded .eqv. .TRUE. ) then
+
          if( channel < 1 .OR. channel > nchan ) then
             iret = -1
             write(*,*) 'Warning:  In validate_count attempt to validate channel out of range', channel
@@ -162,43 +165,47 @@ module valid
             write(*,*) 'Warnig:  In validate_count attempt to validate region out of range', region
             valid = .TRUE.
          else
-            ! 
+            !---------------------------------------------------------------------
             !  all unassimilated channels in the base files will have an rmiss
             !  value and are considered valid for verification purposes
             !
+            avg_cnt = avg_count( channel, region )
+         
             if( avg_count(channel,region) < 0.0 ) then
                valid = .TRUE.
             else
+               !------------------------------------------------------------------
+               !  Consider any count valid if:
+               !    cnt is within 2 sdvs from avg 
+               !
                sdv2 = 2 * sdv_count( channel, region )
-               hi = avg_count(channel,region) + sdv2
                lo = avg_count(channel,region) - sdv2
 
-               !
-               !  Consider any count valid if:
-               !    cnt is 2 sdvs from avg or
-               !    cnt is within the established min/max range for chan,region
-               !
-               if( cnt > 0.0 ) then
+               if( cnt >= lo ) then
                   valid = .TRUE.
-               end if 
-               !if( cnt <= hi .AND. cnt >= lo ) then
-               !   valid = .TRUE.
-               !else if( (cnt > 0) .AND. (cnt >= min_count( channel,region )) .AND. &
-               !    (cnt <= max_count( channel,region ))  ) then
-               !    valid = .TRUE.
-               !end if
+               end if
+
+ 	       if( valid .eqv. .FALSE. ) then
+                  write(*,*) 'LOW COUNT:  cnt, lo, min_count, avg_cnt = ', & 
+			 cnt, lo, min_count(channel,region), avg_cnt
+               end if
+
             end if
 
          end if
 
-         if ( valid .eqv. .FALSE. ) then
-            write(*,*) ' avg_count(channel,region), sdv2, hi, lo = ', avg_count(channel,region), sdv2, hi, lo
-         end if
-         write (*,*) '<-- valid, iret=', valid, iret
+!         if ( valid .eqv. .FALSE. ) then
+!            write(*,*) ' avg_cnt, sdv2, hi, lo = ', avg_cnt, sdv2, hi, lo
+!         end if
       else 
-         !--- base file was not loaded, so return a warning that validation isn't possible
+         !---------------------------------------------------------
+         !  base file wasn't loaded, so validation wasn't possible 
+         !
+         write(*,*) 'base file not loaded, unable to validate count'
          iret = 1 
       end if 
+
+      write (*,*) '<-- valid, iret=', valid, iret
     end subroutine validate_count
 
 

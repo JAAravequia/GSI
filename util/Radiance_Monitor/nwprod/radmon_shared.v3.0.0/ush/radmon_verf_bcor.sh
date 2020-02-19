@@ -71,10 +71,6 @@
 #  Command line arguments.
 export PDATE=${1:-${PDATE:?}}
 
-scr=radmon_verf_bcor.sh
-msg="${scr} HAS STARTED"
-postmsg "$jlogfile" "$msg"
-
 
 if [[ "$VERBOSE" = "YES" ]]; then
    set -ax
@@ -140,8 +136,6 @@ else
 
       for dtype in ${gesanl}; do
 
-         prep_step
-
          ctr=`expr $ctr + 1`
 
          if [[ $dtype == "anl" ]]; then
@@ -190,9 +184,7 @@ cat << EOF > input
  /
 EOF
    
-            startmsg
             ./${bcor_exec} < input >> ${pgmout} 2>>errfile
-            export err=$?; err_chk
             if [[ $? -ne 0 ]]; then
                fail=`expr $fail + 1`
             fi
@@ -239,8 +231,6 @@ if [[ "$VERBOSE" = "YES" ]]; then
    echo $(date) EXITING $0 error code ${err} >&2
 fi
 
-msg="${scr} HAS ENDED"
-postmsg "$jlogfile" "$msg"
 
 exit ${err}
 

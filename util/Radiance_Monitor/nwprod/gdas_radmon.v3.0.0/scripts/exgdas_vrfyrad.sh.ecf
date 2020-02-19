@@ -17,8 +17,6 @@
 ################################################################################
 export scr=exgdas_vrfyrad.sh.ecf
 
-msg="${scr} HAS STARTED"
-postmsg "$jlogfile" "$msg"
 
 ################################################################################
 #  Set environment
@@ -235,8 +233,6 @@ if [[ "$VERBOSE" = "YES" ]]; then
    echo "end exgdas_vrfyrad.sh.ecf, exit value = ${err}"
 fi
 
-msg="${scr} HAS ENDED"
-postmsg "$jlogfile" "$msg"
 
 set +x
 exit ${err}
