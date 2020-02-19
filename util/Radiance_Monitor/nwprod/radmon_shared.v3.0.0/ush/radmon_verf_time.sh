@@ -483,8 +483,8 @@ EOF
          
   The following channels report abnormally low observational counts in this cycle:
    
-Satellite/Instrument      Channel        Obs Count            Avg Count
-====================      =======        =========            =========
+Satellite/Instrument      Channel          Obs Count          Avg Count
+====================      =======          =========          =========
 
 EOF
               
