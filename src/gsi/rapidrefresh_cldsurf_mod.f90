@@ -327,9 +327,9 @@ contains
     metar_impact_radius = 10.0_r_kind                 ! in grid
     metar_impact_radius_lowCloud = 4.0_r_kind         ! in grid
     l_metar_impact_radius_change = .false.            ! .true. =radius change vertically
-    metar_impact_radius_max        = 100000.0_r_kind  ! in meter
-    metar_impact_radius_min        = 10000.0_r_kind   ! in meter
-    metar_impact_radius_max_height = 1200.0_r_kind    ! in meter
+    metar_impact_radius_max        = 50000.0_r_kind   ! in meter
+    metar_impact_radius_min        = 20000.0_r_kind   ! in meter
+    metar_impact_radius_max_height = 3000.0_r_kind    ! in meter
     metar_impact_radius_min_height = 200.0_r_kind     ! in meter
     l_gsd_terrain_match_surfTobs = .false.            ! .true. = turn on GSD terrain 
                                                       !          match for  surface
