@@ -24,6 +24,10 @@ subroutine  gsdcloudanalysis(mype)
 !    2015-01-13  ladwig - add code for Qni and Qnc (cloud ice and water number concentration)
 !    2017-03-23  Hu      - add code to use hybrid vertical coodinate in WRF MASS
 !                           core
+!    2019-10-10  Zhao    - add code to check and adjust Qr/qs/qg and Qnr for
+!                          each verical profile to reduce the background
+!                          reflectivity ghost in final analysis. (for RTMA3D
+!                          only now)
 !
 !
 !   input argument list:
@@ -77,10 +81,11 @@ subroutine  gsdcloudanalysis(mype)
                                       l_use_hydroretrieval_all, &
                                       i_lightpcp, l_numconc, qv_max_inc,ioption, &
                                       l_precip_clear_only,l_fog_off,cld_bld_coverage,cld_clr_coverage,&
-                                      l_T_Q_adjust,l_saturate_bkCloud
+                                      l_T_Q_adjust,l_saturate_bkCloud,l_precip_vertical_check,l_rtma3d  
 
   use gsi_metguess_mod, only: GSI_MetGuess_Bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
+  use gsi_io, only: verbose
 
   implicit none
 
@@ -233,7 +238,10 @@ subroutine  gsdcloudanalysis(mype)
   logical :: ifindomain
   integer(i_kind) :: imaxlvl_ref
   real(r_kind)    :: max_retrieved_qrqs,max_bk_qrqs,ratio_hyd_bk2obs
+  real(r_kind)    :: qrqs_retrieved
   real(r_kind)    :: qrlimit,qrlimit_lightpcp
+  real(r_kind)    :: qnr_limit
+  real(r_kind)    :: dbz_clean_graupel
   character(10)   :: obstype
   integer(i_kind) :: lunin, is, ier, istatus
   integer(i_kind) :: nreal,nchanl,ilat1s,ilon1s
@@ -251,6 +259,7 @@ subroutine  gsdcloudanalysis(mype)
   real(r_kind),parameter    :: rho_w = 999.97_r_kind, rho_a = 1.2_r_kind
   real(r_kind),parameter    :: cldDiameter = 10.0E3_r_kind
 
+  logical       :: print_verbose
 
 !
 !
@@ -305,6 +314,9 @@ subroutine  gsdcloudanalysis(mype)
   istat_radar=0
   istat_lightning=0
   istat_nasalarc=0
+
+  print_verbose=.false.
+  if (verbose) print_verbose=.true.
 
   call load_gsdpbl_hgt(mype)
 !
@@ -865,7 +877,7 @@ subroutine  gsdcloudanalysis(mype)
 !  2013)
 !
 
-  if(l_use_hydroretrieval_all) then !RTMA
+  if(l_use_hydroretrieval_all .or. l_rtma3d) then !RTMA
      qrlimit=15.0_r_kind*0.001_r_kind
      do k=1,nsig
         do j=2,lat2-1
@@ -903,6 +915,67 @@ subroutine  gsdcloudanalysis(mype)
         end do
         end do
      end do
+ 
+!    ---- verical check and adjustment to the analysis of precipitation
+!         in order to remove/reduce the backround reflectivity "ghost" in
+!         analysis.
+!         Note: here rain_3d, snow_3d have been already changed into unit of kg/kg.
+     if(l_precip_vertical_check ) then
+
+        if(mype == 0) &
+           write(6,*)"SUB gsdcloudanalysis: precip_vertical_check start... (only print for pe=",mype,")."
+        if(print_verbose) &
+           write(6,*)"SUB gsdcloudanalysis: precip_vertical_check start... (for pe=",mype,")."
+
+        qnr_limit=200000_r_kind
+        dbz_clean_graupel=35.0
+
+        do j=2,lat2-1
+           do i=2,lon2-1
+
+!          1. search the max reflectivity obs for veritcal profile at each grid
+!             point (same code used in hydrometeor anlysis for RAP forecast)
+              refmax=-999.0_r_kind
+              imaxlvl_ref=0
+              do k=1,nsig
+                 if(ref_mos_3d(i,j,k) > refmax) then
+                    imaxlvl_ref=k
+                    refmax=ref_mos_3d(i,j,k)
+                 endif
+              enddo
+!          2. check and adjustment along the profile at each grid point
+              if( refmax > 0 .and. (imaxlvl_ref > 0 .and. imaxlvl_ref < nsig ) ) then
+!                cleaning the Graupel, if refmax <= dbz_cleanr_graupel (35dbz)
+                 if( refmax <= dbz_clean_graupel ) graupel_3d(i,j,:) = zero
+
+!                adjusting hydrometeors based on maximum reflectivity level
+                 max_retrieved_qrqs=snow_3d(i,j,imaxlvl_ref)+rain_3d(i,j,imaxlvl_ref)
+                 do k=1,nsig
+                    qrqs_retrieved=snow_3d(i,j,k)+rain_3d(i,j,k)
+                    if(qrqs_retrieved > max_retrieved_qrqs .and. qrqs_retrieved > 0.0001_r_kind) then
+                       ratio_hyd_bk2obs=max(min(max_retrieved_qrqs/qrqs_retrieved,1.0_r_kind),0.0_r_kind)
+                       if(rain_3d(i,j,k) > zero) then
+                          rain_3d(i,j,k) = rain_3d(i,j,k)*ratio_hyd_bk2obs
+                          nrain_3d(i,j,k)= min(nrain_3d(i,j,k)/ratio_hyd_bk2obs*2.5,qnr_limit)
+                       endif
+                       if(snow_3d(i,j,k) > zero) &
+                          snow_3d(i,j,k) = snow_3d(i,j,k)*ratio_hyd_bk2obs
+                    end if
+                 end do
+
+              end if
+
+           end do
+        end do
+
+        if(mype == 0) &
+           write(6,*)"SUB gsdcloudanalysis: precip_vertical_check is done ... (only print for pe=",mype,")."
+        if(print_verbose) &
+           write(6,*)"SUB gsdcloudanalysis: precip_vertical_check is done ... (for pe=",mype,")."
+
+     end if 
+
+
   elseif(l_precip_clear_only) then !only clear for HRRRE
      do k=1,nsig
         do j=2,lat2-1

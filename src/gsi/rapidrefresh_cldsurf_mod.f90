@@ -22,6 +22,9 @@ module rapidrefresh_cldsurf_mod
 !  04-01-2017 Hu        added option i_gsdqc to turn on special observation qc
 !                              from GSD (for RAP/HRRR application)
 !   2018-09-12 Ladwig   added options l_precip_clear_only
+!   2019-10-10 Zhao     added options l_rtma3d and l_precip_vertical_check (for
+!                             RTMA3D only now)
+!
 ! 
 ! Subroutines Included:
 !   sub init_rapidrefresh_cldsurf  - initialize RR related variables to default values
@@ -160,6 +163,12 @@ module rapidrefresh_cldsurf_mod
 !      l_saturate_bkCloud - if .true. ensure saturation for all cloud 3-d points
 !                        in background where observed cloud cover is missing
 !                        (default:true).
+!      l_rtma3d      - logical option for turning on configuration for RTMA3D
+!                           (default is .FALSE.)
+!      l_precip_vertical_check - logical option for checking and adjusting
+!                                Qr/Qs/Qg and Qnr after precipitation analysis
+!                                to reduce the background reflectivity ghost in
+!                                analysis. (default is .FALSE.)
 !
 ! attributes:
 !   language: f90
@@ -229,6 +238,8 @@ module rapidrefresh_cldsurf_mod
   public :: DTsTmax 
   public :: l_T_Q_adjust
   public :: l_saturate_bkCloud
+  public :: l_rtma3d
+  public :: l_precip_vertical_check
 
   logical l_hydrometeor_bkio
   real(r_kind)  dfi_radar_latent_heat_time_period
@@ -285,6 +296,8 @@ module rapidrefresh_cldsurf_mod
   real(r_kind)         DTsTmax
   logical              l_T_Q_adjust
   logical              l_saturate_bkCloud
+  logical              l_rtma3d
+  logical              l_precip_vertical_check
 
 contains
 
@@ -391,6 +404,9 @@ contains
     DTsTmax = 20.0_r_kind                             ! maximum allowed difference between Ts and T 1st level
     l_T_Q_adjust= .true.
     l_saturate_bkCloud= .true.
+    l_rtma3d            = .false.                     ! turn configuration for rtma3d off          
+    l_precip_vertical_check = .false.                 ! No verical check for precipitation analysis (default)              
+
     return
   end subroutine init_rapidrefresh_cldsurf
 

@@ -142,7 +142,7 @@
                             i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off,&
                             cld_bld_coverage,cld_clr_coverage,&
                             i_cloud_q_innovation,i_ens_mean,DTsTmax,&
-                            l_T_Q_adjust,l_saturate_bkCloud
+                            l_T_Q_adjust,l_saturate_bkCloud,l_rtma3d,l_precip_vertical_check
   use gsi_metguess_mod, only: gsi_metguess_init,gsi_metguess_final
   use gsi_chemguess_mod, only: gsi_chemguess_init,gsi_chemguess_final
   use tcv_mod, only: init_tcps_errvals,tcp_refps,tcp_width,tcp_ermin,tcp_ermax
@@ -387,6 +387,8 @@
 !  03-11-2019 Collard   Introduce ec_amv_qc as temporary control of GOES-16/17 AMVS
 !  06-19-2019 Hu        Add option reset_bad_radbc for reseting radiance bias correction when it is bad
 !  06-25-2019 Hu        Add option print_obs_para to turn on OBS_PARA list
+!  10-10-2019 Zhao      added options l_rtma3d and l_precip_vertical_check (for
+!                             RTMA3D only now)
 !
 !EOP
 !-------------------------------------------------------------------------
@@ -1062,6 +1064,13 @@
 !                           in cloud analysis (default:true).
 !      l_saturate_bkCloud - if .true. ensure saturation for all cloud 3-d points in background
 !                           where observed cloud cover is missing (default:true).
+!      l_rtma3d      - logical option for turning on configuration for RTMA3D
+!                           (default is .FALSE.)
+!      l_precip_vertical_check - logical option for checking and adjusting
+!                                Qr/Qs/Qg and Qnr after precipitation analysis
+!                                to reduce the background reflectivity ghost in
+!                                analysis. (default is .FALSE.)
+!
 !       
   namelist/rapidrefresh_cldsurf/dfi_radar_latent_heat_time_period, &
                                 metar_impact_radius,metar_impact_radius_lowcloud, &
@@ -1082,7 +1091,7 @@
                                 i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off,&
                                 cld_bld_coverage,cld_clr_coverage,&
                                 i_cloud_q_innovation,i_ens_mean,DTsTmax, &
-                                l_T_Q_adjust,l_saturate_bkCloud
+                                l_T_Q_adjust,l_saturate_bkCloud,l_rtma3d,l_precip_vertical_check
 
 ! chem(options for gsi chem analysis) :
 !     berror_chem       - .true. when background  for chemical species that require
