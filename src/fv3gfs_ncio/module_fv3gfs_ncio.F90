@@ -266,11 +266,18 @@ module module_fv3gfs_ncio
        return_errcode=.false.
     endif
     if (present(paropen)) then
+#ifdef NO_PNC
+       dset%isparallel = .false.
+       if (paropen) then
+         print *, 'WARNING: netCDF with parallel I/O not supported. Using serial read.'
+       end if
+#else
        if (paropen) then
          dset%isparallel = .true.
        else
          dset%isparallel = .false.
        end if
+#endif
     else
       dset%isparallel = .false.
     end if
@@ -422,11 +429,18 @@ module module_fv3gfs_ncio
        copyd = .false. ! only copy coordinate variable data
     endif
     if (present(paropen)) then
+#ifdef NO_PNC
+       dset%isparallel = .false.
+       if (paropen) then
+         print *, 'WARNING: netCDF with parallel I/O not supported. Using serial write.'
+       end if
+#else
        if (paropen) then
          dset%isparallel = .true.
        else
          dset%isparallel = .false.
        end if
+#endif
     else
       dset%isparallel = .false.
     end if

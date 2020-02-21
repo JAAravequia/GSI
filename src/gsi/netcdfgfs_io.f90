@@ -116,7 +116,7 @@ contains
 !$$$ end documentation block
 
     use kinds, only: i_kind,r_kind
-    use gridmod, only: sp_a,grd_a,lat2,lon2,nsig
+    use gridmod, only: sp_a,grd_a,lat2,lon2,nsig, parallel_ncio
     use guess_grids, only: ifilesig,nfldsig
     use gsi_metguess_mod, only: gsi_metguess_bundle
     use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -184,8 +184,13 @@ contains
        write(filename,'(''sigf'',i2.2)') ifilesig(it)
 
 !      Read background fields into bundle
-       call general_read_gfsatm_nc(grd_t,sp_a,filename,.true.,.true.,.true.,&
-            atm_bundle,.true.,istatus)
+       if (parallel_ncio) then
+          call general_read_gfsatm_ncpar(grd_t,sp_a,filename,.true.,.true.,.true.,&
+               atm_bundle,.true.,istatus)
+       else
+          call general_read_gfsatm_nc(grd_t,sp_a,filename,.true.,.true.,.true.,&
+               atm_bundle,.true.,istatus)
+       end if
 
        inithead=.false.
        zflag=.false.

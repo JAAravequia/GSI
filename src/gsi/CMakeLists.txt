@@ -58,6 +58,11 @@ cmake_minimum_required(VERSION 2.8)
     list( REMOVE_ITEM GSIFORT_SRC "${CMAKE_CURRENT_SOURCE_DIR}/nc_diag_write_mod.f90" )
   endif( BUILD_NCDIAG )
 
+# parallel netCDF check for preprocessor
+  if(NOT NETCDF_PARALLEL)
+    add_definitions(-DNO_PNC)
+  endif()
+
 # The specific regional/WRF source files
   if(USE_WRF)
     list( APPEND GSIFORT_SRC

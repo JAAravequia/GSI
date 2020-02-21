@@ -1138,6 +1138,7 @@ end subroutine write_ghg_grid
 !   2019-09-04  martin  - added option to write fv3 netcdf increment file
 !   2019-09-24  martin  - added logic for when use_gfs_ncio is true, note
 !                         writing netCDF analysis for GFS not currently supported
+!   2020-02-21  martin  - option to use parallel write for fv3 netcdf increment
 !
 !   input argument list:
 !     increment          - when >0 will write increment from increment-index slot
@@ -1155,7 +1156,8 @@ end subroutine write_ghg_grid
     use mpimod, only: mype
     use guess_grids, only: dsfct
     use guess_grids, only: ntguessig,ntguessfc,ifilesig,nfldsig
-    use gridmod, only: hires_b,sp_a,grd_a,jcap_b,nlon,nlat,use_gfs_nemsio,write_fv3_incr,use_gfs_ncio
+    use gridmod, only: hires_b,sp_a,grd_a,jcap_b,nlon,nlat,use_gfs_nemsio,&
+                       write_fv3_incr,use_gfs_ncio,parallel_ncio
     use gsi_metguess_mod, only: gsi_metguess_bundle
     use gsi_bundlemod, only: gsi_bundlegetpointer
     use gsi_bundlemod, only: gsi_grid
@@ -1171,7 +1173,7 @@ end subroutine write_ghg_grid
     use gsi_4dvar, only: lwrite4danl,nhr_anal,nobs_bins
     use ncepnems_io, only: write_nemsatm,write_nemssfc,write_nems_sfc_nst
     use netcdfgfs_io, only: write_gfsncsfc, write_gfsnc_sfc_nst, write_gfsncatm
-    use write_incr, only: write_fv3_increment
+    use write_incr, only: write_fv3_increment, write_fv3_increment_para
     use ncepnems_io, only: write_fv3atm_nems     
     use gridmod, only: fv3_full_hydro   
     use gsi_chemguess_mod, only: gsi_chemguess_get,gsi_chemguess_bundle
@@ -1440,8 +1442,13 @@ end subroutine write_ghg_grid
         if ( use_gfs_nemsio ) then
 
             if ( write_fv3_incr ) then
-                call write_fv3_increment(grd_a,sp_a,filename,mype_atm, &
-                     atm_bundle,itoutsig)
+                if ( parallel_ncio ) then
+                   call write_fv3_increment_para(grd_a,sp_a,filename,mype_atm, &
+                        atm_bundle,itoutsig)
+                else
+                   call write_fv3_increment(grd_a,sp_a,filename,mype_atm, &
+                        atm_bundle,itoutsig)
+                end if
             else
                 if (fv3_full_hydro) then
                    call write_fv3atm_nems(grd_a,sp_a,filename,mype_atm, &
@@ -1461,8 +1468,13 @@ end subroutine write_ghg_grid
 
         else if ( use_gfs_ncio ) then
             if  ( write_fv3_incr ) then
-                call write_fv3_increment(grd_a,sp_a,filename,mype_atm, &
-                     atm_bundle,itoutsig)
+                if ( parallel_ncio ) then
+                   call write_fv3_increment_para(grd_a,sp_a,filename,mype_atm, &
+                        atm_bundle,itoutsig)
+                else
+                   call write_fv3_increment(grd_a,sp_a,filename,mype_atm, &
+                        atm_bundle,itoutsig)
+                end if
             else
                 call write_gfsncatm(grd_a,sp_a,filename,mype_atm, &
                      atm_bundle,itoutsig)

@@ -91,6 +91,7 @@ module gridmod
 !   2019-04-19  martin  - add use_fv3_aero option to distingiush between NGAC and FV3-Chem
 !   2019-09-04  martin  - add write_fv3_incr to write netCDF increment rather than analysis in NEMSIO format
 !   2019-09-23  martin  - add use_gfs_ncio to read global first guess from netCDF file
+!   2020-02-21  martin  - add parallel_ncio for option for parallel netCDF I/O
 !
 !                        
 !
@@ -160,6 +161,7 @@ module gridmod
   public :: use_sp_eqspace,jcap_cut
   public :: wrf_mass_hybridcord
   public :: write_fv3_incr
+  public :: parallel_ncio
 
   interface strip
      module procedure strip_single_rank33_
@@ -192,6 +194,7 @@ module gridmod
   logical hires_b           ! .t. when jcap_b requires double FFT
   logical use_gfs_nemsio    ! .t. for using NEMSIO to real global first guess
   logical use_gfs_ncio      ! .t. for using netCDF to real global first guess
+  logical parallel_ncio       ! .t. for using parallel netCDF with use_gfs_ncio
   logical fv3_full_hydro    ! .t. for using NEMSIO to real global first guess
   logical use_fv3_aero      ! .t. for using FV3 Aerosols, .f. for NGAC
   logical sfcnst_comb       ! .t. for using combined sfc & nst file
@@ -490,6 +493,7 @@ contains
 
     use_gfs_nemsio  = .false.
     use_gfs_ncio = .false.
+    parallel_ncio = .true.
     fv3_full_hydro  = .false. 
     use_fv3_aero  = .false.
     sfcnst_comb = .false.
