@@ -47,11 +47,24 @@ module valid
  
   contains
 
-    !-------------------------------------------------------------
+    !--------------------------------------------------------------------------
     !  load the base file for the given satellite
-    !-------------------------------------------------------------
+    !
+    !  Note a change in validation for iasi and cris sources.
+    !  Per Kristen (2/20/20):
+    !   With correlated error, the contribution to penalty calculation in the
+    !   radmon is no longer mathematically correct. The calculated penalty is
+    !   expected to be larger than what it actually is. Both IASI instruments 
+    !   will use correlated error over land and sea, and both CrIS instruments 
+    !   will use correlated error over sea in V16. You should therefore 
+    !   suppress/modify the warnings for IASI and CrIS. 
+    !
+    !  The agreed upon solution is to multiply the historical max penalty
+    !  values, making iasi 5x and cris 6x.
+    !---------------------------------------------------------------------------
 
     subroutine load_base( satname, iret )
+     
 
       !--- interface
       character(20), intent( in )	:: satname
@@ -62,7 +75,7 @@ module valid
       character(20) test_satname
       character(10) base_date
 
-      integer fios
+      integer fios, multiply_by
       integer chan, region
 
       logical fexist 
@@ -114,6 +127,26 @@ module valid
                              avg_penalty(j,k), sdv_penalty(j,k), min_penalty(j,k), max_penalty(j,k)
             end do
          end do
+
+         !--------------------------------------------------
+         !  adjust max_penalty values for iasi and cris
+         !  sources -- see explanation above
+        
+         multiply_by = 1
+ 
+         if ( satname(1:4) == 'iasi' ) then
+            multiply_by = 5
+         else if ( satname(1:4) == 'cris' ) then
+            multiply_by = 6
+         end if
+
+         if ( multiply_by > 1 ) then
+            do k=1,nregion
+               do j=1,nchan
+                  max_penalty(j,k) = max_penalty(j,k) * multiply_by
+               end do
+            end do
+         end if 
 
          iret = 0 
          base_loaded = .TRUE.

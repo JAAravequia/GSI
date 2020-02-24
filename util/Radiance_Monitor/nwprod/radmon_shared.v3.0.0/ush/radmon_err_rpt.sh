@@ -88,13 +88,9 @@ echo "have_diag_rpt = $have_diag_rpt"
 
    echo $myline
    satname=`echo $myline | gawk '{print $1}'`
-   echo satname = $satname
    channel=`echo $myline | gawk '{print $3}'`
-   echo channel = $channel
    region=`echo $myline | gawk '{print $5}'`
-   echo region = $region
    value1=`echo $myline | gawk '{print $7}'`
-   echo value1 = $value1
    bound=`echo $myline | gawk '{print $9}'`
 
 #
@@ -118,11 +114,8 @@ echo "have_diag_rpt = $have_diag_rpt"
       if [[ $type == "chan" ]]; then
          echo "looking for match for $satname and $channel"
          { while read myline2; do
-            echo $myline
             satname2=`echo $myline2 | gawk '{print $1}'`
-            echo satname = $satname
             channel2=`echo $myline2 | gawk '{print $3}'`
-            echo channel = $channel
 
             if [[ $satname == $satname2 && $channel == $channel2 ]]; then
                match="$satname  channel=  $channel" 
@@ -142,17 +135,17 @@ echo "have_diag_rpt = $have_diag_rpt"
          match_len=`echo ${#match}`
          if [[ $match_len > 0 ]]; then
             channel2=`echo $match | gawk '{print $3}'`
-            echo channel2 = $channel2
+
             if [[ $channel2 != $channel ]]; then
                match=""
             fi
          fi            
-         echo match = $match
+
       fi
       match_len=`echo ${#match}`
          
       if [[ $match_len > 0 ]]; then
-         echo $match_len
+
          value2=`echo $match | gawk '{print $7}'`
          bound2=`echo $match | gawk '{print $9}'`
 
@@ -188,15 +181,9 @@ echo "have_diag_rpt = $have_diag_rpt"
             echo "$line2" >> $outfile
          fi
 
-         #----------------------------------------------------------
-         #  Access the control file to deterimine channel grouping 
-         #  number.  Not all sources have consecutively numbered 
-         #  channels, and we need to map the channel to the correct
-         #  grouping number in order to produce an accurate hyperlink.
-         #
-         #  Update: with the new js plotting the actual channel number
-         #  can be sent so the chgrp is no longer used here. 
-
+         !-----------------------------------------
+         ! add hyperlink to warning entry
+         !
          line3="   http://www.emc.ncep.noaa.gov/gmb/gdas/radiance/es_rad/${RADMON_SUFFIX}/index.html?sat=${satname}&region=${region}&channel=${channel}&stat=${type}"
          if [[ $channel -gt 0 ]]; then
             echo "$line3" >> $outfile
