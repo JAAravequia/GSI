@@ -194,9 +194,7 @@ module valid
 
          end if
 
-!         if ( valid .eqv. .FALSE. ) then
-!            write(*,*) ' avg_cnt, sdv2, hi, lo = ', avg_cnt, sdv2, hi, lo
-!         end if
+
       else 
          !---------------------------------------------------------
          !  base file wasn't loaded, so validation wasn't possible 

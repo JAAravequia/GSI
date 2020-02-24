@@ -353,6 +353,7 @@ EOF
 
    if [[ -s ${diag_report} ]]; then
       lines=`wc -l <${diag_report}`
+      echo "lines in diag_report = $lines"   
 
       if [[ $lines -gt 1 ]]; then
          cat ${diag_report}
@@ -386,6 +387,25 @@ if [[ $DO_DATA_RPT -eq 1 ]]; then
    prev_bad_chan=${TANKverf_radM1}/${prev_bad_chan}
    prev_low_count=${TANKverf_radM1}/${prev_low_count}
 
+   if [[ -s $bad_pen ]]; then
+      echo "pad_pen        = $bad_pen"
+   fi
+   if [[ -s $prev_bad_pen ]]; then
+      echo "prev_pad_pen   = $prev_bad_pen"
+   fi
+
+   if [[ -s $bad_chan ]]; then
+      echo "bad_chan       = $bad_chan"
+   fi
+   if [[ -s $prev_bad_chan ]]; then
+      echo "prev_bad_chan  = $prev_bad_chan"
+   fi
+   if [[ -s $low_count ]]; then
+      echo "low_count = $low_count"
+   fi 
+   if [[ -s $prev_low_count ]]; then
+      echo "prev_low_count = $prev_low_count"
+   fi 
 
    do_pen=0
    do_chan=0
@@ -395,7 +415,7 @@ if [[ $DO_DATA_RPT -eq 1 ]]; then
       do_pen=1
    fi
 
-   if [[ -s $low_count ]]; then
+   if [[ -s $low_count && -s $prev_low_count ]]; then
       do_cnt=1
    fi
 
@@ -408,35 +428,39 @@ if [[ $DO_DATA_RPT -eq 1 ]]; then
    fi
 
    #--------------------------------------------------------------------
-   #  Remove extra spaces in new bad_pen file
+   #  Remove extra spaces in new bad_pen & low_count files
    #
    gawk '{$1=$1}1' $bad_pen > tmp.bad_pen
    mv -f tmp.bad_pen $bad_pen
 
+   gawk '{$1=$1}1' $low_count > tmp.low_count
+   mv -f tmp.low_count $low_count
 
+   echo " do_pen, do_chan, do_cnt = $do_pen, $do_chan, $do_cnt"
+   echo " diag_report = $diag_report "
    if [[ $do_pen -eq 1 || $do_chan -eq 1 || $do_cnt -eq 1 ]]; then
 
       if [[ $do_pen -eq 1 ]]; then   
 
-         $NCP ${TANKverf_radM1}/${prev_bad_pen} ./
+         echo "calling radmon_err_rpt for pen"
+#         $NCP ${TANKverf_radM1}/${prev_bad_pen} ./
          ${radmon_err_rpt} ${prev_bad_pen} ${bad_pen} pen ${qdate} \
 		${PDATE} ${diag_report} ${pen_err}
       fi
 
       if [[ $do_chan -eq 1 ]]; then   
 
-         $NCP ${TANKverf_radM1}/${prev_bad_chan} ./
+         echo "calling radmon_err_rpt for chan"
+#         $NCP ${TANKverf_radM1}/${prev_bad_chan} ./
          ${radmon_err_rpt} ${prev_bad_chan} ${bad_chan} chan ${qdate} \
 		${PDATE} ${diag_report} ${chan_err}
       fi
 
       if [[ $do_cnt -eq 1 ]]; then   
 
-          cat ${low_count} > $count_err
-
-#         $NCP ${TANKverf_radM1}/${prev_low_cnt} ./
-#         ${radmon_err_rpt} ${prev_low_cnt} ${low_cnt} cnt ${qdate} \
-#		${PDATE} ${diag_report} ${count_err}
+         echo "calling radmon_err_rpt for cnt"
+         ${radmon_err_rpt} ${prev_low_count} ${low_count} cnt ${qdate} \
+		${PDATE} ${diag_report} ${count_err}
       fi
 
       #-------------------------------------------------------------------
@@ -483,8 +507,8 @@ EOF
          
   The following channels report abnormally low observational counts in this cycle:
    
-Satellite/Instrument      Channel          Obs Count          Avg Count
-====================      =======          =========          =========
+Satellite/Instrument              Obs Count          Avg Count
+====================              =========          =========
 
 EOF
               
@@ -495,7 +519,7 @@ EOF
 
          if [[ -s ${pen_err} ]]; then
 
-            cat << EOF > ${pen_hdr}
+            cat << EOF > ${pen_hdr} 
 
 
   Penalty values outside of the established normal range were found

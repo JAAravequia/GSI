@@ -19,9 +19,6 @@
 #            directory before invoking this script.
 #
 #
-# Script history log:
-# 2012-02-02  Safford  initial script
-#
 # Usage:  radmon_err_rpt.sh file1 file2 type cycle1 cycle2 diag_rpt outfile
 #
 #   Input script positional parameters:
@@ -40,30 +37,14 @@
 #     outfile           output file name
 #                       required
 #
-#   Imported Shell Variables:
-#
-#     HOMEradmon        package's nwprod subdirectory
-#                       defaults to pwd
-#
-#   Exported Shell Variables:
-#     err           Last return code
-#
-#   Modules and files referenced:
-#     scripts    : 
-#
-#     fixed data : $ctlfile
-#
-#     input data : $file1
-#                  $file2
-#
-#     output data: $outfile
-#
 # Remarks:
 #
 #   Condition codes
 #      0 - no problem encountered
 #     >0 - some problem encountered
 ####################################################################
+
+echo "-->  radmon_err_rpt.sh"
 
 #  Command line arguments.
 file1=${1:-${file1:?}}
@@ -94,7 +75,7 @@ if [[ -s $diag_rpt ]]; then
 else
    err=1
 fi
-
+echo "have_diag_rpt = $have_diag_rpt"
 
 #-----------------------------------------------------------------------------
 #  read each line in the $file1 
@@ -102,6 +83,7 @@ fi
 #  if same combination is in both files, add the values to the output file
 #  
 { while read myline; do
+   echo "myline = $myline"
    bound=""
 
    echo $myline
@@ -152,8 +134,6 @@ fi
 
          done } < $file2
      
-      elif [[ $type == "cnt" ]]; then
-         echo "processing cnt"
 
       else
          match=`gawk "/$satname/ && /channel= $channel / && /region= $region /" $file2`
@@ -184,6 +164,10 @@ fi
             tmpa="$satname  channel= $channel region= $region"
             tmpb="$cycle1         	$value1	$bound"
 
+         elif [[ $type == "cnt" ]]; then
+            tmpa="$satname  channel= $channel region= $region"
+            tmpb="$cycle1         	$value1	$bound"
+
          else
             tmpa="$satname  channel= $channel region= $region"
             tmpb="$cycle1: $type= $value1"
@@ -195,7 +179,7 @@ fi
          if [[ $type != "chan" ]]; then
             tmpc=`echo $tmpa |sed 's/[a-z]/ /g' | sed 's/[0-9]/ /g' | sed 's/=/ /g' | sed 's/_/ /g' | sed 's/-/ /g'`
 
-            if [[ $type == "pen" ]]; then
+            if [[ $type == "pen" || $type == "cnt" ]]; then
                line2=" $tmpc $cycle2         	$value2	$bound2"
             else
                line2=" $tmpc $cycle2: $type= $value2"
@@ -229,6 +213,7 @@ if [[ "$VERBOSE" = "YES" ]]; then
    echo $(date) EXITING $0 with error code ${err} >&2
 fi
 
+echo "<--  radmon_err_rpt.sh"
 
 set +x
 exit ${err}

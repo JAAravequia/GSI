@@ -77,14 +77,13 @@ module low_count
       real, intent( in )		:: num_obs
       real, intent( in )                :: avg_cnt
       !--- 
-      character(len=40)                 :: fmt
+      character(len=50)                 :: fmt
 
-      fmt = "(A16,A9,I5,A12,I7,A12,F9.2)"
+      fmt = "(A16,A10,I5,A9,I1,A10,I7,A10,F9.2)"
 
-!      write(funit, fmt) satname, 'channel= ', channel, &
-!                ' obs_cnt= ', INT(num_obs), ' avg_cnt= ', avg_cnt
-      write(funit, fmt) satname, '         ', channel, &
-                '          ', INT(num_obs), '          ', avg_cnt
+      write(funit, fmt) satname, ' channel= ', channel, &
+                        ' region= ', region, ' num_obs= ', &
+                        INT(num_obs), ' avg_obs= ', avg_cnt
 
     end subroutine write_low_count
 
