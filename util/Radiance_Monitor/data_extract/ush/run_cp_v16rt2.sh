@@ -2,15 +2,13 @@
 set -ax
 
 export RADSTAT_LOCATION=/com2/gfs/prod
-export SOURCE_DIR=/gpfs/dell2/emc/modeling/noscrub/emc.glopara/monitor/radmon/stats/v16rt0
+export SOURCE_DIR=/gpfs/dell2/emc/modeling/noscrub/emc.glopara/monitor/radmon/stats/v16rt2
 
 export ACCOUNT=dev
 export USE_ANL=1
 export DO_DIAG_RPT=1
 export DO_DATA_RPT=1
 export MAIL_TO="Edward.Safford@noaa.gov"
-#export MAIL_CC="Russ.Treadon@noaa.gov"
-export MAIL_CC="edward.c.safford@gmail.com"
 export JOB_QUEUE=dev_shared
 
 me=`hostname | cut -c1`
@@ -31,7 +29,7 @@ if [[ $is_prod = 1 ]]; then
 fi
 
 #--------------------------------------------------------------------
-export RADMON_SUFFIX=v16rt0
+export RADMON_SUFFIX=v16rt2
 export RUN=gdas
 export RAD_AREA=glb
 
@@ -46,10 +44,10 @@ if [[ ${ldate_len} -ne 10 ]]; then
    exit 1
 fi
 START_DATE=`${NDATE} +06 $ldate`
-#START_DATE=2019070100
+#START_DATE=2019122112
 
 day=`echo $START_DATE | cut -c1-8` 
-export DATDIR=/gpfs/dell2/emc/modeling/noscrub/emc.glopara/monitor/radmon/stats/v16rt0/gdas.${day}
+export DATDIR=${SOURCE_DIR}/gdas.${day}
 
 logs=/gpfs/dell2/ptmp/Edward.Safford/logs/${RADMON_SUFFIX}/${RUN}/radmon
 

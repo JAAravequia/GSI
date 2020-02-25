@@ -216,12 +216,17 @@ if [[ $exit_value == 0 ]]; then
       
 
       #--------------------------------------------------------------------
-      #  Remove extra spaces in new bad_pen file
+      #  Remove extra spaces in new bad_pen and low_count files
       #--------------------------------------------------------------------
       bad_pen=bad_pen.${PDATE}
       gawk '{$1=$1}1' $bad_pen > tmp.bad_pen
       mv -f tmp.bad_pen $bad_pen
-    
+
+      low_count=low_count.${PDATE}
+      gawk '{$1=$1}1' $low_count > tmp.low_count
+      mv -f tmp.low_count $low_count
+         
+ 
       #--------------------------------------------------------------------
       #  Create a new penalty error report using the new bad_pen file
       #--------------------------------------------------------------------
@@ -232,22 +237,25 @@ if [[ $exit_value == 0 ]]; then
 
       if [[ $TANK_USE_RUN -eq 1 ]]; then
          prev_bad_pen=${TANKverf}/${RUN}.${prev_day}/${prev_cyc}/${MONITOR}/bad_pen.${prev}
+         prev_low_count=${TANKverf}/${RUN}.${prev_day}/${prev_cyc}/${MONITOR}/low_count.${prev}
       else
          prev_bad_pen=${TANKverf}/radmon.${prev_day}/bad_pen.${prev}
+         prev_bad_pen=${TANKverf}/radmon.${prev_day}/low_count.${prev}
       fi
 
       bad_pen=bad_pen.${PDATE}
       diag_rpt="diag.txt"
       outfile="pen.${PDATE}.txt"
       err_rpt="err.${PDATE}.txt"
+      outfile2="obs.${PDATE}.txt"
 
       ./radmon_err_rpt.sh $prev_bad_pen $bad_pen pen ${prev} ${PDATE} $diag_rpt $outfile
+
+      ./radmon_err_rpt.sh $prev_low_count $low_count cnt ${prev} ${PDATE} $diag_rpt $outfile2
 
  
       #--------------------------------------------------------------------
       #  Copy over the ${LOGDIR}/YYYYMMDD/gdas_verfrad_HH.o* log 
-      #   Note that the 18z cycle log file is found in the next day's 
-      #   directory.
       #    1.  Confirm that any entries in the Diagnostic file report 
       #        are in the satype table.  Remove any entries that are not
       #        valid and the entire report if none are valid.
@@ -259,11 +267,13 @@ if [[ $exit_value == 0 ]]; then
       opr_log=opr_${PDATE}.log
       tmp_log=tmp_${PDATE}.log
       new_log=new_opr_${PDATE}.log
-#      if [[ $cycle = 18 ]]; then 
+
+#      if [[ $cycle = 18 ]]; then
 #         $NCP ${LOGDIR}/${next_day}/gdas_verfrad_${cycle}.o* ${opr_log}
 #      else
 #        $NCP ${LOGDIR}/${day}/gdas_verfrad_${cycle}.o* ${opr_log}
 #      fi
+
 
       #--------------------------------------------------------------------
       #  Diag report processing
@@ -365,7 +375,8 @@ if [[ $exit_value == 0 ]]; then
 
 
          #---------------------------------------------------------------------
-         #  If $outfile exists, replace existing penalty report with $outfile 
+         #  If $outfile or $outfile2 exists, replace existing penalty and/or 
+         #  low obs report with $outfile/$outfile2
          #  contents or remove the penalty report altogether if there is no
          #  $outfile
          #---------------------------------------------------------------------
@@ -385,12 +396,13 @@ if [[ $exit_value == 0 ]]; then
 
       else
       
-         if [[ -s $outfile ]]; then
+         if [[ -s $outfile || -s $outfile2 ]]; then
             rm -f report.txt
 
             cp $opr_log $new_log
 
             echo "Begin Cycle Data Integrity Report" > report.txt  
+
 
             echo " "        >> report.txt
             echo "Cycle Data Integrity Report" >> report.txt
@@ -402,18 +414,36 @@ if [[ $exit_value == 0 ]]; then
             echo "  1  Global              (90S-90N, 0-360E)" >> report.txt
             echo " "        >> report.txt
             echo " "        >> report.txt
-            echo "Penalty values outside of the established normal range were found" >> report.txt
-            echo "for these sensor/channel/regions in the past two cycles: " >> report.txt
-            echo " "        >> report.txt
-            echo "Questionable Penalty Values " >> report.txt
-            echo "============ ======= ======      Cycle                 Penalty          Bound" >> report.txt
-            echo "                                 -----                 -------          ----- " >> report.txt
-            echo " "        >> report.txt
-            cat $outfile >> report.txt
-            echo " "        >> report.txt
-            echo " "        >> report.txt
-            echo " "        >> report.txt
-            echo "End Cycle Data Integrity Report" >> report.txt  
+            
+            if [[ -s $outfile2 ]]; then
+               echo " " >> report.txt
+               echo " " >> report.txt
+               echo " " >> report.txt
+               echo "The following channels report abnormally low observational counts in this cycle:" >> report.txt
+               echo " " >> report.txt
+               echo "Satellite/Instrument                                       Obs Count   Avg Count" >> report.txt
+               echo "====================                                       =========   =========" >> report.txt
+
+               cat ${outfile2}  >> report.txt
+            fi
+
+            if [[ -s $outfile ]]; then
+               echo " " >> report.txt
+               echo " " >> report.txt
+               echo " " >> report.txt
+               echo "Penalty values outside of the established normal range were found" >> report.txt
+               echo "for these sensor/channel/regions in the past two cycles: " >> report.txt
+               echo " "        >> report.txt
+               echo "Questionable Penalty Values " >> report.txt
+               echo "============ ======= ======      Cycle                 Penalty          Bound" >> report.txt
+               echo "                                 -----                 -------          ----- " >> report.txt
+               echo " "        >> report.txt
+               cat $outfile >> report.txt
+               echo " "        >> report.txt
+               echo " "        >> report.txt
+               echo " "        >> report.txt
+               echo "End Cycle Data Integrity Report" >> report.txt  
+            fi
 
             cat report.txt >> $new_log
 
