@@ -44,6 +44,8 @@
 #     >0 - some problem encountered
 ####################################################################
 
+set -ax
+
 echo "-->  radmon_err_rpt.sh"
 
 #  Command line arguments.

@@ -151,12 +151,6 @@ if [[ $nfile_src -gt 0 ]]; then
       mkdir -p ${test_dir}
    fi
    cd ${test_dir}
-   if [[ $RADMON_SUFFIX = "fv3rt1" ]]; then
-      $NCP $DE_SCRIPTS/ck_radstat.sh    ${test_dir}/.
-
-      radstat_file=${radstat_file:-${DATA}/${RUN}.${day}/${cycle}/gdas.t${cycle}z.radstat}
-      missing_from_radstat=`./ck_radstat.sh -s $satype_file -r $radstat_file`
-   fi
 
    type_list="angle bcoef bcor time"
 
@@ -187,9 +181,13 @@ if [[ $nfile_src -gt 0 ]]; then
 #           rm stdout files?
 #           make sure *.base and *.tar are removed
 #-----------------------------------------------------------
+   echo "PWD = $PWD"
+   echo "test_dir = ${test_dir}"
+
    if [[ $DO_DATA_RPT -eq 1 ]]; then
       $NCP ${DE_EXEC}/radmon_validate_tm.x ${test_dir}/.
       $NCP $DE_SCRIPTS/validate.sh    ${test_dir}/.
+      echo "firing validate.sh"
       ./validate.sh ${PDATE}
    fi
 
@@ -231,9 +229,9 @@ if [[ $exit_value == 0 ]]; then
       #  Create a new penalty error report using the new bad_pen file
       #--------------------------------------------------------------------
       $NCP $DE_SCRIPTS/radmon_err_rpt.sh      ${test_dir}/.
-      if [[ -s $HOMEradmon/ush/radmon_getchgrp.pl ]]; then
-         $NCP $HOMEradmon/ush/radmon_getchgrp.pl ${test_dir}/.
-      fi
+#      if [[ -s $HOMEradmon/ush/radmon_getchgrp.pl ]]; then
+#         $NCP $HOMEradmon/ush/radmon_getchgrp.pl ${test_dir}/.
+#      fi
 
       if [[ $TANK_USE_RUN -eq 1 ]]; then
          prev_bad_pen=${TANKverf}/${RUN}.${prev_day}/${prev_cyc}/${MONITOR}/bad_pen.${prev}
@@ -410,7 +408,6 @@ if [[ $exit_value == 0 ]]; then
             echo " "        >> report.txt
             echo "Region Definitions:" >> report.txt
             echo " "        >> report.txt
-    
             echo "  1  Global              (90S-90N, 0-360E)" >> report.txt
             echo " "        >> report.txt
             echo " "        >> report.txt
@@ -419,10 +416,10 @@ if [[ $exit_value == 0 ]]; then
                echo " " >> report.txt
                echo " " >> report.txt
                echo " " >> report.txt
-               echo "The following channels report abnormally low observational counts in this cycle:" >> report.txt
+               echo "The following channels report abnormally low observational counts in latest 2 cycles:" >> report.txt
                echo " " >> report.txt
-               echo "Satellite/Instrument                                       Obs Count   Avg Count" >> report.txt
-               echo "====================                                       =========   =========" >> report.txt
+               echo "Satellite/Instrument                               Obs Count   Avg Count" >> report.txt
+               echo "====================                               =========   =========" >> report.txt
 
                cat ${outfile2}  >> report.txt
             fi
@@ -442,9 +439,9 @@ if [[ $exit_value == 0 ]]; then
                echo " "        >> report.txt
                echo " "        >> report.txt
                echo " "        >> report.txt
-               echo "End Cycle Data Integrity Report" >> report.txt  
             fi
 
+            echo "End Cycle Data Integrity Report" >> report.txt  
             cat report.txt >> $new_log
 
          else
@@ -478,7 +475,7 @@ if [[ $exit_value == 0 ]]; then
    rm -f radmon_validate_tm.x
    rm -f validate.sh 
    rm -f radmon_err_rpt.sh  
-   rm -f radmon_getchgrp.pl  
+#   rm -f radmon_getchgrp.pl  
    rm -f opr_log.bu
 
    nfile_dest=`ls -l ${test_dir}/*${PDATE}*ieee_d* | egrep -c '^-'`

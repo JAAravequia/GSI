@@ -23,10 +23,10 @@ scripts=/gpfs/dell2/emc/modeling/noscrub/Edward.Safford/${package}/data_extract/
 #  Check for my monitoring use.  Abort if running on prod machine.
 #--------------------------------------------------------------------
 
-is_prod=`${scripts}/onprod.sh`
-if [[ $is_prod = 1 ]]; then
-   exit 10
-fi
+#is_prod=`${scripts}/onprod.sh`
+#if [[ $is_prod = 1 ]]; then
+#   exit 10
+#fi
 
 #--------------------------------------------------------------------
 export RADMON_SUFFIX=v16rt2

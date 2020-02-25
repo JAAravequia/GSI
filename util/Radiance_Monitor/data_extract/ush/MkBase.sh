@@ -122,13 +122,13 @@ echo "CYCLE_INTERVAL = $CYCLE_INTERVAL"
 #    EDATE is ending date for 30/60 day range (always use 00 cycle) 
 #-------------------------------------------------------------------
 echo "TANKverf = $TANKverf"
-EDATE=`${DE_SCRIPTS}/find_cycle.pl --cyc 1 --dir ${TANKverf} --run $RUN`
+EDATE=`${DE_SCRIPTS}/nu_find_cycle.pl --cyc 1 --dir ${TANKverf} --run $RUN`
 echo $EDATE
 
 sdate=`echo $EDATE|cut -c1-8`
 EDATE=${sdate}00
 BDATE=`$NDATE -1080 $EDATE`
-BDATE=`$NDATE -336 $EDATE`
+#BDATE=`$NDATE -336 $EDATE`
 
 echo EDATE = $EDATE
 echo BDATE = $BDATE
@@ -147,9 +147,10 @@ if [[ $SINGLE_SAT -eq 0 ]]; then
       SATYPE=`cat ${TANKverf}/info/SATYPE.txt`
    else
       PDY=`echo $EDATE|cut -c1-8`
+      HR=`echo $EDATE|cut -c9-10`
 
       if [[ $TANK_USE_RUN -eq 1 ]]; then
-         testdir=${TANKverf}/${RUN}.${PDY}/radmon
+         testdir=${TANKverf}/${RUN}.${PDY}/${HR}/radmon
       else
          testdir=${TANKverf}/radmon.${PDY}
       fi
@@ -216,12 +217,13 @@ for type in ${SATYPE}; do
          . ${IG_SCRIPTS}/rr_set_tz.sh $hh
       else
          day=`echo $cdate | cut -c1-8 `
+         hr=`echo $cdate | cut -c9-10 `
       fi
 
       day=`echo $cdate | cut -c1-8 `
 
       if [[ $TANK_USE_RUN -eq 1 ]]; then
-         testday=${TANKverf}/${RUN}.${day}/radmon
+         testday=${TANKverf}/${RUN}.${day}/${hr}/radmon
       else
          testday=${TANKverf}/radmon.${day}
       fi
@@ -274,7 +276,7 @@ for type in ${SATYPE}; do
    #  Copy the executable and run it 
    #------------------------------------------------------------------
    out_file=${type}.base
-   $NCP ${DE_EXEC}/radmon_make_base.x ./make_base
+   $NCP ${DE_EXEC}/radmon_mk_base.x ./make_base
 
 cat << EOF > input
  &INPUT

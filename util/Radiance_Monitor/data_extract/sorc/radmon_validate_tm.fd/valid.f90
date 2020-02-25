@@ -132,21 +132,21 @@ module valid
          !  adjust max_penalty values for iasi and cris
          !  sources -- see explanation above
         
-         multiply_by = 1
+!         multiply_by = 1
  
-         if ( satname(1:4) == 'iasi' ) then
-            multiply_by = 5
-         else if ( satname(1:4) == 'cris' ) then
-            multiply_by = 6
-         end if
+!         if ( satname(1:4) == 'iasi' ) then
+!            multiply_by = 5
+!         else if ( satname(1:4) == 'cris' ) then
+!            multiply_by = 6
+!         end if
 
-         if ( multiply_by > 1 ) then
-            do k=1,nregion
-               do j=1,nchan
-                  max_penalty(j,k) = max_penalty(j,k) * multiply_by
-               end do
-            end do
-         end if 
+!         if ( multiply_by > 1 ) then
+!            do k=1,nregion
+!               do j=1,nchan
+!                  max_penalty(j,k) = max_penalty(j,k) * multiply_by
+!               end do
+!            end do
+!         end if 
 
          iret = 0 
          base_loaded = .TRUE.

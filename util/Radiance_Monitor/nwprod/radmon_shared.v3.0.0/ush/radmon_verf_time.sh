@@ -505,7 +505,7 @@ EOF
 
 
          
-  The following channels report abnormally low observational counts in this cycle:
+  The following channels report abnormally low observational counts in the latest 2 cycles:
    
 Satellite/Instrument              Obs Count          Avg Count
 ====================              =========          =========
