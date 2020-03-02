@@ -865,15 +865,21 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
         else  ! CV_q
 !        Note: the zero qx or very tiny value of qx needs to be re-set to non-zero
 !        "bigger" tiny value here for log10(Zer + Zes + Zeg)
-            qr_min = 1.0E-8_r_kind
-            qs_min = 1.0E-8_r_kind
-            qg_min = 1.0E-8_r_kind
-!           qrexp = qrges
-            qrexp = max(qrges, qr_min)
-!           qsexp = qsges
-            qsexp = max(qsges, qs_min)
-!           qgexp = qgges
-            qgexp = max(qgges, qg_min)
+           if ( miter == 0 ) then ! EnKF do not need this limitation (by Huiqi)
+              qrexp=qrges
+              qsexp=qsges
+              qgexp=qgges
+           else
+              qr_min = 1.0E-8_r_kind
+              qs_min = 1.0E-8_r_kind
+              qg_min = 1.0E-8_r_kind
+!             qrexp = qrges
+              qrexp = max(qrges, qr_min)
+!             qsexp = qsges
+              qsexp = max(qsges, qs_min)
+!             qgexp = qgges
+              qgexp = max(qgges, qg_min)
+           end if
 
         end if
 !    array qscalar is used in dbz forward operator in CAPS radaremul package    
