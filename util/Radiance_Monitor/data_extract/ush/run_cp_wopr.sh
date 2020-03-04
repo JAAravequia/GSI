@@ -7,14 +7,11 @@ export ACCOUNT=dev
 export USE_ANL=1
 export DO_DIAG_RPT=1
 export DO_DATA_RPT=1
-export MAIL_TO="Edward.Safford@noaa.gov"
-#export MAIL_CC="Russ.Treadon@noaa.gov"
-export MAIL_CC="edward.c.safford@gmail.com"
 export JOB_QUEUE=dev_shared
 
 me=`hostname | cut -c1`
-#package=ProdGSI/util/Radiance_Monitor
-package=RadMon
+package=ProdGSI/util/Radiance_Monitor
+#package=RadMon
 
 export TANK_USE_RUN=1
 export USE_HR=1

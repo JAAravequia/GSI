@@ -24,9 +24,9 @@ export RUN_TRANSFER=1
 export RADMON_SUFFIX=GFS
 export RUN=gdas
 
-data_map=/gpfs/${idev}d2/emc/da/noscrub/Edward.Safford/${package}/parm/data_map.xml
+data_map=${scripts}/data_map.xml
 
-tankdir=/gpfs/${idev}d2/emc/da/noscrub/Edward.Safford/nbns/stats/${RADMON_SUFFIX}
+tankdir=/u/Edward.Safford/nbns/stats/${RADMON_SUFFIX}
 
 imgdate=`${scripts}/query_data_map.pl ${data_map} ${RADMON_SUFFIX}_${RUN} imgdate`
 
