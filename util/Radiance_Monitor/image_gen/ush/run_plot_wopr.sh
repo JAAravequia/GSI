@@ -9,7 +9,7 @@ scripts=/gpfs/${idev}d2/emc/da/noscrub/Edward.Safford/${package}/image_gen/ush
 
 export DO_DATA_RPT=1
 export DO_DIAG_RPT=1
-export NDATE=/nwprod/util/exec/ndate
+export NDATE=/gpfs/dell1/nco/ops/nwprod/prod_util.v1.1.2/exec/ips/ndate
 export DO_ARCHIVE=0
 export JOB_QUEUE=dev_shared
 export NUM_CYCLES=360

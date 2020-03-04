@@ -4,7 +4,7 @@
 #module load metplus/2.1
 #module load prod_util/1.1.2
 
-export NDATE=/nwprod/util/exec/ndate
+export NDATE=/gpfs/dell1/nco/ops/nwprod/prod_util.v1.1.2/exec/ips/ndate
 
 package=ProdGSI/util/Radiance_Monitor
 suffix=v16rt2
@@ -29,7 +29,7 @@ export MAIL_TO="edward.safford@noaa.gov"
 export REGIONAL_RR=0
 export CYCLE_INTERVAL=6
 export TANK_USE_RUN=1
-export RUN_TRANSFER=0
+export RUN_TRANSFER=1
 
 data_map=${scripts}/data_map.xml
 
