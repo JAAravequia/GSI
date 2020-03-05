@@ -2,10 +2,8 @@
 
 set -ax
 package=ProdGSI/util/Radiance_Monitor
-idev=`cat /etc/dev | cut -c1`
-iprod=`cat /etc/prod | cut -c1`
 
-scripts=/gpfs/${idev}d2/emc/da/noscrub/Edward.Safford/${package}/image_gen/ush
+scripts=/gpfs/dell2/emc/modeling/noscrub/Edward.Safford/${package}/image_gen/ush
 
 export DO_DATA_RPT=1
 export DO_DIAG_RPT=1
@@ -32,12 +30,15 @@ imgdate=`${scripts}/query_data_map.pl ${data_map} ${RADMON_SUFFIX}_${RUN} imgdat
 
 idate=`$NDATE +${CYCLE_INTERVAL} $imgdate`
 
-prodate=`${scripts}/find_cycle.pl --dir ${tankdir} --cyc 1 --run ${RUN}`
+prodate=`${scripts}/nu_find_cycle.pl --dir ${tankdir} --cyc 1 --run ${RUN}`
 echo "imgdate, prodate = $imgdate, $prodate"
+
+logs=/gpfs/dell2/ptmp/Edward.Safford/logs/${RADMON_SUFFIX}/${RUN}/radmon
+
 if [[ $idate -le $prodate ]]; then
 
    echo " firing CkPlt_glbl.sh with ${RADMON_SUFFIX} $idate"
-   ${scripts}/CkPlt_glbl.sh ${RADMON_SUFFIX} $idate 1>/ptmpp1/Edward.Safford/logs/CkPlt_${RADMON_SUFFIX}_${RUN}.log 2>/ptmpp1/Edward.Safford/logs/CkPlt_${RADMON_SUFFIX}_${RUN}.err
+   ${scripts}/CkPlt_glbl.sh ${RADMON_SUFFIX} $idate 1>${logs}/CkPlt_${RADMON_SUFFIX}_${RUN}.log 2>${logs}/CkPlt_${RADMON_SUFFIX}_${RUN}.err
 
    rc=`${scripts}/update_data_map.pl ${data_map} ${RADMON_SUFFIX}_${RUN} imgdate ${idate}`
 

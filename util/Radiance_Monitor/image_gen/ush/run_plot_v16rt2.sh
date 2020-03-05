@@ -13,7 +13,7 @@ export RUN=gdas
 idev=`cat /etc/dev | cut -c1`
 iprod=`cat /etc/prod | cut -c1`
 
-scripts=/gpfs/dell2/emc/modeling/noscrub/Edward.Safford/RadMon/image_gen/ush
+scripts=/gpfs/dell2/emc/modeling/noscrub/Edward.Safford/${package}/image_gen/ush
 
 export USE_STATIC_SATYPE=1
 export DO_DATA_RPT=1
@@ -35,7 +35,7 @@ data_map=${scripts}/data_map.xml
 
 TANKverf=/u/Edward.Safford/nbns/stats/${suffix}
 
-imgdate=`${scripts}/query_data_map.pl ${data_map} ${suffix} imgdate`
+imgdate=`${scripts}/query_data_map.pl ${data_map} ${suffix}_${RUN} imgdate`
 idate=`$NDATE +${CYCLE_INTERVAL} $imgdate`
 #idate=2018123118
 
@@ -46,11 +46,11 @@ logdir="/gpfs/dell2/ptmp/Edward.Safford/logs/${suffix}/${RUN}/radmon"
 if [[ $idate -le $prodate ]]; then
 
    echo " firing CkPlt_glbl.sh"
-   ${scripts}/CkPlt_glbl.sh $suffix $idate  \
+   ${scripts}/CkPlt_glbl.sh $suffix_${RUN} $idate  \
 	1>${logdir}/CkPlt_${suffix}.log \
 	2>${logdir}/CkPlt_${suffix}.err
 
-   rc=`${scripts}/update_data_map.pl ${data_map} ${suffix} imgdate ${idate}`
+   rc=`${scripts}/update_data_map.pl ${data_map} ${suffix}_${RUN} imgdate ${idate}`
 
 fi
 
