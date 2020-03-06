@@ -1224,16 +1224,21 @@ contains
 !              tempest2mhs_calidiff(3) = -0.12
 !              tempest2mhs_calidiff(4) = -0.61
 !              tempest2mhs_calidiff(5) = -0.82
-              tempest2mhs_calidiff(1) = 0.0
-              tempest2mhs_calidiff(2) = 0.0
-              tempest2mhs_calidiff(3) = 0.0
-              tempest2mhs_calidiff(4) = 0.0
-              tempest2mhs_calidiff(5) = 0.0
+
+! TCW 02/27/2020: this is the very first attempt (no account for calibration diff)
 !              tempest2mhs_calidiff(1) = 0.0
 !              tempest2mhs_calidiff(2) = 0.0
-!              tempest2mhs_calidiff(3) = -0.12
-!              tempest2mhs_calidiff(4) = -0.61
-!              tempest2mhs_calidiff(5) = -0.82
+!              tempest2mhs_calidiff(3) = 0.0
+!              tempest2mhs_calidiff(4) = 0.0
+!              tempest2mhs_calidiff(5) = 0.0
+
+! TCW 02/27/2020: use mean difference from calibration differences 
+              tempest2mhs_calidiff(1) = -0.39
+              tempest2mhs_calidiff(2) = -1.25
+              tempest2mhs_calidiff(3) =  0.61
+              tempest2mhs_calidiff(4) = -0.29
+              tempest2mhs_calidiff(5) = -0.72
+
               tbc(i) = tbc(i) - tempest2mhs_calidiff(i)*air_rad(mm)
            endif
 ! TCW 10/24/2019

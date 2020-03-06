@@ -3595,48 +3595,59 @@ subroutine qc_tempest(nchanl,ndat,nsig,is,sea,land,ice,snow,tempest,luse, &
         enddo
      end if 
 
-! Otherwise, use MHS screening for tempest-D else where. 
+! Otherwise, don't use any tempest-D pixels
   else
 
-  ! MHS screening uses TB of the first 2 channels to detect cloudy pixels
-  ! The first two channels of tempest-d are "somewhat" similar to those of mhs (see below)
-  !
-  ! MHS ch:       1 (89 GHz), 2 (157 GHz), 3 (183.3+/-1.0 GHz), 4 (183.3+/-3.0 GHz), 5 (190.3 GHz)
-  ! TEMPEST-D ch: 1 (87 GHz), 2 (164 GHz), 3 (174 GHz),         4 (178 GHz),         5 (181 GHz)
-
-    if(sea .or. ice .or. snow)then
-       dsi=9.0_r_kind
-       if(tb_obs(2) < h300)then
-          dsi=0.13_r_kind*(tbc(1)-33.58_r_kind*tbc(2)/(h300-tb_obs(2)))
-          if(luse .and. dsi >= one)aivals(10,is) = aivals(10,is) + one
-       end if
-!       write(*,*) 'qc_tempest: you should never see this!'
-    else
-       dsi=0.85_r_kind*tbc(1)-tbc(2)
-       if(luse .and. dsi >= one)aivals(11,is) = aivals(11,is) + one
-    end if
-    dsi=max(zero,dsi)
-    fact1=((tbc(1)-7.5_r_kind*dsi)/r10)**2+(dsi)**2
-
-    if(fact1 > one)then
-       vfact=zero
-       if(luse)aivals(8,is) = aivals(8,is) + one
-       do i=1,nchanl
-          if(id_qc(i) == igood_qc)id_qc(i)=ifail_fact1_qc
-       end do
-    else
-       do i=3,nchanl
-          if (abs(tbc(i)) >= two) then
-             varinv(i) = zero
-             if(id_qc(i) == igood_qc)id_qc(i)=ifail_gross_routine_qc
-          end if
-       end do
-       efact = (one-fact1*fact1)*efact
-       vfact = (one-fact1*fact1)*vfact
-
-    endif
+    do i = 1, nchanl
+       varinv(i) = zero 
+       if(id_qc(i) == igood_qc)id_qc(i)=ifail_iland_det
+    enddo
 
   endif
+
+! Otherwise, use MHS screening for tempest-D else where. 
+!  else
+!
+!
+!  ! MHS screening uses TB of the first 2 channels to detect cloudy pixels
+!  ! The first two channels of tempest-d are "somewhat" similar to those of mhs (see below)
+!  !
+!  ! MHS ch:       1 (89 GHz), 2 (157 GHz), 3 (183.3+/-1.0 GHz), 4 (183.3+/-3.0 GHz), 5 (190.3 GHz)
+!  ! TEMPEST-D ch: 1 (87 GHz), 2 (164 GHz), 3 (174 GHz),         4 (178 GHz),         5 (181 GHz)
+!
+!    if(sea .or. ice .or. snow)then
+!       dsi=9.0_r_kind
+!       if(tb_obs(2) < h300)then
+!          dsi=0.13_r_kind*(tbc(1)-33.58_r_kind*tbc(2)/(h300-tb_obs(2)))
+!          if(luse .and. dsi >= one)aivals(10,is) = aivals(10,is) + one
+!       end if
+!!       write(*,*) 'qc_tempest: you should never see this!'
+!    else
+!       dsi=0.85_r_kind*tbc(1)-tbc(2)
+!       if(luse .and. dsi >= one)aivals(11,is) = aivals(11,is) + one
+!    end if
+!    dsi=max(zero,dsi)
+!    fact1=((tbc(1)-7.5_r_kind*dsi)/r10)**2+(dsi)**2
+!
+!    if(fact1 > one)then
+!       vfact=zero
+!       if(luse)aivals(8,is) = aivals(8,is) + one
+!       do i=1,nchanl
+!          if(id_qc(i) == igood_qc)id_qc(i)=ifail_fact1_qc
+!       end do
+!    else
+!       do i=3,nchanl
+!          if (abs(tbc(i)) >= two) then
+!             varinv(i) = zero
+!             if(id_qc(i) == igood_qc)id_qc(i)=ifail_gross_routine_qc
+!          end if
+!       end do
+!       efact = (one-fact1*fact1)*efact
+!       vfact = (one-fact1*fact1)*vfact
+!
+!    endif
+!
+!  endif
 
 !    Reduce q.c. bounds over higher topography
   if (zsges > r2000) then
