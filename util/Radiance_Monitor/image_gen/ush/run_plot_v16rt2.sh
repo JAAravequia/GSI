@@ -46,7 +46,7 @@ logdir="/gpfs/dell2/ptmp/Edward.Safford/logs/${suffix}/${RUN}/radmon"
 if [[ $idate -le $prodate ]]; then
 
    echo " firing CkPlt_glbl.sh"
-   ${scripts}/CkPlt_glbl.sh $suffix_${RUN} $idate  \
+   ${scripts}/CkPlt_glbl.sh $suffix $idate  \
 	1>${logdir}/CkPlt_${suffix}.log \
 	2>${logdir}/CkPlt_${suffix}.err
 
