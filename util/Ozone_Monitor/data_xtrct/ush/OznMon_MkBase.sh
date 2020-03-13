@@ -205,7 +205,7 @@ for type in ${SATYPE}; do
       test_dir=${OZN_STATS_TANKDIR}/${RUN}.${pdy}/${cyc}/oznmon/time
 
       if [[ -d ${test_dir} ]]; then
-         test_file=${test_dir}/${type}.${cdate}.ieee_d
+         test_file=${test_dir}/${type}.ges.${cdate}.ieee_d
 
          if [[ -s $test_file ]]; then
             $NCP ${test_file} ./${type}.${cdate}.ieee_d
@@ -220,7 +220,7 @@ for type in ${SATYPE}; do
 
 
       if [[ $have_ctl -eq 0 ]]; then
-         test_file=${test_dir}/${type}.ctl
+         test_file=${test_dir}/${type}.ges.ctl
          if [[ -s ${test_file} ]]; then
             $NCP ${test_file} ./${type}.ctl
             have_ctl=1
