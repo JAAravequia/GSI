@@ -1227,11 +1227,11 @@ contains
 !              tempest2mhs_calidiff(5) = 0.0
 
 ! TCW 02/27/2020: use mean difference from calibration differences 
-              tempest2mhs_calidiff(1) = -0.39
-              tempest2mhs_calidiff(2) = -1.25
-              tempest2mhs_calidiff(3) =  0.61
-              tempest2mhs_calidiff(4) = -0.29
-              tempest2mhs_calidiff(5) = -0.72
+!              tempest2mhs_calidiff(1) = -0.39
+!              tempest2mhs_calidiff(2) = -1.25
+!              tempest2mhs_calidiff(3) =  0.61
+!              tempest2mhs_calidiff(4) = -0.29
+!              tempest2mhs_calidiff(5) = -0.72
 ! TCW 03/17/2020: use updated mean calibration differences (Table 3 in Berg et al, 2020) 
               tempest2mhs_calidiff(1) = -0.40
               tempest2mhs_calidiff(2) = -1.46
