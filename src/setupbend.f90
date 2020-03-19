@@ -567,19 +567,40 @@ subroutine setupbend(lunin,mype,awork,nele,nobs,toss_gps_sub,is,init_pass,last_p
            endif
          else 
 !        CDAAC-type processing
-           if((data(ilate,i)> r40).or.(data(ilate,i)< -r40)) then
-              if(alt>r12) then
-                 repe_gps=-0.685627_r_kind+0.377174_r_kind*alt-0.00421934_r_kind*alt**2
+           if ((data(isatid,i) > 749).and.(data(isatid,i) < 756)) then
+              if ((data(ilate,i)> r40).or.(data(ilate,i)< -r40)) then
+                if (alt.le.8.0_r_kind) then
+                  repe_gps=-1.0304261_r_kind+0.3203316_r_kind*alt+0.0141337_r_kind*alt**2
+                elseif (alt.gt.8.0_r_kind.and.alt.le.r12) then
+                  repe_gps=2.1750271_r_kind+0.0431177_r_kind*alt-0.0008567_r_kind*alt**2
+                else
+                  repe_gps=-0.3447429_r_kind+0.2829981_r_kind*alt-0.0028545_r_kind*alt**2
+                endif
               else
-                 repe_gps=-3.27737_r_kind+1.20003_r_kind*alt-0.0558024_r_kind*alt**2
+                if (alt.le.4.0_r_kind) then
+                  repe_gps=0.7285212_r_kind-1.1138755_r_kind*alt+0.2311123_r_kind*alt**2
+                elseif (alt.le.r18.and.alt.gt.4.0_r_kind) then
+                  repe_gps=-3.3878629_r_kind+0.8691249_r_kind*alt-0.0297196_r_kind*alt**2
+                else
+                  repe_gps=-2.3875749_r_kind+0.3667211_r_kind*alt-0.0037542_r_kind*alt**2
+                endif
               endif
            else
-              if(alt>r18) then
-                 repe_gps=-2.73867_r_kind+0.447663_r_kind*alt-0.00475603_r_kind*alt**2
+              if((data(ilate,i)> r40).or.(data(ilate,i)< -r40)) then
+                 if(alt>r12) then
+                    repe_gps=-0.685627_r_kind+0.377174_r_kind*alt-0.00421934_r_kind*alt**2
+                 else
+                    repe_gps=-3.27737_r_kind+1.20003_r_kind*alt-0.0558024_r_kind*alt**2
+                 endif
               else
-                 repe_gps=-3.45303_r_kind+0.908216_r_kind*alt-0.0293331_r_kind*alt**2
+                 if(alt>r18) then
+                    repe_gps=-2.73867_r_kind+0.447663_r_kind*alt-0.00475603_r_kind*alt**2
+                 else
+                    repe_gps=-3.45303_r_kind+0.908216_r_kind*alt-0.0293331_r_kind*alt**2
+                 endif
               endif
-            endif
+           endif
+
          endif
 
          repe_gps=exp(repe_gps) ! one/modified error in (rad-1*1E3)
