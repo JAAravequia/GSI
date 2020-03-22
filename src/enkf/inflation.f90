@@ -108,9 +108,9 @@ real(r_single) r
 
 fnanalsml = one/(real(nanals-1,r_single))
 
-if (analpertwtnh_rtpp > 1.e-5_r_single .and. &
-    analpertwtnh_rtpp > 1.e-5_r_single .and. &
-    analpertwttr_rtpp > 1.e-5_r_single) then
+if (analpertwtnh_rtpp > 1.e-5_r_single .or. &
+    analpertwttr_rtpp > 1.e-5_r_single .or. &
+    analpertwtsh_rtpp > 1.e-5_r_single) then
 if (nproc .eq. 0) print *,'performing RTPP inflation...'
 nbloop: do nb=1,nbackgrounds ! loop over time levels in background
 ! First perform RTPP ensemble inflation,

@@ -147,7 +147,7 @@ integer(i_kind), allocatable, dimension(:) :: rtmp,numobs
 !real(r_single), allocatable, dimension(:) :: buffer
 integer(i_kind) np,i,n,nn,nob1,nob2,ierr
 real(r_double) t1
-logical test_loadbal
+logical no_loadbal
 
 if (letkf_flag) then
    ! used for finding nearest obs to grid point in LETKF.
@@ -156,6 +156,11 @@ if (letkf_flag) then
       kdtree_obs2  => kdtree2_create(obloc,sort=.true.,rearrange=.true.)
    endif
 endif
+no_loadbal = .false. ! simple partition for testing
+if (letkf_flag .and. nobsl_max > 0) then
+   ! if fixed number of obs used in LETKF, then just use simple partition
+   no_loadbal = .true.
+endif
 
 ! partition state vector for using Grahams rule..
 ! ("When a new job arrives, allocate it to the server 
@@ -163,25 +168,23 @@ endif
 allocate(numobs(npts))
 allocate(numptsperproc(numproc))
 allocate(rtmp(numproc))
-t1 = mpi_wtime()
-! assume work load proportional to number of 'nearby' obs
-call estimate_work_enkf1(numobs) ! fill numobs array with number of obs per horiz point
-! distribute the results of estimate_work to all processors.
-call mpi_allreduce(mpi_in_place,numobs,npts,mpi_integer,mpi_sum,mpi_comm_world,ierr)
-if (letkf_flag .and. nobsl_max > 0) then
-  where(numobs > nobsl_max) numobs = nobsl_max
+if (.not. no_loadbal) then
+   t1 = mpi_wtime()
+   ! assume work load proportional to number of 'nearby' obs
+   call estimate_work_enkf1(numobs) ! fill numobs array with number of obs per horiz point
+   ! distribute the results of estimate_work to all processors.
+   call mpi_allreduce(mpi_in_place,numobs,npts,mpi_integer,mpi_sum,mpi_comm_world,ierr)
+   if (nproc == 0) print *,'time in estimate_work_enkf1 = ',mpi_wtime()-t1,' secs'
+   if (nproc == 0) print *,'min/max numobs',minval(numobs),maxval(numobs)
 endif
-if (nproc == 0) print *,'time in estimate_work_enkf1 = ',mpi_wtime()-t1,' secs'
-if (nproc == 0) print *,'min/max numobs',minval(numobs),maxval(numobs)
 ! loop over horizontal grid points on analysis grid.
 t1 = mpi_wtime()
 rtmp = 0
 numptsperproc = 0
 np = 0
-test_loadbal = .false. ! simple partition for testing
 do n=1,npts
-   if (test_loadbal) then
-       ! use simple partition (does not use estimated workload) for testing
+   if (no_loadbal) then
+       ! use simple partition (does not use estimated workload) 
        np = np + 1
        if (np > numproc) np = 1
    else
@@ -201,7 +204,7 @@ rtmp = 0
 numptsperproc = 0
 np = 0
 do n=1,npts
-   if (test_loadbal) then
+   if (no_loadbal) then
        ! use simple partition (does not use estimated workload) for testing
        np = np + 1
        if (np > numproc) np = 1
@@ -213,7 +216,7 @@ do n=1,npts
    indxproc(np,numptsperproc(np)) = n
 end do
 ! print estimated workload for each task
-if (nproc == 0) then
+if (nproc == 0 .and. .not. no_loadbal) then
    do np=1,numproc
       rtmp(np) = 0
       do n=1,numptsperproc(np)

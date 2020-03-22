@@ -28,8 +28,7 @@ module params
 !                          calculate Hx; nhr_anal is for IAU)
 !   2018-05-31  whitaker - added modelspace_vloc (for model-space localization using
 !                          modulated ensembles), nobsl_max (for ob selection
-!                          in LETKF and dfs_sort
-!                          (for using DFS in LETKF ob selection).
+!                          in LETKF)
 !
 ! attributes:
 !   language: f95
@@ -104,8 +103,9 @@ real(r_single),public ::  lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh,&
                lnsigcutoffpsnh,lnsigcutoffpstr,lnsigcutoffpssh
 real(r_single),public :: analpertwtnh,analpertwtsh,analpertwttr,sprd_tol,saterrfact
 real(r_single),public :: analpertwtnh_rtpp,analpertwtsh_rtpp,analpertwttr_rtpp
-real(r_single),public ::  paoverpb_thresh,latbound,delat,p5delat,delatinv
-real(r_single),public ::  latboundpp,latboundpm,latboundmp,latboundmm
+real(r_single),public :: letkf_rtps=0.0
+real(r_single),public :: paoverpb_thresh,latbound,delat,p5delat,delatinv
+real(r_single),public :: latboundpp,latboundpm,latboundmp,latboundmm
 real(r_single),public :: covl_minfact, covl_efold
 
 real(r_single),public :: covinflatenh,covinflatesh,covinflatetr,lnsigcovinfcutoff
@@ -120,8 +120,6 @@ integer,public :: npefiles = 0
 ! only the first nobsl_max closest obs within the
 ! localization radius will be used.
 ! Ignored if letkf_flag = .false.
-! If dfs_sort=T, DFS is used instead of distance
-! for ob selection.
 integer,public :: nobsl_max = -1
 ! do model-space vertical localization
 ! if .true., eigenvectors of the localization
@@ -177,9 +175,6 @@ logical,public :: letkf_bruteforce_search=.false.
 logical,public :: massbal_adjust = .false. 
 integer(i_kind),public :: nvars = -1
 
-! sort obs in LETKF in order of decreasing DFS
-logical,public :: dfs_sort = .false.
-
 ! if true generate additional input files
 ! required for EFSO calculations
 logical,public :: fso_cycling = .false.
@@ -221,13 +216,14 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    covl_minfact,covl_efold,lupd_obspace_serial,letkf_novlocal,&
                    analpertwtnh,analpertwtsh,analpertwttr,sprd_tol,&
                    analpertwtnh_rtpp,analpertwtsh_rtpp,analpertwttr_rtpp,&
+                   letkf_rtps,&
                    nlevs,nanals,saterrfact,univaroz,regional,use_gfs_nemsio,use_gfs_ncio,&
                    paoverpb_thresh,latbound,delat,pseudo_rh,numiter,biasvar,&
                    lupd_satbiasc,cliptracers,simple_partition,adp_anglebc,angord,&
                    newpc4pred,nmmb,nhr_anal,nhr_state, fhr_assim,nbackgrounds,nstatefields, &
                    save_inflation,nobsl_max,lobsdiag_forenkf,netcdf_diag,&
                    letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
-                   getkf,getkf_inflation,denkf,modelspace_vloc,dfs_sort,write_spread_diag,&
+                   getkf,getkf_inflation,denkf,modelspace_vloc,write_spread_diag,&
                    covinflatenh,covinflatesh,covinflatetr,lnsigcovinfcutoff,letkf_bruteforce_search,&
                    fso_cycling,fso_calculate,imp_physics,lupp,cnvw_option,use_correlated_oberrs,&
                    fv3_native

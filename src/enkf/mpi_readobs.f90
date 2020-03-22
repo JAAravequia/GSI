@@ -33,7 +33,7 @@ module mpi_readobs
 !$$$
   
 use kinds, only: r_kind, r_single, i_kind, r_double
-use params, only: ntasks_io, nanals_per_iotask, nanal1, nanal2
+use params, only: ntasks_io, nanals_per_iotask, nanal1, nanal2, letkf_flag
 use radinfo, only: npred
 use readconvobs
 use readsatobs
@@ -246,22 +246,22 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
 
 ! make anal_ob contain ob prior ensemble *perturbations*
     if (nproc == 0) then
-        analsi=1._r_single/float(nanals)
-        analsim1=1._r_single/float(nanals-1)
+       analsi=1._r_single/float(nanals)
+       analsim1=1._r_single/float(nanals-1)
 !$omp parallel do private(nob)
-        do nob=1,nobs_tot
-           ensmean_obbc(nob)  = sum(anal_ob(:,nob))*analsi
+       do nob=1,nobs_tot
+          ensmean_obbc(nob)  = sum(anal_ob(:,nob))*analsi
 ! remove ensemble mean from each member.
 ! ensmean_obbc is biascorrected ensemble mean (anal_ob is ens pert)
-           anal_ob(:,nob) = anal_ob(:,nob)-ensmean_obbc(nob)
+          anal_ob(:,nob) = anal_ob(:,nob)-ensmean_obbc(nob)
 ! compute sprd
-           sprd_ob(nob) = sum(anal_ob(:,nob)**2)*analsim1
+          sprd_ob(nob) = sum(anal_ob(:,nob)**2)*analsim1
 ! modulated ensemble.
-           if (neigv > 0) then
-              anal_ob_modens(:,nob) = anal_ob_modens(:,nob)-ensmean_obbc(nob)
-              sprd_ob(nob) = sum(anal_ob_modens(:,nob)**2)*analsim1
-           endif
-        enddo
+          if (neigv > 0) then
+             anal_ob_modens(:,nob) = anal_ob_modens(:,nob)-ensmean_obbc(nob)
+             sprd_ob(nob) = sum(anal_ob_modens(:,nob)**2)*analsim1
+          endif
+       enddo
 !$omp end parallel do
        print *, 'prior spread conv: ', minval(sprd_ob(1:nobs_conv)), maxval(sprd_ob(1:nobs_conv))
        print *, 'prior spread oz: ', minval(sprd_ob(nobs_conv+1:nobs_conv+nobs_oz)), &
@@ -280,6 +280,21 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
 
     if (allocated(mem_ob)) deallocate(mem_ob)
     if (allocated(mem_ob_modens)) deallocate(mem_ob_modens)
+
+    ! for LETKF, write anal_ob_modens to temp file.
+    !if (nproc == 0 .and. letkf_flag) then
+    !   open(99,file='anal_ob_modens.dat',form='unformatted',access='direct',recl=4*nobs_tot)
+    !   do nanal=1,nanals*neigv
+    !      write(99,rec=nanal) anal_ob_modens(nanal,1:nobs_tot)
+    !   enddo
+    !   close(99)
+    !   open(99,file='anal_ob.dat',form='unformatted',access='direct',recl=4*nobs_tot)
+    !   do nanal=1,nanals
+    !      write(99,rec=nanal) anal_ob(nanal,1:nobs_tot)
+    !   enddo
+    !   close(99)
+    !   deallocate(anal_ob_modens, anal_ob)
+    !endif
 
     if (nproc == 0) t1 = mpi_wtime()
     call mpi_bcast(ensmean_obbc,nobs_tot,mpi_real4,0,mpi_comm_world,ierr)
