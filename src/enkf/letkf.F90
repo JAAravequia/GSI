@@ -117,7 +117,6 @@ use gridinfo, only: nlevs_pres,lonsgrd,latsgrd,logp,npts,gridloc
 use kdtree2_module, only: kdtree2, kdtree2_create, kdtree2_destroy, &
                           kdtree2_result, kdtree2_n_nearest, kdtree2_r_nearest
 use radbias, only: apply_biascorr
-use random_normal, only : set_random_seed
 
 implicit none
 
@@ -173,10 +172,6 @@ real(r_kind) eps
 
 eps = epsilon(0.0_r_single) ! real(4) machine precision
 re = rearth/1.e3_r_single
-
-! set random seed (for breaking ties in sorting used
-! in observation selection)
-call set_random_seed(iseed_perturbed_obs, nproc)
 
 !$omp parallel
 nthreads = omp_get_num_threads()
