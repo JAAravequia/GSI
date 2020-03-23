@@ -185,6 +185,8 @@ if [[ $nfile_src -gt 0 ]]; then
    echo "test_dir = ${test_dir}"
 
    if [[ $DO_DATA_RPT -eq 1 ]]; then
+
+
       $NCP ${DE_EXEC}/radmon_validate_tm.x ${test_dir}/.
       $NCP $DE_SCRIPTS/validate.sh    ${test_dir}/.
       echo "firing validate.sh"
@@ -275,7 +277,30 @@ if [[ $exit_value == 0 ]]; then
 
       #--------------------------------------------------------------------
       #  Diag report processing
+      #
+      #  New algorithm:
+      #
+      #     1.  locate satype and radstat files, specify output file
+      #     2.  run new radmon_diag_ck.sh script
+      #     3.  build diag report from output file
+      #     4.  move output file to target tankdir
       #--------------------------------------------------------------------
+      RADSTAT_LOCATION=${RADSTAT_LOCATION:-${DATA}/${RUN}.${day}/${cycle}}
+      radstat=${radstat:-${RADSTAT_LOCATION}/${RUN}.t${cycle}z.radstat}
+
+      if [[ -e ${satype_file} || -e ${radstat} ]]; then
+         echo "satype  = $satype_file"
+         echo "radstat = $radstat"
+         echo "OK to PROCEED"
+
+         outfile="bad_diag.${PDATE}"
+	 ${DE_SCRIPTS}/radmon_diag_ck.sh --rad ${radstat} --satype ${satype_file} --output ${outfile}
+         if [[ -e ${outfile} ]]; then
+            $NCP ./${outfile} ${TANKverf}/${RUN}.${day}/${cyc}/.
+         fi
+      fi
+
+
       tmp_diag="diag.tmp"
       new_diag="diag.new"
       opr_log_start=1
