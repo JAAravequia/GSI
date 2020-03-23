@@ -177,6 +177,9 @@ program main
       do j=1,n_levs
          error(j,k)     = real( header_nlev(j)%err, 4)
          use(j,k)       = real( header_nlev(j)%iouse, 4 )
+         if( k == 1 ) then
+            write(6,*) 'lev, use_value = ', j, use(j,k)
+         endif
       end do
    end do
         
@@ -268,6 +271,8 @@ program main
    
                   end do
 
+               else
+                  write(6,*) ' NOT assimilated, data_nlev(j,iobs)%varinv = ', j, iobs, data_nlev(j,iobs)%varinv
                end if
             enddo 
 
