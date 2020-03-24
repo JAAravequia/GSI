@@ -104,6 +104,7 @@ real(r_single),public ::  lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh,&
 real(r_single),public :: analpertwtnh,analpertwtsh,analpertwttr,sprd_tol,saterrfact
 real(r_single),public :: analpertwtnh_rtpp,analpertwtsh_rtpp,analpertwttr_rtpp
 real(r_single),public :: letkf_rtps=0.0
+real(r_single),public :: letkf_rtps_exp=1.0
 real(r_single),public :: paoverpb_thresh,latbound,delat,p5delat,delatinv
 real(r_single),public :: latboundpp,latboundpm,latboundmp,latboundmm
 real(r_single),public :: covl_minfact, covl_efold
@@ -216,7 +217,7 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    covl_minfact,covl_efold,lupd_obspace_serial,letkf_novlocal,&
                    analpertwtnh,analpertwtsh,analpertwttr,sprd_tol,&
                    analpertwtnh_rtpp,analpertwtsh_rtpp,analpertwttr_rtpp,&
-                   letkf_rtps,&
+                   letkf_rtps,letkf_rtps_exp,&
                    nlevs,nanals,saterrfact,univaroz,regional,use_gfs_nemsio,use_gfs_ncio,&
                    paoverpb_thresh,latbound,delat,pseudo_rh,numiter,biasvar,&
                    lupd_satbiasc,cliptracers,simple_partition,adp_anglebc,angord,&

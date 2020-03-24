@@ -112,7 +112,7 @@ use params, only: sprd_tol, datapath, nanals, iseed_perturbed_obs,&
                   zhuberleft,zhuberright,varqc,lupd_satbiasc,huber,letkf_novlocal,&
                   lupd_obspace_serial,corrlengthnh,corrlengthtr,corrlengthsh,&
                   getkf,getkf_inflation,denkf,nbackgrounds,nobsl_max,&
-                  neigv,vlocal_evecs,letkf_rtps
+                  neigv,vlocal_evecs,letkf_rtps,letkf_rtps_exp
 use gridinfo, only: nlevs_pres,lonsgrd,latsgrd,logp,npts,gridloc
 use kdtree2_module, only: kdtree2, kdtree2_create, kdtree2_destroy, &
                           kdtree2_result, kdtree2_n_nearest, kdtree2_r_nearest
@@ -527,12 +527,17 @@ grdloop: do npt=1,numptsperproc(nproc+1)
       ! is used as workspace and is modified on output), and analysis
       ! weights for ensemble perturbations represent posterior ens perturbations, not
       ! analysis increments for ensemble perturbations.
-      !if (nproc .eq. 0 .and. npt .eq. 1) then
+      if (nproc == 0 .and. omp_get_thread_num() == 0) then
       call letkf_core(nobsl2,hxens,obens,dep,&
                       wts_ensmean,wts_ensperts,pa,&
                       rdiag,rloc(1:nobsl2),nens,nens/nanals,getkf_inflation,&
-                      denkf,getkf,letkf_rtps)
-      !endif
+                      denkf,getkf,letkf_rtps,letkf_rtps_exp,.true.)
+      else
+      call letkf_core(nobsl2,hxens,obens,dep,&
+                      wts_ensmean,wts_ensperts,pa,&
+                      rdiag,rloc(1:nobsl2),nens,nens/nanals,getkf_inflation,&
+                      denkf,getkf,letkf_rtps,letkf_rtps_exp)
+      endif
 
       t4 = t4 + mpi_wtime() - t1
       t1 = mpi_wtime()
@@ -672,7 +677,7 @@ end subroutine letkf_update
 subroutine letkf_core(nobsl,hxens,hxens_orig,dep,&
                       wts_ensmean,wts_ensperts,paens,&
                       rdiaginv,rloc,nanals,neigv,getkf_inflation,denkf,getkf,&
-                      rtps)
+                      rtps,rtps_exp,debug)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    letkf_core
@@ -766,7 +771,9 @@ subroutine letkf_core(nobsl,hxens,hxens_orig,dep,&
 
 implicit none
 integer(i_kind), intent(in) :: nobsl,nanals,neigv
+logical, intent(in), optional :: debug
 real(r_single),intent(in) :: rtps
+real(r_single),intent(in) :: rtps_exp
 real(r_kind),dimension(nobsl),intent(in ) :: rdiaginv,rloc
 real(r_kind),dimension(nanals,nobsl),intent(inout)  :: hxens
 real(r_single),dimension(nanals/neigv,nobsl),intent(in)  :: hxens_orig
@@ -778,8 +785,10 @@ real(r_single),dimension(:,:),allocatable, intent(inout) :: paens
 real(r_kind),allocatable,dimension(:,:) :: work3,evecs
 real(r_single),allocatable,dimension(:,:) :: swork2,pa,swork3,shxens
 real(r_single),allocatable,dimension(:) :: swork1
-real(r_kind),allocatable,dimension(:) :: rrloc,evals,gammapI,gamma_inv
+real(r_kind),allocatable,dimension(:) :: &
+             rrloc,evals,gammapI,gamma_inv,gammapI_inv
 real(r_kind) eps
+real(r_single) analsprd,analsprd2,inf_factor
 integer(i_kind) :: nanal,ierr,lwork,liwork
 !for LAPACK dsyevr
 integer(i_kind) isuppz(2*nanals)
@@ -795,6 +804,7 @@ endif
 
 allocate(work3(nanals,nanals),evecs(nanals,nanals))
 allocate(rrloc(nobsl),gammapI(nanals),evals(nanals),gamma_inv(nanals))
+allocate(gammapI_inv(nanals))
 ! for dsyevr
 allocate(iwork(10*nanals),work1(70*nanals))
 ! for dsyevd
@@ -846,10 +856,36 @@ do nanal=1,nanals
    endif
 enddo
 ! gammapI used in calculation of posterior cov in ensemble space
-if (rtps > 0) then
-   gammapI = (evals+1.0)/(rtps**2*evals+1.0)
-else
-   gammapI = evals+1.0
+
+! relax eigenspectrum back to prior if rtps > 0
+gammapI = evals+1.0
+gammapI_inv = 1./gammaPI
+if (rtps > eps) then
+   if (present(debug)) then
+      analsprd = sum(gammapI_inv)/float(nanals)
+   endif
+   !gammapI = gammapI/(rtps*evals+1.0)
+   !gammapI_inv = 1./gammaPI
+   !if (present(debug)) then
+   !   analsprd2 = sum(gammapI_inv)/float(nanals)
+   !   print *,'sprd:',analsprd,(1.-rtps)*analsprd+rtps,analsprd2
+   !endif
+   gammaPI = 1./( (1-rtps)*gammaPI**(1./rtps_exp) + rtps )**rtps_exp
+   gammapI_inv = 1./gammaPI
+   if (present(debug)) then
+      analsprd2 = sum(gammapI_inv)/float(nanals)
+      print *,'sprd:',analsprd**(1./rtps_exp),&
+                     (1.-rtps)*analsprd**(1./rtps_exp)+rtps,&
+                     analsprd2*(1./rtps_exp)
+   endif
+else if (rtps < eps) then
+   inf_factor = -rtps*((1.-analsprd)/analsprd)+1.
+   gammapI = gammapI/inf_factor
+   gammapI_inv = 1./gammaPI
+   if (present(debug)) then
+      analsprd2 = sum(gammapI_inv)/float(nanals)
+      print *,'sprd:',inf_factor,analsprd,(1.+rtps)*analsprd-rtps,analsprd2
+   endif
 endif
 
 ! create HZ^T R**-1/2 
@@ -889,9 +925,9 @@ do nanal=1,nanals
 end do
 
 ! recompute Pa if rtps used
-if (rtps > 0) then
+if (abs(rtps) > eps) then
    do nanal=1,nanals
-      swork3(nanal,:) = evecs(nanal,:)/gammaPI
+      swork3(nanal,:) = evecs(nanal,:)/gammapI
    enddo
    ! pa = C (Gamma + I)**-1 C^T (analysis error cov in ensemble space)
    !pa = matmul(swork3,transpose(swork2))
@@ -978,7 +1014,7 @@ deallocate(swork3,swork2)
 
 endif
 
-deallocate(evecs,gammapI,gamma_inv)
+deallocate(evecs,gammapI,gamma_inv,gammapI_inv)
 
 return
 end subroutine letkf_core
