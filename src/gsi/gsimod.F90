@@ -427,6 +427,10 @@
 !  08-23-2019 pondeca   add logical variable "use_similarity_2dvar" that provides option to use
 !                       similarity theory from the mm5 sfc model to compute the 10-m wind factor for
 !                       near-surface observations
+!  09-04-2019 Martin    Add option write_fv3_incr to write netCDF increment rather than NEMSIO analysis
+!  09-13-2019 Martin    Add option incvars_to_zero(nvars) to zero out netCDF increment fields
+!  09-20-2019 Su        add new variational QC and hub norm option
+!  09-23-2019 Martin    Add option use_gfs_ncio to read in first-guess netCDF file
 !  10-15-2019 Wei/Martin   added option lread_ext_aerosol to read in aerfXX file for NEMS aerosols;
 !                          added option use_fv3_aero to choose between NGAC and FV3GFS-GSDChem 
 !  10-28-2019 Martin    Add option incvars_zero_strat(nvars) to zero out increments above tropopause

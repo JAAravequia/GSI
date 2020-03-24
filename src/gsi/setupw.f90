@@ -208,6 +208,8 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
 !                          rather than assuming sensor height is 10 m AGL.
 !   2019-08-12  zhang/levine/pondeca -  add option to adjust 10-m bckg wind with the help of similarity
 !                                       theory in twodvar_regional applications
+!   2019-09-20  Su      -  remove current VQC part and add subroutine call on VQC
+!   2019-09-25  Su      -  put hibert curve on aircraft data
 !   2020-01-27  Winterbottom - moved the linear regression derived
 !                              coefficients for the dynamic observation
 !                              error (DOE) calculation to the namelist

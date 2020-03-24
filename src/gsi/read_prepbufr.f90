@@ -143,8 +143,9 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
 !   2018-08-16  akella  - explicit KX definition for ships (formerly ID'd by subtype 522/523)
 !   2019-02-06  levine - Add lookup of sensor height for mesonet winds
 !   2019-06-17  mmorris - Update adjust_goescldobs to reject clear cloud obs over water at night
+!   2019-09-27  Su      - add hilbert curve application to aircraft winds
 !   2019-12-05  mmorris - Update adjust_goescldobs to reject ALL clear cloud obs at night
-
+!
 !   input argument list:
 !     infile   - unit from which to read BUFR data
 !     obstype  - observation type to process
