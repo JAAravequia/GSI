@@ -54,6 +54,9 @@ public :: read_namelist,cleanup_namelist
 integer(i_kind), public, parameter :: nsatmax_rad = 200
 integer(i_kind), public, parameter :: nsatmax_oz = 100
 INTEGER(i_kind), PUBLIC, parameter :: nsatmax_aod = 100
+
+REAL(r_single), PARAMETER :: intercept_viirs=0.021, slope_viirs=0.310
+
 character(len=20), public, dimension(nsatmax_rad) ::sattypes_rad, dsis
 character(len=20), public, dimension(nsatmax_oz) ::sattypes_oz
 CHARACTER(len=20), PUBLIC, dimension(nsatmax_aod) ::sattypes_aod
@@ -159,6 +162,8 @@ logical,public :: reducedgrid = .false.
 logical,public :: univaroz = .true.
 LOGICAL,public :: univartracers = .true.
 LOGICAL,public :: aod_controlvar = .false.
+LOGICAL,public :: log_aod = .false.
+REAL(r_single), PUBLIC :: intercept = 0., slope = 0.
 logical,public :: regional = .false.
 logical,public :: use_gfs_nemsio = .false.
 logical,public :: arw = .false.
@@ -215,7 +220,8 @@ NAMELIST /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    covl_minfact,covl_efold,lupd_obspace_serial,letkf_novlocal,&
                    analpertwtnh,analpertwtsh,analpertwttr,sprd_tol,&
                    analpertwtnh_rtpp,analpertwtsh_rtpp,analpertwttr_rtpp,&
-                   nlevs,nanals,saterrfact,univaroz,univartracers,aod_controlvar,&
+                   nlevs,nanals,saterrfact,univaroz,univartracers,&
+                   aod_controlvar,log_aod,&
                    regional,use_gfs_nemsio,&
                    paoverpb_thresh,latbound,delat,pseudo_rh,numiter,biasvar,&
                    lupd_satbiasc,cliptracers,simple_partition,adp_anglebc,angord,&
@@ -668,6 +674,27 @@ endif
 
 call init_constants(.false.) ! initialize constants.
 call init_constants_derived()
+
+IF (aod_controlvar) THEN
+   IF (log_aod) THEN
+      DO i=1,nsats_aod
+         IF (TRIM(sattypes_aod(i)) == "aod_viirs") THEN
+            intercept=intercept_viirs
+            slope=slope_viirs
+         ELSE
+            PRINT *,TRIM(sattypes_aod(i)),' not implemented'
+            CALL stop2(19)
+         ENDIF
+         
+         IF (i > 1) THEN
+            PRINT *,' One AOD satelite only implemented'
+            CALL stop2(19)
+         ENDIF
+      ENDDO
+   ENDIF
+ELSE
+   log_aod=.false.
+ENDIF
 
 if (nproc == 0) then
     if (analpertwtnh > 0) then

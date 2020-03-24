@@ -27,6 +27,7 @@ MODULE readaodobs
 
   USE kinds, ONLY: r_single,i_kind,r_kind,r_double
   USE params, ONLY: nsats_aod,sattypes_aod,npefiles,netcdf_diag
+  USE params, ONLY: intercept,slope,log_aod
   USE constants, ONLY: deg2rad, zero
   IMPLICIT NONE
 
@@ -127,10 +128,14 @@ CONTAINS
           Pressure=100000_r_kind
            call nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@PreQc', Analysis_Use_Flag)
            call nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@ObsError', Errinv)
-           Errinv=1_r_kind/Errinv
+
            call nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@ObsValue', Observation)
 
            call nc_diag_read_close(obsfile)
+
+
+           
+           Errinv=1_r_kind/Errinv
 
            num_obs_totdiag = num_obs_totdiag + nobs_curr
            nread = nread + nobs_curr
@@ -312,7 +317,6 @@ CONTAINS
           CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@ObsError', Errinv)
           Errinv=1_r_kind/Errinv
           CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@ObsValue', Observation)
-!@mzp until fix ombg found use hofx0
           CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@Hofx', Obs_Minus_Forecast_adjusted)
           CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@Hofx', Obs_Minus_Forecast_unadjusted)
           CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@ObsBias',bias)
@@ -371,10 +375,8 @@ CONTAINS
              x_err(nob) = (1./Errinv(i))**2
              x_errorig(nob) = x_err(nob)
              x_obs(nob) =  MAX(Observation(i)-bias(i),zero)
-!@mzp until fix ombg found use hofx0
 !             hx_mean(nob) = Observation(i) - Obs_Minus_Forecast_adjusted(i)
              hx_mean(nob) = Obs_Minus_Forecast_adjusted(i)
-!@mzp until fix ombg found use hofx0
 !             hx_mean_nobc(nob) = Observation(i) - Obs_Minus_Forecast_unadjusted(i)
              hx_mean_nobc(nob) = Obs_Minus_Forecast_unadjusted(i)
              x_type(nob) = 'aod                 '
