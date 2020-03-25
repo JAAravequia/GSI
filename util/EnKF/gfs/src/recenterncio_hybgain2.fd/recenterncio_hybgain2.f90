@@ -64,16 +64,16 @@ program recenterncio_hybgain2
   call getarg(6,filenamein) ! prefix for input ens member files (append _mem###)
   call getarg(7,filenameout) ! prefix for output ens member files (append _mem###)
 ! blending coefficients
-  call getarg(7,charnin)
+  call getarg(8,charnin)
   read(charnin,'(i4)') ialpha ! wt for varanal (3dvar)
   alpha = ialpha/1000.
-  call getarg(8,charnin)
+  call getarg(9,charnin)
   read(charnin,'(i4)') ibeta ! wt for enkfanal (enkf)
   beta = ibeta/1000.
 ! new_anal = fg + alpha*(varanal-varfg) + beta*(enkfanal-fg)
 !          = (1.-alpha)*fg + alpha*(varanal-varfg) + beta*enkfanal
 ! how many ensemble members to process
-  call getarg(9,charnin)
+  call getarg(10,charnin)
   read(charnin,'(i4)') nanals
 
   if (mype==0) then
