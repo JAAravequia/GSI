@@ -527,7 +527,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
       ! is used as workspace and is modified on output), and analysis
       ! weights for ensemble perturbations represent posterior ens perturbations, not
       ! analysis increments for ensemble perturbations.
-      if (nproc == 0 .and. omp_get_thread_num() == 0) then
+      if (nproc == numproc-1 .and. omp_get_thread_num() == 0) then
       call letkf_core(nobsl2,hxens,obens,dep,&
                       wts_ensmean,wts_ensperts,pa,&
                       rdiag,rloc(1:nobsl2),nens,nens/nanals,getkf_inflation,&
@@ -870,13 +870,13 @@ if (rtps > eps) then
    !   analsprd2 = sum(gammapI_inv)/float(nanals)
    !   print *,'sprd:',analsprd,(1.-rtps)*analsprd+rtps,analsprd2
    !endif
-   gammaPI = 1./( (1-rtps)*gammaPI**(1./rtps_exp) + rtps )**rtps_exp
+   gammaPI = 1./( (1.-rtps)*gammaPI**(-1./rtps_exp) + rtps )**rtps_exp
    gammapI_inv = 1./gammaPI
    if (present(debug)) then
       analsprd2 = sum(gammapI_inv)/float(nanals)
-      print *,'sprd:',analsprd**(1./rtps_exp),&
-                     (1.-rtps)*analsprd**(1./rtps_exp)+rtps,&
-                     analsprd2*(1./rtps_exp)
+      print *,'sprd:',(analsprd)**(1./rtps_exp),&
+                     (1.-rtps)*(analsprd)**(1./rtps_exp)+rtps,&
+                     analsprd2**(1./rtps_exp)
    endif
 else if (rtps < eps) then
    inf_factor = -rtps*((1.-analsprd)/analsprd)+1.
