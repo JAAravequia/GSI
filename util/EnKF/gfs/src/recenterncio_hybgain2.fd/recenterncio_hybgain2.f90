@@ -70,8 +70,7 @@ program recenterncio_hybgain2
   call getarg(9,charnin)
   read(charnin,'(i4)') ibeta ! wt for enkfanal (enkf)
   beta = ibeta/1000.
-! new_anal = fg + alpha*(varanal-varfg) + beta*(enkfanal-fg)
-!          = (1.-alpha)*fg + alpha*(varanal-varfg) + beta*enkfanal
+! new_anal = alpha*(varanal-varfg) + beta*(enkfanal-enkffg)
 ! how many ensemble members to process
   call getarg(10,charnin)
   read(charnin,'(i4)') nanals
@@ -160,9 +159,8 @@ program recenterncio_hybgain2
                call read_vardata(dset_enkfanal,trim(dset_fg%variables(nvar)%name),values_2d_enkfanal)
                call read_vardata(dseti,trim(dset_fg%variables(nvar)%name),values_2d)
                ! blended analysis
-               values_2d_anal = (1.-beta)*values_2d_fg + &
-                            alpha*(values_2d_varanal-values_2d_varfg) + &
-                            beta*values_2d_enkfanal
+               values_2d_anal = values_2d_fg + beta*(values_2d_enkfanal-values_2d_fg) + &
+                                alpha*(values_2d_varanal-values_2d_varfg) 
                ! recentered ensemble member
                values_2d = values_2d - values_2d_enkfanal + values_2d_anal
                if (has_attr(dset_fg, 'nbits', trim(dset_fg%variables(nvar)%name))) then
@@ -194,9 +192,8 @@ program recenterncio_hybgain2
                call read_vardata(dset_enkfanal,trim(dset_fg%variables(nvar)%name),values_3d_enkfanal)
                call read_vardata(dseti,trim(dset_fg%variables(nvar)%name),values_3d)
                ! blended analysis
-               values_3d_anal = (1.-beta)*values_3d_fg + &
-                            alpha*(values_3d_varanal - values_3d_varfg) + &
-                            beta*values_3d_enkfanal
+               values_3d_anal = values_3d_fg + beta*(values_3d_enkfanal-values_3d_fg) +  &
+                                alpha*(values_3d_varanal - values_3d_varfg) 
                ! recentered ensemble member
                values_3d = values_3d - values_3d_enkfanal + values_3d_anal
                if (has_attr(dset_fg, 'nbits', trim(dset_fg%variables(nvar)%name))) then
