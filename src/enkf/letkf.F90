@@ -527,17 +527,17 @@ grdloop: do npt=1,numptsperproc(nproc+1)
       ! is used as workspace and is modified on output), and analysis
       ! weights for ensemble perturbations represent posterior ens perturbations, not
       ! analysis increments for ensemble perturbations.
-      if (nproc == numproc-1 .and. omp_get_thread_num() == 0) then
-      call letkf_core(nobsl2,hxens,obens,dep,&
-                      wts_ensmean,wts_ensperts,pa,&
-                      rdiag,rloc(1:nobsl2),nens,nens/nanals,getkf_inflation,&
-                      denkf,getkf,letkf_rtps,letkf_rtps_exp,.true.)
-      else
+      !if (nproc == numproc-1 .and. omp_get_thread_num() == 0) then
+      !call letkf_core(nobsl2,hxens,obens,dep,&
+      !                wts_ensmean,wts_ensperts,pa,&
+      !                rdiag,rloc(1:nobsl2),nens,nens/nanals,getkf_inflation,&
+      !                denkf,getkf,letkf_rtps,letkf_rtps_exp,.true.)
+      !else
       call letkf_core(nobsl2,hxens,obens,dep,&
                       wts_ensmean,wts_ensperts,pa,&
                       rdiag,rloc(1:nobsl2),nens,nens/nanals,getkf_inflation,&
                       denkf,getkf,letkf_rtps,letkf_rtps_exp)
-      endif
+      !endif
 
       t4 = t4 + mpi_wtime() - t1
       t1 = mpi_wtime()
