@@ -860,7 +860,7 @@ enddo
 ! relax eigenspectrum back to prior if rtps > 0
 gammapI = evals+1.0
 gammapI_inv = 1./gammaPI
-if (rtps > eps) then
+if (rtps > 1.e-5) then
    if (present(debug)) then
       analsprd = sum(gammapI_inv)/float(nanals)
    endif
@@ -878,7 +878,7 @@ if (rtps > eps) then
                      (1.-rtps)*(analsprd)**(1./rtps_exp)+rtps,&
                      analsprd2**(1./rtps_exp)
    endif
-else if (rtps < eps) then
+else if (rtps < -1.e-5) then
    inf_factor = -rtps*((1.-analsprd)/analsprd)+1.
    gammapI = gammapI/inf_factor
    gammapI_inv = 1./gammaPI
