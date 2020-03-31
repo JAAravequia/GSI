@@ -1690,7 +1690,7 @@ contains
     if (iret /= 0) call error_msg(trim(my_name),null,null,'init',istop,iret)
 
 
-    filename='sfcf06_anlgrid'
+    filename='sfcf04_anlgrid'
     call nemsio_open(gfile,trim(filename),'READ',iret=iret)
     if (iret /= 0) call error_msg(trim(my_name),trim(filename),null,'open',istop,iret)
 
@@ -4352,7 +4352,7 @@ contains
 !-------------------------------------------------------------------------
 
 !   Declare local parameters
-    character( 6),parameter:: fname_ges='sfcf06'
+    character( 6),parameter:: fname_ges='sfcf04'
 !   Declare local variables
     character(len=120) :: my_name = 'WRITE_NEMSSFC'
     character(len=1)   :: null = ' '
@@ -4589,11 +4589,11 @@ contains
 !-------------------------------------------------------------------------
 
 !   Declare local parameters
-    character(6), parameter:: fname_sfcges = 'sfcf06'
+    character(6), parameter:: fname_sfcges = 'sfcf04'
     character(6), parameter:: fname_sfcgcy = 'sfcgcy'
     character(6), parameter:: fname_sfctsk = 'sfctsk'
     character(6), parameter:: fname_sfcanl = 'sfcanl'
-    character(6), parameter:: fname_nstges = 'nstf06'
+    character(6), parameter:: fname_nstges = 'nstf04'
     character(6), parameter:: fname_nstanl = 'nstanl'
     character(6), parameter:: fname_dtfanl = 'dtfanl'
 

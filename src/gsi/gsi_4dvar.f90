@@ -266,7 +266,12 @@ integer(i_kind),intent(in   ) :: mype
 ! local variables
 integer(i_kind) :: ibin,k
 
-winlen = real(nhr_assimilation,r_kind)
+if (l4densvar) then !lippi: probably make a new namelist variable??
+   !winlen = real(6,r_kind)
+   winlen = real(4,r_kind)
+else
+   winlen = real(nhr_assimilation,r_kind)
+endif
 winoff = real(min_offset/60._r_kind,r_kind)
 
 if (nhr_obsbin>0.and.nhr_obsbin<=nhr_assimilation) then
@@ -285,11 +290,11 @@ end if
 ! Setup observation bins
 IF (hr_obsbin<winlen) THEN
    ibin = NINT(winlen/hr_obsbin)
-   IF (NINT(ibin*hr_obsbin)/=nhr_assimilation) THEN
-      write(6,*)'SETUP_4DVAR: Error=',ibin,hr_obsbin,nhr_assimilation
-      write(6,*)'SETUP_4DVAR: Error in observation binning'
-      call stop2(132)
-   ENDIF
+   !IF (NINT(ibin*hr_obsbin)/=nhr_assimilation) THEN
+   !   write(6,*)'SETUP_4DVAR: Error=',ibin,hr_obsbin,nhr_assimilation
+   !   write(6,*)'SETUP_4DVAR: Error in observation binning'
+   !   call stop2(132)
+   !ENDIF
 ELSE
    ibin = 0
 ENDIF
@@ -298,6 +303,7 @@ if (mype==0)  write(6,*) 'GSI_4DVAR:  nobs_bins = ',nobs_bins
 
 ! Setup weak constraint 4dvar
 if (nhr_subwin<=0) nhr_subwin = nhr_assimilation
+if (l4densvar) nhr_subwin = 4 !lippi: probably need new namelise variable here
 winsub = real(nhr_subwin,r_kind)
 
 IF (nhr_subwin<nhr_assimilation) THEN
@@ -345,7 +351,8 @@ if ( l4densvar ) then
       write(6,'(A)')' SETUP_4DVAR: 4densvar mode, resetting nsubwin to 1'
    nsubwin = 1
 
-   ibin_anl = (nhr_assimilation/(2*nhr_obsbin))+1
+   !ibin_anl = (nhr_assimilation/(2*nhr_obsbin))+1
+   ibin_anl = 4
    if ( mype == 0 ) &
       write(6,'(A,I4)')' SETUP_4DVAR: 4densvar mode, ibin_anl = ', ibin_anl
 

@@ -1227,7 +1227,7 @@ contains
 
 !-----------------------------------------------------------------------------
 
-    filename='sfcf06_anlgrid'
+    filename='sfcf04_anlgrid'
     ! open the netCDF file
     sfcges = open_dataset(filename)
     ! get dimension sizes
@@ -2332,7 +2332,7 @@ contains
 !-------------------------------------------------------------------------
 
 !   Declare local parameters
-    character( 6),parameter:: fname_ges='sfcf06'
+    character( 6),parameter:: fname_ges='sfcf04'
 !   Declare local variables
     character(len=120) :: my_name = 'WRITE_GFSNCSFC'
     character(len=1)   :: null = ' '
@@ -2540,11 +2540,11 @@ contains
 !-------------------------------------------------------------------------
 
 !   Declare local parameters
-    character(6), parameter:: fname_sfcges = 'sfcf06'
+    character(6), parameter:: fname_sfcges = 'sfcf04'
     character(6), parameter:: fname_sfcgcy = 'sfcgcy'
     character(6), parameter:: fname_sfctsk = 'sfctsk'
     character(6), parameter:: fname_sfcanl = 'sfcanl'
-    character(6), parameter:: fname_nstges = 'nstf06'
+    character(6), parameter:: fname_nstges = 'nstf04'
     character(6), parameter:: fname_nstanl = 'nstanl'
     character(6), parameter:: fname_dtfanl = 'dtfanl'
 
