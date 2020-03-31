@@ -1,8 +1,7 @@
 #!/bin/sh
 set -ax
 
-export RADSTAT_LOCATION=/com2/gfs/prod
-export SOURCE_DIR=/gpfs/dell2/emc/modeling/noscrub/emc.glopara/monitor/radmon/stats/v16rt2
+source_dir=/gpfs/dell2/emc/modeling/noscrub/emc.glopara/monitor/radmon/stats/v16rt2
 
 export ACCOUNT=dev
 export USE_ANL=1
@@ -10,23 +9,23 @@ export DO_DIAG_RPT=1
 export DO_DATA_RPT=1
 export MAIL_TO="Edward.Safford@noaa.gov"
 export JOB_QUEUE=dev_shared
+MY_MACHINE=wcoss_d
 
-me=`hostname | cut -c1`
+shell=sh
+source /usrx/local/prod/lmod/lmod/init/${shell}
+
+export MODULEPATH=/usrx/local/prod/lmod/lmod/modulefiles/Core:/usrx/local/prod/modulefiles/core_third:/usrx/local/prod/modulefiles/defs:/gpfs/dell1/nco/ops/nwprod/modulefiles/core_prod:/usrx/local/dev/modulefiles
+module load ips/18.0.1.163
+module load metplus/2.1
+module load lsf/10.1
+
+
 package=ProdGSI/util/Radiance_Monitor
 #package=RadMon
 export TANK_USE_RUN=1
 
 scripts=/gpfs/dell2/emc/modeling/noscrub/Edward.Safford/${package}/data_extract/ush
 
-
-#--------------------------------------------------------------------
-#  Check for my monitoring use.  Abort if running on prod machine.
-#--------------------------------------------------------------------
-
-#is_prod=`${scripts}/onprod.sh`
-#if [[ $is_prod = 1 ]]; then
-#   exit 10
-#fi
 
 #--------------------------------------------------------------------
 export RADMON_SUFFIX=v16rt2
@@ -47,15 +46,33 @@ START_DATE=`${NDATE} +06 $ldate`
 #START_DATE=2019122112
 
 day=`echo $START_DATE | cut -c1-8` 
-export DATDIR=${SOURCE_DIR}/gdas.${day}
+cyc=`echo $START_DATE | cut -c 9-10`
+
+export RADSTAT_DIR=/gpfs/dell3/ptmp/emc.glopara/ROTDIRS/v16rt2/${RUN}.${day}/${cyc}
+export DATDIR=${source_dir}/gdas.${day}
 
 logs=/gpfs/dell2/ptmp/Edward.Safford/logs/${RADMON_SUFFIX}/${RUN}/radmon
+logfile=${logs}/cp.${day}.${cyc}.log
+if [[ -e ${logfile} ]]; then
+   rm -f ${logfile}
+fi
+
+PROJECT=GDAS-T2O
+SUB=/gpfs/lsf/10.1/linux3.10-glibc2.17-x86_64/bin/bsub
+copy_job="${scripts}/Copy_glbl.sh ${RADMON_SUFFIX} ${START_DATE}"
+jobname="${RADMON_SUFFIX}_${RUN}.CP"
 
 echo ldate, START_DATE = $ldate, $START_DATE
 
-${scripts}/Copy_glbl.sh \
-   ${RADMON_SUFFIX} ${START_DATE} \
-   1>${logs}/CopyRad_${RADMON_SUFFIX}.log \
-   2>${logs}/CopyRad_${RADMON_SUFFIX}.err
+if [[ $MY_MACHINE = "wcoss_d" ]]; then
+   $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} \
+        -M 100 -R affinity[core] -W 0:20 -cwd ${PWD} -J ${jobname} ${copy_job}
+
+fi
+
+#${scripts}/Copy_glbl.sh \
+#   ${RADMON_SUFFIX} ${START_DATE} \
+#   1>${logs}/CopyRad_${RADMON_SUFFIX}.log \
+#   2>${logs}/CopyRad_${RADMON_SUFFIX}.err
 
 exit

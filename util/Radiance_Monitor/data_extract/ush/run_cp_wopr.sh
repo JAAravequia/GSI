@@ -1,15 +1,23 @@
 #!/bin/sh
 set -ax
 
-#export RADSTAT_LOCATION=/com2/gfs/prod
 export SOURCE_DIR=/gpfs/dell1/nco/ops/com/gfs/prod
 export ACCOUNT=dev
 export USE_ANL=1
 export DO_DIAG_RPT=1
 export DO_DATA_RPT=1
 export JOB_QUEUE=dev_shared
+MY_MACHINE=wcoss_d
 
-me=`hostname | cut -c1`
+shell=sh
+source /usrx/local/prod/lmod/lmod/init/${shell}
+
+export MODULEPATH=/usrx/local/prod/lmod/lmod/modulefiles/Core:/usrx/local/prod/modulefiles/core_third:/usrx/local/prod/modulefiles/defs:/gpfs/dell1/nco/ops/nwprod/modulefiles/core_prod:/usrx/local/dev/modulefiles
+module load ips/18.0.1.163
+module load metplus/2.1
+module load lsf/10.1
+
+
 package=ProdGSI/util/Radiance_Monitor
 #package=RadMon
 
@@ -35,14 +43,28 @@ fi
 START_DATE=`${NDATE} +06 $idate`
 #START_DATE=2019062900
 
+PDY=`echo $START_DATE | cut -c 1-8`
+cyc=`echo $START_DATE | cut -c 9-10`
+
 echo idate, START_DATE = $idate, $START_DATE
 
 logdir=/gpfs/dell2/ptmp/Edward.Safford/logs/${RADMON_SUFFIX}/${RUN}/radmon
+logfile=${logdir}/cp.${PDY}.${cyc}.log
+if [[ -e ${logfile} ]]; then
+   rm -f ${logfile}
+fi
 
-${scripts}/Copy_glbl.sh \
-   ${RADMON_SUFFIX} ${START_DATE} \
-   1>${logdir}/CopyRad_${RADMON_SUFFIX}.log \
-   2>${logdir}/CopyRad_${RADMON_SUFFIX}.err
+PROJECT=GDAS-T2O
+SUB=/gpfs/lsf/10.1/linux3.10-glibc2.17-x86_64/bin/bsub
+copy_job="${scripts}/Copy_glbl.sh ${RADMON_SUFFIX} ${START_DATE}"
+jobname="${RADMON_SUFFIX}_${RUN}.CP"
+
+if [[ $MY_MACHINE = "wcoss_d" ]]; then
+   $SUB -q $JOB_QUEUE -P $PROJECT -o ${logfile} \
+        -M 100 -R affinity[core] -W 0:20 -cwd ${PWD} -J ${jobname} ${copy_job} 
+
+fi
+
 
 set +ax
 exit

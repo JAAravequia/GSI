@@ -124,7 +124,7 @@ else
    DATDIR=${DATDIR:-${DATA}/${RUN}.${day}/radmon}
 fi
 
-LOGDIR=${LOGDIR:-/gpfs/dell1/nco/ops/com/output/prod}
+LOGFILE_DIR=${LOGFILE_DIR:-/gpfs/dell1/nco/ops/com/output/prod}
 
 if [[ $TANK_USE_RUN -eq 1 ]]; then
    test_dir=${TANKverf}/${RUN}.${day}/${cycle}/${MONITOR}
@@ -255,7 +255,7 @@ if [[ $exit_value == 0 ]]; then
 
  
       #--------------------------------------------------------------------
-      #  Copy over the ${LOGDIR}/YYYYMMDD/gdas_verfrad_HH.o* log 
+      #  Copy over the ${LOGFILE_DIR}/YYYYMMDD/gdas_verfrad_HH.o* log 
       #    1.  Confirm that any entries in the Diagnostic file report 
       #        are in the satype table.  Remove any entries that are not
       #        valid and the entire report if none are valid.
@@ -269,9 +269,9 @@ if [[ $exit_value == 0 ]]; then
       new_log=new_opr_${PDATE}.log
 
 #      if [[ $cycle = 18 ]]; then
-#         $NCP ${LOGDIR}/${next_day}/gdas_verfrad_${cycle}.o* ${opr_log}
+#         $NCP ${LOGFILE_DIR}/${next_day}/gdas_verfrad_${cycle}.o* ${opr_log}
 #      else
-#        $NCP ${LOGDIR}/${day}/gdas_verfrad_${cycle}.o* ${opr_log}
+#         $NCP ${LOGFILE_DIR}/${day}/gdas_verfrad_${cycle}.o* ${opr_log}
 #      fi
 
 
@@ -285,18 +285,18 @@ if [[ $exit_value == 0 ]]; then
       #     3.  build diag report from output file
       #     4.  move output file to target tankdir
       #--------------------------------------------------------------------
-      RADSTAT_LOCATION=${RADSTAT_LOCATION:-${DATA}/${RUN}.${day}/${cycle}}
-      radstat=${radstat:-${RADSTAT_LOCATION}/${RUN}.t${cycle}z.radstat}
+      radstat_dir=${RADSTAT_DIR:-${DATA}/${RUN}.${day}/${cycle}}
+      radstat=${radstat:-${radstat_dir}/${RUN}.t${cycle}z.radstat}
 
       if [[ -e ${satype_file} || -e ${radstat} ]]; then
          echo "satype  = $satype_file"
          echo "radstat = $radstat"
          echo "OK to PROCEED"
 
-         outfile="bad_diag.${PDATE}"
-	 ${DE_SCRIPTS}/radmon_diag_ck.sh --rad ${radstat} --satype ${satype_file} --output ${outfile}
-         if [[ -e ${outfile} ]]; then
-            $NCP ./${outfile} ${TANKverf}/${RUN}.${day}/${cyc}/.
+         diag_out="bad_diag.${PDATE}"
+	 ${DE_SCRIPTS}/radmon_diag_ck.sh --rad ${radstat} --sat ${satype_file} --out ${diag_out}
+         if [[ -e ${diag_out} ]]; then
+            $NCP ./${diag_out} ${TANKverf}/${RUN}.${day}/${cyc}/radmon/.
          fi
       fi
 

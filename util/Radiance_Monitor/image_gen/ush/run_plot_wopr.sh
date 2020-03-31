@@ -11,8 +11,8 @@ export NDATE=/gpfs/dell1/nco/ops/nwprod/prod_util.v1.1.2/exec/ips/ndate
 export DO_ARCHIVE=0
 export JOB_QUEUE=dev_shared
 export NUM_CYCLES=360
-export MAIL_CC="russ.treadon@noaa.gov, john.derber@noaa.gov, andrew.collard@noaa.gov"
-#export MAIL_CC="edward.c.safford@gmail.com"
+export MAIL_CC="russ.treadon@noaa.gov, andrew.collard@noaa.gov"
+export MAIL_TO="edward.safford@noaa.gov"
 
 export REGIONAL_RR=0
 export CYCLE_INTERVAL=6
