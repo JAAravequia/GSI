@@ -112,7 +112,7 @@ use params, only: sprd_tol, datapath, nanals, iseed_perturbed_obs,&
                   zhuberleft,zhuberright,varqc,lupd_satbiasc,huber,letkf_novlocal,&
                   lupd_obspace_serial,corrlengthnh,corrlengthtr,corrlengthsh,&
                   getkf,getkf_inflation,denkf,nbackgrounds,nobsl_max,&
-                  neigv,vlocal_evecs,letkf_rtps,letkf_rtps_exp
+                  neigv,vlocal_evecs,letkf_rtps
 use gridinfo, only: nlevs_pres,lonsgrd,latsgrd,logp,npts,gridloc
 use kdtree2_module, only: kdtree2, kdtree2_create, kdtree2_destroy, &
                           kdtree2_result, kdtree2_n_nearest, kdtree2_r_nearest
@@ -136,9 +136,10 @@ integer(i_kind) nobsl, ngrd1, nobsl2, nthreads, nb, &
                 nobslocal_mean,nobslocal_min,nobslocal_max, &
                 nobslocal_meanall,nobslocal_minall,nobslocal_maxall
 real(r_single)  robslocal_mean,robslocal_min,robslocal_max,re, &
-                robslocal_meanall,robslocal_minall,robslocal_maxall
+                robslocal_meanall,robslocal_minall,robslocal_maxall,&
+                coslatslocal_meanall, coslatslocal_mean
 integer(i_kind),allocatable,dimension(:) :: oindex
-real(r_single) :: deglat, dist, corrsq, oberrfact, trpa, trpa_raw
+real(r_single) :: deglat, dist, corrsq, oberrfact, trpa, trpa_raw, coslat
 real(r_double) :: t1,t2,t3,t4,t5,tbegin,tend,tmin,tmax,tmean
 real(r_kind) r_nanals,r_nanalsm1
 real(r_kind) normdepart, pnge, width
@@ -152,7 +153,7 @@ real(r_single),allocatable,dimension(:,:) :: obens
 real(r_single),allocatable,dimension(:,:,:) :: ens_tmp
 real(r_single),allocatable,dimension(:,:) :: wts_ensperts,pa
 real(r_single),allocatable,dimension(:) :: wts_ensmean
-real(r_kind),allocatable,dimension(:) :: rdiag,rloc,robs_local
+real(r_kind),allocatable,dimension(:) :: rdiag,rloc,robs_local,coslats_local
 real(r_single),allocatable,dimension(:) :: dep
 ! kdtree stuff
 type(kdtree2_result),dimension(:),allocatable :: sresults
@@ -383,8 +384,9 @@ tbegin = mpi_wtime()
 nobslocal_max = -999
 nobslocal_min = nobstot
 nobslocal_mean = 0
-allocate(robs_local(npts_max))
+allocate(robs_local(npts_max),coslats_local(npts_max))
 robs_local = 0
+coslats_local = 0
 
 ! Update ensemble on model grid.
 ! Loop for each horizontal grid points on this task.
@@ -401,6 +403,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
    ! find obs close to this grid point (using kdtree)
    ngrd1=indxproc(nproc+1,npt)
    deglat = latsgrd(ngrd1)*rad2deg
+   coslat = cos(latsgrd(ngrd1))
    corrlength=latval(deglat,corrlengthnh,corrlengthtr,corrlengthsh)
    corrsq = corrlength**2
    allocate(sresults(nobstot))
@@ -454,6 +457,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
    endif
    if (nobsl_max > 0) then
       robs_local(npt) = sqrt(sresults(nobsl)%dis)
+      coslats_local(npt) = coslat
    else
       robs_local(npt) = nobsl
    endif
@@ -531,12 +535,12 @@ grdloop: do npt=1,numptsperproc(nproc+1)
       !call letkf_core(nobsl2,hxens,obens,dep,&
       !                wts_ensmean,wts_ensperts,pa,&
       !                rdiag,rloc(1:nobsl2),nens,nens/nanals,getkf_inflation,&
-      !                denkf,getkf,letkf_rtps,letkf_rtps_exp,.true.)
+      !                denkf,getkf,letkf_rtps,.true.)
       !else
       call letkf_core(nobsl2,hxens,obens,dep,&
                       wts_ensmean,wts_ensperts,pa,&
                       rdiag,rloc(1:nobsl2),nens,nens/nanals,getkf_inflation,&
-                      denkf,getkf,letkf_rtps,letkf_rtps_exp)
+                      denkf,getkf,letkf_rtps)
       !endif
 
       t4 = t4 + mpi_wtime() - t1
@@ -637,13 +641,15 @@ call mpi_reduce(t5,tmin,1,mpi_real8,mpi_min,0,mpi_comm_world,ierr)
 call mpi_reduce(t5,tmax,1,mpi_real8,mpi_max,0,mpi_comm_world,ierr)
 if (nproc .eq. 0) print *,',min/max/mean t5 = ',tmin,tmax,tmean
 if (nobsl_max > 0) then
-robslocal_mean = sum(robs_local)/numptsperproc(nproc+1)
+robslocal_mean = sum(robs_local*coslats_local)/numptsperproc(nproc+1)
+coslatslocal_mean = sum(coslats_local)/numptsperproc(nproc+1)
 robslocal_min = minval(robs_local(1:numptsperproc(nproc+1)))
 robslocal_max = maxval(robs_local(1:numptsperproc(nproc+1)))
 call mpi_reduce(robslocal_max,robslocal_maxall,1,mpi_real4,mpi_max,0,mpi_comm_world,ierr)
 call mpi_reduce(robslocal_min,robslocal_minall,1,mpi_real4,mpi_min,0,mpi_comm_world,ierr)
 call mpi_reduce(robslocal_mean,robslocal_meanall,1,mpi_real4,mpi_sum,0,mpi_comm_world,ierr)
-if (nproc == 0) print *,'min/max/mean distance searched for local obs',re*robslocal_minall,re*robslocal_maxall,re*robslocal_meanall/float(numproc)
+call mpi_reduce(coslatslocal_mean,coslatslocal_meanall,1,mpi_real4,mpi_sum,0,mpi_comm_world,ierr)
+if (nproc == 0) print *,'min/max/mean distance searched for local obs',re*robslocal_minall,re*robslocal_maxall,re*robslocal_meanall/coslatslocal_meanall
 else
 nobslocal_mean = nint(sum(robs_local)/numptsperproc(nproc+1))
 nobslocal_min = minval(robs_local(1:numptsperproc(nproc+1)))
@@ -677,7 +683,7 @@ end subroutine letkf_update
 subroutine letkf_core(nobsl,hxens,hxens_orig,dep,&
                       wts_ensmean,wts_ensperts,paens,&
                       rdiaginv,rloc,nanals,neigv,getkf_inflation,denkf,getkf,&
-                      rtps,rtps_exp,debug)
+                      rtps,debug)
 !$$$  subprogram documentation block
 !                .      .    .
 ! subprogram:    letkf_core
@@ -773,7 +779,6 @@ implicit none
 integer(i_kind), intent(in) :: nobsl,nanals,neigv
 logical, intent(in), optional :: debug
 real(r_single),intent(in) :: rtps
-real(r_single),intent(in) :: rtps_exp
 real(r_kind),dimension(nobsl),intent(in ) :: rdiaginv,rloc
 real(r_kind),dimension(nanals,nobsl),intent(inout)  :: hxens
 real(r_single),dimension(nanals/neigv,nobsl),intent(in)  :: hxens_orig
@@ -860,31 +865,15 @@ enddo
 ! relax eigenspectrum back to prior if rtps > 0
 gammapI = evals+1.0
 gammapI_inv = 1./gammaPI
-if (rtps > 1.e-5) then
+if (rtps > eps) then
    if (present(debug)) then
       analsprd = sum(gammapI_inv)/float(nanals)
    endif
-   !gammapI = gammapI/(rtps*evals+1.0)
-   !gammapI_inv = 1./gammaPI
-   !if (present(debug)) then
-   !   analsprd2 = sum(gammapI_inv)/float(nanals)
-   !   print *,'sprd:',analsprd,(1.-rtps)*analsprd+rtps,analsprd2
-   !endif
-   gammaPI = 1./( (1.-rtps)*gammaPI**(-1./rtps_exp) + rtps )**rtps_exp
+   gammapI = gammapI/(rtps*evals+1.0)
    gammapI_inv = 1./gammaPI
    if (present(debug)) then
       analsprd2 = sum(gammapI_inv)/float(nanals)
-      print *,'sprd:',(analsprd)**(1./rtps_exp),&
-                     (1.-rtps)*(analsprd)**(1./rtps_exp)+rtps,&
-                     analsprd2**(1./rtps_exp)
-   endif
-else if (rtps < -1.e-5) then
-   inf_factor = -rtps*((1.-analsprd)/analsprd)+1.
-   gammapI = gammapI/inf_factor
-   gammapI_inv = 1./gammaPI
-   if (present(debug)) then
-      analsprd2 = sum(gammapI_inv)/float(nanals)
-      print *,'sprd:',inf_factor,analsprd,(1.+rtps)*analsprd-rtps,analsprd2
+      print *,'sprd:',analsprd,(1.-rtps)*analsprd+rtps,analsprd2
    endif
 endif
 
@@ -925,7 +914,7 @@ do nanal=1,nanals
 end do
 
 ! recompute Pa if rtps used
-if (abs(rtps) > eps) then
+if (rtps > eps) then
    do nanal=1,nanals
       swork3(nanal,:) = evecs(nanal,:)/gammapI
    enddo
