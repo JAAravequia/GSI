@@ -319,7 +319,7 @@ CONTAINS
           CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@ObsValue', Observation)
           CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@Hofx', Obs_Minus_Forecast_adjusted)
           CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@Hofx', Obs_Minus_Forecast_unadjusted)
-          CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@ObsBias',bias)
+          CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@KnownObsBias',bias)
           
           IF (lobsdiag_forenkf) THEN
 
