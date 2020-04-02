@@ -384,9 +384,12 @@ tbegin = mpi_wtime()
 nobslocal_max = -999
 nobslocal_min = nobstot
 nobslocal_mean = 0
-allocate(robs_local(npts_max),coslats_local(npts_max))
+allocate(robs_local(npts_max))
 robs_local = 0
-coslats_local = 0
+if (nobsl_max > 0) then
+  allocate(coslats_local(npts_max))
+  coslats_local = 0
+endif
 
 ! Update ensemble on model grid.
 ! Loop for each horizontal grid points on this task.
@@ -641,23 +644,26 @@ call mpi_reduce(t5,tmin,1,mpi_real8,mpi_min,0,mpi_comm_world,ierr)
 call mpi_reduce(t5,tmax,1,mpi_real8,mpi_max,0,mpi_comm_world,ierr)
 if (nproc .eq. 0) print *,',min/max/mean t5 = ',tmin,tmax,tmean
 if (nobsl_max > 0) then
-robslocal_mean = sum(robs_local*coslats_local)/numptsperproc(nproc+1)
-coslatslocal_mean = sum(coslats_local)/numptsperproc(nproc+1)
-robslocal_min = minval(robs_local(1:numptsperproc(nproc+1)))
-robslocal_max = maxval(robs_local(1:numptsperproc(nproc+1)))
-call mpi_reduce(robslocal_max,robslocal_maxall,1,mpi_real4,mpi_max,0,mpi_comm_world,ierr)
-call mpi_reduce(robslocal_min,robslocal_minall,1,mpi_real4,mpi_min,0,mpi_comm_world,ierr)
-call mpi_reduce(robslocal_mean,robslocal_meanall,1,mpi_real4,mpi_sum,0,mpi_comm_world,ierr)
-call mpi_reduce(coslatslocal_mean,coslatslocal_meanall,1,mpi_real4,mpi_sum,0,mpi_comm_world,ierr)
-if (nproc == 0) print *,'min/max/mean distance searched for local obs',re*robslocal_minall,re*robslocal_maxall,re*robslocal_meanall/coslatslocal_meanall
+   ! compute and print min/max/mean search radius to find nobsl_max
+   robslocal_mean = sum(robs_local*coslats_local)/numptsperproc(nproc+1)
+   coslatslocal_mean = sum(coslats_local)/numptsperproc(nproc+1)
+   robslocal_min = minval(robs_local(1:numptsperproc(nproc+1)))
+   robslocal_max = maxval(robs_local(1:numptsperproc(nproc+1)))
+   call mpi_reduce(robslocal_max,robslocal_maxall,1,mpi_real4,mpi_max,0,mpi_comm_world,ierr)
+   call mpi_reduce(robslocal_min,robslocal_minall,1,mpi_real4,mpi_min,0,mpi_comm_world,ierr)
+   call mpi_reduce(robslocal_mean,robslocal_meanall,1,mpi_real4,mpi_sum,0,mpi_comm_world,ierr)
+   call mpi_reduce(coslatslocal_mean,coslatslocal_meanall,1,mpi_real4,mpi_sum,0,mpi_comm_world,ierr)
+   if (nproc == 0) print *,'min/max/mean distance searched for local obs',re*robslocal_minall,re*robslocal_maxall,re*robslocal_meanall/coslatslocal_meanall
+   deallocate(coslats_local)
 else
-nobslocal_mean = nint(sum(robs_local)/numptsperproc(nproc+1))
-nobslocal_min = minval(robs_local(1:numptsperproc(nproc+1)))
-nobslocal_max = maxval(robs_local(1:numptsperproc(nproc+1)))
-call mpi_reduce(nobslocal_max,nobslocal_maxall,1,mpi_integer,mpi_max,0,mpi_comm_world,ierr)
-call mpi_reduce(nobslocal_min,nobslocal_minall,1,mpi_integer,mpi_min,0,mpi_comm_world,ierr)
-call mpi_reduce(nobslocal_mean,nobslocal_meanall,1,mpi_integer,mpi_sum,0,mpi_comm_world,ierr)
-if (nproc == 0) print *,'min/max/mean number of obs in local volume',nobslocal_minall,nobslocal_maxall,nint(nobslocal_meanall/float(numproc))
+   ! compute and print min/max/mean number of obs found within search radius
+   nobslocal_mean = nint(sum(robs_local)/numptsperproc(nproc+1))
+   nobslocal_min = minval(robs_local(1:numptsperproc(nproc+1)))
+   nobslocal_max = maxval(robs_local(1:numptsperproc(nproc+1)))
+   call mpi_reduce(nobslocal_max,nobslocal_maxall,1,mpi_integer,mpi_max,0,mpi_comm_world,ierr)
+   call mpi_reduce(nobslocal_min,nobslocal_minall,1,mpi_integer,mpi_min,0,mpi_comm_world,ierr)
+   call mpi_reduce(nobslocal_mean,nobslocal_meanall,1,mpi_integer,mpi_sum,0,mpi_comm_world,ierr)
+   if (nproc == 0) print *,'min/max/mean number of obs in local volume',nobslocal_minall,nobslocal_maxall,nint(nobslocal_meanall/float(numproc))
 endif
 deallocate(robs_local)
 if (nrej > 0 .and. nproc == 0) print *, nrej,' obs rejected by varqc'
@@ -862,9 +868,10 @@ do nanal=1,nanals
 enddo
 ! gammapI used in calculation of posterior cov in ensemble space
 
-! relax eigenspectrum back to prior if rtps > 0
 gammapI = evals+1.0
 gammapI_inv = 1./gammaPI
+! relax eigenspectrum back to prior if rtps > 0
+! TODO: find out why this doesn't work as well as posterior RTPS
 if (rtps > eps) then
    if (present(debug)) then
       analsprd = sum(gammapI_inv)/float(nanals)
