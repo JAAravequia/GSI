@@ -7,7 +7,6 @@ export ACCOUNT=dev
 export USE_ANL=1
 export DO_DIAG_RPT=1
 export DO_DATA_RPT=1
-export MAIL_TO="Edward.Safford@noaa.gov"
 export JOB_QUEUE=dev_shared
 MY_MACHINE=wcoss_d
 
@@ -43,7 +42,7 @@ if [[ ${ldate_len} -ne 10 ]]; then
    exit 1
 fi
 START_DATE=`${NDATE} +06 $ldate`
-#START_DATE=2019122112
+#START_DATE=2020032800
 
 day=`echo $START_DATE | cut -c1-8` 
 cyc=`echo $START_DATE | cut -c 9-10`
@@ -70,9 +69,5 @@ if [[ $MY_MACHINE = "wcoss_d" ]]; then
 
 fi
 
-#${scripts}/Copy_glbl.sh \
-#   ${RADMON_SUFFIX} ${START_DATE} \
-#   1>${logs}/CopyRad_${RADMON_SUFFIX}.log \
-#   2>${logs}/CopyRad_${RADMON_SUFFIX}.err
 
 exit

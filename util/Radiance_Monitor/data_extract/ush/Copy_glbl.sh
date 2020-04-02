@@ -7,13 +7,15 @@
 #    and copies those filess to the user's $TANKDIR directory under 
 #    the specified suffix argument. 
 #
-#    The bad_penalty findings and missing diag reports are 
+#    The bad_penalty, low count, and missing diag reports are 
 #    reevaluated using local copies of the base file and satype
-#    files in the $TANKdir/$suffix/info directory.  New missing diag
-#    and bad penalty reports are created and replace any existing
-#    ones in the cycle DE log file.
+#    files in the $TANKdir/$suffix/info directory. 
 #    
 #    Note that processing occurs within TANKdir, not in stmp space.
+#
+#    The unified error report is journaled to warning.${PDY}${CYC}
+#    which is moved to the $TANKdir.
+#
 #--------------------------------------------------------------------
 
 function usage {
@@ -23,6 +25,9 @@ function usage {
   echo "             correspond to an entry in the ../../parm/data_map file."
   echo "            DATE is 10 digit yyyymmddhh string."
 }
+
+
+
 
 set -ax
 echo start Copy_glbl.sh
@@ -36,8 +41,6 @@ fi
 
 this_file=`basename $0`
 this_dir=`dirname $0`
-no_diag_rpt=0
-no_error_rpt=0
 
 export RADMON_SUFFIX=$1
 export DATE=$2
@@ -80,19 +83,6 @@ fi
 export USHradmon=${USHradmon:-$HOMEradmon/ush}
 
 
-#--------------------------------------------------------------------
-#  Check setting of RUN_ONLY_ON_DEV and possible abort if on prod and
-#  not permitted to run there.
-#--------------------------------------------------------------------
-
-if [[ RUN_ONLY_ON_DEV -eq 1 ]]; then
-   is_prod=`${DE_SCRIPTS}/onprod.sh`
-   if [[ $is_prod = 1 ]]; then
-      exit 10
-   fi
-fi
-
-
 #---------------------------------------------------------------
 # Create any missing directories.
 #---------------------------------------------------------------
@@ -116,7 +106,17 @@ next_cyc=`echo $next|cut -c9-10`
 echo prev_day, prev_cyc = $prev_day, $prev_cyc
 echo next_day, next_cyc = $next_day, $next_cyc
 
+#----------------------------------------------
+#  Default location is GFS output.  Override 
+#  to copy parallel data. 
+#
 DATA=${DATA:-/gpfs/dell1/nco/ops/com/gfs/prod}
+
+
+#----------------------------------------------
+#  GFS output doesn't use this but most 
+#  parallels do.  
+USE_HR=${USE_HR:-0}
 
 if [[ $USE_HR -eq 1 ]]; then
    DATDIR=${DATDIR:-${DATA}/${RUN}.${day}/${cycle}/radmon}
@@ -124,7 +124,6 @@ else
    DATDIR=${DATDIR:-${DATA}/${RUN}.${day}/radmon}
 fi
 
-LOGFILE_DIR=${LOGFILE_DIR:-/gpfs/dell1/nco/ops/com/output/prod}
 
 if [[ $TANK_USE_RUN -eq 1 ]]; then
    test_dir=${TANKverf}/${RUN}.${day}/${cycle}/${MONITOR}
@@ -172,37 +171,22 @@ if [[ $nfile_src -gt 0 ]]; then
 
    $NCP ${DATDIR}/*.ctl* ${test_dir}/.
 
-#-----------------------------------------------------------
-#  run validate.sh
-#    1.  copy validate.sh and validate_data.x locally
-#    2.  run validate.sh 
-#    3.  clean up
-#           rm validate.sh, validate_data.x
-#           rm stdout files?
-#           make sure *.base and *.tar are removed
-#-----------------------------------------------------------
    echo "PWD = $PWD"
    echo "test_dir = ${test_dir}"
 
+
+
    if [[ $DO_DATA_RPT -eq 1 ]]; then
 
 
+      #-------------------------------------------------
+      #  run validate.sh
+      #
       $NCP ${DE_EXEC}/radmon_validate_tm.x ${test_dir}/.
       $NCP $DE_SCRIPTS/validate.sh    ${test_dir}/.
       echo "firing validate.sh"
+
       ./validate.sh ${PDATE}
-   fi
-
-else
-   exit_value=5
-fi
-
-
-if [[ $exit_value == 0 ]]; then
-   #--------------------------------------------------------------------
-   #  Tar up the stdout.validation files 
-   #--------------------------------------------------------------------
-   if [[ $DO_DATA_RPT -eq 1 ]]; then
 
       valid_tar=stdout.validate.tar
 
@@ -213,7 +197,24 @@ if [[ $exit_value == 0 ]]; then
       fi
 
       rm -f stdout.validate.*.${cycle}
-      
+  
+      ls -la ./${valid_tar} 
+   fi
+
+else
+   exit_value=5
+fi
+
+warn_msg="warning.${PDATE}"
+warn_msg2="warning2.${PDATE}"
+
+if [[ $exit_value == 0 ]]; then
+
+   #--------------------------------------------------------------------
+   #  Tar up the stdout.validation files 
+   #--------------------------------------------------------------------
+   if [[ $DO_DATA_RPT -eq 1 ]]; then
+
 
       #--------------------------------------------------------------------
       #  Remove extra spaces in new bad_pen and low_count files
@@ -228,54 +229,6 @@ if [[ $exit_value == 0 ]]; then
          
  
       #--------------------------------------------------------------------
-      #  Create a new penalty error report using the new bad_pen file
-      #--------------------------------------------------------------------
-      $NCP $DE_SCRIPTS/radmon_err_rpt.sh      ${test_dir}/.
-#      if [[ -s $HOMEradmon/ush/radmon_getchgrp.pl ]]; then
-#         $NCP $HOMEradmon/ush/radmon_getchgrp.pl ${test_dir}/.
-#      fi
-
-      if [[ $TANK_USE_RUN -eq 1 ]]; then
-         prev_bad_pen=${TANKverf}/${RUN}.${prev_day}/${prev_cyc}/${MONITOR}/bad_pen.${prev}
-         prev_low_count=${TANKverf}/${RUN}.${prev_day}/${prev_cyc}/${MONITOR}/low_count.${prev}
-      else
-         prev_bad_pen=${TANKverf}/radmon.${prev_day}/bad_pen.${prev}
-         prev_bad_pen=${TANKverf}/radmon.${prev_day}/low_count.${prev}
-      fi
-
-      bad_pen=bad_pen.${PDATE}
-      diag_rpt="diag.txt"
-      outfile="pen.${PDATE}.txt"
-      err_rpt="err.${PDATE}.txt"
-      outfile2="obs.${PDATE}.txt"
-
-      ./radmon_err_rpt.sh $prev_bad_pen $bad_pen pen ${prev} ${PDATE} $diag_rpt $outfile
-
-      ./radmon_err_rpt.sh $prev_low_count $low_count cnt ${prev} ${PDATE} $diag_rpt $outfile2
-
- 
-      #--------------------------------------------------------------------
-      #  Copy over the ${LOGFILE_DIR}/YYYYMMDD/gdas_verfrad_HH.o* log 
-      #    1.  Confirm that any entries in the Diagnostic file report 
-      #        are in the satype table.  Remove any entries that are not
-      #        valid and the entire report if none are valid.
-      #    2.  Remove the existing bad penalty report
-      #    3.  Add the output from the new penalty error report (if present)
-      #        otherwise remove the entire penalty report.
-      #    4.  put log in the /ptmp/logs/radopr/data_extract logs dir
-      #--------------------------------------------------------------------
-      opr_log=opr_${PDATE}.log
-      tmp_log=tmp_${PDATE}.log
-      new_log=new_opr_${PDATE}.log
-
-#      if [[ $cycle = 18 ]]; then
-#         $NCP ${LOGFILE_DIR}/${next_day}/gdas_verfrad_${cycle}.o* ${opr_log}
-#      else
-#         $NCP ${LOGFILE_DIR}/${day}/gdas_verfrad_${cycle}.o* ${opr_log}
-#      fi
-
-
-      #--------------------------------------------------------------------
       #  Diag report processing
       #
       #  New algorithm:
@@ -287,13 +240,12 @@ if [[ $exit_value == 0 ]]; then
       #--------------------------------------------------------------------
       radstat_dir=${RADSTAT_DIR:-${DATA}/${RUN}.${day}/${cycle}}
       radstat=${radstat:-${radstat_dir}/${RUN}.t${cycle}z.radstat}
+      diag_out="bad_diag.${PDATE}"
 
       if [[ -e ${satype_file} || -e ${radstat} ]]; then
          echo "satype  = $satype_file"
          echo "radstat = $radstat"
-         echo "OK to PROCEED"
 
-         diag_out="bad_diag.${PDATE}"
 	 ${DE_SCRIPTS}/radmon_diag_ck.sh --rad ${radstat} --sat ${satype_file} --out ${diag_out}
          if [[ -e ${diag_out} ]]; then
             $NCP ./${diag_out} ${TANKverf}/${RUN}.${day}/${cyc}/radmon/.
@@ -301,198 +253,56 @@ if [[ $exit_value == 0 ]]; then
       fi
 
 
-      tmp_diag="diag.tmp"
-      new_diag="diag.new"
-      opr_log_start=1
-
-      start=`grep -n 'cat diag_report.txt' ${opr_log}`
-      diag_start=`echo $start | sed 's/:/ /g' | gawk '{print $1}'`
-      echo diag_start = $diag_start
-
-      if [[ $diag_start -gt 1 ]]; then
-         end=`grep -nx 'End Problem Reading Diagnostic File' ${opr_log}`
-         diag_end=`echo $end | sed 's/:/ /g' | gawk '{print $1}'` 
-         echo diag_end = $diag_end
-
-         gawk "NR>=$diag_start && NR<=$diag_end" ${opr_log} >> $tmp_diag
-
-         reported_missing=""   
-         while read line; do
-            new_sat=`echo $line | grep PROBLEM`
-            len=`expr length "$new_sat"`
-            if [[ $len -gt 0 ]]; then
-               sat=`echo $new_sat | gawk '{print $1}'`
-         
-               test_satype=`grep $sat ${satype_file}`
-               len_test=`expr length "$test_satype"`
-               if [[ $len_test -gt 0 ]]; then
-                  echo $line >> $new_diag
-                  reported_missing="$reported_missing $sat"
-               fi
-            else
-               echo $line >> $new_diag
-            fi 
-         done <${tmp_diag}
-
-         #-------------------------------------------------------------------
-         # now check the other direction, are all of the missing diag files
-         # reported in $missing_from_radstat in the report?
-         #-------------------------------------------------------------------
-         for mfr in $missing_from_radstat; do
-            test=`echo $reported_missing | grep $mfr`
-            len_test=`expr length "$test"`
-            if [[ $len_test -eq 0 ]]; then
-               line1=" $mfr   ges   ***PROBLEM reading diagnostic file."
-               line2=" $mfr   anl   ***PROBLEM reading diagnostic file."
-#               lines=`cat $new_diag | wc -l`
-#	       echo "lines = $lines"
-
-               sed "\$i $line1" ./$new_diag >fish.tmp
-	       mv fish.tmp $new_diag
-               sed "\$i $line2" ./$new_diag >fish.tmp
-               mv fish.tmp $new_diag
-
-            fi
-            
-         done
-
-
-         #--------------------------------------------------------------------
-         # if $new_diag still contains errors with reading diag files
-         # then return $new_diag to the $opr_log
-         #--------------------------------------------------------------------
-         test_new_diag=`cat $new_diag | grep "PROBLEM"` 
-
-         len_test_new_diag=`expr length "$test_new_diag"`
-         echo "test_new_diag, len = $test_new_diag, $len_test_new_diag"
-         
-
-         l_end=`wc -l $opr_log`
-         log_end=`echo $l_end | sed 's/:/ /g' | gawk '{print $1}'` 
-
-         diag_start=`expr $diag_start - 1`
-         diag_end=`expr $diag_end + 1`
-         gawk "NR>=1 && NR<=$diag_start" ${opr_log} >> $tmp_log
-
-         if [[ $len_test_new_diag -gt 0 ]]; then
-            cat $new_diag >> $tmp_log
-         fi
-
-         gawk "NR>=$diag_end && NR<=$log_end" ${opr_log} >> $tmp_log
-         mv -f $opr_log opr_log.bu 
-         $NCP $tmp_log $opr_log 
-
-      else
-         no_diag_rpt=1 
-      fi
-
-
       #--------------------------------------------------------------------
-      #  Penalty report processing
+      #  Create a new penalty error report using the new bad_pen file
       #--------------------------------------------------------------------
-      end=`grep -n '============ ======= ======      Cycle                 Penalty          Bound' ${opr_log} | tail -1`
-      opr_log_end=`echo $end | sed 's/:/ /g' | gawk '{print $1}'`
+      $NCP $DE_SCRIPTS/radmon_err_rpt.sh      ${test_dir}/.
 
-      if [[ $opr_log_end -gt 1 ]]; then
-         opr_log_start=1
-
-
-         #---------------------------------------------------------------------
-         #  If $outfile or $outfile2 exists, replace existing penalty and/or 
-         #  low obs report with $outfile/$outfile2
-         #  contents or remove the penalty report altogether if there is no
-         #  $outfile
-         #---------------------------------------------------------------------
-         if [[ -s $outfile ]]; then
-            echo "OUTFILE -s $outfile is TRUE"
-            opr_log_end=`expr $opr_log_end + 1`
-            gawk "NR>=$opr_log_start && NR<=$opr_log_end" ${opr_log} >> $new_log
-            cat $outfile >> $new_log
-
-            echo "End Cycle Data Integrity Report" >> $new_log
-         else
-            echo "OUTFILE -s $outfile is FALSE"
-            opr_log_end=`expr $opr_log_end - 15`
-            gawk "NR>=$opr_log_start && NR<=$opr_log_end" ${opr_log} >> $new_log
-            no_error_rpt=1 
-         fi
-
+      if [[ $TANK_USE_RUN -eq 1 ]]; then
+         prev_bad_pen=${TANKverf}/${RUN}.${prev_day}/${prev_cyc}/${MONITOR}/bad_pen.${prev}
+         prev_low_count=${TANKverf}/${RUN}.${prev_day}/${prev_cyc}/${MONITOR}/low_count.${prev}
       else
-      
-         if [[ -s $outfile || -s $outfile2 ]]; then
-            rm -f report.txt
+         prev_bad_pen=${TANKverf}/radmon.${prev_day}/bad_pen.${prev}
+         prev_bad_pen=${TANKverf}/radmon.${prev_day}/low_count.${prev}
+      fi
 
-            cp $opr_log $new_log
+      bad_pen=bad_pen.${PDATE}
+      diag_rpt="diag.txt"
+      bad_pen_rpt="pen.${PDATE}.txt"
+      err_rpt="err.${PDATE}.txt"
+      low_obs_rpt="obs.${PDATE}.txt"
 
-            echo "Begin Cycle Data Integrity Report" > report.txt  
+      ./radmon_err_rpt.sh $prev_bad_pen $bad_pen pen ${prev} ${PDATE} $diag_out $bad_pen_rpt
+
+      ./radmon_err_rpt.sh $prev_low_count $low_count cnt ${prev} ${PDATE} $diag_out $low_obs_rpt
 
 
-            echo " "        >> report.txt
-            echo "Cycle Data Integrity Report" >> report.txt
-            echo "${PDATE}" >> report.txt
-            echo " "        >> report.txt
-            echo "Region Definitions:" >> report.txt
-            echo " "        >> report.txt
-            echo "  1  Global              (90S-90N, 0-360E)" >> report.txt
-            echo " "        >> report.txt
-            echo " "        >> report.txt
-            
-            if [[ -s $outfile2 ]]; then
-               echo " " >> report.txt
-               echo " " >> report.txt
-               echo " " >> report.txt
-               echo "The following channels report abnormally low observational counts in latest 2 cycles:" >> report.txt
-               echo " " >> report.txt
-               echo "Satellite/Instrument                               Obs Count   Avg Count" >> report.txt
-               echo "====================                               =========   =========" >> report.txt
 
-               cat ${outfile2}  >> report.txt
-            fi
+      #--------------------------
+      #  Build the $warn_msg file
+      #
+      if [[ -s $bad_pen_rpt || -s $low_obs_rpt || -s ${diag_out} ]]; then
 
-            if [[ -s $outfile ]]; then
-               echo " " >> report.txt
-               echo " " >> report.txt
-               echo " " >> report.txt
-               echo "Penalty values outside of the established normal range were found" >> report.txt
-               echo "for these sensor/channel/regions in the past two cycles: " >> report.txt
-               echo " "        >> report.txt
-               echo "Questionable Penalty Values " >> report.txt
-               echo "============ ======= ======      Cycle                 Penalty          Bound" >> report.txt
-               echo "                                 -----                 -------          ----- " >> report.txt
-               echo " "        >> report.txt
-               cat $outfile >> report.txt
-               echo " "        >> report.txt
-               echo " "        >> report.txt
-               echo " "        >> report.txt
-            fi
-
-            echo "End Cycle Data Integrity Report" >> report.txt  
-            cat report.txt >> $new_log
-
-         else
-            mv $opr_log $new_log
+         if [[ -s $bad_pen_rpt ]]; then
+            args="${args} --pen ${bad_pen_rpt}"
          fi
+
+         if [[ -s $low_obs_rpt ]]; then
+            args="${args} --obs ${low_obs_rpt}"
+         fi
+
+         if [[ -s $diag_out ]]; then
+            args="${args} --diag ${diag_out}"
+         fi
+
+         ${DE_SCRIPTS}/radmon_mk_warning.sh ${args} --out ${warn_msg}
+         ${NCP} ${warn_msg} ${DATDIR}/.
+
       fi
 
-
-      if [[ $no_diag_rpt -eq 1 ]]; then
-         echo "NO DIAG REPORT" >> $new_log
-      fi
-      if [[ $no_error_rpt -eq 1 ]]; then
-         echo "NO ERROR REPORT" >> $new_log
-      fi
-
-      $NCP ./$new_log ${LOGdir}/data_extract.${day}.${cycle}.log
-
-      #rm -f $new_log
-      #rm -f $opr_log 
-      #rm -f $new_diag $tmp_diag
-      #rm -f $tmp_log
+      $COMPRESS *.ctl
 
    fi
-
-   $COMPRESS *.ctl
-
 
    #--------------------------------------------------------------------
    # Remove processing scripts/executables and exit.
@@ -500,8 +310,6 @@ if [[ $exit_value == 0 ]]; then
    rm -f radmon_validate_tm.x
    rm -f validate.sh 
    rm -f radmon_err_rpt.sh  
-#   rm -f radmon_getchgrp.pl  
-   rm -f opr_log.bu
 
    nfile_dest=`ls -l ${test_dir}/*${PDATE}*ieee_d* | egrep -c '^-'`
 
