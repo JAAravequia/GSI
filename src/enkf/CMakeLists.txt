@@ -43,18 +43,15 @@ if(BUILD_ENKF)
   )
   set(ENKF_SRCS 
   innovstats.f90
-  enkf.f90
   read_locinfo.f90
   enkf_main.f90
   inflation.f90
   letkf.F90
   quicksort.f90
-  radbias.f90
   loadbal.f90
   smooth_${ENKF_SUFFIX}.f90 
   gridio_${ENKF_SUFFIX}.f90 
   gridinfo_${ENKF_SUFFIX}.f90
-  enkf_obs_sensitivity.f90 
   )
 # if( (NOT HOST-WCOSS_C) AND (NOT HOST-WCOSS_D) )
 #   find_package( LAPACK REQUIRED )
