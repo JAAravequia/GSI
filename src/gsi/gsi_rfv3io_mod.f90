@@ -197,6 +197,7 @@ subroutine gsi_rfv3io_get_grid_specs(fv3filenamegin,ierr)
   character(len=128) :: name
   integer(i_kind) myear,mmonth,mday,mhour,mminute,msecond
   real(r_kind),allocatable:: abk_fv3(:)
+  integer nlon0,nlat0
 
       coupler_res_filenam=fv3filenamegin%couplerres
       grid_spec=fv3filenamegin%grid_spec
@@ -317,6 +318,8 @@ subroutine gsi_rfv3io_get_grid_specs(fv3filenamegin,ierr)
 
 !!!!!!! setup A grid and interpolation/rotation coeff.
     call generate_anl_grid(nx,ny,grid_lon,grid_lont,grid_lat,grid_latt)
+
+
 
     deallocate (grid_lon,grid_lat,grid_lont,grid_latt)
     deallocate (ak,bk,abk_fv3)
@@ -1983,9 +1986,9 @@ subroutine gsi_fv3ncdf_writeuv_v1(dynvars,varu,varv,mype_io,add_saved)
              call fv3_ll_to_h(work_au(:,:,k),u,nlon,nlat,nlon_regional,nlat_regional,.true.)
              call fv3_ll_to_h(work_av(:,:,k),v,nlon,nlat,nlon_regional,nlat_regional,.true.)
 !!!!!!!!  add analysis_inc to readin work_b !!!!!!!!!!!!!!!!
-             do i=2,nlon_regional-1
-               workbu_w2(i,:)=half*(u(i,:)+u(i+1,:))
-               workbv_w2(i,:)=half*(v(i,:)+v(i+1,:))
+             do i=2,nlon_regional
+               workbu_w2(i,:)=half*(u(i-1,:)+u(i,:))
+               workbv_w2(i,:)=half*(v(i-1,:)+v(i,:))
              enddo
              workbu_w2(1,:)=u(1,:)
              workbv_w2(1,:)=v(1,:)
