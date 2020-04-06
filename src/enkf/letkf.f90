@@ -338,99 +338,96 @@ grdloop: do npt=1,numptsperproc(nproc+1)
       if(rloc(nobsl2) > eps) nobsl2=nobsl2+1
    end do
    nobsl2=nobsl2-1
-   if(nobsl2 == 0) then
-      deallocate(rloc,oindex)
-      go to 99
-   end if
-   allocate(hxens(nens,nobsl2))
-   allocate(obens(nanals,nobsl2))
-   allocate(rdiag(nobsl2))
-   allocate(dep(nobsl2))
-   do nob=1,nobsl2
-      nf=oindex(nob)
-      if (neigv > 0) then
-      hxens(1:nens,nob)=anal_ob_modens(1:nens,nf) 
-      else
-      hxens(1:nens,nob)=anal_ob(1:nens,nf) 
-      endif
-      obens(1:nanals,nob) = &
-      anal_ob(1:nanals,nf) 
-      rdiag(nob)=one/oberrvaruse(nf)
-      dep(nob)=ob(nf)-ensmean_ob(nf)
-   end do
-   deallocate(oindex)
-   t3 = t3 + mpi_wtime() - t1
-   t1 = mpi_wtime()
-  
-   ! use gain form of LETKF (to make modulated ensemble vertical localization
-   ! possible)
-   allocate(wts_ensperts(nens,nanals),wts_ensmean(nens))
-   ! compute analysis weights for mean and ensemble perturbations given 
-   ! ensemble in observation space, ob departures and ob errors.
-   ! note: if modelspace_vloc=F, hxens and obens are identical (but hxens is
-   ! is used as workspace and is modified on output), and analysis
-   ! weights for ensemble perturbations represent posterior ens perturbations, not
-   ! analysis increments for ensemble perturbations.
-   !if (nproc == numproc-1 .and. omp_get_thread_num() == 0) then
-   !call letkf_core(nobsl2,hxens,obens,dep,&
-   !                wts_ensmean,wts_ensperts,pa,&
-   !                rdiag,rloc(1:nobsl2),nens,nens/nanals,getkf_inflation,&
-   !                denkf,getkf,letkf_rtps,.true.)
-   !else
-   call letkf_core(nobsl2,hxens,obens,dep,&
-                   wts_ensmean,wts_ensperts,pa,&
-                   rdiag,rloc(1:nobsl2),nens,nens/nanals,getkf_inflation,&
-                   denkf,getkf,letkf_rtps)
-   !endif
-
-   t4 = t4 + mpi_wtime() - t1
-   t1 = mpi_wtime()
-
-   ! Update analysis ensembles (all time levels)
-   ! analysis increments represented as a linear combination
-   ! of (modulated) prior ensemble perturbations.
-   do nb=1,nbackgrounds
-   do i=1,ncdim
-      ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + &
-      sum(wts_ensmean*ens_tmp(:,i,nb))
-      if (getkf) then ! gain formulation
-         do nanal=1,nanals 
-            anal_chunk(nanal,npt,i,nb) = anal_chunk(nanal,npt,i,nb) + &
-            sum(wts_ensperts(:,nanal)*ens_tmp(:,i,nb))
-         enddo
-         if (.not. denkf .and. getkf_inflation) then
-            ! inflate posterior perturbations so analysis variance 
-            ! in original low-rank ensemble is the same as modulated ensemble
-            ! (eqn 30 in https://doi.org/10.1175/MWR-D-17-0102.1)
-            trpa = 0.0_r_single
-            do nanal=1,nens
-               trpa = trpa + &
-               sum(pa(:,nanal)*ens_tmp(:,i,nb))*ens_tmp(nanal,i,nb)
-            enddo
-            trpa = max(eps,trpa)
-            trpa_raw = max(eps,r_nanalsm1*sum(anal_chunk(:,npt,i,nb)**2))
-            anal_chunk(:,npt,i,nb) = sqrt(trpa/trpa_raw)*anal_chunk(:,npt,i,nb)
-            !if (nproc == 0 .and. omp_get_thread_num() == 0 .and. i .eq. ncdim) print *,'i,trpa,trpa_raw,inflation = ',i,trpa,trpa_raw,sqrt(trpa/trpa_raw)
+   ! if there are any local obs, calculate increment.
+   if(nobsl2 > 0) then
+      allocate(hxens(nens,nobsl2))
+      allocate(obens(nanals,nobsl2))
+      allocate(rdiag(nobsl2))
+      allocate(dep(nobsl2))
+      do nob=1,nobsl2
+         nf=oindex(nob)
+         if (neigv > 0) then
+         hxens(1:nens,nob)=anal_ob_modens(1:nens,nf) 
+         else
+         hxens(1:nens,nob)=anal_ob(1:nens,nf) 
          endif
-      else ! original LETKF formulation
-         do nanal=1,nanals 
-            anal_chunk(nanal,npt,i,nb) = &
-            sum(wts_ensperts(:,nanal)*ens_tmp(:,i,nb))
-         enddo
-      endif
-      !if (nproc .eq. 0 .and. npt .eq. 1) then
-      !  print *,'sprd',nb,i,r_nanalsm1*sum(anal_chunk(:,npt,i,nb)**2),&
-      !         r_nanalsm1*sum(anal_chunk_prior(:,npt,i,nb)**2)
+         obens(1:nanals,nob) = &
+         anal_ob(1:nanals,nf) 
+         rdiag(nob)=one/oberrvaruse(nf)
+         dep(nob)=ob(nf)-ensmean_ob(nf)
+      end do
+      deallocate(oindex)
+      t3 = t3 + mpi_wtime() - t1
+      t1 = mpi_wtime()
+      ! use gain form of LETKF (to make modulated ensemble vertical localization
+      ! possible)
+      allocate(wts_ensperts(nens,nanals),wts_ensmean(nens))
+      ! compute analysis weights for mean and ensemble perturbations given 
+      ! ensemble in observation space, ob departures and ob errors.
+      ! note: if modelspace_vloc=F, hxens and obens are identical (but hxens is
+      ! is used as workspace and is modified on output), and analysis
+      ! weights for ensemble perturbations represent posterior ens perturbations, not
+      ! analysis increments for ensemble perturbations.
+      !if (nproc == numproc-1 .and. omp_get_thread_num() == 0) then
+      !call letkf_core(nobsl2,hxens,obens,dep,&
+      !                wts_ensmean,wts_ensperts,pa,&
+      !                rdiag,rloc(1:nobsl2),nens,nens/nanals,getkf_inflation,&
+      !                denkf,getkf,letkf_rtps,.true.)
+      !else
+      call letkf_core(nobsl2,hxens,obens,dep,&
+                      wts_ensmean,wts_ensperts,pa,&
+                      rdiag,rloc(1:nobsl2),nens,nens/nanals,getkf_inflation,&
+                      denkf,getkf,letkf_rtps)
       !endif
-   enddo
-   enddo
-   deallocate(wts_ensperts,wts_ensmean,dep,obens,rloc,rdiag,hxens)
-   if (allocated(pa)) deallocate(pa)
-99 continue
 
+      t4 = t4 + mpi_wtime() - t1
+      t1 = mpi_wtime()
+
+      ! Update analysis ensembles (all time levels)
+      ! analysis increments represented as a linear combination
+      ! of (modulated) prior ensemble perturbations.
+      do nb=1,nbackgrounds
+      do i=1,ncdim
+         ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + &
+         sum(wts_ensmean*ens_tmp(:,i,nb))
+         if (getkf) then ! gain formulation
+            do nanal=1,nanals 
+               anal_chunk(nanal,npt,i,nb) = anal_chunk(nanal,npt,i,nb) + &
+               sum(wts_ensperts(:,nanal)*ens_tmp(:,i,nb))
+            enddo
+            if (.not. denkf .and. getkf_inflation) then
+               ! inflate posterior perturbations so analysis variance 
+               ! in original low-rank ensemble is the same as modulated ensemble
+               ! (eqn 30 in https://doi.org/10.1175/MWR-D-17-0102.1)
+               trpa = 0.0_r_single
+               do nanal=1,nens
+                  trpa = trpa + &
+                  sum(pa(:,nanal)*ens_tmp(:,i,nb))*ens_tmp(nanal,i,nb)
+               enddo
+               trpa = max(eps,trpa)
+               trpa_raw = max(eps,r_nanalsm1*sum(anal_chunk(:,npt,i,nb)**2))
+               anal_chunk(:,npt,i,nb) = sqrt(trpa/trpa_raw)*anal_chunk(:,npt,i,nb)
+               !if (nproc == 0 .and. omp_get_thread_num() == 0 .and. i .eq. ncdim) print *,'i,trpa,trpa_raw,inflation = ',i,trpa,trpa_raw,sqrt(trpa/trpa_raw)
+            endif
+         else ! original LETKF formulation
+            do nanal=1,nanals 
+               anal_chunk(nanal,npt,i,nb) = &
+               sum(wts_ensperts(:,nanal)*ens_tmp(:,i,nb))
+            enddo
+         endif
+         !if (nproc .eq. 0 .and. npt .eq. 1) then
+         !  print *,'sprd',nb,i,r_nanalsm1*sum(anal_chunk(:,npt,i,nb)**2),&
+         !         r_nanalsm1*sum(anal_chunk_prior(:,npt,i,nb)**2)
+         !endif
+      enddo
+      enddo
+      deallocate(wts_ensperts,wts_ensmean,dep,obens,rloc,rdiag,hxens)
+      if (allocated(pa)) deallocate(pa)
+   else ! nobsl2 > 0
+      deallocate(rloc,oindex)
+   endif
    t5 = t5 + mpi_wtime() - t1
    t1 = mpi_wtime()
-
    if (allocated(sresults)) deallocate(sresults)
    if (allocated(ens_tmp)) deallocate(ens_tmp)
 end do grdloop
