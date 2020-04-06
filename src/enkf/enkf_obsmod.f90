@@ -335,7 +335,6 @@ end subroutine write_obsstats
 subroutine screenobs()
 ! screen out obs with large observation errors or 
 ! that fail background check.  For screened obs oberrvar is set to 1.e31_r_single
-!use radbias, only: apply_biascorr
 real(r_single) fail,failm
 integer nn,nob
 fail=1.e31_r_single
