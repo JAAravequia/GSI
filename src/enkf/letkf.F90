@@ -28,11 +28,7 @@ module letkf
 !  the maximum in the weighting function associated with that sensor/channel/
 !  background state (this computation, along with the rest of the forward
 !  operator calcuation, is performed by a separate program using the GSI
-!  forward operator code).  Although all the observation variable ensemble
-!  members sometimes cannot fit in memory, they are necessary before LETKF core
-!  process. So they are saved in all processors. If the code is compiled with
-!  -DMPI3, a single copy of the observation space ensemble is stored on each
-!  compute node and shared among processors.
+!  forward operator code).  
 !
 !  The parameter nobsl_max controls
 !  the maximum number of obs that will be assimilated in each local patch.
@@ -116,8 +112,6 @@ use params, only: sprd_tol, datapath, nanals, iseed_perturbed_obs,&
 use gridinfo, only: nlevs_pres,lonsgrd,latsgrd,logp,npts,gridloc
 use kdtree2_module, only: kdtree2, kdtree2_create, kdtree2_destroy, &
                           kdtree2_result, kdtree2_n_nearest, kdtree2_r_nearest
-use radbias, only: apply_biascorr
-
 implicit none
 
 private
@@ -131,7 +125,7 @@ implicit none
 
 ! local variables.
 integer(i_kind) nob,nf,nanal,nens,&
-                i,nlev,nrej,npt,nn,nnmax,ierr
+                i,nlev,nrej,npt,nn,ierr
 integer(i_kind) nobsl, ngrd1, nobsl2, nthreads, nb, &
                 nobslocal_mean,nobslocal_min,nobslocal_max, &
                 nobslocal_meanall,nobslocal_minall,nobslocal_maxall
@@ -144,9 +138,8 @@ real(r_double) :: t1,t2,t3,t4,t5,tbegin,tend,tmin,tmax,tmean
 real(r_kind) r_nanals,r_nanalsm1
 real(r_kind) normdepart, pnge, width
 real(r_kind),dimension(nobstot):: oberrvaruse
-real(r_kind) vdist
 real(r_kind) corrlength
-logical vlocal, kdobs
+logical kdobs
 ! For LETKF core processes
 real(r_kind),allocatable,dimension(:,:) :: hxens
 real(r_single),allocatable,dimension(:,:) :: obens
@@ -158,16 +151,6 @@ real(r_single),allocatable,dimension(:) :: dep
 ! kdtree stuff
 type(kdtree2_result),dimension(:),allocatable :: sresults
 integer(i_kind), dimension(:), allocatable :: indxassim, indxob
-#ifdef MPI3
-! pointers used for MPI-3 shared memory manipulations.
-real(r_single), pointer, dimension(:,:) :: anal_ob_fp ! Fortran pointer
-type(c_ptr)                             :: anal_ob_cp ! C pointer
-real(r_single), pointer, dimension(:,:) :: anal_ob_modens_fp ! Fortran pointer
-type(c_ptr)                             :: anal_ob_modens_cp ! C pointer
-integer disp_unit, shm_win, shm_win2
-integer(MPI_ADDRESS_KIND) :: win_size, nsize, nsize2, win_size2
-integer(MPI_ADDRESS_KIND) :: segment_size
-#endif
 real(r_single), allocatable, dimension(:) :: buffer
 real(r_kind) eps
 
@@ -189,137 +172,12 @@ if (.not. kdobs .and. nproc .eq. 0) then
   print *,'using brute-force search instead of kdtree in LETKF'
 endif
 
-t1 = mpi_wtime()
-
 if (neigv > 0) then
    nens = nanals*neigv ! modulated ensemble size
 else
    nens = nanals
 endif
 
-#ifdef MPI3
-! setup shared memory segment on each node that points to
-! observation prior ensemble.
-! shared window size will be zero except on root task of
-! shared memory group on each node.
-disp_unit = num_bytes_for_r_single ! anal_ob is r_single
-nsize = nobstot*nanals
-nsize2 = nobstot*nanals*neigv
-if (nproc_shm == 0) then
-   win_size = nsize*disp_unit
-   win_size2 = nsize2*disp_unit
-else
-   win_size = 0
-   win_size2 = 0
-endif
-call MPI_Win_allocate_shared(win_size, disp_unit, MPI_INFO_NULL,&
-                             mpi_comm_shmem, anal_ob_cp, shm_win, ierr)
-if (neigv > 0) then
-   call MPI_Win_allocate_shared(win_size2, disp_unit, MPI_INFO_NULL,&
-                                mpi_comm_shmem, anal_ob_modens_cp, shm_win2, ierr)
-endif
-if (nproc_shm == 0) then
-   ! create shared memory segment on each shared mem comm
-   call MPI_Win_lock(MPI_LOCK_EXCLUSIVE,0,MPI_MODE_NOCHECK,shm_win,ierr)
-   call c_f_pointer(anal_ob_cp, anal_ob_fp, [nanals, nobstot])
-   ! bcast entire obs prior ensemble from root task 
-   ! to a single task on each node, assign to shared memory window.
-   ! send one ensemble member at a time.
-   allocate(buffer(nobstot))
-   do nanal=1,nanals
-      if (nproc == 0) buffer(1:nobstot) = anal_ob(nanal,1:nobstot)
-      if (nproc_shm == 0) then
-         call mpi_bcast(buffer,nobstot,mpi_real4,0,mpi_comm_shmemroot,ierr)
-         anal_ob_fp(nanal,1:nobstot) = buffer(1:nobstot)
-      end if 
-      ! read from temp file to avoid having two copies on root task.
-      !if (nproc_shm == 0) then
-      !   open(99,file='anal_ob.dat',form='unformatted',access='direct',recl=nobstot*4)
-      !   do nanal=1,nanals
-      !      read(99,rec=nanal) anal_ob_fp(nanal,1:nobstot)
-      !   enddo
-      !   close(99)
-      !endif
-   end do
-   if (neigv > 0) then
-      call MPI_Win_lock(MPI_LOCK_EXCLUSIVE,0,MPI_MODE_NOCHECK,shm_win2,ierr)
-      call c_f_pointer(anal_ob_modens_cp, anal_ob_modens_fp, [nens, nobstot])
-      do nanal=1,nens
-         if (nproc == 0) buffer(1:nobstot) = anal_ob_modens(nanal,1:nobstot)
-         if (nproc_shm == 0) then
-            call mpi_bcast(buffer,nobstot,mpi_real4,0,mpi_comm_shmemroot,ierr)
-            anal_ob_modens_fp(nanal,1:nobstot) = buffer(1:nobstot)
-         end if 
-      end do
-      ! read from temp file to avoid having two copies on root task.
-      !if (nproc_shm == 0) then
-      !   open(99,file='anal_ob_modens.dat',form='unformatted',access='direct',recl=nobstot*4)
-      !   do nanal=1,nens
-      !      read(99,rec=nanal) anal_ob_modens_fp(nanal,1:nobstot)
-      !   enddo
-      !   close(99)
-      !endif
-   endif
-   deallocate(buffer)
-   call MPI_Win_unlock(0, shm_win, ierr)
-   if (neigv > 0) call MPI_Win_unlock(0, shm_win2, ierr)
-   nullify(anal_ob_fp)
-   if (neigv > 0) nullify(anal_ob_modens_fp)
-   ! don't need anal_ob anymore
-   if (allocated(anal_ob)) deallocate(anal_ob)
-   if (allocated(anal_ob_modens)) deallocate(anal_ob_modens)
-endif
-! barrier here to make sure no tasks try to access shared
-! memory segment before it is created.
-call mpi_barrier(mpi_comm_world, ierr)
-! associate fortran pointer with c pointer to shared memory 
-! segment (containing observation prior ensemble) on each task.
-call MPI_Win_shared_query(shm_win, 0, segment_size, disp_unit, anal_ob_cp, ierr)
-call c_f_pointer(anal_ob_cp, anal_ob_fp, [nanals, nobstot])
-if (neigv > 0) then
-   call MPI_Win_shared_query(shm_win2, 0, segment_size, disp_unit, anal_ob_modens_cp, ierr)
-   call c_f_pointer(anal_ob_modens_cp, anal_ob_modens_fp, [nens, nobstot])
-endif
-#else
-! if MPI3 not available, need anal_ob on every MPI task
-! broadcast observation prior ensemble from root one ensemble member at a time.
-allocate(buffer(nobstot))
-! allocate anal_ob on non-root tasks
-if (nproc .ne. 0) allocate(anal_ob(nanals,nobstot))
-if (neigv > 0 .and. nproc .ne. 0) allocate(anal_ob_modens(nens,nobstot))
-! bcast anal_ob from root one member at a time.
-do nanal=1,nanals
-   buffer(1:nobstot) = anal_ob(nanal,1:nobstot)
-   call mpi_bcast(buffer,nobstot,mpi_real4,0,mpi_comm_world,ierr)
-   if (nproc .ne. 0) anal_ob(nanal,1:nobstot) = buffer(1:nobstot)
-end do
-if (neigv > 0) then
-   do nanal=1,nens
-      buffer(1:nobstot) = anal_ob_modens(nanal,1:nobstot)
-      call mpi_bcast(buffer,nobstot,mpi_real4,0,mpi_comm_world,ierr)
-      if (nproc .ne. 0) anal_ob_modens(nanal,1:nobstot) = buffer(1:nobstot)
-   end do
-endif
-deallocate(buffer)
-#endif
-t2 = mpi_wtime()
-if (nproc .eq. 0) print *,'time to broadcast ob prior ensemble = ',t2-t1
-
-if (nproc .eq. 0 .and. .not. deterministic) then
-   print *,'perturbed obs LETKF'
-endif
-if (minval(lnsigl) > 1.e3 .or. letkf_novlocal) then
-   vlocal = .false.
-   if (nproc == 0) print *,'no vertical localization in LETKF'
-   ! if no vertical localization, weights
-   ! need only be computed once for each column.
-   nnmax = 1
-else
-   vlocal = .true.
-   ! if vertical localization on, analysis weights
-   ! need to be computed for every vertical level.
-   nnmax = nlevs_pres
-endif
 if (nproc == 0 .and. .not. deterministic) then
    print *,'warning - perturbed obs not used in LETKF (deterministic=F ignored)'
 endif
@@ -395,7 +253,7 @@ endif
 ! Loop for each horizontal grid points on this task.
 !$omp parallel do schedule(dynamic) private(npt,nob,nobsl, &
 !$omp                  nobsl2,oberrfact,ngrd1,corrlength,ens_tmp, &
-!$omp                  nf,vdist,obens,indxassim,indxob, &
+!$omp                  nf,obens,indxassim,indxob, &
 !$omp                  nn,hxens,wts_ensmean,rdiag,dep,rloc,i, &
 !$omp                  oindex,deglat,dist,corrsq,nb,sresults, &
 !$omp                  wts_ensperts,pa,trpa,trpa_raw) 
@@ -465,137 +323,113 @@ grdloop: do npt=1,numptsperproc(nproc+1)
       robs_local(npt) = nobsl
    endif
 
-   ! Loop through vertical levels (nnmax=1 if no vertical localization)
-   verloop: do nn=1,nnmax
-
-      ! Pick up variables passed to LETKF core process
-      allocate(rloc(nobsl))
-      allocate(oindex(nobsl))
-      nobsl2=1
-      do nob=1,nobsl
-         nf = sresults(nob)%idx
-         ! skip 'screened' obs.
-         if (oberrvaruse(nf) > 1.e10_r_single) cycle
-         if (vlocal) then
-            vdist=(lnp_chunk(npt,nn)-oblnp(nf))/lnsigl(nf)
-            if(abs(vdist) >= one) cycle
-         else
-            vdist = zero
-         endif
-         dist = sqrt(sresults(nob)%dis/corrlengthsq(nf)+vdist*vdist)
-         if (dist >= one) cycle
-         rloc(nobsl2)=taper(dist)
-         oindex(nobsl2)=nf
-         if(rloc(nobsl2) > eps) nobsl2=nobsl2+1
-      end do
-      nobsl2=nobsl2-1
-      if(nobsl2 == 0) then
-         deallocate(rloc,oindex)
-         cycle verloop
-      end if
-      allocate(hxens(nens,nobsl2))
-      allocate(obens(nanals,nobsl2))
-      allocate(rdiag(nobsl2))
-      allocate(dep(nobsl2))
-      do nob=1,nobsl2
-         nf=oindex(nob)
-         if (neigv > 0) then
-#ifdef MPI3
-         hxens(1:nens,nob)=anal_ob_modens_fp(1:nens,nf) 
-#else
-         hxens(1:nens,nob)=anal_ob_modens(1:nens,nf) 
-#endif
-         else
-#ifdef MPI3
-         hxens(1:nens,nob)=anal_ob_fp(1:nens,nf) 
-#else
-         hxens(1:nens,nob)=anal_ob(1:nens,nf) 
-#endif
-         endif
-         obens(1:nanals,nob) = &
-#ifdef MPI3
-         anal_ob_fp(1:nanals,nf) 
-#else
-         anal_ob(1:nanals,nf) 
-#endif
-         rdiag(nob)=one/oberrvaruse(nf)
-         dep(nob)=ob(nf)-ensmean_ob(nf)
-      end do
-      deallocate(oindex)
-      t3 = t3 + mpi_wtime() - t1
-      t1 = mpi_wtime()
+   ! Pick up variables passed to LETKF core process
+   allocate(rloc(nobsl))
+   allocate(oindex(nobsl))
+   nobsl2=1
+   do nob=1,nobsl
+      nf = sresults(nob)%idx
+      ! skip 'screened' obs.
+      if (oberrvaruse(nf) > 1.e10_r_single) cycle
+      dist = sqrt(sresults(nob)%dis/corrlengthsq(nf))
+      if (dist >= one) cycle
+      rloc(nobsl2)=taper(dist)
+      oindex(nobsl2)=nf
+      if(rloc(nobsl2) > eps) nobsl2=nobsl2+1
+   end do
+   nobsl2=nobsl2-1
+   if(nobsl2 == 0) then
+      deallocate(rloc,oindex)
+      go to 99
+   end if
+   allocate(hxens(nens,nobsl2))
+   allocate(obens(nanals,nobsl2))
+   allocate(rdiag(nobsl2))
+   allocate(dep(nobsl2))
+   do nob=1,nobsl2
+      nf=oindex(nob)
+      if (neigv > 0) then
+      hxens(1:nens,nob)=anal_ob_modens(1:nens,nf) 
+      else
+      hxens(1:nens,nob)=anal_ob(1:nens,nf) 
+      endif
+      obens(1:nanals,nob) = &
+      anal_ob(1:nanals,nf) 
+      rdiag(nob)=one/oberrvaruse(nf)
+      dep(nob)=ob(nf)-ensmean_ob(nf)
+   end do
+   deallocate(oindex)
+   t3 = t3 + mpi_wtime() - t1
+   t1 = mpi_wtime()
   
-      ! use gain form of LETKF (to make modulated ensemble vertical localization
-      ! possible)
-      allocate(wts_ensperts(nens,nanals),wts_ensmean(nens))
-      ! compute analysis weights for mean and ensemble perturbations given 
-      ! ensemble in observation space, ob departures and ob errors.
-      ! note: if modelspace_vloc=F, hxens and obens are identical (but hxens is
-      ! is used as workspace and is modified on output), and analysis
-      ! weights for ensemble perturbations represent posterior ens perturbations, not
-      ! analysis increments for ensemble perturbations.
-      !if (nproc == numproc-1 .and. omp_get_thread_num() == 0) then
-      !call letkf_core(nobsl2,hxens,obens,dep,&
-      !                wts_ensmean,wts_ensperts,pa,&
-      !                rdiag,rloc(1:nobsl2),nens,nens/nanals,getkf_inflation,&
-      !                denkf,getkf,letkf_rtps,.true.)
-      !else
-      call letkf_core(nobsl2,hxens,obens,dep,&
-                      wts_ensmean,wts_ensperts,pa,&
-                      rdiag,rloc(1:nobsl2),nens,nens/nanals,getkf_inflation,&
-                      denkf,getkf,letkf_rtps)
-      !endif
+   ! use gain form of LETKF (to make modulated ensemble vertical localization
+   ! possible)
+   allocate(wts_ensperts(nens,nanals),wts_ensmean(nens))
+   ! compute analysis weights for mean and ensemble perturbations given 
+   ! ensemble in observation space, ob departures and ob errors.
+   ! note: if modelspace_vloc=F, hxens and obens are identical (but hxens is
+   ! is used as workspace and is modified on output), and analysis
+   ! weights for ensemble perturbations represent posterior ens perturbations, not
+   ! analysis increments for ensemble perturbations.
+   !if (nproc == numproc-1 .and. omp_get_thread_num() == 0) then
+   !call letkf_core(nobsl2,hxens,obens,dep,&
+   !                wts_ensmean,wts_ensperts,pa,&
+   !                rdiag,rloc(1:nobsl2),nens,nens/nanals,getkf_inflation,&
+   !                denkf,getkf,letkf_rtps,.true.)
+   !else
+   call letkf_core(nobsl2,hxens,obens,dep,&
+                   wts_ensmean,wts_ensperts,pa,&
+                   rdiag,rloc(1:nobsl2),nens,nens/nanals,getkf_inflation,&
+                   denkf,getkf,letkf_rtps)
+   !endif
 
-      t4 = t4 + mpi_wtime() - t1
-      t1 = mpi_wtime()
+   t4 = t4 + mpi_wtime() - t1
+   t1 = mpi_wtime()
 
-      ! Update analysis ensembles (all time levels)
-      ! analysis increments represented as a linear combination
-      ! of (modulated) prior ensemble perturbations.
-      do nb=1,nbackgrounds
-      do i=1,ncdim
-         ! if not vlocal, update all state variables in column.
-         if(vlocal .and. index_pres(i) /= nn) cycle
-         ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + &
-         sum(wts_ensmean*ens_tmp(:,i,nb))
-         if (getkf) then ! gain formulation
-            do nanal=1,nanals 
-               anal_chunk(nanal,npt,i,nb) = anal_chunk(nanal,npt,i,nb) + &
-               sum(wts_ensperts(:,nanal)*ens_tmp(:,i,nb))
+   ! Update analysis ensembles (all time levels)
+   ! analysis increments represented as a linear combination
+   ! of (modulated) prior ensemble perturbations.
+   do nb=1,nbackgrounds
+   do i=1,ncdim
+      ensmean_chunk(npt,i,nb) = ensmean_chunk(npt,i,nb) + &
+      sum(wts_ensmean*ens_tmp(:,i,nb))
+      if (getkf) then ! gain formulation
+         do nanal=1,nanals 
+            anal_chunk(nanal,npt,i,nb) = anal_chunk(nanal,npt,i,nb) + &
+            sum(wts_ensperts(:,nanal)*ens_tmp(:,i,nb))
+         enddo
+         if (.not. denkf .and. getkf_inflation) then
+            ! inflate posterior perturbations so analysis variance 
+            ! in original low-rank ensemble is the same as modulated ensemble
+            ! (eqn 30 in https://doi.org/10.1175/MWR-D-17-0102.1)
+            trpa = 0.0_r_single
+            do nanal=1,nens
+               trpa = trpa + &
+               sum(pa(:,nanal)*ens_tmp(:,i,nb))*ens_tmp(nanal,i,nb)
             enddo
-            if (.not. denkf .and. getkf_inflation) then
-               ! inflate posterior perturbations so analysis variance 
-               ! in original low-rank ensemble is the same as modulated ensemble
-               ! (eqn 30 in https://doi.org/10.1175/MWR-D-17-0102.1)
-               trpa = 0.0_r_single
-               do nanal=1,nens
-                  trpa = trpa + &
-                  sum(pa(:,nanal)*ens_tmp(:,i,nb))*ens_tmp(nanal,i,nb)
-               enddo
-               trpa = max(eps,trpa)
-               trpa_raw = max(eps,r_nanalsm1*sum(anal_chunk(:,npt,i,nb)**2))
-               anal_chunk(:,npt,i,nb) = sqrt(trpa/trpa_raw)*anal_chunk(:,npt,i,nb)
-               !if (nproc == 0 .and. omp_get_thread_num() == 0 .and. i .eq. ncdim) print *,'i,trpa,trpa_raw,inflation = ',i,trpa,trpa_raw,sqrt(trpa/trpa_raw)
-            endif
-         else ! original LETKF formulation
-            do nanal=1,nanals 
-               anal_chunk(nanal,npt,i,nb) = &
-               sum(wts_ensperts(:,nanal)*ens_tmp(:,i,nb))
-            enddo
+            trpa = max(eps,trpa)
+            trpa_raw = max(eps,r_nanalsm1*sum(anal_chunk(:,npt,i,nb)**2))
+            anal_chunk(:,npt,i,nb) = sqrt(trpa/trpa_raw)*anal_chunk(:,npt,i,nb)
+            !if (nproc == 0 .and. omp_get_thread_num() == 0 .and. i .eq. ncdim) print *,'i,trpa,trpa_raw,inflation = ',i,trpa,trpa_raw,sqrt(trpa/trpa_raw)
          endif
-         !if (nproc .eq. 0 .and. npt .eq. 1) then
-         !  print *,'sprd',nb,i,r_nanalsm1*sum(anal_chunk(:,npt,i,nb)**2),&
-         !         r_nanalsm1*sum(anal_chunk_prior(:,npt,i,nb)**2)
-         !endif
-      enddo
-      enddo
-      deallocate(wts_ensperts,wts_ensmean,dep,obens,rloc,rdiag,hxens)
-      if (allocated(pa)) deallocate(pa)
+      else ! original LETKF formulation
+         do nanal=1,nanals 
+            anal_chunk(nanal,npt,i,nb) = &
+            sum(wts_ensperts(:,nanal)*ens_tmp(:,i,nb))
+         enddo
+      endif
+      !if (nproc .eq. 0 .and. npt .eq. 1) then
+      !  print *,'sprd',nb,i,r_nanalsm1*sum(anal_chunk(:,npt,i,nb)**2),&
+      !         r_nanalsm1*sum(anal_chunk_prior(:,npt,i,nb)**2)
+      !endif
+   enddo
+   enddo
+   deallocate(wts_ensperts,wts_ensmean,dep,obens,rloc,rdiag,hxens)
+   if (allocated(pa)) deallocate(pa)
+99 continue
 
-      t5 = t5 + mpi_wtime() - t1
-      t1 = mpi_wtime()
-
-   end do verloop
+   t5 = t5 + mpi_wtime() - t1
+   t1 = mpi_wtime()
 
    if (allocated(sresults)) deallocate(sresults)
    if (allocated(ens_tmp)) deallocate(ens_tmp)
@@ -668,18 +502,6 @@ endif
 deallocate(robs_local)
 if (nrej > 0 .and. nproc == 0) print *, nrej,' obs rejected by varqc'
   
-! free shared memory segement, fortran pointer to that memory.
-#ifdef MPI3
-nullify(anal_ob_fp)
-call MPI_Win_free(shm_win, ierr)
-if (neigv > 0) then
-   nullify(anal_ob_modens_fp)
-   call MPI_Win_free(shm_win2, ierr)
-endif
-#endif
-! deallocate anal_ob on non-root tasks.
-if (nproc .ne. 0 .and. allocated(anal_ob)) deallocate(anal_ob)
-if (nproc .ne. 0 .and. allocated(anal_ob_modens)) deallocate(anal_ob_modens)
 if (allocated(ens_tmp)) deallocate(ens_tmp)
 
 return

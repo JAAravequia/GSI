@@ -54,7 +54,6 @@ module enkf_obsmod
 !    variance (as defined by bufr file or external error table).
 !   ensmean_ob(nobstot): real array containing ensemble mean ob prior, 
 !    including bias correction.
-!   ensmean_obnobc(nobstot): as above, but not includeing bias correction.
 !   obfit_prior(nobstot): obs(nob)-ensmean_ob(nob) for prior.
 !   obfit_post(nobstot): obs(nob)-ensmean_ob(nob) for posterior (not
 !    defined until after analysis).
@@ -113,13 +112,14 @@ use params, only: &
 
 use state_vectors, only: init_anasv
 use mpi_readobs, only:  mpi_getobs
+use, intrinsic :: iso_c_binding
 
 implicit none
 private
 public :: readobs, obsmod_cleanup, write_obsstats
 
-real(r_single), public, allocatable, dimension(:) :: obsprd_prior, ensmean_obnobc,&
- ensmean_ob, ob, oberrvar, obloclon, obloclat, &
+real(r_single), public, allocatable, dimension(:) :: obsprd_prior,&
+ ensmean_ob, ensmean_obnobc, ob, oberrvar, obloclon, obloclat, &
  obpress, obtime, oberrvar_orig,&
  oblnp, obfit_prior, prpgerr, oberrvarmean, probgrosserr, &
  lnsigl,corrlengthsq,obtimel
@@ -136,11 +136,13 @@ character(len=20), public, allocatable, dimension(:) :: obtype
 integer(i_kind), public ::  nobs_sat, nobs_oz, nobs_conv, nobstot
 integer(i_kind) :: nobs_convdiag, nobs_ozdiag, nobs_satdiag, nobstotdiag
 
-! for serial enkf, anal_ob is only used here and in loadbal. It is deallocated in loadbal.
-! for letkf, anal_ob used on all tasks in letkf_update (bcast from root in loadbal), deallocated
-! in letkf_update.
-! same goes for anal_ob_modens when modelspace_vloc=T.
-real(r_single), public, allocatable, dimension(:,:) :: anal_ob, anal_ob_modens
+! pointers used for MPI-3 shared memory manipulations.
+! allocated and filled in mpi_readobs
+real(r_single),public,pointer, dimension(:,:) :: anal_ob        ! Fortran pointer
+type(c_ptr)                             :: anal_ob_cp           ! C pointer
+real(r_single),public,pointer, dimension(:,:) :: anal_ob_modens ! Fortran pointer
+type(c_ptr)                             :: anal_ob_modens_cp    ! C pointer
+integer shm_win, shm_win2
 
 contains
 
@@ -182,10 +184,11 @@ deltapredx = zero
 t1 = mpi_wtime()
 call mpi_getobs(datapath, datestring, nobs_conv, nobs_oz, nobs_sat, nobstot,  &
                 nobs_convdiag,nobs_ozdiag, nobs_satdiag, nobstotdiag,         &
-                obsprd_prior, ensmean_obnobc, ensmean_ob, ob,                 &
+                obsprd_prior, ensmean_ob, ob,                                 &
                 oberrvar, obloclon, obloclat, obpress,                        &
                 obtime, oberrvar_orig, stattype, obtype, biaspreds, diagused, &
-                anal_ob,anal_ob_modens,indxsat,nanals,neigv)
+                anal_ob,anal_ob_modens,anal_ob_cp,anal_ob_modens_cp,          &
+                shm_win,shm_win2, indxsat, nanals, neigv)
 
 tdiff = mpi_wtime()-t1
 call mpi_reduce(tdiff,tdiffmax,1,mpi_real4,mpi_max,0,mpi_comm_world,ierr)
@@ -274,10 +277,9 @@ subroutine write_obsstats()
 use readconvobs, only: write_convobs_data
 use readozobs,   only: write_ozobs_data
 use readsatobs,  only: write_satobs_data
-character(len=10) :: id,id2,gesid2
+character(len=10) :: id,gesid2
 
   id = 'ensmean'
-  id2 = 'enssprd'
   if (nproc==0) then
     if (nobs_conv > 0) then
        print *, 'obsprd, conv: ', minval(obsprd_prior(1:nobs_conv)),    &
@@ -286,12 +288,12 @@ character(len=10) :: id,id2,gesid2
        call write_convobs_data(datapath, datestring, nobs_conv, nobs_convdiag,  &
              obfit_prior(1:nobs_conv), obsprd_prior(1:nobs_conv),               &
              diagused(1:nobs_convdiag),                                         &
-             id, id2, gesid2)
+             id, gesid2)
        gesid2 = 'anl'
        call write_convobs_data(datapath, datestring, nobs_conv, nobs_convdiag,  &
              obfit_post(1:nobs_conv), obsprd_post(1:nobs_conv),                 &
              diagused(1:nobs_convdiag),                                         &
-             id, id2, gesid2)
+             id, gesid2)
     end if
     if (nobs_oz > 0) then
        print *, 'obsprd, oz: ', minval(obsprd_prior(nobs_conv+1:nobs_conv+nobs_oz)), &
@@ -301,13 +303,13 @@ character(len=10) :: id,id2,gesid2
              obfit_prior(nobs_conv+1:nobs_conv+nobs_oz),                  &
              obsprd_prior(nobs_conv+1:nobs_conv+nobs_oz),                 &
              diagused(nobs_convdiag+1:nobs_convdiag+nobs_ozdiag),         &
-             id, id2, gesid2)
+             id,  gesid2)
        gesid2 = 'anl'
        call write_ozobs_data(datapath, datestring, nobs_oz, nobs_ozdiag,  &
              obfit_post(nobs_conv+1:nobs_conv+nobs_oz),                   &
              obsprd_post(nobs_conv+1:nobs_conv+nobs_oz),                  &
              diagused(nobs_convdiag+1:nobs_convdiag+nobs_ozdiag),         &
-             id, id2, gesid2)
+             id,  gesid2)
     end if
     if (nobs_sat > 0) then
        print *, 'obsprd, sat: ', minval(obsprd_prior(nobs_conv+nobs_oz+1:nobstot)), &
@@ -317,13 +319,13 @@ character(len=10) :: id,id2,gesid2
              obfit_prior(nobs_conv+nobs_oz+1:nobstot),                      &
              obsprd_prior(nobs_conv+nobs_oz+1:nobstot),                     & 
              diagused(nobs_convdiag+nobs_ozdiag+1:nobstotdiag),             &
-             id, id2, gesid2)
+             id, gesid2)
        gesid2 = 'anl'
        call write_satobs_data(datapath, datestring, nobs_sat, nobs_satdiag, &
              obfit_post(nobs_conv+nobs_oz+1:nobstot),                       &
              obsprd_post(nobs_conv+nobs_oz+1:nobstot),                      &
              diagused(nobs_convdiag+nobs_ozdiag+1:nobstotdiag),             &
-             id, id2, gesid2)
+             id, gesid2)
     end if
   endif
 
@@ -422,13 +424,13 @@ enddo
 end subroutine channelstats
 
 subroutine obsmod_cleanup()
+integer ierr
 ! deallocate module-level allocatable arrays
 if (allocated(obsprd_prior)) deallocate(obsprd_prior)
 if (allocated(obfit_prior)) deallocate(obfit_prior)
 if (allocated(obsprd_post)) deallocate(obsprd_post)
 if (allocated(obfit_post)) deallocate(obfit_post)
 if (allocated(ensmean_ob)) deallocate(ensmean_ob)
-if (allocated(ensmean_obnobc)) deallocate(ensmean_obnobc)
 if (allocated(ob)) deallocate(ob)
 if (allocated(oberrvar)) deallocate(oberrvar)
 if (allocated(oberrvar_orig)) deallocate(oberrvar_orig)
@@ -446,9 +448,14 @@ if (allocated(indxsat)) deallocate(indxsat)
 if (allocated(obtype)) deallocate(obtype)
 if (allocated(probgrosserr)) deallocate(probgrosserr)
 if (allocated(prpgerr)) deallocate(prpgerr)
-if (allocated(anal_ob)) deallocate(anal_ob)
-if (allocated(anal_ob_modens)) deallocate(anal_ob_modens)
 if (allocated(diagused)) deallocate(diagused)
+! free shared memory segement, fortran pointer to that memory.
+nullify(anal_ob)
+call MPI_Win_free(shm_win, ierr)
+if (neigv > 0) then
+   nullify(anal_ob_modens)
+   call MPI_Win_free(shm_win2, ierr)
+endif
 end subroutine obsmod_cleanup
 
 

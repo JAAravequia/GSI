@@ -177,7 +177,7 @@ subroutine calc_linhx(hx, dens, dhx_dx, hxpert, hx_ens, &
 
   ! interpolate state horizontally and in time and do  dot product with dHx/dx profile
   ! saves from calculating interpolated x_ens for each state variable
-  hx_ens = hx
+  hx_ens = 0.
   do i = 1, dhx_dx%nnz
      j = dhx_dx%ind(i)
      hxpert%val(i) = (( dens( ix*nlons  + iy , j, it) *delxp*delyp          &
@@ -235,7 +235,7 @@ subroutine calc_linhx_modens(hx, dhx_dx, hxpert, hx_ens, vscale)
   integer(i_kind) i
 
   ! calculate modulated ensemble in ob space
-  hx_ens = hx
+  hx_ens = 0.
   do i = 1, dhx_dx%nnz
      hx_ens(:) = hx_ens(:) + dhx_dx%val(i) * vscale(:,kindx(dhx_dx%ind(i))) * hxpert%val(i)
   enddo

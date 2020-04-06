@@ -100,8 +100,6 @@ program enkf_main
  use enkf, only: enkf_update
  ! letkf update
  use letkf, only: letkf_update
- ! radiance bias correction coefficients.
- use radinfo, only: radinfo_write
  ! posterior ensemble inflation.
  use inflation, only: inflate_ens
  ! initialize radinfo variables
@@ -135,24 +133,20 @@ program enkf_main
  ! Initialize read_diag
  call set_netcdf_read(netcdf_diag)
 
-
  nth= omp_get_max_threads()
  if(nproc== 0)write(6,*) 'enkf_main:  number of threads ',nth
 
- ! Init and read state vector only if needed for linearized Hx
- if (lobsdiag_forenkf) then
-    ! read state/control vector info from anavinfo
-    call init_statevec()
+ ! read state/control vector info from anavinfo
+ call init_statevec()
 
-    ! initialize observer
-    call init_observer_enkf()
+ ! initialize observer
+ call init_observer_enkf()
 
-    ! read in ensemble members
-    t1 = mpi_wtime()
-    call read_state()
-    t2 = mpi_wtime()
-    if (nproc == 0) print *,'time in read_state =',t2-t1,'on proc',nproc
- endif
+ ! read in ensemble members
+ t1 = mpi_wtime()
+ call read_state()
+ t2 = mpi_wtime()
+ if (nproc == 0) print *,'time in read_state =',t2-t1,'on proc',nproc
 
  ! read obs, initial screening.
  t1 = mpi_wtime()
@@ -163,10 +157,8 @@ program enkf_main
  call mpi_barrier(mpi_comm_world, ierr)
 
  ! cleanup state vectors after observation operator is done if lin Hx
- if (lobsdiag_forenkf) then
-    call statevec_cleanup()
-    call destroy_observer_enkf()
- endif
+ call statevec_cleanup()
+ call destroy_observer_enkf()
 
  ! print innovation statistics for prior on root task.
  if (nproc == 0) then
@@ -182,10 +174,6 @@ program enkf_main
  call read_control()
  t2 = mpi_wtime()
  if (nproc == 0) print *,'time in read_control =',t2-t1,'on proc',nproc
-
- ! Initialization for writing
- ! observation sensitivity files
- if(fso_cycling) call init_ob_sens()
 
  ! read in vertical profile of horizontal and vertical localization length
  ! scales, set values for each ob.
@@ -205,28 +193,9 @@ program enkf_main
  if (nproc == 0) print *,'time in scatter_chunks = ',t2-t1,'on proc',nproc
 
  t1 = mpi_wtime()
- ! state and bias correction coefficient update iteration.
- if(letkf_flag) then
-    ! do ob space update using serial filter if desired
-    if (lupd_obspace_serial) call enkf_update()
-    call letkf_update()
- else
-    call enkf_update()
- end if
+ call letkf_update()
  t2 = mpi_wtime()
  if (nproc == 0) print *,'time in enkf_update =',t2-t1,'on proc',nproc
-
- ! Output non-inflated
- ! analyses for FSO
- if(fso_cycling) then
-    no_inflate_flag=.true.
-    t1 = mpi_wtime()
-    call gather_chunks()
-    call write_control(no_inflate_flag)
-    t2 = mpi_wtime()
-    if (nproc == 0) print *,'time in write_ensemble wo/inflation =',t2-t1,'on proc',nproc
- end if
- no_inflate_flag=.false.
 
  ! posterior inflation.
  if (analpertwtnh > 0. .or. &
@@ -248,19 +217,6 @@ program enkf_main
     if (nproc == 0) print *,'time in write_obsstats =',t2-t1,'on proc',nproc
   endif
 
- ! print EFSO sensitivity i/o on root task.
- if(fso_cycling) call print_ob_sens()
-
- ! print innovation statistics for posterior on root task.
- if (nproc == 0 .and. numiter > 0) then
-    print *,'innovation statistics for posterior:'
-    call print_innovstats(obfit_post, obsprd_post)
- ! write out bias coeffs on root.
-    if (nobs_sat > 0 .and. lupd_satbiasc) then
-       call radinfo_write()
-    end if
- end if
-
  ! free memory (radinfo memory freed in radinfo_write)
  ! and write out analysis ensemble.
  call obsmod_cleanup()
@@ -277,7 +233,6 @@ program enkf_main
 
  call controlvec_cleanup()
  call loadbal_cleanup()
- if(fso_cycling) call destroy_ob_sens()
  call cleanup_namelist()
 
  ! write log file (which script can check to verify completion).
