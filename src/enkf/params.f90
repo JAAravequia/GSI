@@ -105,7 +105,6 @@ integer,public :: nobsl_max = -1
 ! if .true., eigenvectors of the localization
 ! matrix are read from a file called 'vlocal_eig.dat'
 ! (created by an external python utility).
-logical,public :: modelspace_vloc=.false.
 ! use correlated obs errors
 ! if T, extra fields read from diag file and innovation stats
 ! are in transformed space (R**{-1/2}).
@@ -310,43 +309,39 @@ latboundmp=-latbound+p5delat
 latboundmm=-latbound-p5delat
 delatinv=1.0_r_single/delat
 
-! if modelspace_vloc, use modulated ensemble to compute Kalman gain (but use
-! this gain to update only original ensemble). 
-if (modelspace_vloc) then
-  ! read in eigenvalues/vectors of vertical localization matrix on all tasks
-  ! (text file vlocal_eig.dat must exist)
-  inquire(file='vlocal_eig.dat',exist=fexist)
-  if ( fexist ) then
-     open(7,file='vlocal_eig.dat',status="old",action="read")
-  else
-     if (nproc .eq. 0) print *, 'error: vlocal_eig.dat does not exist'
-     call stop2(19)
-  endif
-  read(7,*) neigv,modelspace_vloc_thresh,modelspace_vloc_cutoff
-  if (neigv < 1) then
-     if (nproc .eq. 0) print *, 'error: neigv must be greater than zero'
-     call stop2(19)
-  endif
-  allocate(vlocal_evecs(neigv,nlevs+1))
-  if (nproc .eq. 0) then
-     print *,'model-space vertical localization enabled'
-     print *,'neigv = ',neigv
-     print *,'vertical localization cutoff distance (lnp units) =',&
-            modelspace_vloc_cutoff
-     print *,'eigenvector truncation threshold = ',modelspace_vloc_thresh
-     print *,'vertical localization eigenvalues'
-  endif
-  do i = 1,neigv
-     read(7,*) vlocal_eval
-     if (nproc .eq. 0) print *,i,vlocal_eval
-     do j = 1,nlevs
-        read(7,*) vlocal_evecs(i,j)
-     enddo
-     ! nlevs+1 same as level 1 (2d variables treated as surface)
-     vlocal_evecs(i,nlevs+1) = vlocal_evecs(i,1)
-  enddo
-  close(7)
+! read in eigenvalues/vectors of vertical localization matrix on all tasks
+! (text file vlocal_eig.dat must exist)
+inquire(file='vlocal_eig.dat',exist=fexist)
+if ( fexist ) then
+   open(7,file='vlocal_eig.dat',status="old",action="read")
+else
+   if (nproc .eq. 0) print *, 'error: vlocal_eig.dat does not exist'
+   call stop2(19)
 endif
+read(7,*) neigv,modelspace_vloc_thresh,modelspace_vloc_cutoff
+if (neigv < 1) then
+   if (nproc .eq. 0) print *, 'error: neigv must be greater than zero'
+   call stop2(19)
+endif
+allocate(vlocal_evecs(neigv,nlevs+1))
+if (nproc .eq. 0) then
+   print *,'model-space vertical localization enabled'
+   print *,'neigv = ',neigv
+   print *,'vertical localization cutoff distance (lnp units) =',&
+          modelspace_vloc_cutoff
+   print *,'eigenvector truncation threshold = ',modelspace_vloc_thresh
+   print *,'vertical localization eigenvalues'
+endif
+do i = 1,neigv
+   read(7,*) vlocal_eval
+   if (nproc .eq. 0) print *,i,vlocal_eval
+   do j = 1,nlevs
+      read(7,*) vlocal_evecs(i,j)
+   enddo
+   ! nlevs+1 same as level 1 (2d variables treated as surface)
+   vlocal_evecs(i,nlevs+1) = vlocal_evecs(i,1)
+enddo
+close(7)
 
 if (nanals <= numproc) then
    ! one ensemble member read in on each of first nanals tasks.

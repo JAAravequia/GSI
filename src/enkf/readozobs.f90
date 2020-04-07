@@ -49,10 +49,9 @@ subroutine get_num_ozobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
     character(len=8),   intent(in)  :: id
 
     character(len=500) obsfile
-    character(len=4) pe_name
     real(r_kind) :: errorlimit,errorlimit2
     integer(i_kind) iunit
-    integer(i_kind) :: i, nsat, ipe, nobs_curr
+    integer(i_kind) :: i, nsat, nobs_curr
     integer(i_kind):: nread,nkeep
     logical :: fexist
 
@@ -145,9 +144,8 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
   integer(i_kind), intent(in)  :: nanal, nmem
 
   character*500    :: obsfile, obsfile2
-  character(len=4) :: pe_name
 
-  integer(i_kind) :: nobs_curr, nob, nobdiag, i, nsat, ipe, nnz, nind, nprof
+  integer(i_kind) :: nobs_curr, nob, nobdiag, i, nsat, nnz, nind, nprof
   integer(i_kind) :: iunit, iunit2
 
   real(r_double) t1,t2,tsum
@@ -332,10 +330,9 @@ subroutine write_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, &
 
 
   character*500 obsfile, obsfile2
-  character(len=4) pe_name
 
   integer(i_kind) :: iunit, nobsid
-  integer(i_kind) :: nob, nobdiag, nobs, ipe, i, nsat
+  integer(i_kind) :: nob, nobdiag, nobs, i, nsat
   integer(i_kind), dimension(:), allocatable :: enkf_use_flag
   real(r_single),  dimension(:), allocatable :: enkf_fit, enkf_sprd
   logical :: fexist

@@ -57,7 +57,6 @@ subroutine get_num_convobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
   integer(i_kind),    intent(out) :: num_obs_tot, num_obs_totdiag
 
   character(len=500) :: obsfile
-  character(len=4) :: pe_name
   character(len=3) :: obtype
   integer(i_kind) :: iunit, itype, i, nobs_curr
   integer(i_kind),dimension(nobtype,2) :: nobs
@@ -230,7 +229,6 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
   integer, intent(in)           :: nanal, nmem
 
   real(r_double) t1,t2,tsum
-  character(len=4) pe_name
   character*500 obsfile, obsfile2
 
   type(sparr2)    :: dhx_dx_read
@@ -614,7 +612,6 @@ subroutine write_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag, &
   character(len=10), intent(in) :: id, gesid
 
   character*500 obsfile, obsfile2
-  character(len=4) pe_name
 
   character(len=3) :: obtype
   integer(i_kind) :: iunit, nobsid
