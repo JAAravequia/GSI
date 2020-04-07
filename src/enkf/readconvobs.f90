@@ -242,15 +242,13 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
   real(r_kind) :: errorlimit,errorlimit2,error,errororig
   real(r_kind) :: obmax, pres
   real(r_kind) :: errorlimit2_obs,errorlimit2_bnd
-  logical fexist, fexist2
+  logical fexist
   real(r_single), allocatable, dimension (:) :: Latitude, Longitude, Pressure, Time
   integer(i_kind), allocatable, dimension (:) :: Observation_Type
   real(r_single), allocatable, dimension (:) :: Errinv_Input, Errinv_Final, Analysis_Use_Flag, GPS_Type
   real(r_single), allocatable, dimension (:) :: Observation, v_Observation
   real(r_single), allocatable, dimension (:) :: Obs_Minus_Forecast_adjusted, v_Obs_Minus_Forecast_adjusted
   real(r_single), allocatable, dimension (:) :: Obs_Minus_Forecast_unadjusted, v_Obs_Minus_Forecast_unadjusted
-  real(r_single), allocatable, dimension (:) :: Obs_Minus_Forecast_adjusted2, v_Obs_Minus_Forecast_adjusted2
-  real(r_single), allocatable, dimension (:) :: Obs_Minus_Forecast_unadjusted2, v_Obs_Minus_Forecast_unadjusted2
   real(r_single), allocatable, dimension (:) :: Forecast_Saturation_Spec_Hum
   integer(i_kind), allocatable, dimension (:,:) :: Observation_Operator_Jacobian_stind, v_Observation_Operator_Jacobian_stind
   integer(i_kind), allocatable, dimension (:,:) :: Observation_Operator_Jacobian_endind, v_Observation_Operator_Jacobian_endind

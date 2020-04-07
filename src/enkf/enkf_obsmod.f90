@@ -29,7 +29,6 @@ module enkf_obsmod
 !   nobs_oz (integer scalar): number of sbuv ozone obs.
 !   nobs_sat (integer scalar): number of satellite radiance obs.
 !   nobstot (integer scalar): total number of obs (=nobs_conv+nobs_oz+nobs_sat)
-!   jpch_rad: (integer scalar) total number of satellite sensors/channels
 !    (imported from module radinfo).
 !   npred: (integer scalar) total number of adaptive bias correction terms
 !    (imported from module radinfo).
@@ -133,7 +132,7 @@ subroutine readobs()
 ! all tasks.  Ob prior perturbations for each ensemble member
 ! are written to a temp file, since the entire array can be 
 ! very large.
-use radinfo, only: npred,jpch_rad,radinfo_read
+use radinfo, only: npred,radinfo_read
 use convinfo, only: convinfo_read, init_convinfo
 use ozinfo, only: init_oz, ozinfo_read
 use covlocal, only: latval
