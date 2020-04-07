@@ -33,7 +33,7 @@ module mpi_readobs
 !$$$
   
 use kinds, only: r_kind, r_single, i_kind, r_double
-use params, only: ntasks_io, nanals_per_iotask, nanal1, nanal2, letkf_flag
+use params, only: ntasks_io, nanals_per_iotask, nanal1, nanal2
 use radinfo, only: npred
 use readconvobs
 use readsatobs
@@ -73,7 +73,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     real(r_single), pointer, dimension(:,:)     :: anal_ob, anal_ob_modens
     type(c_ptr) anal_ob_cp, anal_ob_modens_cp
     integer shm_win, shm_win2
-    real(r_single), allocatable, dimension(:)   :: mem_ob 
+    real(r_single), allocatable, dimension(:)   :: mem_ob
     real(r_single), allocatable, dimension(:,:) :: mem_ob_modens
     real(r_single) :: analsim1
     real(r_double) t1,t2
@@ -315,20 +315,16 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
           if (nproc == 0) then
              mem_ob(1:nobs_tot) = anal_ob(nanal,1:nobs_tot)
           endif
-          if (nproc_shm == 0) then
-             call mpi_bcast(mem_ob,nobs_tot,mpi_real4,0,mpi_comm_shmemroot,ierr)
-             if (nproc .ne. 0) anal_ob(nanal,1:nobs_tot) = mem_ob(1:nobs_tot)
-          end if 
+          call mpi_bcast(mem_ob,nobs_tot,mpi_real4,0,mpi_comm_shmemroot,ierr)
+          if (nproc .ne. 0) anal_ob(nanal,1:nobs_tot) = mem_ob(1:nobs_tot)
        end do
        if (neigv > 0) then
           do nanal=1,nens
              if (nproc == 0) then
                mem_ob(1:nobs_tot) = anal_ob_modens(nanal,1:nobs_tot)
              endif
-             if (nproc_shm == 0) then
-                call mpi_bcast(mem_ob,nobs_tot,mpi_real4,0,mpi_comm_shmemroot,ierr)
-                if (nproc .ne. 0) anal_ob_modens(nanal,1:nobs_tot) = mem_ob(1:nobs_tot)
-             end if 
+             call mpi_bcast(mem_ob,nobs_tot,mpi_real4,0,mpi_comm_shmemroot,ierr)
+             if (nproc .ne. 0) anal_ob_modens(nanal,1:nobs_tot) = mem_ob(1:nobs_tot)
           end do
        endif
        if (allocated(mem_ob)) deallocate(mem_ob)

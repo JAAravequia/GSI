@@ -31,7 +31,6 @@ module readconvobs
 
 use kinds, only: r_kind,i_kind,r_single,r_double
 use constants, only: one,zero,deg2rad
-use params, only: netcdf_diag, modelspace_vloc
 implicit none
 
 private
@@ -157,8 +156,6 @@ subroutine get_num_convobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
            endif
            if (error < errorlimit .or. error > errorlimit2 .or.  &
                abs(obmax) > 1.e9_r_kind) cycle
-           if (.not. modelspace_vloc .and. &
-              (pres < 0.001_r_kind .or. pres > 1200._r_kind)) cycle
            ! skipping sst obs since ENKF does not how how to handle them yet.
            nobs(itype,2) = nobs(itype,2) + 1
            if (obtype == ' uv') then
@@ -389,8 +386,6 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
            if (Analysis_Use_Flag(i) < zero .or.                  &
                error < errorlimit .or. error > errorlimit2 .or.  &
                abs(obmax) > 1.e9_r_kind) cycle
-           if (.not. modelspace_vloc .and. &
-              (pres < 0.001_r_kind .or. pres > 1200._r_kind)) cycle
            ! skipping sst obs since ENKF does not how how to handle them yet.
            if (obtype == 'sst') cycle
 

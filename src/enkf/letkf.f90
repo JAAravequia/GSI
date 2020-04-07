@@ -98,15 +98,12 @@ use loadbal, only: numptsperproc, npts_max, &
 use controlvec, only: ncdim, index_pres
 use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, oblnp, &
                   nobstot, nobs_conv, nobs_oz, nobs_sat,&
-                  obfit_prior, obfit_post, obsprd_prior, obsprd_post,&
+                  obfit_prior, obsprd_prior,&
                   numobspersat, biaspreds, corrlengthsq,&
-                  probgrosserr, prpgerr, obtype, obpress,&
-                  lnsigl, anal_ob, anal_ob_modens, obloclat, obloclon, stattype
+                  obtype, anal_ob, anal_ob_modens, obloclat, obloclon, stattype
 use constants, only: pi, one, zero, rad2deg, deg2rad, rearth
-use params, only: sprd_tol, datapath, nanals, iseed_perturbed_obs,&
-                  iassim_order,sortinc,deterministic,nlevs,&
-                  zhuberleft,zhuberright,varqc,lupd_satbiasc,huber,letkf_novlocal,&
-                  lupd_obspace_serial,corrlengthnh,corrlengthtr,corrlengthsh,&
+use params, only: nlevs, sprd_tol, datapath, nanals, &
+                  corrlengthnh,corrlengthtr,corrlengthsh,&
                   getkf,getkf_inflation,denkf,nbackgrounds,nobsl_max,&
                   neigv,vlocal_evecs,letkf_rtps
 use gridinfo, only: nlevs_pres,lonsgrd,latsgrd,logp,npts,gridloc
@@ -136,8 +133,6 @@ integer(i_kind),allocatable,dimension(:) :: oindex
 real(r_single) :: deglat, dist, corrsq, oberrfact, trpa, trpa_raw, coslat
 real(r_double) :: t1,t2,t3,t4,t5,tbegin,tend,tmin,tmax,tmean
 real(r_kind) r_nanals,r_nanalsm1
-real(r_kind) normdepart, pnge, width
-real(r_kind),dimension(nobstot):: oberrvaruse
 real(r_kind) corrlength
 logical kdobs
 ! For LETKF core processes
@@ -151,7 +146,6 @@ real(r_single),allocatable,dimension(:) :: dep
 ! kdtree stuff
 type(kdtree2_result),dimension(:),allocatable :: sresults
 integer(i_kind), dimension(:), allocatable :: indxassim, indxob
-real(r_single), allocatable, dimension(:) :: buffer
 real(r_kind) eps
 
 eps = epsilon(0.0_r_single) ! real(4) machine precision
@@ -178,59 +172,7 @@ else
    nens = nanals
 endif
 
-if (nproc == 0 .and. .not. deterministic) then
-   print *,'warning - perturbed obs not used in LETKF (deterministic=F ignored)'
-endif
-
 nrej=0
-! reset ob error to account for gross errors 
-if (varqc .and. lupd_obspace_serial) then
-    if (huber) then ! "huber norm" QC
-      do nob=1,nobstot
-        ! observation space update performed in serial filter 
-        ! using lupd_obspace_serial
-        normdepart = obfit_post(nob)/sqrt(oberrvar(nob))
-        ! depends of 2 parameters: zhuberright, zhuberleft.
-        if (normdepart < -zhuberleft) then
-           pnge = zhuberleft/abs(normdepart)
-        else if (normdepart > zhuberright) then
-           pnge = zhuberright/abs(normdepart)
-        else
-           pnge = one
-        end if
-        ! eqn 17 in Dharssi, Lorenc and Inglesby
-        ! divide ob error by prob of gross error not occurring.
-        oberrvaruse(nob) = oberrvar(nob)/pnge
-        ! pnge is the prob that the ob *does not* contain a gross error.
-        ! assume rejected if prob of gross err > 50%.
-        probgrosserr(nob) = one-pnge
-        if (probgrosserr(nob) > 0.5_r_single) then 
-           nrej=nrej+1
-        endif
-      end do
-    else ! "flat-tail" QC.
-      do nob=1,nobstot
-        ! original form, gross error cutoff a multiple of ob error st dev.
-        ! here gross err cutoff proportional to ensemble spread plus ob error
-        ! Dharssi, Lorenc and Inglesby eqn (1) a = grosserrw*sqrt(S+R) 
-        width = sprd_tol*sqrt(obsprd_prior(nob)+oberrvar(nob))
-        pnge = prpgerr(nob)*sqrt(2.*pi*oberrvar(nob))/((one-prpgerr(nob))*(2.*width))
-        normdepart = obfit_post(nob)/sqrt(oberrvar(nob))
-        pnge = one - (pnge/(pnge+exp(-normdepart**2/2._r_single)))
-        ! eqn 17 in Dharssi, Lorenc and Inglesby
-        ! divide ob error by prob of gross error not occurring.
-        oberrvaruse(nob) = oberrvar(nob)/pnge
-        ! pnge is the prob that the ob *does not* contain a gross error.
-        ! assume rejected if prob of gross err > 50%.
-        probgrosserr(nob) = one-pnge
-        if (probgrosserr(nob) > 0.5_r_single) then 
-           nrej=nrej+1
-        endif
-      end do
-    endif
-else
-     oberrvaruse(1:nobstot) = oberrvar(1:nobstot)
-end if
 
 tbegin = mpi_wtime()
 
@@ -330,7 +272,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
    do nob=1,nobsl
       nf = sresults(nob)%idx
       ! skip 'screened' obs.
-      if (oberrvaruse(nf) > 1.e10_r_single) cycle
+      if (oberrvar(nf) > 1.e10_r_single) cycle
       dist = sqrt(sresults(nob)%dis/corrlengthsq(nf))
       if (dist >= one) cycle
       rloc(nobsl2)=taper(dist)
@@ -353,7 +295,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
          endif
          obens(1:nanals,nob) = &
          anal_ob(1:nanals,nf) 
-         rdiag(nob)=one/oberrvaruse(nf)
+         rdiag(nob)=one/oberrvar(nf)
          dep(nob)=ob(nf)-ensmean_ob(nf)
       end do
       deallocate(oindex)
@@ -618,7 +560,7 @@ real(r_single),allocatable,dimension(:) :: swork1
 real(r_kind),allocatable,dimension(:) :: &
              rrloc,evals,gammapI,gamma_inv,gammapI_inv
 real(r_kind) eps
-real(r_single) analsprd,analsprd2,inf_factor
+real(r_single) analsprd,analsprd2
 integer(i_kind) :: nanal,ierr,lwork,liwork
 !for LAPACK dsyevr
 integer(i_kind) isuppz(2*nanals)

@@ -78,48 +78,28 @@ character(len=120),dimension(7),public :: anlfileprefixes
 character(len=10), public ::  datestring
 ! filesystem path to input files (first-guess, GSI diagnostic files).
 character(len=500),public :: datapath
-! if deterministic=.true., the deterministic square-root filter
-! update is used.  If .false, a perturbed obs (stochastic) update
-! is used.
-logical, public :: deterministic, sortinc, pseudo_rh, &
-                   varqc, huber, cliptracers, readin_localization
+logical, public :: pseudo_rh, cliptracers
 logical, public :: lupp
 logical, public :: cnvw_option
-integer(i_kind),public ::  iassim_order,nlevs,nanals,numiter,&
+integer(i_kind),public ::  nlevs,nanals,numiter,&
                            nlons,nlats,nbackgrounds,nstatefields,&
                            nanals_per_iotask, ntasks_io
 integer(i_kind),public, allocatable, dimension(:) ::  nanal1,nanal2
 integer(i_kind),public :: nsats_rad,nsats_oz,imp_physics
-! random seed for perturbed obs (deterministic=.false.)
-! if zero, system clock is used.  Also used when
-! iassim_order=1 (random shuffling of obs for serial assimilation).
-integer(i_kind),public :: iseed_perturbed_obs = 0
 real(r_single),public ::  covinflatemax,covinflatemin,smoothparm,biasvar
 real(r_single),public ::  corrlengthnh,corrlengthtr,corrlengthsh
-real(r_single),public ::  obtimelnh,obtimeltr,obtimelsh
-real(r_single),public ::  zhuberleft,zhuberright
-real(r_single),public ::  lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh,&
-               lnsigcutoffsatnh,lnsigcutoffsattr,lnsigcutoffsatsh,&
-               lnsigcutoffpsnh,lnsigcutoffpstr,lnsigcutoffpssh
 real(r_single),public :: analpertwtnh,analpertwtsh,analpertwttr,sprd_tol,saterrfact
 real(r_single),public :: analpertwtnh_rtpp,analpertwtsh_rtpp,analpertwttr_rtpp
 real(r_single),public :: letkf_rtps=0.0
 real(r_single),public :: paoverpb_thresh,latbound,delat,p5delat,delatinv
 real(r_single),public :: latboundpp,latboundpm,latboundmp,latboundmm
-real(r_single),public :: covl_minfact, covl_efold
 
 real(r_single),public :: covinflatenh,covinflatesh,covinflatetr,lnsigcovinfcutoff
-! if npefiles=0, diag files are read (concatenated pe* files written by gsi)
-! if npefiles>0, npefiles+1 pe* files read directly
-! the pe* files are assumed to be located in <obspath>/gsitmp_mem###
-! (<obspath>/gsitmp_ensmean for ensemble mean).
-integer,public :: npefiles = 0
 ! for LETKF, max number of obs in local volume.
 ! default is -1, which means take all obs within
 ! specified localization radius.  if nobsl_max > 0,
 ! only the first nobsl_max closest obs within the
 ! localization radius will be used.
-! Ignored if letkf_flag = .false.
 integer,public :: nobsl_max = -1
 ! do model-space vertical localization
 ! if .true., eigenvectors of the localization
@@ -127,7 +107,6 @@ integer,public :: nobsl_max = -1
 ! (created by an external python utility).
 logical,public :: modelspace_vloc=.false.
 ! use correlated obs errors
-! (implies letkf_flag=T, modelspace_vloc=T and lobsdiag_forenkf=T)
 ! if T, extra fields read from diag file and innovation stats
 ! are in transformed space (R**{-1/2}).
 logical,public :: use_correlated_oberrs=.false.
@@ -139,22 +118,12 @@ real(r_double) :: vlocal_eval
 real(r_double),public,dimension(:,:), allocatable :: vlocal_evecs
 logical,public :: params_initialized = .true.
 logical,public :: save_inflation = .false.
-! use gain form of LETKF (reset to true if modelspace_vloc=T)
 logical,public :: getkf = .false.
-! turn on getkf inflation (when modelspace_vloc=T and
-! letkf_flag=T, posterior variance inflated to match
-! variance of modulated ensemble).
 logical, public :: getkf_inflation=.false.
 ! use DEnKF approx to EnKF perturbation update.
-! Implies getkf=T if letkf_flag=T
+! Implies getkf=T
 ! See Sakov and Oke 2008 https://doi.org/10.1111/j.1600-0870.2007.00299.x
 logical, public :: denkf=.false.
-! do sat bias correction update.
-logical,public :: lupd_satbiasc = .false.
-! do ob space update with serial filter (only used if letkf_flag=.true.)
-logical,public :: lupd_obspace_serial = .false.
-! disable vertical localization for letkf
-logical,public :: letkf_novlocal = .false.
 ! simple_partition=.false. does more sophisticated
 ! load balancing for ob space update.
 logical,public :: simple_partition = .true.
@@ -167,20 +136,12 @@ logical,public :: arw = .false.
 logical,public :: nmm = .true.
 logical,public :: nmm_restart = .true.
 logical,public :: nmmb = .false.
-logical,public :: letkf_flag = .false.
 ! use brute force search in LETKF instead of kdtree
 logical,public :: letkf_bruteforce_search=.false.
 
 ! next two are no longer used, instead they are inferred from anavinfo
 logical,public :: massbal_adjust = .false. 
 integer(i_kind),public :: nvars = -1
-
-! if true generate additional input files
-! required for EFSO calculations
-logical,public :: fso_cycling = .false.
-
-! if true perform efso calculations
-logical,public :: fso_calculate = .false.
 
 ! if true, use ensemble mean qsat in definition of
 ! normalized humidity analysis variable (instead of
@@ -189,11 +150,6 @@ logical,public :: fso_calculate = .false.
 ! is ignored.
 logical,public :: use_qsatensmean = .false.
 logical,public :: write_spread_diag = .false.
-! if true, use jacobian from GSI stored in diag file to compute
-! ensemble perturbations in observation space.
-logical,public :: lobsdiag_forenkf = .false.
-! if true, use netcdf diag files, otherwise use binary diags
-logical,public :: netcdf_diag = .false.
 
 ! use fv3 cubed-sphere tiled restart files
 logical,public :: fv3_native = .false.
@@ -202,29 +158,23 @@ integer(i_kind),public :: ntiles=6
 integer(i_kind),public :: nx_res=0,ny_res=0
 logical,public ::l_pres_add_saved 
 
-namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
-                   covinflatemax,covinflatemin,deterministic,sortinc,&
+namelist /nam_enkf/datestring,datapath,nvars,&
+                   covinflatemax,covinflatemin,&
                    corrlengthnh,corrlengthtr,corrlengthsh,&
-                   varqc,huber,nlons,nlats,smoothparm,use_qsatensmean,&
-                   readin_localization, zhuberleft,zhuberright,&
-                   obtimelnh,obtimeltr,obtimelsh,reducedgrid,&
-                   lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh,&
-                   lnsigcutoffsatnh,lnsigcutoffsattr,lnsigcutoffsatsh,&
-                   lnsigcutoffpsnh,lnsigcutoffpstr,lnsigcutoffpssh,&
+                   reducedgrid,nlons,nlats,smoothparm,use_qsatensmean,&
                    fgfileprefixes,fgsfcfileprefixes,anlfileprefixes, &
                    statefileprefixes,statesfcfileprefixes, &
-                   covl_minfact,covl_efold,lupd_obspace_serial,letkf_novlocal,&
                    analpertwtnh,analpertwtsh,analpertwttr,sprd_tol,&
                    analpertwtnh_rtpp,analpertwtsh_rtpp,analpertwttr_rtpp,letkf_rtps,&
                    nlevs,nanals,saterrfact,univaroz,regional,use_gfs_nemsio,use_gfs_ncio,&
                    paoverpb_thresh,latbound,delat,pseudo_rh,numiter,biasvar,&
-                   lupd_satbiasc,cliptracers,simple_partition,adp_anglebc,angord,&
+                   cliptracers,simple_partition,adp_anglebc,angord,&
                    newpc4pred,nmmb,nhr_anal,nhr_state, fhr_assim,nbackgrounds,nstatefields, &
-                   save_inflation,nobsl_max,lobsdiag_forenkf,netcdf_diag,&
-                   letkf_flag,massbal_adjust,use_edges,emiss_bc,iseed_perturbed_obs,npefiles,&
-                   getkf,getkf_inflation,denkf,modelspace_vloc,write_spread_diag,&
+                   save_inflation,nobsl_max,&
+                   massbal_adjust,use_edges,emiss_bc,&
+                   getkf,getkf_inflation,denkf,write_spread_diag,&
                    covinflatenh,covinflatesh,covinflatetr,lnsigcovinfcutoff,letkf_bruteforce_search,&
-                   fso_cycling,fso_calculate,imp_physics,lupp,cnvw_option,use_correlated_oberrs,&
+                   imp_physics,lupp,cnvw_option,use_correlated_oberrs,&
                    fv3_native
 namelist /nam_wrf/arw,nmm,nmm_restart
 namelist /nam_fv3/fv3fixpath,nx_res,ny_res,ntiles,l_pres_add_saved
@@ -251,41 +201,9 @@ datestring = "0000000000" ! if 0000000000 will not be used.
 corrlengthnh = 2800_r_single
 corrlengthtr = 2800_r_single
 corrlengthsh = 2800_r_single
-! read in localization length scales from an external file.
-readin_localization = .false.
 ! min and max inflation.
 covinflatemin = 1.0_r_single
 covinflatemax = 1.e30_r_single
-! lnsigcutoff (length for vertical localization in ln(p))
-! **these are ignored if modelspace_vloc=.true.**
-! this corresponding GSI parameter is -s_ens_v (if s_ens_v<0)
-! lnsigcutoff is the distance at which the Gaspari-Cohn
-! polynomial goes to zero.  s_ens_v is the scale of a 
-! Gaussian exp(-(r/L)**2) so
-! lnsigcutoff ~ s_ens_v/sqrt(0.15)
-lnsigcutoffnh = 2._r_single
-lnsigcutofftr = 2._r_single
-lnsigcutoffsh = 2._r_single
-lnsigcutoffsatnh = -999._r_single ! value for satellite radiances
-lnsigcutoffsattr = -999._r_single ! value for satellite radiances
-lnsigcutoffsatsh = -999._r_single ! value for satellite radiances
-lnsigcutoffpsnh = -999._r_single  ! value for surface pressure
-lnsigcutoffpstr = -999._r_single  ! value for surface pressure
-lnsigcutoffpssh = -999._r_single  ! value for surface pressure
-! ob time localization
-obtimelnh = 1.e10_r_single
-obtimeltr = 1.e10_r_single
-obtimelsh = 1.e10_r_single
-! min localization reduction factor for adaptive localization
-! based on HPaHt/HPbHT. Default (1.0) means no adaptive localization.
-! 0.25 means minimum localization is 0.25*corrlength(nh,tr,sh).
-covl_minfact = 1.0_r_single
-! efolding distance for adapative localization.
-! Localization reduction factor is 1. - exp( -((1.-paoverpb)/covl_efold) )
-! When 1-pavoerpb=1-HPaHt/HPbHt=cov_efold localization scales reduced by
-! factor of 1-1/e ~ 0.632. When paoverpb==>1, localization scales go to zero.
-! When paoverpb==>1, localization scales not reduced.
-covl_efold = 1.e-10_r_single
 ! path to data directory
 datapath = " " ! mandatory
 ! tolerance for background check.
@@ -308,17 +226,8 @@ lnsigcovinfcutoff = 1.0e30_r_single
 ! if ob space posterior variance divided by prior variance
 ! less than this value, ob is skipped during serial processing.
 paoverpb_thresh = 1.0_r_single! don't skip any obs
-! set to to 0 for the order they are read in, 1 for random order, or 2 for
-! order of predicted posterior variance reduction (based on prior)
-iassim_order = 0
 ! use 'pseudo-rh' analysis variable, as in GSI.
 pseudo_rh = .false.
-! if deterministic is true, use LETKF/EnSRF w/o perturbed obs.
-! if false, use perturbed obs EnKF/LETKF.
-deterministic = .true.
-! if deterministic is false, re-order obs to minimize regression erros
-! as described in Anderson (2003) (only used for serial filter).
-sortinc = .true.
 ! type of GFS microphyics.
 ! 99: Zhao-Carr, 11: GFDL
 imp_physics = 99
@@ -349,11 +258,6 @@ saterrfact = 1._r_single
 ! (for LETKF, numiter = 0 shuts off update in observation space)
 numiter = 1
 
-! varqc parameters
-varqc = .false.
-huber = .false. ! use huber norm instead of "flat-tail"
-zhuberleft=1.e30_r_single
-zhuberright=1.e30_r_single
 ! smoothing paramater for inflation (-1 for no smoothing)
 smoothparm = -1
 ! if true, tracers are clipped to zero when read in, and just
@@ -406,14 +310,6 @@ end do
 if(nproc == 0)write(6,*) 'number of satellite ozone files used',nsats_oz
 
 
-! default value of vertical localization for sat radiances
-! and surface pressure should be same as other data.
-if (lnsigcutoffsatnh < 0._r_single) lnsigcutoffsatnh = lnsigcutoffnh
-if (lnsigcutoffsattr < 0._r_single) lnsigcutoffsattr = lnsigcutofftr
-if (lnsigcutoffsatsh < 0._r_single) lnsigcutoffsatsh = lnsigcutoffsh
-if (lnsigcutoffpsnh < 0._r_single) lnsigcutoffpsnh = lnsigcutoffnh
-if (lnsigcutoffpstr < 0._r_single) lnsigcutoffpstr = lnsigcutofftr
-if (lnsigcutoffpssh < 0._r_single) lnsigcutoffpssh = lnsigcutoffsh
 p5delat=0.5_r_single*delat
 latboundpp=latbound+p5delat
 latboundpm=latbound-p5delat
@@ -441,7 +337,6 @@ if (modelspace_vloc) then
   allocate(vlocal_evecs(neigv,nlevs+1))
   if (nproc .eq. 0) then
      print *,'model-space vertical localization enabled'
-     print *,'lnsigcutoff* values read from namelist ignored!'
      print *,'neigv = ',neigv
      print *,'vertical localization cutoff distance (lnp units) =',&
             modelspace_vloc_cutoff
@@ -458,31 +353,6 @@ if (modelspace_vloc) then
      vlocal_evecs(i,nlevs+1) = vlocal_evecs(i,1)
   enddo
   close(7)
-  if (.not. lobsdiag_forenkf) then
-    if (nproc .eq. 0) then
-       print *,'lobsdiag_forenkf must be true if modelspace_vloc==.true.'
-    endif
-    call stop2(19)
-  endif
-  if (letkf_flag .and. .not. letkf_novlocal) then
-     if (nproc .eq. 0) print *,"modelspace_vloc=T and letkf_flag=T, re-setting letkf_novlocal to T"
-     letkf_novlocal = .true.
-  endif
-  if (letkf_flag .and. .not. getkf) then
-     if (nproc .eq. 0) print *,"modelspace_vloc=T and getkf=F, re-setting getkf to T"
-     getkf = .true.
-  endif
-  ! set vertical localization parameters to very large values
-  ! (turns vertical localization off for serial filter)
-  lnsigcutoffnh = 1.e30_r_single
-  lnsigcutoffsh = 1.e30_r_single
-  lnsigcutofftr = 1.e30_r_single
-  lnsigcutoffsatnh = 1.e30_r_single
-  lnsigcutoffsatsh = 1.e30_r_single
-  lnsigcutoffsattr = 1.e30_r_single
-  lnsigcutoffpsnh = 1.e30_r_single
-  lnsigcutoffpssh = 1.e30_r_single
-  lnsigcutoffpstr = 1.e30_r_single
 endif
 
 if (nanals <= numproc) then
@@ -510,9 +380,6 @@ else
       nanal2(np) = (np+1)*nanals_per_iotask
    enddo
 endif
-
-! have to do ob space update for serial filter (not for LETKF).
-if ((.not. letkf_flag .or. lupd_obspace_serial) .and. numiter < 1) numiter = 1
 
 if (nproc == 0) then
 
@@ -551,35 +418,6 @@ if (nproc == 0) then
       print *, 'must specify nx_res,ny_res and fv3fixpath when fv3_native is true'
       call stop2(19)
    endif
-   if (letkf_flag .and. univaroz) then
-     print *,'univaroz is not supported in LETKF!'
-     call stop2(19)
-   end if
-   if (letkf_flag .and. .not. getkf .and. denkf) then
-     print *,'denkf only works when letkf_flag=T *and* getkf=T'
-     call stop2(19)
-   end if
-   if (lupd_satbiasc .and. letkf_flag) then
-     print *,'lupd_satbiasc not supported with LETKF'
-     call stop2(19)
-   endif
-   if (use_correlated_oberrs .and. .not. netcdf_diag) then
-     print *,'use_correlated_oberrs only works with netcdf_diag'
-     call stop2(19)
-   endif
-   if (use_correlated_oberrs .and. .not. letkf_novlocal) then
-     print *,'use_correlated_oberrs implies modelspace_vloc,lobsdiag_forenkf=T'
-     call stop2(19)
-   endif
-   if (use_correlated_oberrs .and. .not. lobsdiag_forenkf) then
-     print *,'use_correlated_oberrs implies letkf_flag,modelspace_vloc,lobsdiag_forenkf=T'
-     call stop2(19)
-   endif
-   if ((obtimelnh < 1.e10 .or. obtimeltr < 1.e10 .or. obtimelsh < 1.e10) .and. &
-       letkf_flag) then
-     print *,'warning: no time localization in LETKF!'
-   endif
-
 
    print *, trim(adjustl(datapath))
    if (datestring .ne. '0000000000') print *, 'analysis time ',datestring
@@ -694,23 +532,6 @@ corrlengthsh = corrlengthsh * 1.e3_r_single/rearth
 
 ! this var is .false. until this routine is called.
 params_initialized = .true.
-
-! reset lupd_obspace_serial to false if letkf not requested.
-if (.not. letkf_flag .and. lupd_obspace_serial) then
-  lupd_obspace_serial = .false.
-  if (nproc == 0) then
-   print *,'setting lupd_obspace_serial to .false., since letkf_flag is .false.'
-  endif
-endif
-
-! set lupd_obspace_serial to .true. if letkf_flag is true
-! and numiter > 0.
-if (letkf_flag .and. .not. lupd_obspace_serial .and. numiter > 0) then
-  lupd_obspace_serial = .true.
-  if (nproc == 0) then
-   print *,'setting lupd_obspace_serial to .true., since letkf_flag is .true. and numiter > 0'
-  endif
-endif
 
 if (datapath(len_trim(datapath):len_trim(datapath)) .ne. '/') then
    ! add trailing slash if needed

@@ -102,8 +102,8 @@ module loadbal
 use mpimod, only: mpi_comm_world
 use mpisetup, only: mpi_real4,mpi_sum,mpi_comm_io,mpi_in_place,numproc,nproc,&
                 mpi_integer,mpi_wtime,mpi_status,mpi_real8,mpi_max
-use params, only: datapath, nanals, simple_partition, letkf_flag, nobsl_max,&
-                  neigv, corrlengthnh, corrlengthsh, corrlengthtr, lupd_obspace_serial,letkf_bruteforce_search
+use params, only: datapath, nanals, simple_partition, nobsl_max,&
+                  neigv, corrlengthnh, corrlengthsh, corrlengthtr, letkf_bruteforce_search
 use enkf_obsmod, only: nobstot, obloc, oblnp, ensmean_ob, obtime, anal_ob, anal_ob_modens, corrlengthsq
 use kinds, only: r_kind, i_kind, r_double, r_single
 use kdtree2_module, only: kdtree2, kdtree2_create, kdtree2_destroy, &
@@ -145,7 +145,7 @@ subroutine load_balance()
 implicit none
 integer(i_kind), allocatable, dimension(:) :: rtmp,numobs
 !real(r_single), allocatable, dimension(:) :: buffer
-integer(i_kind) np,i,n,nn,nob1,nob2,ierr
+integer(i_kind) np,i,n,nn,ierr
 real(r_double) t1
 logical no_loadbal
 
@@ -429,37 +429,30 @@ ideln = int(real(npts)/real(numproc))
 n1 = 1 + nproc*ideln
 n2 = (nproc+1)*ideln
 if (nproc == numproc-1) n2 = npts
-if (letkf_flag) allocate(sresults(nobstot))
+allocate(sresults(nobstot))
 
 ! loop over 'good' obs.
 numobs = 1 ! set min # of obs to 1, not 0 (so single ob test behaves)
 !$omp parallel do  schedule(dynamic,1) private(nob,i,deglat,corrlength,sresults,corrsq)
 obsloop: do i=n1,n2
-    if (letkf_flag) then
-       deglat = latsgrd(i)*rad2deg
-       corrlength=latval(deglat,corrlengthnh,corrlengthtr,corrlengthsh)
-       corrsq = corrlength**2
+    deglat = latsgrd(i)*rad2deg
+    corrlength=latval(deglat,corrlengthnh,corrlengthtr,corrlengthsh)
+    corrsq = corrlength**2
 
-       if (associated(kdtree_obs2)) then
-         call kdtree2_r_nearest(tp=kdtree_obs2,qv=gridloc(:,i),r2=corrsq,&
-              nfound=numobs(i),nalloc=nobstot,results=sresults)
-       else
-         do nob = 1, nobstot
-            r = sum( (gridloc(:,i)-obloc(:,nob))**2, 1)
-            if (r < corrsq) then
-              numobs(i) = numobs(i) + 1
-            endif
-         enddo
-       endif
+    if (associated(kdtree_obs2)) then
+      call kdtree2_r_nearest(tp=kdtree_obs2,qv=gridloc(:,i),r2=corrsq,&
+           nfound=numobs(i),nalloc=nobstot,results=sresults)
     else
-       do nob=1,nobstot
-          if (sum((obloc(1:3,nob)-gridloc(1:3,i))**2,1) < corrlengthsq(nob)) &
-          numobs(i) = numobs(i) + 1
-       end do 
+      do nob = 1, nobstot
+         r = sum( (gridloc(:,i)-obloc(:,nob))**2, 1)
+         if (r < corrsq) then
+           numobs(i) = numobs(i) + 1
+         endif
+      enddo
     endif
 end do obsloop
 !$omp end parallel do
-if (letkf_flag) deallocate(sresults)
+deallocate(sresults)
 
 end subroutine estimate_work_enkf
 

@@ -27,7 +27,7 @@ module readozobs
 !$$$
 
 use kinds, only: r_single,i_kind,r_kind,r_double
-use params, only: nsats_oz,sattypes_oz,npefiles,netcdf_diag,modelspace_vloc
+use params, only: nsats_oz,sattypes_oz
 use constants, only: deg2rad, zero
 implicit none
 
@@ -98,8 +98,6 @@ subroutine get_num_ozobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
         nread = nread + nobs_curr
         do i = 1, nobs_curr
           if (Analysis_Use_Flag(i) < 0) cycle
-          if (.not. modelspace_vloc .and. (Pressure(i) <= 0.001 .or. &
-              Pressure(i) > 1200._r_kind)) cycle
           if (Errinv(i) <= errorlimit .or.  &
               Errinv(i) >= errorlimit2 .or.  &
               abs(Observation(i)) > 1.e9_r_kind) cycle
@@ -237,9 +235,6 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
         do i = 1, nobs_curr
            nobdiag = nobdiag + 1
            if (Analysis_Use_Flag(i) < 0) cycle
-           if (.not. modelspace_vloc .and. (Pressure(i) <= 0.001 .or. &
-               Pressure(i) > 1200._r_kind)) cycle
-
            if (Errinv(i) <= errorlimit .or. Errinv(i) >= errorlimit2 .or.  &
                abs(Observation(i)) > 1.e9_r_kind) cycle
            nob = nob + 1

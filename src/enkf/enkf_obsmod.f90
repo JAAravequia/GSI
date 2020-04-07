@@ -55,13 +55,8 @@ module enkf_obsmod
 !   ensmean_ob(nobstot): real array containing ensemble mean ob prior, 
 !    including bias correction.
 !   obfit_prior(nobstot): obs(nob)-ensmean_ob(nob) for prior.
-!   obfit_post(nobstot): obs(nob)-ensmean_ob(nob) for posterior (not
-!    defined until after analysis).
 !   obsprd_prior(nobstot): real array of ensemble variance of 
 !     observation prior perturbations.
-!   obsprd_post(nobstot): real array of ensemble variance of 
-!     observation posterior perturbations (not defined until after analysis,
-!     and then only on root task).
 !   numobspersat(jpch_rad):  number of screened obs for each
 !     satellite sensor/channel.
 !   oberrvarmean(jpch_rad):  mean observation error variance for
@@ -104,11 +99,7 @@ use kinds, only : r_kind, r_double, i_kind, r_single
 use constants, only: zero, one, deg2rad, rad2deg, rd, cp, pi
 use params, only: & 
       datestring,datapath,sprd_tol,nanals,saterrfact, &
-      lnsigcutoffnh, lnsigcutoffsh, lnsigcutofftr, corrlengthnh,&
-      corrlengthtr, corrlengthsh, obtimelnh, obtimeltr, obtimelsh,&
-      lnsigcutoffsatnh, lnsigcutoffsatsh, lnsigcutoffsattr,&
-      varqc, huber, zhuberleft, zhuberright, modelspace_vloc, &
-      lnsigcutoffpsnh, lnsigcutoffpssh, lnsigcutoffpstr, neigv
+      neigv, corrlengthnh, corrlengthtr, corrlengthsh
 
 use state_vectors, only: init_anasv
 use mpi_readobs, only:  mpi_getobs
@@ -121,12 +112,11 @@ public :: readobs, obsmod_cleanup, write_obsstats
 real(r_single), public, allocatable, dimension(:) :: obsprd_prior,&
  ensmean_ob, ensmean_obnobc, ob, oberrvar, obloclon, obloclat, &
  obpress, obtime, oberrvar_orig,&
- oblnp, obfit_prior, prpgerr, oberrvarmean, probgrosserr, &
- lnsigl,corrlengthsq,obtimel
+ oblnp, obfit_prior, oberrvarmean, &
+ corrlengthsq,obtimel
 integer(i_kind), public, allocatable, dimension(:) :: numobspersat
 integer(i_kind), allocatable, dimension(:)         :: diagused
 ! posterior stats computed in enkf_update
-real(r_single), public, allocatable, dimension(:) :: obfit_post, obsprd_post
 real(r_single), public, allocatable, dimension(:,:) :: biaspreds
 real(r_kind), public, allocatable, dimension(:,:) :: deltapredx
 ! arrays passed to kdtree2 routines must be single.
@@ -152,12 +142,11 @@ subroutine readobs()
 ! all tasks.  Ob prior perturbations for each ensemble member
 ! are written to a temp file, since the entire array can be 
 ! very large.
-use radinfo, only: npred,jpch_rad,radinfo_read,pg_rad
-use convinfo, only: convinfo_read, init_convinfo, cvar_pg, nconvtype, ictype,&
-                    ioctype
-use ozinfo, only: init_oz, ozinfo_read, pg_oz, jpch_oz, nusis_oz, nulev
+use radinfo, only: npred,jpch_rad,radinfo_read
+use convinfo, only: convinfo_read, init_convinfo
+use ozinfo, only: init_oz, ozinfo_read
 use covlocal, only: latval
-integer nob,j,ierr
+integer nob,ierr
 real(r_double) t1
 real(r_single) tdiff,tdiffmax,deglat,radlat,radlon
 ! read in conv data info
@@ -201,37 +190,6 @@ allocate(obfit_prior(nobstot))
 ! set obfit_prior
 call screenobs()
 
-allocate(probgrosserr(nobstot),prpgerr(nobstot))
-! initialize prob of gross error to 0.0 (will be reset by analysis if varqc is true)
-probgrosserr = zero
-if (varqc .and. .not. huber) then
-   ! for flat-tail VarQC, read in a-prior prob of gross error.
-   prpgerr = zero ! initialize to zero
-   do nob=1,nobstot
-      if (nob <= nobs_conv) then
-         ! search for matching record in convinfo file. 
-         ! if match found, set prob. of gross error to nonzero value given in
-         ! file.
-         do j=1,nconvtype
-            if (ictype(j) == stattype(nob) .and. &
-                ioctype(j) == obtype(nob)(1:3)) then
-                prpgerr(nob) = cvar_pg(j)
-                exit
-            end if     
-         enddo
-      else if (nob <= nobs_conv+nobs_oz) then
-         do j=1,jpch_oz
-            if (stattype(nob)-700 == nulev(j) .and. obtype(nob) == nusis_oz(j)) then
-                prpgerr(nob) = pg_oz(j)
-                exit
-            end if
-         enddo
-      else
-         prpgerr(nob) = pg_rad(indxsat(nob-(nobs_conv+nobs_oz)))
-      end if
-      !if (nproc == 0) print *,nob,obtype(nob)(1:3),prpgerr(nob)
-   enddo
-endif
 ! compute number of usuable obs, average ob error for each satellite sensor/channel.
 if (nobs_sat > 0) then
   call channelstats()
@@ -240,8 +198,7 @@ end if
 ! calculate locations of obs that passed initial screening in cartesian coords.
 allocate(obloc(3,nobstot))
 allocate(oblnp(nobstot)) ! log(p) at ob locations.
-allocate(corrlengthsq(nobstot),lnsigl(nobstot),obtimel(nobstot))
-lnsigl=1.e10
+allocate(corrlengthsq(nobstot))
 do nob=1,nobstot
    oblnp(nob) = -log(obpress(nob)) ! distance measured in log(p) units
    if (obloclon(nob) < zero) obloclon(nob) = obloclon(nob) + 360._r_single
@@ -252,25 +209,9 @@ do nob=1,nobstot
    obloc(2,nob) = cos(radlat)*sin(radlon)
    obloc(3,nob) = sin(radlat)
    deglat = obloclat(nob)
-!  get limits on corrlength,lnsig,and obtime
-   if (.not. modelspace_vloc) then
-   if (nob > nobs_conv+nobs_oz) then
-      lnsigl(nob) = latval(deglat,lnsigcutoffsatnh,lnsigcutoffsattr,lnsigcutoffsatsh)
-   else if (obtype(nob)(1:3) == ' ps') then
-      lnsigl(nob) = latval(deglat,lnsigcutoffpsnh,lnsigcutoffpstr,lnsigcutoffpssh)
-   else
-      lnsigl(nob)=latval(deglat,lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh)
-   end if
-   endif
    corrlengthsq(nob)=latval(deglat,corrlengthnh,corrlengthtr,corrlengthsh)**2
-   obtimel(nob)=latval(deglat,obtimelnh,obtimeltr,obtimelsh)
 end do
 
-! these allocated here, but not computed till after the state 
-! update in enkf_update.
-allocate(obfit_post(nobstot))
-allocate(obsprd_post(nobstot))
-obsprd_post = zero
 end subroutine readobs
 
 subroutine write_obsstats()
@@ -280,50 +221,31 @@ use readsatobs,  only: write_satobs_data
 character(len=10) :: id,gesid2
 
   id = 'ensmean'
+  gesid2 = 'ges'
   if (nproc==0) then
     if (nobs_conv > 0) then
        print *, 'obsprd, conv: ', minval(obsprd_prior(1:nobs_conv)),    &
               maxval(obsprd_prior(1:nobs_conv))
-       gesid2 = 'ges'
        call write_convobs_data(datapath, datestring, nobs_conv, nobs_convdiag,  &
              obfit_prior(1:nobs_conv), obsprd_prior(1:nobs_conv),               &
-             diagused(1:nobs_convdiag),                                         &
-             id, gesid2)
-       gesid2 = 'anl'
-       call write_convobs_data(datapath, datestring, nobs_conv, nobs_convdiag,  &
-             obfit_post(1:nobs_conv), obsprd_post(1:nobs_conv),                 &
              diagused(1:nobs_convdiag),                                         &
              id, gesid2)
     end if
     if (nobs_oz > 0) then
        print *, 'obsprd, oz: ', minval(obsprd_prior(nobs_conv+1:nobs_conv+nobs_oz)), &
               maxval(obsprd_prior(nobs_conv+1:nobs_conv+nobs_oz))
-       gesid2 = 'ges'
        call write_ozobs_data(datapath, datestring, nobs_oz, nobs_ozdiag,  &
              obfit_prior(nobs_conv+1:nobs_conv+nobs_oz),                  &
              obsprd_prior(nobs_conv+1:nobs_conv+nobs_oz),                 &
-             diagused(nobs_convdiag+1:nobs_convdiag+nobs_ozdiag),         &
-             id,  gesid2)
-       gesid2 = 'anl'
-       call write_ozobs_data(datapath, datestring, nobs_oz, nobs_ozdiag,  &
-             obfit_post(nobs_conv+1:nobs_conv+nobs_oz),                   &
-             obsprd_post(nobs_conv+1:nobs_conv+nobs_oz),                  &
              diagused(nobs_convdiag+1:nobs_convdiag+nobs_ozdiag),         &
              id,  gesid2)
     end if
     if (nobs_sat > 0) then
        print *, 'obsprd, sat: ', minval(obsprd_prior(nobs_conv+nobs_oz+1:nobstot)), &
               maxval(obsprd_prior(nobs_conv+nobs_oz+1:nobstot))
-       gesid2 = 'ges'
        call write_satobs_data(datapath, datestring, nobs_sat, nobs_satdiag, &
              obfit_prior(nobs_conv+nobs_oz+1:nobstot),                      &
              obsprd_prior(nobs_conv+nobs_oz+1:nobstot),                     & 
-             diagused(nobs_convdiag+nobs_ozdiag+1:nobstotdiag),             &
-             id, gesid2)
-       gesid2 = 'anl'
-       call write_satobs_data(datapath, datestring, nobs_sat, nobs_satdiag, &
-             obfit_post(nobs_conv+nobs_oz+1:nobstot),                       &
-             obsprd_post(nobs_conv+nobs_oz+1:nobstot),                      &
              diagused(nobs_convdiag+nobs_ozdiag+1:nobstotdiag),             &
              id, gesid2)
     end if
@@ -344,8 +266,6 @@ failm=1.e30_r_single
 !==> pre-process obs, obs metadata.
 do nob=1,nobstot
   if (nob > nobs_conv+nobs_oz) oberrvar(nob) = saterrfact*oberrvar(nob)
-  ! empirical adjustment of obs errors for Huber norm from ECMWF RD tech memo
-  if (varqc) oberrvar(nob) = oberrvar(nob)*(min(one,0.5_r_single+0.125_r_single*(zhuberleft+zhuberright)))**2
 
   obfit_prior(nob) = ob(nob)-ensmean_ob(nob)
 
@@ -427,8 +347,6 @@ integer ierr
 ! deallocate module-level allocatable arrays
 if (allocated(obsprd_prior)) deallocate(obsprd_prior)
 if (allocated(obfit_prior)) deallocate(obfit_prior)
-if (allocated(obsprd_post)) deallocate(obsprd_post)
-if (allocated(obfit_post)) deallocate(obfit_post)
 if (allocated(ensmean_ob)) deallocate(ensmean_ob)
 if (allocated(ob)) deallocate(ob)
 if (allocated(oberrvar)) deallocate(oberrvar)
@@ -445,8 +363,6 @@ if (allocated(biaspreds)) deallocate(biaspreds)
 if (allocated(deltapredx)) deallocate(deltapredx)
 if (allocated(indxsat)) deallocate(indxsat)
 if (allocated(obtype)) deallocate(obtype)
-if (allocated(probgrosserr)) deallocate(probgrosserr)
-if (allocated(prpgerr)) deallocate(prpgerr)
 if (allocated(diagused)) deallocate(diagused)
 ! free shared memory segement, fortran pointer to that memory.
 nullify(anal_ob)

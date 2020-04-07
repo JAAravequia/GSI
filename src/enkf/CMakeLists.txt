@@ -35,7 +35,7 @@ if(BUILD_ENKF)
   add_library( MODS2 OBJECT ${ENKF_EXTRA_SRCS} )  
 
   set(ENKFMOD_SRCS 
-  netcdf_io_wrf.f90  params.f90 covlocal.f90 fftpack.f90 genqsat1.f90 mpisetup.f90 rnorm.f90
+  netcdf_io_wrf.f90  params.f90 covlocal.f90 fftpack.f90 genqsat1.f90 mpisetup.f90 
   sorting.f90 specmod.f90 reducedgrid.f90 readozobs.f90 readsatobs.f90 readconvobs.f90
   write_logfile.f90 kdtree2.f90 mpi_readobs.f90 enkf_obsmod.f90 statevec.f90 controlvec.f90
   observer_${ENKF_SUFFIX}.f90 gridio_${ENKF_SUFFIX}.f90 gridinfo_${ENKF_SUFFIX}.f90 expand_ens.f90
@@ -43,7 +43,6 @@ if(BUILD_ENKF)
   )
   set(ENKF_SRCS 
   innovstats.f90
-  read_locinfo.f90
   enkf_main.f90
   inflation.f90
   letkf.f90

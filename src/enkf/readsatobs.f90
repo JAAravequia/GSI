@@ -34,8 +34,7 @@ use kinds, only: r_kind,i_kind,r_single,r_double
 use read_diag, only: diag_data_fix_list,diag_header_fix_list,diag_header_chan_list, &
     diag_data_chan_list,diag_data_extra_list,read_radiag_data,read_radiag_header, &
     diag_data_name_list, open_radiag, close_radiag
-use params, only: nsats_rad, dsis, sattypes_rad, npefiles, netcdf_diag, &
-                  lupd_satbiasc, use_correlated_oberrs, modelspace_vloc
+use params, only: nsats_rad, dsis, sattypes_rad, use_correlated_oberrs
 
 implicit none
 
@@ -137,8 +136,6 @@ subroutine get_num_satobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
            if(QC_Flag(i) < 0. .or. Inv_Error(i) < errorlimit &
               .or. Inv_Error(i) > errorlimit2 &
               .or. Satinfo_Chan(chind(i)) == 0) cycle
-           if(.not. modelspace_vloc .and. (Pressure(i) <= 0.001_r_kind .or.  &
-              Pressure(i) > 1200._r_kind)) cycle
            if(abs(Observation(i)) > 1.e9_r_kind) cycle 
            nkeep = nkeep + 1
         enddo
@@ -311,33 +308,6 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
                                   Inv_Error_scaled)
      endif
 
-     if (lupd_satbiasc) then ! bias predictors only needed if lupd_satbiasc=T
-        allocate(BC_Fixed_Scan_Position(nobs), BCPred_Constant(nobs), BCPred_Scan_Angle(nobs), &
-                 BCPred_Cloud_Liquid_Water(nobs), BCPred_Lapse_Rate_Squared(nobs),             &
-                 BCPred_Lapse_Rate(nobs))
-        call nc_diag_read_get_var(iunit, 'BC_Fixed_Scan_Position', BC_Fixed_Scan_Position)
-        call nc_diag_read_get_var(iunit, 'BCPred_Constant', BCPred_Constant)
-        call nc_diag_read_get_var(iunit, 'BCPred_Scan_Angle', BCPred_Scan_Angle)
-        call nc_diag_read_get_var(iunit, 'BCPred_Cloud_Liquid_Water', BCPred_Cloud_Liquid_Water)
-        call nc_diag_read_get_var(iunit, 'BCPred_Lapse_Rate_Squared', BCPred_Lapse_Rate_Squared)
-        call nc_diag_read_get_var(iunit, 'BCPred_Lapse_Rate', BCPred_Lapse_Rate)
-
-        allocate(BCPred_Cosine_Latitude_times_Node(nobs), BCPred_Sine_Latitude(nobs))
-        call nc_diag_read_get_var(iunit, 'BCPred_Cosine_Latitude_times_Node', BCPred_Cosine_Latitude_times_Node) 
-        call nc_diag_read_get_var(iunit, 'BCPred_Sine_Latitude', BCPred_Sine_Latitude)
-
-        if (emiss_bc) then
-           allocate(BCPred_Emissivity(nobs))
-           call nc_diag_read_get_var(iunit, 'BCPred_Emissivity', BCPred_Emissivity)
-        endif
-
-        if (adp_anglebc) then
-           call nc_diag_read_get_global_attr(iunit, "angord", angord)
-           allocate(BCPred_angord(angord, nobs))
-           call nc_diag_read_get_var(iunit, 'BCPred_angord', BCPred_angord)
-        endif
-     endif ! lupd_satbiasc=T, read bias predictors
-
      call nc_diag_read_get_global_attr(iunit, "jac_nnz", nnz)
      call nc_diag_read_get_global_attr(iunit, "jac_nind", nind)
      allocate(Observation_Operator_Jacobian_stind(nind, nobs))
@@ -358,8 +328,6 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
         if (QC_Flag(i) < 0. .or. Inv_Error(i) < errorlimit &
                   .or. Inv_Error(i) > errorlimit2 &
                   .or. Satinfo_Chan(chind(i)) == 0) cycle
-        if (.not. modelspace_vloc .and. (Pressure(i) <= 0.001_r_kind .or.  &
-            Pressure(i) > 1200._r_kind)) cycle
         if (abs(Observation(i)) > 1.e9_r_kind) cycle 
 
         nob = nob + 1
@@ -430,50 +398,6 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
         endif
         x_press(nob) = Pressure(i)
 
-! DTK:  **NOTE**
-!       The bifix term will need to be expanded if/when the GSI/GDAS goes to using
-!       a higher polynomial version of the angle dependent bias correction (if
-!       and when it is moved into part of the varbc)
-! from radinfo: radiance bias correction terms are as follows:
-!  pred(1,:)  = global offset
-!  pred(2,:)  = zenith angle predictor, is not used and set to zero now
-!  pred(3,:)  = cloud liquid water predictor for clear-sky microwave radiance assimilation
-!  pred(4,:)  = square of temperature laps rate predictor
-!  pred(5,:)  = temperature laps rate predictor
-!  pred(6,:)  = cosinusoidal predictor for SSMI/S ascending/descending bias
-!  pred(7,:)  = sinusoidal predictor for SSMI/S
-!  pred(8,:)  = emissivity sensitivity predictor for land/sea differences
-!  pred(9,:)  = fourth order polynomial of angle bias correction
-!  pred(10,:) = third order polynomial of angle bias correction
-!  pred(11,:) = second order polynomial of angle bias correction
-!  pred(12,:) = first order polynomial of angle bias correction
-         if (lupd_satbiasc) then ! bias predictors only used if lupd_satbiasc=T
-            x_biaspred(1,nob) = BCPred_Constant(i) !  global offset
-            x_biaspred(2,nob) = BCPred_Scan_Angle(i) ! zenith angle predictor, not used
-            x_biaspred(3,nob) = BCPred_Cloud_Liquid_Water(i) ! CLW bias correction
-            x_biaspred(4,nob) = BCPred_Lapse_Rate_Squared(i) ! square lapse rate bias corr
-            x_biaspred(5,nob) = BCPred_Lapse_Rate(i) ! lapse rate bias correction
-            x_biaspred(6,nob) = BCPred_Cosine_Latitude_times_Node(i) ! node*cos(lat) bias correction for SSMIS
-            x_biaspred(7,nob) = BCPred_Sine_Latitude(i) ! sin(lat) bias correction for SSMIS
-            if (emiss_bc) then
-               x_biaspred(8,nob) = BCPred_Emissivity(i)
-               nn = 9
-            else
-               nn = 8
-            endif
-
-            if (adp_anglebc) then
-               x_biaspred(nn  ,nob)  = BCPred_angord(1,i) ! 4th order scan angle (predictor)
-               x_biaspred(nn+1,nob)  = BCPred_angord(2,i) ! 3rd order scan angle (predictor)
-               x_biaspred(nn+2,nob)  = BCPred_angord(3,i) ! 2nd order scan angle (predictor)
-               x_biaspred(nn+3,nob)  = BCPred_angord(4,i) ! 1st order scan angle (predictor)
-            endif
-            ! total angle dependent bias correction (sum of four terms)
-            x_biaspred(npred+1,nob) = BC_Fixed_Scan_Position(i) 
-         else
-            x_biaspred(:,nob)=zero ! lupd_biaspredc=F, don't need bias predictors
-         endif
-
      enddo
 
      deallocate(Satinfo_Chan, Use_Flag, error_variance, chaninfoidx)
@@ -483,15 +407,6 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
      if (use_correlated_oberrs) then
          deallocate(Obs_Minus_Forecast_adjusted_scaled,Inv_Error_scaled,&
                     Observation_scaled)
-     endif
-     if (lupd_satbiasc) then ! bias predictors only used if lupd_satbiasc=T
-        deallocate(BC_Fixed_Scan_Position, BCPred_Constant, BCPred_Scan_Angle,      &
-                  BCPred_Cloud_Liquid_Water, BCPred_Lapse_Rate_Squared,             &
-                  BCPred_Lapse_Rate)
-
-        deallocate(BCPred_Cosine_Latitude_times_Node, BCPred_Sine_Latitude)
-        if (emiss_bc)    deallocate(BCPred_Emissivity)
-        if (adp_anglebc) deallocate(BCPred_angord)
      endif
      deallocate(Observation_Operator_Jacobian_stind, Observation_Operator_Jacobian_endind, &
                 Observation_Operator_Jacobian_val)
