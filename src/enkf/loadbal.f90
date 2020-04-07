@@ -102,7 +102,7 @@ module loadbal
 use mpimod, only: mpi_comm_world
 use mpisetup, only: mpi_real4,mpi_sum,mpi_comm_io,mpi_in_place,numproc,nproc,&
                 mpi_integer,mpi_wtime,mpi_status,mpi_real8,mpi_max
-use params, only: datapath, nanals, simple_partition, nobsl_max,&
+use params, only: datapath, nanals, nobsl_max,&
                   neigv, corrlengthnh, corrlengthsh, corrlengthtr, letkf_bruteforce_search
 use enkf_obsmod, only: nobstot, obloc, oblnp, ensmean_ob, obtime, anal_ob, anal_ob_modens, corrlengthsq
 use kinds, only: r_kind, i_kind, r_double, r_single

@@ -123,10 +123,7 @@ logical, public :: getkf_inflation=.false.
 ! use DEnKF approx to EnKF perturbation update.
 ! Implies getkf=T
 ! See Sakov and Oke 2008 https://doi.org/10.1111/j.1600-0870.2007.00299.x
-logical, public :: denkf=.false.
-! simple_partition=.false. does more sophisticated
-! load balancing for ob space update.
-logical,public :: simple_partition = .true.
+logical,public :: denkf=.false.
 logical,public :: reducedgrid = .false.
 logical,public :: univaroz = .true.
 logical,public :: regional = .false.
@@ -138,10 +135,6 @@ logical,public :: nmm_restart = .true.
 logical,public :: nmmb = .false.
 ! use brute force search in LETKF instead of kdtree
 logical,public :: letkf_bruteforce_search=.false.
-
-! next two are no longer used, instead they are inferred from anavinfo
-logical,public :: massbal_adjust = .false. 
-integer(i_kind),public :: nvars = -1
 
 ! if true, use ensemble mean qsat in definition of
 ! normalized humidity analysis variable (instead of
@@ -158,7 +151,7 @@ integer(i_kind),public :: ntiles=6
 integer(i_kind),public :: nx_res=0,ny_res=0
 logical,public ::l_pres_add_saved 
 
-namelist /nam_enkf/datestring,datapath,nvars,&
+namelist /nam_enkf/datestring,datapath,&
                    covinflatemax,covinflatemin,&
                    corrlengthnh,corrlengthtr,corrlengthsh,&
                    reducedgrid,nlons,nlats,smoothparm,use_qsatensmean,&
@@ -168,10 +161,10 @@ namelist /nam_enkf/datestring,datapath,nvars,&
                    analpertwtnh_rtpp,analpertwtsh_rtpp,analpertwttr_rtpp,letkf_rtps,&
                    nlevs,nanals,saterrfact,univaroz,regional,use_gfs_nemsio,use_gfs_ncio,&
                    paoverpb_thresh,latbound,delat,pseudo_rh,numiter,biasvar,&
-                   cliptracers,simple_partition,adp_anglebc,angord,&
+                   cliptracers,adp_anglebc,angord,&
                    newpc4pred,nmmb,nhr_anal,nhr_state, fhr_assim,nbackgrounds,nstatefields, &
                    save_inflation,nobsl_max,&
-                   massbal_adjust,use_edges,emiss_bc,&
+                   use_edges,emiss_bc,&
                    getkf,getkf_inflation,denkf,write_spread_diag,&
                    covinflatenh,covinflatesh,covinflatetr,lnsigcovinfcutoff,letkf_bruteforce_search,&
                    imp_physics,lupp,cnvw_option,use_correlated_oberrs,&
@@ -429,12 +422,6 @@ if (nproc == 0) then
       print *,nanals,' members'
    endif
 
-! check for deprecated namelist variables
-   if (nvars > 0 .or. massbal_adjust) then
-      print *,'WARNING: nvars and massbal_adjust are no longer used!'
-      print *,'They are inferred from the anavinfo file instead.'
-   endif
-   
 end if
 
 ! background forecast time for analysis

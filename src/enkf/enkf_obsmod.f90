@@ -61,12 +61,6 @@ module enkf_obsmod
 !     satellite sensor/channel.
 !   oberrvarmean(jpch_rad):  mean observation error variance for
 !     each satellite sensor/channel for all screened obs
-!   biaspreds(npred+1, nobs_sat):  real array of bias predictors for 
-!     each satellite radiance ob (includes non-adaptive scan angle
-!     bias correction term in biaspreds(1,1:nobs_sat)).
-!     npred from radinfo module
-!   deltapredx(npred,jpch_rad): real array of bias coefficient increments
-!     (initialized to zero, updated by analysis).
 !   obloc(3,nobstot): real array of spherical cartesian coordinates
 !     (x,y,z) of screened observation locations.
 !   stattype(nobstot):  integer array containing prepbufr report type
@@ -116,9 +110,6 @@ real(r_single), public, allocatable, dimension(:) :: obsprd_prior,&
  corrlengthsq,obtimel
 integer(i_kind), public, allocatable, dimension(:) :: numobspersat
 integer(i_kind), allocatable, dimension(:)         :: diagused
-! posterior stats computed in enkf_update
-real(r_single), public, allocatable, dimension(:,:) :: biaspreds
-real(r_kind), public, allocatable, dimension(:,:) :: deltapredx
 ! arrays passed to kdtree2 routines must be single.
 real(r_single), public, allocatable, dimension(:,:) :: obloc
 integer(i_kind), public, allocatable, dimension(:) :: stattype, indxsat
@@ -167,15 +158,12 @@ call radinfo_read()
 ! so bias coefficents have same units as radiance obs.
 ! (by computing RMS values over many analyses)
 if (nproc == 0) print*, 'npred  = ', npred
-! allocate array for bias correction increments, initialize to zero.
-allocate(deltapredx(npred,jpch_rad))
-deltapredx = zero
 t1 = mpi_wtime()
 call mpi_getobs(datapath, datestring, nobs_conv, nobs_oz, nobs_sat, nobstot,  &
                 nobs_convdiag,nobs_ozdiag, nobs_satdiag, nobstotdiag,         &
                 obsprd_prior, ensmean_ob, ob,                                 &
                 oberrvar, obloclon, obloclat, obpress,                        &
-                obtime, oberrvar_orig, stattype, obtype, biaspreds, diagused, &
+                obtime, oberrvar_orig, stattype, obtype, diagused,            &
                 anal_ob,anal_ob_modens,anal_ob_cp,anal_ob_modens_cp,          &
                 shm_win,shm_win2, indxsat, nanals, neigv)
 
@@ -359,8 +347,6 @@ if (allocated(obtime)) deallocate(obtime)
 if (allocated(oblnp)) deallocate(oblnp)
 if (allocated(numobspersat)) deallocate(numobspersat)
 if (allocated(obloc)) deallocate(obloc)
-if (allocated(biaspreds)) deallocate(biaspreds)
-if (allocated(deltapredx)) deallocate(deltapredx)
 if (allocated(indxsat)) deallocate(indxsat)
 if (allocated(obtype)) deallocate(obtype)
 if (allocated(diagused)) deallocate(diagused)

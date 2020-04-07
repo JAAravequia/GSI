@@ -99,7 +99,7 @@ use controlvec, only: ncdim, index_pres
 use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, oblnp, &
                   nobstot, nobs_conv, nobs_oz, nobs_sat,&
                   obfit_prior, obsprd_prior,&
-                  numobspersat, biaspreds, corrlengthsq,&
+                  numobspersat, corrlengthsq,&
                   obtype, anal_ob, anal_ob_modens, obloclat, obloclon, stattype
 use constants, only: pi, one, zero, rad2deg, deg2rad, rearth
 use params, only: nlevs, sprd_tol, datapath, nanals, &

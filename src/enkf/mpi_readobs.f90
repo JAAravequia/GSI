@@ -59,7 +59,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
                       sprd_ob, ensmean_ob, ob, &
                       oberr, oblon, oblat, obpress, &
                       obtime, oberrorig, obcode, obtype, &
-                      biaspreds, diagused,  anal_ob, anal_ob_modens, anal_ob_cp, anal_ob_modens_cp, &
+                      diagused,  anal_ob, anal_ob_modens, anal_ob_cp, anal_ob_modens_cp, &
                       shm_win, shm_win2, indxsat, nanals, neigv)
     character*500, intent(in) :: obspath
     character*10, intent(in) :: datestring
@@ -68,7 +68,6 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     real(r_single), allocatable, dimension(:)   :: obpress,obtime,oberrorig,sprd_ob
     integer(i_kind), allocatable, dimension(:)  :: obcode,indxsat
     integer(i_kind), allocatable, dimension(:)  :: diagused
-    real(r_single), allocatable, dimension(:,:) :: biaspreds
     ! pointers used for MPI-3 shared memory manipulations.
     real(r_single), pointer, dimension(:,:)     :: anal_ob, anal_ob_modens
     type(c_ptr) anal_ob_cp, anal_ob_modens_cp
@@ -117,7 +116,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
        allocate(sprd_ob(nobs_tot),ob(nobs_tot),oberr(nobs_tot),oblon(nobs_tot),&
        oblat(nobs_tot),obpress(nobs_tot),obtime(nobs_tot),oberrorig(nobs_tot),obcode(nobs_tot),&
        obtype(nobs_tot),ensmean_ob(nobs_tot),&
-       biaspreds(npred+1, nobs_sat),indxsat(nobs_sat), diagused(nobs_totdiag))
+       indxsat(nobs_sat), diagused(nobs_totdiag))
     else
 ! stop if no obs found (must be an error somewhere).
        print *,'no obs found!'
@@ -211,7 +210,6 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
         id,nanal,nmem)
     end if
     if (nobs_sat > 0) then
-      biaspreds = 0. ! initialize bias predictor array to zero.
 ! last nobs_sat are satellite radiance obs.
       call get_satobs_data(obspath, datestring, nobs_sat, nobs_satdiag, &
         ensmean_ob(nobs_conv+nobs_oz+1:nobs_tot),         &
@@ -226,7 +224,7 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
         obcode(nobs_conv+nobs_oz+1:nobs_tot),             &
         oberrorig(nobs_conv+nobs_oz+1:nobs_tot),          &
         obtype(nobs_conv+nobs_oz+1:nobs_tot),             &
-        biaspreds,indxsat,                                &
+        indxsat,                                          &
         diagused(nobs_convdiag+nobs_ozdiag+1:nobs_totdiag),&
         id,nanal,nmem)
     end if ! read obs.

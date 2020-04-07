@@ -57,7 +57,6 @@ subroutine get_num_satobs(obspath,datestring,num_obs_tot,num_obs_totdiag,id)
 
     character(len=500) obsfile
     character(len=20) ::  sat_type
-    character(len=4) :: pe_name
     integer(i_kind) iunit, nsat, nobs, nchans, nkeep, i, jpchstart
     logical fexist
     real(r_kind) :: errorlimit,errorlimit2
@@ -151,12 +150,12 @@ end subroutine get_num_satobs
 
 ! read radiance data from netcdf file
 subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, hx, hx_modens, x_obs, x_err, &
-           x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_biaspred, x_indx, x_used, id, nanal, nmem)
+           x_lon, x_lat, x_press, x_time, x_channum, x_errorig, x_type, x_indx, x_used, id, nanal, nmem)
   use nc_diag_read_mod, only: nc_diag_read_get_var
   use nc_diag_read_mod, only: nc_diag_read_get_dim, nc_diag_read_get_global_attr
   use nc_diag_read_mod, only: nc_diag_read_init, nc_diag_read_close
 
-  use radinfo, only: iuse_rad,nusis,jpch_rad,npred,adp_anglebc,emiss_bc
+  use radinfo, only: iuse_rad,nusis,jpch_rad
   use params, only: nanals, neigv, vlocal_evecs
   use statevec, only: state_d
   use constants, only: deg2rad, zero
@@ -181,21 +180,18 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
   real(r_single), dimension(nobs_max), intent(out) :: x_press, x_time
   integer(i_kind), dimension(nobs_max), intent(out) :: x_channum, x_indx
   character(len=20), dimension(nobs_max), intent(out) :: x_type
-  real(r_single), dimension(npred+1,nobs_max), intent(out) :: x_biaspred
   integer(i_kind), dimension(nobs_maxdiag), intent(out) :: x_used
 
 
   character(len=10), intent(in) :: id
   integer(i_kind), intent(in)   :: nanal, nmem
 
-  character*500 obsfile, obsfile2
-  character(len=4) pe_name
+  character*500 obsfile
 
   character(len=20) ::  sat_type
 
   integer(i_kind) iunit, nobs, nobdiag, i, nsat, jpchstart, nchans
-  integer(i_kind) iunit2, nob, nobs2, nnz, nind, nn
-  integer(i_kind) npred_radiag, angord
+  integer(i_kind) nob, nnz, nind
   logical fexist
   real(r_kind) :: errorlimit,errorlimit2
   real(r_double) t1,t2,tsum,tsum2
@@ -212,16 +208,10 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
   real(r_single), dimension(:), allocatable :: Latitude, Longitude, Time
   real(r_single), dimension(:), allocatable :: Obs_Minus_Forecast_adjusted
   real(r_single), dimension(:), allocatable :: Obs_Minus_Forecast_adjusted_scaled
-  real(r_single), dimension(:), allocatable :: Obs_Minus_Forecast_adjusted_scaled2
-  real(r_single), dimension(:), allocatable :: Obs_Minus_Forecast_unadjusted, Obs_Minus_Forecast_adjusted2
+  real(r_single), dimension(:), allocatable :: Obs_Minus_Forecast_unadjusted
   integer(i_kind), allocatable, dimension (:,:) :: Observation_Operator_Jacobian_stind
   integer(i_kind), allocatable, dimension (:,:) :: Observation_Operator_Jacobian_endind
   real(r_single), allocatable, dimension (:,:) :: Observation_Operator_Jacobian_val
-  real(r_single), dimension(:), allocatable :: BC_Fixed_Scan_Position, BCPred_Constant, BCPred_Scan_Angle
-  real(r_single), dimension(:), allocatable :: BCPred_Cloud_Liquid_Water, BCPred_Lapse_Rate_Squared, BCPred_Lapse_Rate
-  real(r_single), dimension(:), allocatable :: BCPred_Cosine_Latitude_times_Node, BCPred_Sine_Latitude
-  real(r_single), dimension(:), allocatable :: BCPred_Emissivity
-  real(r_single), allocatable, dimension (:,:) :: BCPred_angord
   integer(i_kind) :: ix, iy, it, ixp, iyp, itp, nprof
   real(r_kind) :: delx, dely, delxp, delyp, delt, deltp
 
@@ -231,7 +221,6 @@ subroutine get_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean,
   eps = 1.e-3
 
   tsum = 0; tsum2 = 0
-  npred_radiag=npred
 
   hx = zero
   nob = 0
@@ -448,7 +437,6 @@ subroutine write_satobs_data(obspath, datestring, nobs_max, nobs_maxdiag, &
   character(len=10), intent(in) :: id, gesid
 
   character*500 obsfile, obsfile2
-  character(len=4) pe_name
   character(len=20) ::  sat_type
 
   integer(i_kind) :: iunit, nobsid
