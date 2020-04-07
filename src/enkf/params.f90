@@ -124,7 +124,6 @@ logical, public :: getkf_inflation=.false.
 ! See Sakov and Oke 2008 https://doi.org/10.1111/j.1600-0870.2007.00299.x
 logical,public :: denkf=.false.
 logical,public :: reducedgrid = .false.
-logical,public :: univaroz = .true.
 logical,public :: regional = .false.
 logical,public :: use_gfs_nemsio = .false.
 logical,public :: use_gfs_ncio = .false.
@@ -158,7 +157,7 @@ namelist /nam_enkf/datestring,datapath,&
                    statefileprefixes,statesfcfileprefixes, &
                    analpertwtnh,analpertwtsh,analpertwttr,sprd_tol,&
                    analpertwtnh_rtpp,analpertwtsh_rtpp,analpertwttr_rtpp,letkf_rtps,&
-                   nlevs,nanals,saterrfact,univaroz,regional,use_gfs_nemsio,use_gfs_ncio,&
+                   nlevs,nanals,saterrfact,regional,use_gfs_nemsio,use_gfs_ncio,&
                    paoverpb_thresh,latbound,delat,pseudo_rh,numiter,biasvar,&
                    cliptracers,adp_anglebc,angord,&
                    newpc4pred,nmmb,nhr_anal,nhr_state, fhr_assim,nbackgrounds,nstatefields, &

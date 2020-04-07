@@ -143,10 +143,10 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
   character(len=8), intent(in) :: id
   integer(i_kind), intent(in)  :: nanal, nmem
 
-  character*500    :: obsfile, obsfile2
+  character*500    :: obsfile
 
   integer(i_kind) :: nobs_curr, nob, nobdiag, i, nsat, nnz, nind, nprof
-  integer(i_kind) :: iunit, iunit2
+  integer(i_kind) :: iunit
 
   real(r_double) t1,t2,tsum
 
@@ -158,7 +158,7 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
   integer(i_kind), allocatable, dimension (:) :: Analysis_Use_Flag
   real(r_single),  allocatable, dimension (:) :: Errinv
   real(r_single),  allocatable, dimension (:) :: Observation
-  real(r_single),  allocatable, dimension (:) :: Obs_Minus_Forecast_adjusted, Obs_Minus_Forecast_adjusted2
+  real(r_single),  allocatable, dimension (:) :: Obs_Minus_Forecast_adjusted
   real(r_single),  allocatable, dimension (:) :: Obs_Minus_Forecast_unadjusted
   integer(i_kind), allocatable, dimension (:,:) :: Observation_Operator_Jacobian_stind
   integer(i_kind), allocatable, dimension (:,:) :: Observation_Operator_Jacobian_endind
@@ -274,12 +274,12 @@ subroutine get_ozobs_data(obspath, datestring, nobs_max, nobs_maxdiag, hx_mean, 
                 nprof = nprof + 1
              endif
              call init_raggedarr(hxpert, dhx_dx%nnz)
-             call calc_linhx(hx_mean(nob), state_d(:,:,:,nmem),       &
-                             dhx_dx, hxpert, hx(nob),                 &
+             call calc_linhx(state_d(:,:,:,nmem),              &
+                             dhx_dx, hxpert, hx(nob),          &
                              ix, delx, ixp, delxp, iy, dely,   &
                              iyp, delyp, it, delt, itp, deltp)
              ! compute modulated ensemble in obs space
-             if (neigv>0) call calc_linhx_modens(hx_mean(nob),dhx_dx,hxpert,hx_modens(:,nob),vlocal_evecs)
+             if (neigv>0) call calc_linhx_modens(dhx_dx,hxpert,hx_modens(:,nob),vlocal_evecs)
              t2 = mpi_wtime()
              tsum = tsum + t2-t1
 

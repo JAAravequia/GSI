@@ -444,19 +444,19 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
               if (abs(rlat-rlat_prev) > eps .or. &
                  abs(rlon-rlon_prev) > eps .or. &
                  abs(rtim-rtim_prev) > eps) then
-                 call setup_linhx(rlat,rlon,rtim,              &
+                 call setup_linhx(rlat,rlon,rtim,               &
                                ix, delx, ixp, delxp, iy, dely,  &
                                iyp, delyp, it, delt, itp, deltp)
               else
                  nprof = nprof + 1
               endif
               call init_raggedarr(hxpert, dhx_dx%nnz)
-              call calc_linhx(hx_mean(nob), state_d(:,:,:,nmem),&
+              call calc_linhx(state_d(:,:,:,nmem),              &
                               dhx_dx, hxpert, hx(nob),          &
                               ix, delx, ixp, delxp, iy, dely,   &
                               iyp, delyp, it, delt, itp, deltp)
               ! compute modulated ensemble in obs space
-              if (neigv>0) call calc_linhx_modens(hx_mean(nob),dhx_dx,hxpert,hx_modens(:,nob),vlocal_evecs)
+              if (neigv>0) call calc_linhx_modens(dhx_dx,hxpert,hx_modens(:,nob),vlocal_evecs)
 
               t2 = mpi_wtime()
               tsum = tsum + t2-t1
@@ -532,12 +532,12 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
                                   iyp, delyp, it, delt, itp, deltp)
                  endif
                  call init_raggedarr(hxpert, dhx_dx%nnz)
-                 call calc_linhx(hx_mean(nob), state_d(:,:,:,nmem),    &
-                                 dhx_dx, hxpert, hx(nob),              &
+                 call calc_linhx(state_d(:,:,:,nmem),              &
+                                 dhx_dx, hxpert, hx(nob),          &
                                  ix, delx, ixp, delxp, iy, dely,   &
                                  iyp, delyp, it, delt, itp, deltp)
                  ! compute modulated ensemble in obs space
-                 if (neigv>0) call calc_linhx_modens(hx_mean(nob),dhx_dx,hxpert,hx_modens(:,nob),vlocal_evecs)
+                 if (neigv>0) call calc_linhx_modens(dhx_dx,hxpert,hx_modens(:,nob),vlocal_evecs)
                  t2 = mpi_wtime()
                  tsum = tsum + t2-t1
                  call delete(dhx_dx)
