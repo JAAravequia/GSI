@@ -143,18 +143,6 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
        call MPI_Win_allocate_shared(win_size2, disp_unit, MPI_INFO_NULL,&
                                     mpi_comm_shmem, anal_ob_modens_cp, shm_win2, ierr)
     endif
-    if (nproc_shm == 0) then
-       ! create shared memory segment on each shared mem comm
-       call MPI_Win_lock(MPI_LOCK_EXCLUSIVE,0,MPI_MODE_NOCHECK,shm_win,ierr)
-       call MPI_Win_unlock(0, shm_win, ierr)
-       if (neigv > 0) then
-          call MPI_Win_lock(MPI_LOCK_EXCLUSIVE,0,MPI_MODE_NOCHECK,shm_win2,ierr)
-          call MPI_Win_unlock(0, shm_win2, ierr)
-       endif
-    endif
-    ! barrier here to make sure no tasks try to access shared
-    ! memory segment before it is created.
-    call mpi_barrier(mpi_comm_world, ierr)
     ! associate fortran pointer with c pointer to shared memory 
     ! segment (containing observation prior ensemble) on each task.
     call MPI_Win_shared_query(shm_win, 0, segment_size, disp_unit, anal_ob_cp, ierr)
@@ -260,7 +248,6 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
         endif
         t2 = mpi_wtime()
         print *,'time to gather ob prior ensemble on root = ',t2-t1
-
      else ! nproc != 0
         ! send to root.
         call mpi_send(mem_ob,nobs_tot,mpi_real4,0,1,mpi_comm_io,ierr)
@@ -272,37 +259,12 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
 
     enddo ! nanal loop (loop over ens members on each task)
 
-! make anal_ob contain ob prior ensemble *perturbations*
-    if (nproc == 0) then
-       analsim1=1._r_single/float(nanals-1)
-!$omp parallel do private(nob)
-       do nob=1,nobs_tot
-! compute sprd
-          if (neigv > 0) then
-             sprd_ob(nob) = sum(anal_ob_modens(:,nob)**2)*analsim1
-          else
-             sprd_ob(nob) = sum(anal_ob(:,nob)**2)*analsim1
-          endif
-       enddo
-!$omp end parallel do
-       print *, 'prior spread conv: ', minval(sprd_ob(1:nobs_conv)), maxval(sprd_ob(1:nobs_conv))
-       print *, 'prior spread oz: ', minval(sprd_ob(nobs_conv+1:nobs_conv+nobs_oz)), &
-                                     maxval(sprd_ob(nobs_conv+1:nobs_conv+nobs_oz))
-       print *, 'prior spread sat: ',minval(sprd_ob(nobs_conv+nobs_oz+1:nobs_tot)), &
-                                     maxval(sprd_ob(nobs_conv+nobs_oz+1:nobs_tot))
-       do nob =nobs_conv+nobs_oz+1 , nobs_tot
-          if (sprd_ob(nob) > 1000.) then 
-             print *, nob, ' sat spread: ', sprd_ob(nob), ', ensmean_ob: ', ensmean_ob(nob), &
-                           ', anal_ob: ', anal_ob(:,nob), ', mem_ob: ', mem_ob(nob)
-          endif
-       enddo
-    endif
 
     if (allocated(mem_ob)) deallocate(mem_ob)
     if (allocated(mem_ob_modens)) deallocate(mem_ob_modens)
 
 ! obs prior ensemble now defined on root task, bcast to other tasks.
-    if (nproc == 0) print *,'broadcast ob prior ensemble perturbatons and spread'
+    if (nproc == 0) print *,'broadcast ob prior ensemble perturbations'
     if (nproc == 0) t1 = mpi_wtime()
     if (nproc_shm == 0) then
        ! bcast entire obs prior ensemble from root task 
@@ -332,15 +294,33 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
         print *,'time to broadcast ob prior ensemble perturbations = ',t2-t1
     endif
 
-! broadcast ob prior ensemble spread to every task.
-
-    if (nproc == 0) t1 = mpi_wtime()
-    call mpi_bcast(sprd_ob,nobs_tot,mpi_real4,0,mpi_comm_world,ierr)
-    if (nproc == 0) then
-        t2 = mpi_wtime()
-        print *,'time to broadcast ob prior ensemble spread = ',t2-t1
+! compute spread
+    analsim1=1._r_single/float(nanals-1)
+!$omp parallel do private(nob)
+    do nob=1,nobs_tot
+       sprd_ob(nob) = sum(anal_ob(:,nob)**2)*analsim1
+    enddo
+!$omp end parallel do
+    if (neigv > 0) then
+!$omp parallel do private(nob)
+       do nob=1,nobs_tot
+          sprd_ob(nob) = sum(anal_ob_modens(:,nob)**2)*analsim1
+       enddo
+!$omp end parallel do
     endif
-
+    if (nproc == 0) then
+       print *, 'prior spread conv: ', minval(sprd_ob(1:nobs_conv)), maxval(sprd_ob(1:nobs_conv))
+       print *, 'prior spread oz: ', minval(sprd_ob(nobs_conv+1:nobs_conv+nobs_oz)), &
+                                     maxval(sprd_ob(nobs_conv+1:nobs_conv+nobs_oz))
+       print *, 'prior spread sat: ',minval(sprd_ob(nobs_conv+nobs_oz+1:nobs_tot)), &
+                                     maxval(sprd_ob(nobs_conv+nobs_oz+1:nobs_tot))
+       do nob =nobs_conv+nobs_oz+1 , nobs_tot
+          if (sprd_ob(nob) > 1000.) then 
+             print *, nob, ' sat spread: ', sprd_ob(nob), ', ensmean_ob: ', ensmean_ob(nob), &
+                           ', anal_ob: ', anal_ob(:,nob), ', mem_ob: ', mem_ob(nob)
+          endif
+       enddo
+    endif
 
  end subroutine mpi_getobs
 
