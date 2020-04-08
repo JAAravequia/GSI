@@ -656,7 +656,7 @@ contains
   ! writegriddata.f90: write WRF-ARW or WRF-NMM analysis
   !-------------------------------------------------------------------------
 
-  subroutine writegriddata(nanal1,nanal2,vars3d,vars2d,n3d,n2d,levels,ndim,vargrid,no_inflate_flag)
+  subroutine writegriddata(nanal1,nanal2,vars3d,vars2d,n3d,n2d,levels,ndim,vargrid)
     use constants
     use params, only: nbackgrounds, anlfileprefixes, fgfileprefixes
     include 'netcdf.inc'      
@@ -668,7 +668,6 @@ contains
     character(len=max_varname_length), dimension(n3d), intent(in) :: vars3d
     integer, dimension(0:n3d), intent(in) :: levels
     real(r_single), dimension(npts,ndim,nbackgrounds,nanal2-nanal1+1), intent(in) :: vargrid
-    logical, intent(in) :: no_inflate_flag 
       !Not used here, but added to make writegriddata(...) consistent with gridio_gfs.f90
 
     !----------------------------------------------------------------------

@@ -368,7 +368,7 @@ end subroutine readgriddata
   ! writegriddata.f90: write WRF-ARW or WRF-NMM analysis
   !-------------------------------------------------------------------------
 
-subroutine writegriddata(nanal1,nanal2,vars3d,vars2d,n3d,n2d,levels,ndim,vargrid,no_inflate_flag)
+subroutine writegriddata(nanal1,nanal2,vars3d,vars2d,n3d,n2d,levels,ndim,vargrid)
     use constants, only: zero, one,fv,half
     use gridinfo,only: eta1_ll,eta2_ll    
     use params, only: nbackgrounds, anlfileprefixes, fgfileprefixes
@@ -387,7 +387,6 @@ subroutine writegriddata(nanal1,nanal2,vars3d,vars2d,n3d,n2d,levels,ndim,vargrid
     character(len=*), dimension(n3d), intent(in) :: vars3d
     integer, dimension(0:n3d), intent(in) :: levels
     real(r_single), dimension(npts,ndim,nbackgrounds,nanal2-nanal1+1), intent(in) :: vargrid
-    logical, intent(in) :: no_inflate_flag
 
     !----------------------------------------------------------------------
     ! Define variables computed within subroutine
@@ -422,7 +421,6 @@ subroutine writegriddata(nanal1,nanal2,vars3d,vars2d,n3d,n2d,levels,ndim,vargrid
     
     write(6,*)"anlfileprefixes, fgfileprefixes are not used in the current implementation", &
                anlfileprefixes, fgfileprefixes  
-    write(6,*)"the no_inflate_flag is not used in the currrent implementation ",no_inflate_flag
     !----------------------------------------------------------------------
     nlevsp1=nlevs+1
 

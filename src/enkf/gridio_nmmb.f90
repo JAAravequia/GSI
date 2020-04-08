@@ -337,7 +337,7 @@ end do ensmemloop     ! loop over ens members read by this task
 
 end subroutine readgriddata
 
-subroutine writegriddata(nanal1,nanal2,vars3d,vars2d,n3d,n2d,levels,ndim,grdin,no_inflate_flag)
+subroutine writegriddata(nanal1,nanal2,vars3d,vars2d,n3d,n2d,levels,ndim,grdin)
 use params, only: nbackgrounds, anlfileprefixes,fgfileprefixes
 
 implicit none
@@ -348,7 +348,6 @@ character(len=max_varname_length), dimension(n3d), intent(in) :: vars3d
 integer, intent(in) :: n2d,n3d,ndim
 integer, dimension(0:n3d), intent(in) :: levels
 real(r_single), dimension(npts,ndim,nbackgrounds,nanal2-nanal1+1), intent(inout) :: grdin
-logical, intent(in) :: no_inflate_flag 
   !Not used here, but added to make writegriddata(...) consistent with gridio_gfs.f90
 
 character(len=500):: filename

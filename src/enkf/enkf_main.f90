@@ -112,7 +112,6 @@ program enkf_main
  implicit none
  integer(i_kind) nth,ierr
  real(r_double) t1,t2
- logical no_inflate_flag
 
  ! initialize MPI.
  call mpi_initialize()
@@ -222,7 +221,7 @@ program enkf_main
  if (nproc == 0) print *,'time in gather_chunks =',t2-t1,'on proc',nproc
 
  t1 = mpi_wtime()
- call write_control(no_inflate_flag)
+ call write_control()
  t2 = mpi_wtime()
  if (nproc == 0) print *,'time in write_control =',t2-t1,'on proc',nproc
 
