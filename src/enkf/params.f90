@@ -313,33 +313,32 @@ delatinv=1.0_r_single/delat
 inquire(file='vlocal_eig.dat',exist=fexist)
 if ( fexist ) then
    open(7,file='vlocal_eig.dat',status="old",action="read")
-else
-   if (nproc .eq. 0) print *, 'error: vlocal_eig.dat does not exist'
-   call stop2(19)
-endif
-read(7,*) neigv,modelspace_vloc_thresh,modelspace_vloc_cutoff
-if (neigv < 1) then
-   if (nproc .eq. 0) print *, 'error: neigv must be greater than zero'
-   call stop2(19)
-endif
-allocate(vlocal_evecs(neigv,nlevs+1))
-if (nproc .eq. 0) then
-   print *,'model-space vertical localization enabled'
-   print *,'neigv = ',neigv
-   print *,'vertical localization cutoff distance (lnp units) =',&
-          modelspace_vloc_cutoff
-   print *,'eigenvector truncation threshold = ',modelspace_vloc_thresh
-   print *,'vertical localization eigenvalues'
-endif
-do i = 1,neigv
-   read(7,*) vlocal_eval
-   if (nproc .eq. 0) print *,i,vlocal_eval
-   do j = 1,nlevs
-      read(7,*) vlocal_evecs(i,j)
+   read(7,*) neigv,modelspace_vloc_thresh,modelspace_vloc_cutoff
+   if (neigv < 1) then
+      if (nproc .eq. 0) print *, 'error: neigv must be greater than zero'
+      call stop2(19)
+   endif
+   allocate(vlocal_evecs(neigv,nlevs+1))
+   if (nproc .eq. 0) then
+      print *,'model-space vertical localization enabled'
+      print *,'neigv = ',neigv
+      print *,'vertical localization cutoff distance (lnp units) =',&
+             modelspace_vloc_cutoff
+      print *,'eigenvector truncation threshold = ',modelspace_vloc_thresh
+      print *,'vertical localization eigenvalues'
+   endif
+   do i = 1,neigv
+      read(7,*) vlocal_eval
+      if (nproc .eq. 0) print *,i,vlocal_eval
+      do j = 1,nlevs
+         read(7,*) vlocal_evecs(i,j)
+      enddo
+      ! nlevs+1 same as level 1 (2d variables treated as surface)
+      vlocal_evecs(i,nlevs+1) = vlocal_evecs(i,1)
    enddo
-   ! nlevs+1 same as level 1 (2d variables treated as surface)
-   vlocal_evecs(i,nlevs+1) = vlocal_evecs(i,1)
-enddo
+else
+   if (nproc == 0) print *,'no vertical localization, no modulated ensemble'
+endif
 close(7)
 
 if (nanals <= numproc) then
