@@ -211,14 +211,12 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
         obtime(nobs_conv+nobs_oz+1:nobs_tot),             &
         obcode(nobs_conv+nobs_oz+1:nobs_tot),             &
         oberrorig(nobs_conv+nobs_oz+1:nobs_tot),          &
-        obtype(nobs_conv+nobs_oz+1:nobs_tot),             &
-        indxsat,                                          &
+        obtype(nobs_conv+nobs_oz+1:nobs_tot),indxsat,     &
         diagused(nobs_convdiag+nobs_ozdiag+1:nobs_totdiag),&
         id,nanal,nmem)
     end if ! read obs.
 
 ! use mpi_send/mpi_recv to gather ob prior ensemble on root.
-! a bit slower, but does not require large temporary array like mpi_gather.
     if (nproc <= ntasks_io-1) then
      if (nproc == 0) then
         t1 = mpi_wtime()
@@ -258,7 +256,6 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     end if ! io task
 
     enddo ! nanal loop (loop over ens members on each task)
-
 
     if (allocated(mem_ob)) deallocate(mem_ob)
     if (allocated(mem_ob_modens)) deallocate(mem_ob_modens)
