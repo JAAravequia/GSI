@@ -71,6 +71,8 @@ program efsoi_main
  ! Scatter chunks for EFSOI
  use scatter_chunks_efsoi, only: scatter_chunks_ob_impact
  use omp_lib, only: omp_get_max_threads
+ ! Needed for rad fixed files 
+ use radinfo, only: init_rad, init_rad_vars 
  
  implicit none
  integer :: ierr, nth
@@ -80,11 +82,15 @@ program efsoi_main
  call mpi_initialize()
  if (nproc==0) call w3tagb('EFSOI_CALC',2018,0319,0055,'NP25')
 
+ call init_rad()
+
  ! read namelist.
  call read_namelist()
 
  ! initialize MPI communicator for IO tasks.
  call mpi_initialize_io(nanals)
+
+ call init_rad_vars()
 
  ! read the necessary inputs for
  ! the EFSOI calculation from file
