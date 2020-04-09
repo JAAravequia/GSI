@@ -96,8 +96,6 @@ program enkf_main
  use observer_enkf, only: init_observer_enkf, destroy_observer_enkf
  ! load balancing
  use loadbal, only: load_balance, loadbal_cleanup, scatter_chunks, gather_chunks
- ! enkf update
- use enkf, only: enkf_update
  ! letkf update
  use letkf, only: letkf_update
  ! posterior ensemble inflation.
@@ -106,8 +104,6 @@ program enkf_main
  use radinfo, only: init_rad, init_rad_vars
  use omp_lib, only: omp_get_max_threads
  use read_diag, only: set_netcdf_read
- ! Observation sensitivity usage
- use enkf_obs_sensitivity, only: init_ob_sens, print_ob_sens, destroy_ob_sens
 
  implicit none
  integer(i_kind) nth,ierr
