@@ -77,8 +77,8 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     real(r_single) :: analsim1
     real(r_double) t1,t2
     character(len=20), allocatable,  dimension(:) ::  obtype
-    integer(i_kind) nob, ierr, iozproc, isatproc, neig, nens1, nens2, na, nmem,&
-            np, nobs_conv, nobs_oz, nobs_sat, nobs_tot, nanal, nanalo, nens
+    integer(i_kind) nob, ierr, iozproc, isatproc, nens1, nens2, na, nmem,&
+              nobs_conv, nobs_oz, nobs_sat, nobs_tot, nanal, nens
     integer(i_kind) :: nobs_convdiag, nobs_ozdiag, nobs_satdiag, nobs_totdiag
     integer(i_kind), intent(in) :: nanals, neigv
 
@@ -139,23 +139,25 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     endif
     call MPI_Win_allocate_shared(win_size, disp_unit, MPI_INFO_NULL,&
                                  mpi_comm_shmem, anal_ob_cp, shm_win, ierr)
+    call MPI_Win_lock(MPI_LOCK_EXCLUSIVE,0,MPI_MODE_NOCHECK,shm_win,ierr)
     if (neigv > 0) then
        call MPI_Win_allocate_shared(win_size2, disp_unit, MPI_INFO_NULL,&
                                     mpi_comm_shmem, anal_ob_modens_cp, shm_win2, ierr)
+       call MPI_Win_lock(MPI_LOCK_EXCLUSIVE,0,MPI_MODE_NOCHECK,shm_win2,ierr)
     endif
     ! associate fortran pointer with c pointer to shared memory 
     ! segment (containing observation prior ensemble) on each task.
     call MPI_Win_shared_query(shm_win, 0, segment_size, disp_unit, anal_ob_cp, ierr)
     call c_f_pointer(anal_ob_cp, anal_ob, [nanals, nobs_tot])
-    call MPI_Win_fence(0, shm_win, ierr)
+    !call MPI_Win_fence(0, shm_win, ierr)
     anal_ob=0
-    call MPI_Win_fence(0, shm_win, ierr)
+    !call MPI_Win_fence(0, shm_win, ierr)
     if (neigv > 0) then
        call MPI_Win_shared_query(shm_win2, 0, segment_size, disp_unit, anal_ob_modens_cp, ierr)
        call c_f_pointer(anal_ob_modens_cp, anal_ob_modens, [nens, nobs_tot])
-       call MPI_Win_fence(0, shm_win2, ierr)
+       !call MPI_Win_fence(0, shm_win2, ierr)
        anal_ob_modens=0
-       call MPI_Win_fence(0, shm_win2, ierr)
+       !call MPI_Win_fence(0, shm_win2, ierr)
     endif
   
 
@@ -225,31 +227,33 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
 
 !   ! populate obs prior ensemble shared array pointer on each io task.
     if (nproc <= ntasks_io-1) then
-       call MPI_Win_fence(0, shm_win, ierr)
+       !print *,nproc,'fill anal_ob ens member',nmem+nproc*nanals_per_iotask
+       !call MPI_Win_fence(0, shm_win, ierr)
        anal_ob(nmem+nproc*nanals_per_iotask,:) = mem_ob(:)
-       call MPI_Win_fence(0, shm_win, ierr)
+       !call MPI_Win_fence(0, shm_win, ierr)
        !print *,nproc,'filled anal_ob ens member',nmem+nproc*nanals_per_iotask
        if (neigv > 0) then
           na = nmem+nproc*nanals_per_iotask
-          call MPI_Win_fence(0, shm_win2, ierr)
+          !call MPI_Win_fence(0, shm_win2, ierr)
           anal_ob_modens(neigv*(na-1)+1:neigv*na,:) = mem_ob_modens(:,:)
-          call MPI_Win_fence(0, shm_win2, ierr)
+          !call MPI_Win_fence(0, shm_win2, ierr)
           !print *,nproc,'filled anal_ob_modens ens members',neigv*(na-1)+1,'to',neigv*na
        endif
     endif
 
     enddo ! nanal loop (loop over ens members on each task)
-! wait here for all tasks before trying to run mpi_allreduce
-    call mpi_barrier(mpi_comm_world, ierr)
-
+    call mpi_barrier(mpi_comm_world,ierr)
+   
 ! obs prior ensemble now defined on root task, bcast to other tasks.
     if (nproc == 0) print *,'broadcast ob prior ensemble perturbations'
     if (nproc == 0) t1 = mpi_wtime()
 ! exchange obs prior ensemble members across all tasks to fully populate shared
 ! memory array pointer on each node.
     if (nproc_shm == 0) then
+       call MPI_Win_unlock(0, shm_win, ierr)
        call mpi_allreduce(mpi_in_place,anal_ob,nanals*nobs_tot,mpi_real4,mpi_sum,mpi_comm_shmemroot,ierr)
        if (neigv > 0) then
+          call MPI_Win_unlock(0, shm_win2, ierr)
           mem_ob_modens = 0.
           do na=1,nanals
              mem_ob_modens(:,:) = anal_ob_modens(neigv*(na-1)+1:neigv*na,:)

@@ -159,7 +159,7 @@ real(r_single),public :: lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh,&
                lnsigcutoffpsnh,lnsigcutoffpstr,lnsigcutoffpssh
 integer, public :: nvars, iassim_order, npefiles
 logical, public :: deterministic, sortinc,letkf_novlocal,  &
-                   huber,univaroz
+                   huber,univaroz,dfs_sort
 logical, public :: letkf_flag=.true.
 logical, public :: modelspace_vloc=.true.
 logical, public :: lupd_obspace_serial=.false.
@@ -196,7 +196,7 @@ namelist /nam_enkf/datestring,datapath,&
                    readin_localization, zhuberleft,zhuberright,&
                    modelspace_vloc,obtimelnh,obtimeltr,obtimelsh,&
                    lupd_satbiasc,paoverpb_thresh,biasvar,npefiles,letkf_flag,&
-                   lobsdiag_forenkf,netcdf_diag,univaroz
+                   lobsdiag_forenkf,netcdf_diag,univaroz,dfs_sort
 namelist /nam_wrf/arw,nmm,nmm_restart
 namelist /nam_fv3/fv3fixpath,nx_res,ny_res,ntiles,l_pres_add_saved
 namelist /satobs_enkf/sattypes_rad,dsis
