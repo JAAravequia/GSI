@@ -351,6 +351,7 @@ if (allocated(obtype)) deallocate(obtype)
 if (allocated(diagused)) deallocate(diagused)
 ! free shared memory segement, fortran pointer to that memory.
 nullify(anal_ob)
+call MPI_Barrier(mpi_comm_world,ierr)
 call MPI_Win_free(shm_win, ierr)
 if (neigv > 0) then
    nullify(anal_ob_modens)

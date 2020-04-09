@@ -139,11 +139,11 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     endif
     call MPI_Win_allocate_shared(win_size, disp_unit, MPI_INFO_NULL,&
                                  mpi_comm_shmem, anal_ob_cp, shm_win, ierr)
-    call MPI_Win_lock(MPI_LOCK_EXCLUSIVE,0,MPI_MODE_NOCHECK,shm_win,ierr)
+    !call MPI_Win_lock(MPI_LOCK_EXCLUSIVE,0,MPI_MODE_NOCHECK,shm_win,ierr)
     if (neigv > 0) then
        call MPI_Win_allocate_shared(win_size2, disp_unit, MPI_INFO_NULL,&
                                     mpi_comm_shmem, anal_ob_modens_cp, shm_win2, ierr)
-       call MPI_Win_lock(MPI_LOCK_EXCLUSIVE,0,MPI_MODE_NOCHECK,shm_win2,ierr)
+       !call MPI_Win_lock(MPI_LOCK_EXCLUSIVE,0,MPI_MODE_NOCHECK,shm_win2,ierr)
     endif
     ! associate fortran pointer with c pointer to shared memory 
     ! segment (containing observation prior ensemble) on each task.
@@ -250,10 +250,10 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
 ! exchange obs prior ensemble members across all tasks to fully populate shared
 ! memory array pointer on each node.
     if (nproc_shm == 0) then
-       call MPI_Win_unlock(0, shm_win, ierr)
+       !call MPI_Win_unlock(0, shm_win, ierr)
        call mpi_allreduce(mpi_in_place,anal_ob,nanals*nobs_tot,mpi_real4,mpi_sum,mpi_comm_shmemroot,ierr)
        if (neigv > 0) then
-          call MPI_Win_unlock(0, shm_win2, ierr)
+          !call MPI_Win_unlock(0, shm_win2, ierr)
           mem_ob_modens = 0.
           do na=1,nanals
              mem_ob_modens(:,:) = anal_ob_modens(neigv*(na-1)+1:neigv*na,:)
