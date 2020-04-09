@@ -158,8 +158,16 @@ real(r_single),public :: lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh,&
                lnsigcutoffsatnh,lnsigcutoffsattr,lnsigcutoffsatsh,&
                lnsigcutoffpsnh,lnsigcutoffpstr,lnsigcutoffpssh
 integer, public :: nvars, iassim_order, npefiles
-logical, public :: deterministic, sortinc,letkf_novlocal, modelspace_vloc,  &
-                   lupd_obspace_serial,varqc, huber, readin_localization
+logical, public :: deterministic, sortinc,letkf_novlocal,  &
+                   huber,univaroz
+logical, public :: letkf_flag=.true.
+logical, public :: modelspace_vloc=.true.
+logical, public :: lupd_obspace_serial=.false.
+logical, public :: readin_localization=.false.
+logical, public :: lupd_satbiasc=.false.
+logical, public :: varqc=.false.
+logical, public :: netcdf_diag=.true.
+logical, public :: lobsdiag_forenkf=.true.
 
 namelist /nam_enkf/datestring,datapath,&
                    covinflatemax,covinflatemin,&
@@ -187,7 +195,8 @@ namelist /nam_enkf/datestring,datapath,&
                    varqc,huber,iassim_order,nvars,sortinc,deterministic,&
                    readin_localization, zhuberleft,zhuberright,&
                    modelspace_vloc,obtimelnh,obtimeltr,obtimelsh,&
-                   paoverpb_thresh,biasvar,npefiles
+                   lupd_satbiasc,paoverpb_thresh,biasvar,npefiles,letkf_flag,&
+                   lobsdiag_forenkf,netcdf_diag,univaroz
 namelist /nam_wrf/arw,nmm,nmm_restart
 namelist /nam_fv3/fv3fixpath,nx_res,ny_res,ntiles,l_pres_add_saved
 namelist /satobs_enkf/sattypes_rad,dsis
@@ -304,6 +313,39 @@ if (fv3_native) then
   nlons = nx_res; nlats = ny_res ! (total number of pts = ntiles*res*res)
 endif
 close(912)
+
+! only letkf with model space vertical localization supported in this vertion
+if (.not. letkf_flag .or. .not. modelspace_vloc) then
+   if (nproc .eq. 0) then
+      print *, 'error: only letkf with model space vert localization supported'
+   endif
+   call stop2(19)
+endif
+if (.not. lobsdiag_forenkf) then
+   if (nproc .eq. 0) then
+      print *, 'error: only lobsdiag_forenkf=T supported'
+   endif
+   call stop2(19)
+endif
+if (.not. netcdf_diag) then
+   if (nproc .eq. 0) then
+      print *, 'error: only netcdf_diag=T supported'
+   endif
+   call stop2(19)
+endif
+if (lupd_obspace_serial .and. nproc == 0) then
+   print *,'warning: lupd_obspace_serial ignored - no serial enkf support'
+endif
+if (varqc .and. nproc == 0) then
+   print *,'warning: varqc ignored - no serial enkf support'
+endif
+if (lupd_satbiasc .and. nproc == 0) then
+   print *,'warning: lupd_satbiasc ignored - no serial enkf support'
+endif
+if (readin_localization .and. nproc == 0) then
+   print *,'warning: read_localization ignored'
+   print *,'corrlength*, nobsl_max, vlocal_eig.dat used to set localization'
+endif
 
 ! find number of satellite files
 nsats_rad=0
