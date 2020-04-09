@@ -147,15 +147,15 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     ! segment (containing observation prior ensemble) on each task.
     call MPI_Win_shared_query(shm_win, 0, segment_size, disp_unit, anal_ob_cp, ierr)
     call c_f_pointer(anal_ob_cp, anal_ob, [nanals, nobs_tot])
-    call MPI_WIN_FENCE(0, shm_win, ierr)
+    call MPI_Win_fence(0, shm_win, ierr)
     anal_ob=0
-    call MPI_WIN_FENCE(0, shm_win, ierr)
+    call MPI_Win_fence(0, shm_win, ierr)
     if (neigv > 0) then
        call MPI_Win_shared_query(shm_win2, 0, segment_size, disp_unit, anal_ob_modens_cp, ierr)
        call c_f_pointer(anal_ob_modens_cp, anal_ob_modens, [nens, nobs_tot])
-       call MPI_WIN_FENCE(0, shm_win2, ierr)
+       call MPI_Win_fence(0, shm_win2, ierr)
        anal_ob_modens=0
-       call MPI_WIN_FENCE(0, shm_win2, ierr)
+       call MPI_Win_fence(0, shm_win2, ierr)
     endif
   
 
@@ -225,19 +225,22 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
 
 !   ! populate obs prior ensemble shared array pointer on each io task.
     if (nproc <= ntasks_io-1) then
-       call MPI_WIN_FENCE(0, shm_win, ierr)
+       call MPI_Win_fence(0, shm_win, ierr)
        anal_ob(nmem+nproc*nanals_per_iotask,:) = mem_ob(:)
-       call MPI_WIN_FENCE(0, shm_win, ierr)
-       !print *,nproc,'filling anal_ob ens member',nmem+nproc*nanals_per_iotask
+       call MPI_Win_fence(0, shm_win, ierr)
+       !print *,nproc,'filled anal_ob ens member',nmem+nproc*nanals_per_iotask
        if (neigv > 0) then
           na = nmem+nproc*nanals_per_iotask
-          call MPI_WIN_FENCE(0, shm_win2, ierr)
+          call MPI_Win_fence(0, shm_win2, ierr)
           anal_ob_modens(neigv*(na-1)+1:neigv*na,:) = mem_ob_modens(:,:)
-          call MPI_WIN_FENCE(0, shm_win2, ierr)
+          call MPI_Win_fence(0, shm_win2, ierr)
+          !print *,nproc,'filled anal_ob_modens ens members',neigv*(na-1)+1,'to',neigv*na
        endif
     endif
 
     enddo ! nanal loop (loop over ens members on each task)
+! wait here for all tasks before trying to run mpi_allreduce
+    call mpi_barrier(mpi_comm_world, ierr)
 
 ! obs prior ensemble now defined on root task, bcast to other tasks.
     if (nproc == 0) print *,'broadcast ob prior ensemble perturbations'
