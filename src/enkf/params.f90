@@ -86,12 +86,12 @@ integer(i_kind),public ::  nlevs,nanals,numiter,&
                            nanals_per_iotask, ntasks_io
 integer(i_kind),public, allocatable, dimension(:) ::  nanal1,nanal2
 integer(i_kind),public :: nsats_rad,nsats_oz,imp_physics
-real(r_single),public ::  covinflatemax,covinflatemin,smoothparm,biasvar
+real(r_single),public ::  covinflatemax,covinflatemin,smoothparm
 real(r_single),public ::  corrlengthnh,corrlengthtr,corrlengthsh
 real(r_single),public :: analpertwtnh,analpertwtsh,analpertwttr,sprd_tol,saterrfact
 real(r_single),public :: analpertwtnh_rtpp,analpertwtsh_rtpp,analpertwttr_rtpp
 real(r_single),public :: letkf_rtps=0.0
-real(r_single),public :: paoverpb_thresh,latbound,delat,p5delat,delatinv
+real(r_single),public :: latbound,delat,p5delat,delatinv
 real(r_single),public :: latboundpp,latboundpm,latboundmp,latboundmm
 
 real(r_single),public :: covinflatenh,covinflatesh,covinflatetr,lnsigcovinfcutoff
@@ -149,6 +149,18 @@ integer(i_kind),public :: ntiles=6
 integer(i_kind),public :: nx_res=0,ny_res=0
 logical,public ::l_pres_add_saved 
 
+! not used anymore
+real(r_single),public :: paoverpb_thresh,biasvar
+real(r_single),public :: obtimelnh,obtimeltr,obtimelsh
+real(r_single),public :: zhuberleft,zhuberright
+real(r_single),public :: covl_minfact, covl_efold
+real(r_single),public :: lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh,&
+               lnsigcutoffsatnh,lnsigcutoffsattr,lnsigcutoffsatsh,&
+               lnsigcutoffpsnh,lnsigcutoffpstr,lnsigcutoffpssh
+integer, public :: nvars, iassim_order, npefiles
+logical, public :: deterministic, sortinc,letkf_novlocal, modelspace_vloc,  &
+                   lupd_obspace_serial,varqc, huber, readin_localization
+
 namelist /nam_enkf/datestring,datapath,&
                    covinflatemax,covinflatemin,&
                    corrlengthnh,corrlengthtr,corrlengthsh,&
@@ -158,7 +170,7 @@ namelist /nam_enkf/datestring,datapath,&
                    analpertwtnh,analpertwtsh,analpertwttr,sprd_tol,&
                    analpertwtnh_rtpp,analpertwtsh_rtpp,analpertwttr_rtpp,letkf_rtps,&
                    nlevs,nanals,saterrfact,regional,use_gfs_nemsio,use_gfs_ncio,&
-                   paoverpb_thresh,latbound,delat,pseudo_rh,numiter,biasvar,&
+                   latbound,delat,pseudo_rh,numiter,&
                    cliptracers,adp_anglebc,angord,&
                    newpc4pred,nmmb,nhr_anal,nhr_state, fhr_assim,nbackgrounds,nstatefields, &
                    save_inflation,nobsl_max,&
@@ -166,7 +178,16 @@ namelist /nam_enkf/datestring,datapath,&
                    getkf,getkf_inflation,denkf,write_spread_diag,&
                    covinflatenh,covinflatesh,covinflatetr,lnsigcovinfcutoff,letkf_bruteforce_search,&
                    imp_physics,lupp,cnvw_option,use_correlated_oberrs,&
-                   fv3_native
+                   fv3_native,&
+! these are not used, included for backwards compatibility
+                   lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh,&
+                   lnsigcutoffsatnh,lnsigcutoffsattr,lnsigcutoffsatsh,&
+                   lnsigcutoffpsnh,lnsigcutoffpstr,lnsigcutoffpssh,&
+                   covl_minfact,covl_efold,lupd_obspace_serial,letkf_novlocal,&
+                   varqc,huber,iassim_order,nvars,sortinc,deterministic,&
+                   readin_localization, zhuberleft,zhuberright,&
+                   modelspace_vloc,obtimelnh,obtimeltr,obtimelsh,&
+                   paoverpb_thresh,biasvar,npefiles
 namelist /nam_wrf/arw,nmm,nmm_restart
 namelist /nam_fv3/fv3fixpath,nx_res,ny_res,ntiles,l_pres_add_saved
 namelist /satobs_enkf/sattypes_rad,dsis
