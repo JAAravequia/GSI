@@ -229,7 +229,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
   integer, intent(in)           :: nanal, nmem
 
   real(r_double) t1,t2,tsum
-  character*500 obsfile, obsfile2
+  character*500 obsfile
 
   type(sparr2)    :: dhx_dx_read
   type(sparr)     :: dhx_dx
@@ -237,7 +237,7 @@ subroutine get_convobs_data(obspath, datestring, nobs_max, nobs_maxdiag,   &
 
   character(len=3) :: obtype
 
-  integer(i_kind) :: iunit, iunit2, itype
+  integer(i_kind) :: iunit, itype
   integer(i_kind) :: nobs, nobdiag, i, nob, nnz, nind
   real(r_kind) :: errorlimit,errorlimit2,error,errororig
   real(r_kind) :: obmax, pres
