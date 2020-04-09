@@ -147,10 +147,17 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
     ! segment (containing observation prior ensemble) on each task.
     call MPI_Win_shared_query(shm_win, 0, segment_size, disp_unit, anal_ob_cp, ierr)
     call c_f_pointer(anal_ob_cp, anal_ob, [nanals, nobs_tot])
+    call MPI_WIN_FENCE(0, shm_win, ierr)
+    anal_ob=0
+    call MPI_WIN_FENCE(0, shm_win, ierr)
     if (neigv > 0) then
        call MPI_Win_shared_query(shm_win2, 0, segment_size, disp_unit, anal_ob_modens_cp, ierr)
        call c_f_pointer(anal_ob_modens_cp, anal_ob_modens, [nens, nobs_tot])
+       call MPI_WIN_FENCE(0, shm_win2, ierr)
+       anal_ob_modens=0
+       call MPI_WIN_FENCE(0, shm_win2, ierr)
     endif
+  
 
 ! read ensemble mean and every ensemble member
     if (nproc <= ntasks_io-1) then
@@ -216,80 +223,45 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
         id,nanal,nmem)
     end if ! read obs.
 
-! use mpi_send/mpi_recv to gather ob prior ensemble on root.
+!   ! populate obs prior ensemble shared array pointer on each io task.
     if (nproc <= ntasks_io-1) then
-     if (nproc == 0) then
-        t1 = mpi_wtime()
-        anal_ob(nmem,:) = mem_ob(:)
-        ! if nproc <= ntasks_io-1, then 
-        ! nanal = nmem+nproc*nanals_per_iotask
-        do np=2,ntasks_io
-           call mpi_recv(mem_ob,nobs_tot,mpi_real4,np-1, &
-                         1,mpi_comm_io,mpi_status,ierr)
-           anal_ob(nmem+(np-1)*nanals_per_iotask,:) = mem_ob(:)
-        enddo
-        ! mem_ob_modens and anal_ob_modens not referenced unless neigv>0
-        if (neigv > 0) then
-           do neig=1,neigv
-              nanalo = neigv*(nmem-1) + neig
-              anal_ob_modens(nanalo,:) = mem_ob_modens(neig,:)
-           enddo
-           do np=2,ntasks_io
-              call mpi_recv(mem_ob_modens,neigv*nobs_tot,mpi_real4,np-1, &
-                            2,mpi_comm_io,mpi_status,ierr)
-              do neig=1,neigv
-                 na = nmem+(np-1)*nanals_per_iotask
-                 nanalo = neigv*(na-1) + neig
-                 anal_ob_modens(nanalo,:) = mem_ob_modens(neig,:)
-              enddo
-           enddo
-        endif
-        t2 = mpi_wtime()
-        print *,'time to gather ob prior ensemble on root = ',t2-t1
-     else ! nproc != 0
-        ! send to root.
-        call mpi_send(mem_ob,nobs_tot,mpi_real4,0,1,mpi_comm_io,ierr)
-        if (neigv > 0) then
-            call mpi_send(mem_ob_modens,neigv*nobs_tot,mpi_real4,0,2,mpi_comm_io,ierr)
-        endif
-     end if 
-    end if ! io task
+       call MPI_WIN_FENCE(0, shm_win, ierr)
+       anal_ob(nmem+nproc*nanals_per_iotask,:) = mem_ob(:)
+       call MPI_WIN_FENCE(0, shm_win, ierr)
+       !print *,nproc,'filling anal_ob ens member',nmem+nproc*nanals_per_iotask
+       if (neigv > 0) then
+          na = nmem+nproc*nanals_per_iotask
+          call MPI_WIN_FENCE(0, shm_win2, ierr)
+          anal_ob_modens(neigv*(na-1)+1:neigv*na,:) = mem_ob_modens(:,:)
+          call MPI_WIN_FENCE(0, shm_win2, ierr)
+       endif
+    endif
 
     enddo ! nanal loop (loop over ens members on each task)
-
-    if (allocated(mem_ob)) deallocate(mem_ob)
-    if (allocated(mem_ob_modens)) deallocate(mem_ob_modens)
 
 ! obs prior ensemble now defined on root task, bcast to other tasks.
     if (nproc == 0) print *,'broadcast ob prior ensemble perturbations'
     if (nproc == 0) t1 = mpi_wtime()
+! exchange obs prior ensemble members across all tasks to fully populate shared
+! memory array pointer on each node.
     if (nproc_shm == 0) then
-       ! bcast entire obs prior ensemble from root task 
-       ! to a single task on each node, assign to shared memory window.
-       ! send one ensemble member at a time.
-       allocate(mem_ob(nobs_tot))
-       do nanal=1,nanals
-          if (nproc == 0) then
-             mem_ob(1:nobs_tot) = anal_ob(nanal,1:nobs_tot)
-          endif
-          call mpi_bcast(mem_ob,nobs_tot,mpi_real4,0,mpi_comm_shmemroot,ierr)
-          if (nproc .ne. 0) anal_ob(nanal,1:nobs_tot) = mem_ob(1:nobs_tot)
-       end do
+       call mpi_allreduce(mpi_in_place,anal_ob,nanals*nobs_tot,mpi_real4,mpi_sum,mpi_comm_shmemroot,ierr)
        if (neigv > 0) then
-          do nanal=1,nens
-             if (nproc == 0) then
-               mem_ob(1:nobs_tot) = anal_ob_modens(nanal,1:nobs_tot)
-             endif
-             call mpi_bcast(mem_ob,nobs_tot,mpi_real4,0,mpi_comm_shmemroot,ierr)
-             if (nproc .ne. 0) anal_ob_modens(nanal,1:nobs_tot) = mem_ob(1:nobs_tot)
-          end do
+          mem_ob_modens = 0.
+          do na=1,nanals
+             mem_ob_modens(:,:) = anal_ob_modens(neigv*(na-1)+1:neigv*na,:)
+             call mpi_allreduce(mpi_in_place,mem_ob_modens,neigv*nobs_tot,mpi_real4,mpi_sum,mpi_comm_shmemroot,ierr)
+             anal_ob_modens(neigv*(na-1)+1:neigv*na,:) = mem_ob_modens(:,:)
+          enddo
        endif
-       if (allocated(mem_ob)) deallocate(mem_ob)
     endif
     if (nproc == 0) then
         t2 = mpi_wtime()
         print *,'time to broadcast ob prior ensemble perturbations = ',t2-t1
     endif
+
+    if (allocated(mem_ob)) deallocate(mem_ob)
+    if (allocated(mem_ob_modens)) deallocate(mem_ob_modens)
 
 ! compute spread
     analsim1=1._r_single/float(nanals-1)
