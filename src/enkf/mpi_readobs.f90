@@ -246,6 +246,8 @@ subroutine mpi_getobs(obspath, datestring, nobs_conv, nobs_oz, nobs_sat, nobs_to
           do na=1,nanals
              mem_ob_modens(:,:) = anal_ob_modens(neigv*(na-1)+1:neigv*na,:)
              call mpi_allreduce(mpi_in_place,mem_ob_modens,neigv*nobs_tot,mpi_real4,mpi_sum,mpi_comm_shmemroot,ierr)
+             !call mpi_reduce(mpi_in_place,mem_ob_modens,neigv*nobs_tot,mpi_real4,mpi_sum,0,mpi_comm_shmemroot,ierr)
+             !call mpi_bcast(mem_ob_modens,neigv*nobs_tot,mpi_real4,0,mpi_comm_shmemroot,ierr)
              anal_ob_modens(neigv*(na-1)+1:neigv*na,:) = mem_ob_modens(:,:)
           enddo
        endif
