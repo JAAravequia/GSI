@@ -223,7 +223,8 @@
   integer, intent(in), optional :: nanal
   integer, intent(in), optional :: ft
   integer, intent(in), optional :: hr
-  character, intent(in), optional :: infilename
+!  character, intent(in), optional :: infilename AFE
+  character(len=100), intent(in), optional :: infilename ! AFE
   integer, intent(in) :: mode
   character(len=max_varname_length), dimension(n2d), intent(in) :: vars2d
   character(len=max_varname_length), dimension(n3d), intent(in) :: vars3d
@@ -375,8 +376,8 @@
      ! Transformation to EFSOI relevant quantities
      ! Assign weighted kinetic energy components. There
      ! are no unit/metric differences for the kinetic component
-     grdin(:,levels(u_ind-1) + k) = weight(:,levels(u_ind-1) + k) * grdin(:,levels(u_ind-1) + k)
-     grdin(:,levels(v_ind-1) + k) = weight(:,levels(v_ind-1) + k) * grdin(:,levels(v_ind-1) + k)
+     grdin(:,levels(u_ind-1) + k) = weight(:,k) * grdin(:,levels(u_ind-1) + k)
+     grdin(:,levels(v_ind-1) + k) = weight(:,k) * grdin(:,levels(v_ind-1) + k)
   
      call nemsio_readrecv(gfile,'tmp','mid layer',k,nems_wrk,iret=iret)
      if (iret/=0) then
