@@ -36,8 +36,7 @@ module letkf
 !
 !  The parameter nobsl_max controls
 !  the maximum number of obs that will be assimilated in each local patch.
-!  (the nobsl_max closest are chosen by default, if dfs_sort=T then they
-!   are ranked by decreasing DFS)
+!  (the nobsl_max closest are chosen)
 !  nobsl_max=-1 (default) means all obs used.
 !
 !  Vertical covariance localization can be turned off with letkf_novlocal.
@@ -77,8 +76,8 @@ module letkf
 !   2016-11-29  shlyaeva: Modification for using control vector (control and
 !               state used to be the same) and the "chunks" come from loadbal
 !   2018-05-31  whitaker:  add modulated ensemble model-space vertical
-!               localization (when neigv>0) and ob selection using DFS 
-!               (when dfs_sort=T). Add options for DEnKF and gain form of LETKF.
+!               localization (when neigv>0).
+!               Add options for DEnKF and gain form of LETKF.
 
 !
 ! attributes:
@@ -107,13 +106,13 @@ use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, oblnp, &
                   numobspersat, biaspreds, corrlengthsq,&
                   probgrosserr, prpgerr, obtype, obpress,&
                   lnsigl, anal_ob, anal_ob_modens, obloclat, obloclon, stattype
-use constants, only: pi, one, zero, rad2deg, deg2rad
+use constants, only: pi, one, zero, rad2deg, deg2rad, rearth
 use params, only: sprd_tol, datapath, nanals, iseed_perturbed_obs,&
                   iassim_order,sortinc,deterministic,nlevs,&
                   zhuberleft,zhuberright,varqc,lupd_satbiasc,huber,letkf_novlocal,&
                   lupd_obspace_serial,corrlengthnh,corrlengthtr,corrlengthsh,&
                   getkf,getkf_inflation,denkf,nbackgrounds,nobsl_max,&
-                  neigv,vlocal_evecs,dfs_sort
+                  neigv,vlocal_evecs
 use gridinfo, only: nlevs_pres,lonsgrd,latsgrd,logp,npts,gridloc
 use kdtree2_module, only: kdtree2, kdtree2_create, kdtree2_destroy, &
                           kdtree2_result, kdtree2_n_nearest, kdtree2_r_nearest
@@ -135,8 +134,11 @@ implicit none
 integer(i_kind) nob,nf,nanal,nens,&
                 i,nlev,nrej,npt,nn,nnmax,ierr
 integer(i_kind) nobsl, ngrd1, nobsl2, nthreads, nb, &
-                nobslocal_min,nobslocal_max, &
-                nobslocal_minall,nobslocal_maxall
+                nobslocal_mean,nobslocal_min,nobslocal_max, &
+                nobslocal_meanall,nobslocal_minall,nobslocal_maxall
+real(r_single)  robslocal_mean,robslocal_min,robslocal_max,re, &
+                robslocal_meanall,robslocal_minall,robslocal_maxall,&
+                coslat,coslatslocal_meanall, coslatslocal_mean
 integer(i_kind),allocatable,dimension(:) :: oindex
 real(r_single) :: deglat, dist, corrsq, oberrfact, trpa, trpa_raw
 real(r_double) :: t1,t2,t3,t4,t5,tbegin,tend,tmin,tmax,tmean
@@ -152,7 +154,7 @@ real(r_single),allocatable,dimension(:,:) :: obens
 real(r_single),allocatable,dimension(:,:,:) :: ens_tmp
 real(r_single),allocatable,dimension(:,:) :: wts_ensperts,pa
 real(r_single),allocatable,dimension(:) :: dfs,wts_ensmean
-real(r_kind),allocatable,dimension(:) :: rdiag,rloc
+real(r_kind),allocatable,dimension(:) :: rdiag,rloc,robs_local,coslats_local
 real(r_single),allocatable,dimension(:) :: dep
 ! kdtree stuff
 type(kdtree2_result),dimension(:),allocatable :: sresults
@@ -160,6 +162,7 @@ integer(i_kind), dimension(:), allocatable :: indxassim, indxob
 real(r_kind) eps
 
 eps = epsilon(0.0_r_single) ! real(4) machine precision
+re = rearth/1.e3_r_single
 
 !$omp parallel
 nthreads = omp_get_num_threads()
@@ -252,6 +255,15 @@ else
 end if
 
 tbegin = mpi_wtime()
+nobslocal_max = -999
+nobslocal_min = nobstot
+nobslocal_mean = 0
+allocate(robs_local(npts_max))
+robs_local = 0
+if (nobsl_max > 0) then
+  allocate(coslats_local(npts_max))
+  coslats_local = 0
+endif
 
 t2 = zero
 t3 = zero
@@ -279,6 +291,7 @@ grdloop: do npt=1,numptsperproc(nproc+1)
    ! find obs close to this grid point (using kdtree)
    ngrd1=indxproc(nproc+1,npt)
    deglat = latsgrd(ngrd1)*rad2deg
+   coslat = cos(latsgrd(ngrd1))
    corrlength=latval(deglat,corrlengthnh,corrlengthtr,corrlengthsh)
    corrsq = corrlength**2
    allocate(sresults(nobstot))
@@ -298,60 +311,14 @@ grdloop: do npt=1,numptsperproc(nproc+1)
    ! kd-tree fixed range search
    !if (allocated(sresults)) deallocate(sresults)
    if (nobsl_max > 0) then ! only use nobsl_max nearest obs (sorted by distance).
-       if (dfs_sort) then ! sort by 1-DFS in ob-space instead of distance.
-          allocate(dfs(nobstot))
-          allocate(rloc(nobstot))
-          allocate(indxob(nobstot))
-          ! calculate integrated 1-DFS for each ob in local volume
-          nobsl = 0
-          do nob=1,nobstot
-             rloc(nob) = sum((obloc(:,nob)-grdloc_chunk(:,npt))**2,1)
-             dist = sqrt(rloc(nob)/corrlengthsq(nob))
-             if (dist < 1.0 - eps .and. &
-                 oberrvaruse(nob) < 1.e10_r_single) then
-                nobsl = nobsl + 1
-                indxob(nobsl) = nob
-                oberrfact = taper(dist)
-                if (lupd_obspace_serial) then
-                   ! use updated ensemble in ob space to estimate DFS
-                   !dfs(nobsl) = obsprd_post(nob)/obsprd_prior(nob)
-                   ! weight by distance to analysis point
-                   dfs(nobsl) = oberrfact*obsprd_post(nob)/obsprd_prior(nob)
-                else
-                   ! estimate DFS assuming each ob assimilated independently, one
-                   ! at a time.
-                   ! 1-DFS = HP_aH^T/HP_bH^T = R/(HP_bH^T + R)
-                   dfs(nobsl) = (oberrvaruse(nob)/oberrfact)/((oberrvar(nob)/oberrfact)+obsprd_prior(nob))
-                endif
-             endif
-          enddo
-          ! sort on 1-DFS
-          allocate(indxassim(nobsl))
-          call quicksort(nobsl,dfs(1:nobsl),indxassim)
-          nobsl2 = min(nobsl_max,nobsl)
-          do nob=1,nobsl2
-             sresults(nob)%dis = rloc(indxob(indxassim(nob)))
-             sresults(nob)%idx = indxob(indxassim(nob))
-             !if (nproc == 0 .and. npt == 1) &
-             !print *,nob,sresults(nob)%idx,dfs(indxassim(nob)),sqrt(sresults(nob)%dis/corrlengthsq(sresults(nob)%idx)),obtype(sresults(nob)%idx)
-          enddo
-          deallocate(rloc,dfs,indxassim,indxob)
-          nobsl = nobsl2
+       if (kdobs) then
+          call kdtree2_n_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),nn=nobsl_max,&
+               results=sresults)
+          nobsl = nobsl_max
        else
-          if (kdobs) then
-             call kdtree2_n_nearest(tp=kdtree_obs2,qv=grdloc_chunk(:,npt),nn=nobsl_max,&
-                  results=sresults)
-             nobsl = nobsl_max
-          else
-             ! brute force search
-             call find_localobs(grdloc_chunk(:,npt),obloc,corrsq,nobstot,nobsl_max,sresults,nobsl)
-             nobsl_max = nobsl
-          endif
-          !if (nproc == 0 .and. npt == 1) then
-          !   do nob=1,nobsl
-          !       print *,nob,sresults(nob)%idx,sqrt(sresults(nob)%dis/corrlengthsq(sresults(nob)%idx)),obtype(sresults(nob)%idx)
-          !    enddo
-          !endif
+          ! brute force search
+          call find_localobs(grdloc_chunk(:,npt),obloc,corrsq,nobstot,nobsl_max,sresults,nobsl)
+          nobsl_max = nobsl
        endif
    else ! find all obs within localization radius (sorted by distance).
        if (kdobs) then
@@ -371,6 +338,12 @@ grdloop: do npt=1,numptsperproc(nproc+1)
       if (allocated(sresults)) deallocate(sresults)
       if (allocated(ens_tmp)) deallocate(ens_tmp)
       cycle grdloop
+   endif
+   if (nobsl_max > 0) then
+      robs_local(npt) = sqrt(sresults(nobsl)%dis)
+      coslats_local(npt) = coslat
+   else
+      robs_local(npt) = nobsl
    endif
 
    ! Loop through vertical levels (nnmax=1 if no vertical localization)
@@ -528,10 +501,31 @@ call mpi_reduce(t5,tmean,1,mpi_real8,mpi_sum,0,mpi_comm_world,ierr)
 tmean = tmean/numproc
 call mpi_reduce(t5,tmin,1,mpi_real8,mpi_min,0,mpi_comm_world,ierr)
 call mpi_reduce(t5,tmax,1,mpi_real8,mpi_max,0,mpi_comm_world,ierr)
-if (nproc .eq. 0) print *,',min/max/mean t5 = ',tmin,tmax,tmean
-call mpi_reduce(nobslocal_max,nobslocal_maxall,1,mpi_integer,mpi_max,0,mpi_comm_world,ierr)
-call mpi_reduce(nobslocal_min,nobslocal_minall,1,mpi_integer,mpi_max,0,mpi_comm_world,ierr)
-if (nproc == 0) print *,'min/max number of obs in local volume',nobslocal_minall,nobslocal_maxall
+if (nobsl_max > 0) then
+   ! compute and print min/max/mean search radius to find nobsl_max
+   robslocal_mean = sum(robs_local*coslats_local)/numptsperproc(nproc+1)
+   coslatslocal_mean = sum(coslats_local)/numptsperproc(nproc+1)
+   robslocal_min = minval(robs_local(1:numptsperproc(nproc+1)))
+   robslocal_max = maxval(robs_local(1:numptsperproc(nproc+1)))
+   call mpi_reduce(robslocal_max,robslocal_maxall,1,mpi_real4,mpi_max,0,mpi_comm_world,ierr)
+   call mpi_reduce(robslocal_min,robslocal_minall,1,mpi_real4,mpi_min,0,mpi_comm_world,ierr)
+   call mpi_reduce(robslocal_mean,robslocal_meanall,1,mpi_real4,mpi_sum,0,mpi_comm_world,ierr)
+   call mpi_reduce(coslatslocal_mean,coslatslocal_meanall,1,mpi_real4,mpi_sum,0,mpi_comm_world,ierr)
+   if (nproc == 0) print *,'min/max/mean distance searched for local obs',&
+   re*robslocal_minall,re*robslocal_maxall,re*robslocal_meanall/coslatslocal_meanall
+   deallocate(coslats_local)
+else
+   ! compute and print min/max/mean number of obs found within search radius
+   nobslocal_mean = nint(sum(robs_local)/numptsperproc(nproc+1))
+   nobslocal_min = minval(robs_local(1:numptsperproc(nproc+1)))
+   nobslocal_max = maxval(robs_local(1:numptsperproc(nproc+1)))
+   call mpi_reduce(nobslocal_max,nobslocal_maxall,1,mpi_integer,mpi_max,0,mpi_comm_world,ierr)
+   call mpi_reduce(nobslocal_min,nobslocal_minall,1,mpi_integer,mpi_min,0,mpi_comm_world,ierr)
+   call mpi_reduce(nobslocal_mean,nobslocal_meanall,1,mpi_integer,mpi_sum,0,mpi_comm_world,ierr)
+   if (nproc == 0) print *,'min/max/mean number of obs in local volume',&
+   nobslocal_minall,nobslocal_maxall,nint(nobslocal_meanall/float(numproc))
+endif
+deallocate(robs_local)
 if (nrej > 0 .and. nproc == 0) print *, nrej,' obs rejected by varqc'
   
 if (allocated(ens_tmp)) deallocate(ens_tmp)
