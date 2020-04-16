@@ -55,7 +55,7 @@
  use mpisetup, only: nproc
  use mpeu_util, only: getindex
  use nemsio_module
- use loadbal, only: numptsperproc, indxproc, npts_max
+ use loadbal_efsoi, only: numptsperproc, indxproc, npts_max
  implicit none
  private
  public :: readgriddata_efsoi, get_weight, destroy_weight, divide_weight
@@ -208,7 +208,9 @@
            grdin(npt,3*nlevs+k) = grdin(npt,3*nlevs+k) * qweight / weight(indxproc(nproc+1,npt),k) 
         end if 
      end do 
-     grdin(npt,nvars*nlevs+1) = grdin(npt,nvars*nlevs+1) & 
+! AFE the indexing schema needs to be cleaned up
+!     grdin(npt,nvars*nlevs+1) = grdin(npt,nvars*nlevs+1) & 
+     grdin(npt,ncdim) = grdin(npt,ncdim) & 
           & * rdtrpr / grweight(indxproc(nproc+1,npt)) 
   end do 
   return 
