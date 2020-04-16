@@ -243,7 +243,6 @@ if (nproc == 0 .or. nproc == numproc-1) print *,'time to process FSO on gridpoin
 if (nproc == 0 .and. nskip > 0) print *,nskip,' out of',nobstot,'obs skipped'
 if (nproc == 0 .and. nsame > 0) print *,nsame,' out of', nobstot-nskip,' same lat/lon'
 
-if (nproc == 0) print *, 'AFE 1'
 ! Observation sensitivity post process
 !$omp parallel do private(nob)
 do nob=1,nobstot
@@ -254,7 +253,6 @@ do nob=1,nobstot
    obsense_moist(nob) = djdy_moist(nob) * obdep(nob)
 end do
 
-if (nproc == 0) print *, 'AFE 2'
 ! Gathering analysis perturbations projected on the observation space
 if(nproc /= 0) then
   call mpi_send(anal_obchunk_prior,numobsperproc(nproc+1)*nanals,mpi_real4,0, &
