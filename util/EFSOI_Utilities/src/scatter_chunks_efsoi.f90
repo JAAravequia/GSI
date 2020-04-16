@@ -62,7 +62,6 @@ allocate(ensmean_chunk_prior(npts_max,ncdim))
 ensmean_chunk = 0.
 allocate(sendbuf(numproc*npts_max*ncdim))
 allocate(recvbuf(numproc*npts_max*ncdim))
-
 ! send and receive buffers.
 if (nproc <= nanals-1) then
    ! fill up send buffer.
@@ -118,17 +117,19 @@ if(nproc == 0) then
          end do
       end do
    end do
-   call mpi_scatter(sendbuf,ncdim*npts_max,mpi_realkind,recvbuf, &
-        & ncdim*npts_max,mpi_realkind,0,mpi_comm_world,ierr)
-   call mpi_scatter(sendbuf2,ncdim*npts_max,mpi_realkind,recvbuf2, &
-        & ncdim*npts_max,mpi_realkind,0,mpi_comm_world,ierr)
+   call mpi_scatter(sendbuf,ncdim*npts_max,mpi_real4,recvbuf, &
+        & ncdim*npts_max,mpi_real4,0,mpi_comm_world,ierr)
+   call mpi_scatter(sendbuf2,ncdim*npts_max,mpi_real4,recvbuf2, &
+        & ncdim*npts_max,mpi_real4,0,mpi_comm_world,ierr)
 else
-   call mpi_scatter(sendbuf,ncdim*npts_max,mpi_realkind,recvbuf, &
-        & ncdim*npts_max,mpi_realkind,0,mpi_comm_world,ierr)
-   call mpi_scatter(sendbuf2,ncdim*npts_max,mpi_realkind,recvbuf2, &
-        & ncdim*npts_max,mpi_realkind,0,mpi_comm_world,ierr)
+   call mpi_scatter(sendbuf,ncdim*npts_max,mpi_real4,recvbuf, &
+        & ncdim*npts_max,mpi_real4,0,mpi_comm_world,ierr)
+   call mpi_scatter(sendbuf2,ncdim*npts_max,mpi_real4,recvbuf2, &
+        & ncdim*npts_max,mpi_real4,0,mpi_comm_world,ierr)
 end if
+
 !$omp parallel do schedule(dynamic,1)  private(nn,i,n) 
+
    do nn=1,ncdim
       do i=1,numptsperproc(nproc+1)
          n = (nn-1)*npts_max + i
