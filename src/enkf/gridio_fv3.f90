@@ -450,15 +450,47 @@ contains
        ENDDO
     ENDDO
 
-    DO k=1,nlevs
+
+!fv3
+
+    k=1
+
+    IF (ptop > 1.E-8 ) THEN
+       DO j=1,ny_res
+          DO i=1,nx_res
+             workvar3d(i,j,k)=(workprsi(i,j,k) - workprsi(i,j,k+1)) &
+                  &/ LOG(workprsi(i,j,k)/workprsi(i,j,k+1)) 
+          ENDDO
+       ENDDO
+    ELSE
+       DO j=1,ny_res
+          DO i=1,nx_res
+             workvar3d(i,j,k)=(workprsi(i,j,k) - workprsi(i,j,k+1)) &
+                  &* kap/kap1
+          ENDDO
+       ENDDO
+    ENDIF
+    
+    DO k=2,nlevs
        DO j=1,ny_res  
           DO i=1,nx_res
-             workvar3d(i,j,k)=&
-                  &((workprsi(i,j,k)**kap1- workprsi(i,j,k+1)**kap1)/&
-                  &(kap1*(workprsi(i,j,k)-workprsi(i,j,k+1))))**kapr
+             workvar3d(i,j,k)=(workprsi(i,j,k) - workprsi(i,j,k+1)) &
+                  &/ LOG(workprsi(i,j,k)/workprsi(i,j,k+1)) 
           ENDDO
        ENDDO
     ENDDO
+
+
+!phillips
+!    DO k=1,nlevs
+!       DO j=1,ny_res  
+!          DO i=1,nx_res
+!             workvar3d(i,j,k)=&
+!                  &((workprsi(i,j,k)**kap1- workprsi(i,j,k+1)**kap1)/&
+!                  &(kap1*(workprsi(i,j,k)-workprsi(i,j,k+1))))**kapr
+!          ENDDO
+!       ENDDO
+!    ENDDO
 
     ice=.TRUE.  !tothink
     IF (pseudo_rh) THEN
