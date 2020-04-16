@@ -115,7 +115,7 @@ program efsoi_main
  t1 = mpi_wtime()
  call read_state_efsoi()
  t2 = mpi_wtime()
- if (nproc == 0) print *,'time in read_stae_efsoi =',t2-t1,'on proc',nproc
+ if (nproc == 0) print *,'time in read_state_efsoi =',t2-t1,'on proc',nproc
 
  ! do load balancing (partitioning of grid points
  ! and observations among processors)
