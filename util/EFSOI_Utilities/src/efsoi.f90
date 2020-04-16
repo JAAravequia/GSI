@@ -39,9 +39,11 @@ use kinds, only: r_double, i_kind, r_kind
 use kdtree2_module, only: kdtree2_r_nearest, kdtree2_result
 use loadbal_efsoi, only: numptsperproc, indxproc, lnp_chunk, kdtree_grid, &
                    iprocob, indxob_chunk, anal_obchunk_prior, numobsperproc, &
-                   indxproc_obs, nobs_max, anal_chunk
+                   indxproc_obs, nobs_max
+!                   indxproc_obs, nobs_max, anal_chunk
 !use statevec_efsoi, only: anal_chunk, fcerror_chunk
-use scatter_chunks_efsoi, only: fcerror_chunk
+use scatter_chunks_efsoi, only: fcerror_chunk, anal_chunk
+!use scatter_chunks_efsoi, only: fcerror_chunk
 use enkf_obsmod, only: oberrvar, ob, ensmean_ob, obloc, obloclon, obloclat, oblnp, &
                        obtime, nobstot, corrlengthsq, lnsigl, obtimel, anal_ob
 use constants, only: constants_initialized, pi, zero, one
