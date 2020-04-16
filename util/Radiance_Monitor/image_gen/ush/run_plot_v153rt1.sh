@@ -7,7 +7,7 @@
 export NDATE=/gpfs/dell1/nco/ops/nwprod/prod_util.v1.1.2/exec/ips/ndate
 
 package=ProdGSI/util/Radiance_Monitor
-suffix=v16rt2
+suffix=v153rt1
 export RUN=gdas
 
 idev=`cat /etc/dev | cut -c1`
@@ -16,8 +16,8 @@ iprod=`cat /etc/prod | cut -c1`
 scripts=/gpfs/dell2/emc/modeling/noscrub/Edward.Safford/${package}/image_gen/ush
 
 export USE_STATIC_SATYPE=1
-export DO_DATA_RPT=1
-export DO_DIAG_RPT=1
+export DO_DATA_RPT=0
+export DO_DIAG_RPT=0
 #export NDATE=/nwprod/util/exec/ndate
 #export DO_ARCHIVE=1
 export JOB_QUEUE=dev_shared
