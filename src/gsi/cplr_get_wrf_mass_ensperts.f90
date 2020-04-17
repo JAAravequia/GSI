@@ -1058,7 +1058,7 @@ contains
                                                     g_w,g_dbz,g_qs,g_qg,g_qi,g_qr, &
                                                     g_qnc,g_qni,g_qnr
       real(r_kind),dimension(grd_ens%lat2,grd_ens%lon2),intent(out):: g_ps
-      character(24),intent(in):: filename
+      character(240),intent(in):: filename
   !
   !   Declare local variables
       real(r_single),allocatable,dimension(:):: temp_1d
