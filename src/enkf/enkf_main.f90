@@ -1,5 +1,6 @@
 program enkf_main
 !$$$  main program documentation block
+! (test added by liaofan)
 !
 ! program:  enkf_main                  high level driver program for 
 !                                      ensemble kalman filter (EnKF).
