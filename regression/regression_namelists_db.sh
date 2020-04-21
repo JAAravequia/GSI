@@ -881,6 +881,8 @@ export gsi_namelist="
    oneobtest=.false.,retrieval=.false.,
    diag_rad=.false.,diag_pcp=.false.,diag_ozone=.false.,diag_aero=.false.,
    nhr_assimilation=6,min_offset=180,use_compress=.false.,lrun_subdirs=.true.,
+   use_similarity_2dvar=.true.,
+   neutral_stability_windfact_2dvar=.false.,
    use_prepb_satwnd=.false.,
    $SETUP
  /
@@ -907,30 +909,40 @@ export gsi_namelist="
    baldiag_full=.true.,baldiag_inc=.true.,
  /
  &OBSQC
-   dfact=0.75,dfact1=3.0,noiqc=.true.,oberrflg=.false.,c_varqc=0.02,vadfile='prepbufr',
-   hilbert_curve=.true.,buddycheck_t=.false.,buddydiag_save=.false.,oberrflg=.true.,njqc=.true.,vqc=.false.,
+   dfact=0.75,dfact1=3.0,noiqc=.true.,c_varqc=0.02,vadfile='prepbufr',hilbert_curve=.true.,
+   buddycheck_t=.false.,buddydiag_save=.false.,oberrflg=.true.,njqc=.true.,vqc=.false.,
+   $OBSQC
  /
  &OBS_INPUT
-   dmesh(1)=600.0,dmesh(2)=600.0,dmesh(3)=600.0,dmesh(4)=600.0,time_window_max=0.5,
+   dmesh(1)=60.0,dmesh(2)=60.0,dmesh(3)=60.0,dmesh(4)=60.0,time_window_max=3.0,
  /
 OBS_INPUT::
 !  dfile          dtype       dplat       dsis          dval   dthin dsfcalc
-   prepbufr       ps          null        ps           1.0     0      0
-   prepbufr       t           null        t            1.0     0      0
-   prepbufr       q           null        q            1.0     0      0
-   prepbufr       uv          null        uv           1.0     0      0
-   satwndbufr     uv          null        uv           1.0     0      0
-   prepbufr       spd         null        spd          1.0     0      0
-   prepbufr       gust        null        gust         1.0     0      0
-   prepbufr       vis         null        vis          1.0     0      0
-   prepbufr       wspd10m     null        wspd10m      1.0     0      0
-   prepbufr       td2m        null        td2m         1.0     0      0
-   prepbufr       mxtm        null        mxtm         1.0     0      0
-   prepbufr       mitm        null        mitm         1.0     0      0
-   prepbufr       pmsl        null        pmsl         1.0     0      0
-   prepbufr       howv        null        howv         1.0     0      0
-   prepbufr       tcamt       null        tcamt        1.0     0      0
-   prepbufr       cldch       null        cldch        1.0     0      0
+   prepbufr       ps        null      ps       1.0     0      0
+   prepbufr       t         null      t        1.0     0      0
+   prepbufr       q         null      q        1.0     0      0
+   prepbufr       uv        null      uv       1.0     0      0
+   satwndbufr     uv        null      uv       1.0     0      0
+   prepbufr       spd       null      spd      1.0     0      0
+   prepbufr       wspd10m   null      wspd10m  1.0     0      0
+   satwnd         wspd10m   null      wspd10m  1.0     0      0
+   prepbufr       uwnd10m   null      uwnd10m  1.0     0      0
+   satwnd         uwnd10m   null      uwnd10m  1.0     0      0
+   prepbufr       vwnd10m   null      vwnd10m  1.0     0      0
+   satwnd         vwnd10m   null      vwnd10m  1.0     0      0
+   prepbufr       gust      null      gust     1.0     0      0
+   prepbufr       vis       null      vis      1.0     0      0
+   prepbufr       td2m      null      td2m     1.0     0      0
+   mxtmdat        mxtm      null      mxtm     1.0     0      0
+   mitmdat        mitm      null      mitm     1.0     0      0
+   prepbufr       mxtm      null      mxtm     1.0     0      0
+   prepbufr       mitm      null      mitm     1.0     0      0
+   prepbufr       pmsl      null      pmsl     1.0     0      0
+   prepbufr       howv      null      howv     1.0     0      0
+   satmar         howv      null      howv     1.0     0      0
+   prepbufr       tcamt     null      tcamt    1.0     0      0
+   goessky        tcamt     null      tcamt    1.0     0      0
+   prepbufr       cldch     null      cldch    1.0     0      0
 ::
  &SUPEROB_RADAR
  /
@@ -940,6 +952,7 @@ OBS_INPUT::
  /
  &RAPIDREFRESH_CLDSURF
    dfi_radar_latent_heat_time_period=30.0,
+   l_closeobs=.true.
  /
  &CHEM
  /
@@ -2342,6 +2355,115 @@ OBS_INPUT::
 "
 ;;
 
+    global_C96_fv3aero)
+
+# Define namelist for global run (aerosol analysis)
+
+export gsi_namelist="
+ &SETUP
+  miter=3,
+  niter(1)=100,niter(2)=100,niter(3)=1,
+  niter_no_qc(1)=50,niter_no_qc(2)=0,
+  write_diag(1)=.true.,write_diag(2)=.false.,write_diag(3)=.true.,
+  qoption=2,
+  gencode=0,deltim=400,
+  factqmin=0.0,factqmax=0.0,
+  iguess=-1,
+  tzr_qc=1,
+  oneobtest=.false.,retrieval=.false.,l_foto=.false.,
+  use_pbl=.false.,use_compress=.true.,nsig_ext=12,gpstop=50.,
+  use_gfs_nemsio=.true.,sfcnst_comb=.true.,
+  use_readin_anl_sfcmask=.false.,
+  lrun_subdirs=.true.,
+  crtm_coeffs_path='./crtm_coeffs/',
+  newpc4pred=.true.,adp_anglebc=.true.,angord=4,passive_bc=.true.,use_edges=.false.,
+  diag_precon=.true.,step_start=1.e-3,emiss_bc=.true.,nhr_obsbin=3,
+  cwoption=3,imp_physics=11,lupp=.true.,
+  netcdf_diag=.true.,binary_diag=.true.,
+  lobsdiag_forenkf=.false.,
+  diag_aero=.true., use_fv3_aero=.true.,offtime_data=.true.,
+  diag_rad=.false.,diag_pcp=.false.,diag_conv=.false.,diag_ozone=.false.,
+ /
+
+ &GRIDOPTS
+  JCAP_B=190,JCAP=190,NLAT=194,NLON=384,nsig=64,
+  regional=.false.,nlayers(63)=3,nlayers(64)=6,
+ /
+
+ &BKGERR
+  vs=0.7,
+  hzscl=1.7,0.8,0.5,
+  hswgt=0.45,0.3,0.25,
+  bw=0.0,norsp=4,
+  bkgv_flowdep=.true.,bkgv_rewgtfct=1.5,
+  bkgv_write=.false.,
+  cwcoveqqcov=.false.,
+ /
+
+ &ANBKGERR
+  anisotropic=.false.,
+ /
+
+ &JCOPTS
+  ljcdfi=.false.,alphajc=0.0,ljcpdry=.true.,bamp_jcpdry=5.0e7,
+ /
+
+ &STRONGOPTS
+  tlnmc_option=2,nstrong=1,nvmodes_keep=8,period_max=6.,period_width=1.5,
+ /
+
+ &OBSQC
+  dfact=0.75,dfact1=3.0,noiqc=.true.,oberrflg=.false.,c_varqc=0.02,
+  use_poq7=.true.,qc_noirjaco3_pole=.true.,vqc=.true.,
+  aircraft_t_bc=.false.,biaspredt=1000.0,upd_aircraft=.true.,cleanup_tail=.true.,
+ /
+
+ &OBS_INPUT
+  dmesh(1)=145.0,dmesh(2)=150.0,dmesh(3)=100.0,time_window_max=3.0,
+ /
+
+OBS_INPUT::
+!  dfile          dtype       dplat       dsis                dval    dthin dsfcalc
+   modisaodbufr   modis_aod   aqua      v.modis_aqua          1.0     1     0
+   modisaodbufr   modis_aod   terra     v.modis_terra         1.0     1     0
+::
+
+ &SUPEROB_RADAR
+ /
+
+ &LAG_DATA
+ /
+
+ &HYBRID_ENSEMBLE
+  l_hyb_ens=.false.,
+  generate_ens=.false.,
+  beta_s0=0.125,readin_beta=.false.,
+  s_ens_h=800.,s_ens_v=-0.8,readin_localization=.true.,
+  aniso_a_en=.false.,oz_univ_static=.false.,uv_hyb_ens=.true.,
+  ensemble_path='./ensemble_data/',
+  ens_fast_read=.true.,
+ /
+
+ &RAPIDREFRESH_CLDSURF
+  dfi_radar_latent_heat_time_period=30.0,
+ /
+
+ &CHEM
+  laeroana_gocart=.true.,aod_qa_limit=-1000,
+ /
+
+ &SINGLEOB_TEST
+  maginnov=0.1,magoberr=0.1,oneob_type='t',
+  oblat=45.,oblon=180.,obpres=1000.,obdattim=2019061718,
+  obhourset=0.,
+ /
+
+ &NST
+  nst_gsi=3,
+  nstinfo=4,fac_dtl=1,fac_tsl=1,zsea1=0,zsea2=0,
+ /"
+
+;;
 *)
 
 # EXIT out for unresolved job_name
