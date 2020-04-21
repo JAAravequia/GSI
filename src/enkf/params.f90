@@ -103,6 +103,7 @@ real(r_single),public ::  lnsigcutoffnh,lnsigcutofftr,lnsigcutoffsh,&
 ! --- CAPS ---
 real(r_single),public ::  corrlengthrdrnh,corrlengthrdrtr,corrlengthrdrsh, &
                lnsigcutoffrdrnh,lnsigcutoffrdrtr,lnsigcutoffrdrsh
+logical,       public :: use_meanofhx
 ! --- CAPS ---
 real(r_single),public :: analpertwtnh,analpertwtsh,analpertwttr,sprd_tol,saterrfact
 real(r_single),public :: analpertwtnh_rtpp,analpertwtsh_rtpp,analpertwttr_rtpp
@@ -220,7 +221,7 @@ namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    fso_cycling,fso_calculate,imp_physics,lupp,&
                    corrlengthrdrnh,corrlengthrdrsh,corrlengthrdrtr,&
                    lnsigcutoffrdrnh,lnsigcutoffrdrsh,lnsigcutoffrdrtr,&
-                   l_use_enkf_caps ! CAPS flag
+                   l_use_enkf_caps,use_meanofhx ! CAPS flag
 namelist /nam_wrf/arw,nmm,nmm_restart,fv3 ! CAPS added fv3 options
 namelist /satobs_enkf/sattypes_rad,dsis
 namelist /ozobs_enkf/sattypes_oz
@@ -250,6 +251,8 @@ corrlengthsh = 2800_r_single
 corrlengthrdrnh = 10
 corrlengthrdrtr = 10
 corrlengthrdrsh = 10
+! use mean of hx instead of h(mean(x))
+use_meanofhx = .true. 
 ! read in localization length scales from an external file.
 readin_localization = .false.
 ! min and max inflation.

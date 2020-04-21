@@ -110,6 +110,7 @@ use params, only: &
       varqc, huber, zhuberleft, zhuberright,&
       lnsigcutoffrdrnh, lnsigcutoffrdrsh, lnsigcutoffrdrtr,& ! CAPS
       corrlengthrdrnh, corrlengthrdrtr, corrlengthrdrsh,&    ! CAPS
+      use_meanofhx, &                                        ! CAPS
       lnsigcutoffpsnh, lnsigcutoffpssh, lnsigcutoffpstr, neigv
 
 use state_vectors, only: init_anasv
@@ -120,7 +121,7 @@ private
 public :: readobs, obsmod_cleanup, write_obsstats
 
 real(r_single), public, allocatable, dimension(:) :: obsprd_prior, ensmean_obnobc,&
- ensmean_ob, ob, oberrvar, obloclon, obloclat, &
+ ensmean_ob, ensmean_obbc, ob, oberrvar, obloclon, obloclat, &
  obpress, obtime, oberrvar_orig,&
  oblnp, obfit_prior, prpgerr, oberrvarmean, probgrosserr, &
  lnsigl,corrlengthsq,obtimel
@@ -197,12 +198,23 @@ enddo
 allocate(deltapredx(npred,jpch_rad))
 deltapredx = zero
 t1 = mpi_wtime()
+
+if (use_meanofhx) then  !Rong Kong modified here to initially use mean of H(x) instead of H(xbm) to calculate d
+call mpi_getobs(datapath, datestring, nobs_conv, nobs_oz, nobs_sat, nobstot,  &
+                nobs_convdiag,nobs_ozdiag, nobs_satdiag, nobstotdiag,         &
+                obsprd_prior, ensmean_ob, ensmean_obbc, ob,                 &
+                oberrvar, obloclon, obloclat, obpress,                        &
+                obtime, oberrvar_orig, stattype, obtype, biaspreds, diagused, &
+                anal_ob,anal_ob_modens,indxsat,nanals,neigv)
+ensmean_obnobc = ensmean_ob !Need to allocate ensmean_obnobc anyway to avoid segmentation fault
+else
 call mpi_getobs(datapath, datestring, nobs_conv, nobs_oz, nobs_sat, nobstot,  &
                 nobs_convdiag,nobs_ozdiag, nobs_satdiag, nobstotdiag,         &
                 obsprd_prior, ensmean_obnobc, ensmean_ob, ob,                 &
                 oberrvar, obloclon, obloclat, obpress,                        &
                 obtime, oberrvar_orig, stattype, obtype, biaspreds, diagused, &
                 anal_ob,anal_ob_modens,indxsat,nanals,neigv)
+endif
 
 tdiff = mpi_wtime()-t1
 call mpi_reduce(tdiff,tdiffmax,1,mpi_real4,mpi_max,0,mpi_comm_world,ierr)
@@ -456,6 +468,7 @@ if (allocated(obsprd_post)) deallocate(obsprd_post)
 if (allocated(obfit_post)) deallocate(obfit_post)
 if (allocated(ensmean_ob)) deallocate(ensmean_ob)
 if (allocated(ensmean_obnobc)) deallocate(ensmean_obnobc)
+if (allocated(ensmean_obbc)) deallocate(ensmean_obbc)
 if (allocated(ob)) deallocate(ob)
 if (allocated(oberrvar)) deallocate(oberrvar)
 if (allocated(oberrvar_orig)) deallocate(oberrvar_orig)

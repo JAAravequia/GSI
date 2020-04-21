@@ -348,22 +348,23 @@ contains
       select case (mphyopt)
       case (2,3,4)
           ! hail
-          Zehnegf = ((m3todBZ * Zefact) * Ki2  /  &
-             ((pi ** pipowf) * Kw2 * (N0h ** N0xpowf) *  &
-             (rhoh ** rhoxpowf)))
-          Zehposf = (((m3todBZ * Zefact) /  &
-             ((pi ** pipowf) * (N0h ** N0xpowf) *  &
-             (rhoh ** rhoxpowf))) ** approxpow)
-          iret = 0
+         ! Zehnegf = ((m3todBZ * Zefact) * Ki2  /  &
+         !    ((pi ** pipowf) * Kw2 * (N0h ** N0xpowf) *  &
+         !    (rhoh ** rhoxpowf)))
+         ! Zehposf = (((m3todBZ * Zefact) /  &
+         !    ((pi ** pipowf) * (N0h ** N0xpowf) *  &
+         !    (rhoh ** rhoxpowf))) ** approxpow)
+         ! iret = 0
           
+          !! JP set this values in default / 20200420
           !!Rong Kong temporily  changed the density of hail to graupel to make it consistent with WRF Lin scheme
-          !    Zehnegf = ((m3todBZ * Zefact) * Ki2  /  &
-          !        ((pi ** pipowf) * Kw2 * (4.0E+06 ** N0xpowf) *  &
-          !        (400. ** rhoxpowf)))
-          !    Zehposf = (((m3todBZ * Zefact) /  &
-          !        ((pi ** pipowf) * (4.0E+06 ** N0xpowf) *  &
-          !        (400. ** rhoxpowf))) ** approxpow)
-          !    iret = 0
+              Zehnegf = ((m3todBZ * Zefact) * Ki2  /  &
+                  ((pi ** pipowf) * Kw2 * (4.0E+06 ** N0xpowf) *  &
+                  (400. ** rhoxpowf)))
+              Zehposf = (((m3todBZ * Zefact) /  &
+                  ((pi ** pipowf) * (4.0E+06 ** N0xpowf) *  &
+                  (400. ** rhoxpowf))) ** approxpow)
+              iret = 0
       case (5,6,7)
           ! graupel
           Zehnegf = ((m3todBZ * Zefact) * Ki2  /  &

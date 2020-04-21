@@ -965,12 +965,13 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
               !* thin new VAD in time level
               if(kx==224.and.newvad)then
                 icase=0
-                if(abs(hdr(4))>0.17_r_kind.and.abs(hdr(4))<0.32_r_kind) icase=1
-                if(abs(hdr(4))>0.67_r_kind.and.abs(hdr(4))<0.82_r_kind) icase=1
-                if(abs(hdr(4))>1.17_r_kind.and.abs(hdr(4))<1.32_r_kind) icase=1
-                if(abs(hdr(4))>1.67_r_kind.and.abs(hdr(4))<1.82_r_kind) icase=1
-                if(abs(hdr(4))>2.17_r_kind.and.abs(hdr(4))<2.62_r_kind) icase=1
-                if(abs(hdr(4))>2.67_r_kind.and.abs(hdr(4))<2.82_r_kind) icase=1
+                if(abs(hdr(4))>0.75_r_kind) icase=1
+                !if(abs(hdr(4))>0.17_r_kind.and.abs(hdr(4))<0.32_r_kind) icase=1
+                !if(abs(hdr(4))>0.67_r_kind.and.abs(hdr(4))<0.82_r_kind) icase=1
+                !if(abs(hdr(4))>1.17_r_kind.and.abs(hdr(4))<1.32_r_kind) icase=1
+                !if(abs(hdr(4))>1.67_r_kind.and.abs(hdr(4))<1.82_r_kind) icase=1
+                !if(abs(hdr(4))>2.17_r_kind.and.abs(hdr(4))<2.62_r_kind) icase=1
+                !if(abs(hdr(4))>2.67_r_kind.and.abs(hdr(4))<2.82_r_kind) icase=1
                 if(icase/=1) cycle
               end if
 

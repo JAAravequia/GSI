@@ -1103,28 +1103,32 @@ contains
     if (fv3) then ! added code, for FV3
       if (u_ind > 0) then
          varstrname = 'u'
-         call readfv3var(filename, varstrname, enkf_field, nlevs)
-         enkf_field = enkf_field + vargrid(:,levels(u_ind-1)+1:levels(u_ind),nb,ne)
-         call writefv3var(filename, varstrname, enkf_field, nlevs)
+         !call readfv3var(filename, varstrname, enkf_field, nlevs)
+         !enkf_field = enkf_field  + vargrid(:,levels(u_ind-1)+1:levels(u_ind),nb,ne)
+         !call writefv3var(filename, varstrname, enkf_field, nlevs)
+         call writefv3var_native(filename, varstrname, vargrid(:,levels(u_ind-1)+1:levels(u_ind),nb,ne), nlevs)  ! JP : add inc at native grid
       endif
       if (v_ind > 0) then
          varstrname = 'v'
-         call readfv3var(filename, varstrname, enkf_field, nlevs)
-         enkf_field = enkf_field + vargrid(:,levels(v_ind-1)+1:levels(v_ind),nb,ne)
-         call writefv3var(filename, varstrname, enkf_field, nlevs)
+         !call readfv3var(filename, varstrname, enkf_field, nlevs)
+         !enkf_field = enkf_field  + vargrid(:,levels(v_ind-1)+1:levels(v_ind),nb,ne)
+         !call writefv3var(filename, varstrname, enkf_field, nlevs)
+         call writefv3var_native(filename, varstrname, vargrid(:,levels(v_ind-1)+1:levels(v_ind),nb,ne), nlevs)  ! JP : add inc at native grid
       endif
     else ! original code, for NMM/ARW
       if (u_ind > 0) then
          varstrname = 'U'
-         call readwrfvar(filename, varstrname, enkf_field, nlevs)
-         enkf_field = enkf_field +vargrid(:,levels(u_ind-1)+1:levels(u_ind),nb,ne)
-         call writewrfvar(filename, varstrname, enkf_field, nlevs)
+        ! call readwrfvar(filename, varstrname, enkf_field, nlevs)
+        ! enkf_field = enkf_field  +vargrid(:,levels(u_ind-1)+1:levels(u_ind),nb,ne)
+        ! call writewrfvar(filename, varstrname, enkf_field, nlevs)   
+         call writewrfvar_native(filename, varstrname, vargrid(:,levels(u_ind-1)+1:levels(u_ind),nb,ne), nlevs)    ! JP : add inc at native grid
       endif
       if (v_ind > 0) then
          varstrname = 'V'
-         call readwrfvar(filename, varstrname, enkf_field, nlevs)
-         enkf_field = enkf_field + vargrid(:,levels(v_ind-1)+1:levels(v_ind),nb,ne)
-         call writewrfvar(filename, varstrname, enkf_field, nlevs)
+        ! call readwrfvar(filename, varstrname, enkf_field, nlevs)
+        ! enkf_field = enkf_field  + vargrid(:,levels(v_ind-1)+1:levels(v_ind),nb,ne)
+        ! call writewrfvar(filename, varstrname, enkf_field, nlevs)   
+         call writewrfvar_native(filename, varstrname, vargrid(:,levels(v_ind-1)+1:levels(v_ind),nb,ne), nlevs)    ! JP : add inc at native grid
       endif
     endif
 
@@ -1807,6 +1811,123 @@ contains
 
   end subroutine readfv3var
 ! --- CAPS ---
+  !======================================================================
+  ! writewrfvar: write EnKF-style field in WRF netcdf file; variable is
+  ! interpolated to the native variable grid; all checks for
+  ! grid staggering are contained within this subroutine
+  ! JP : Wind increments are added at native grid to minimize interpolation
+  !      errors from dot2cross
+  subroutine writewrfvar_native(filename, varname, grid, nlevs)
+    implicit none
+    character(len=500), intent(in) :: filename
+    character(len=12),  intent(in) :: varname
+    integer(i_kind), intent(in) :: nlevs
+    real(r_single),  dimension(npts,nlevs),  intent(in) :: grid    ! analysis increment
+
+    ! Define variables computed within subroutine
+    real, dimension(:,:,:), allocatable :: workgrid
+    real, dimension(:,:,:), allocatable :: vargrid_native   ! original variables at native grid
+    real, dimension(:,:,:), allocatable :: vargridin_native ! analysis increment at native grid
+    integer :: xdim, ydim, zdim
+    integer :: xdim_native, ydim_native, zdim_native
+    integer :: xdim_local,  ydim_local,  zdim_local
+
+    ! Define variables requiredfor netcdf variable I/O
+    character(len=50) :: attstr
+    character(len=12) :: varstagger
+
+    ! Define counting variables
+    integer :: i, j, k
+    integer :: counth
+
+
+    xdim = dimensions%xdim
+    ydim = dimensions%ydim
+    zdim = dimensions%zdim
+
+    ! Allocate memory for local variable
+    allocate(workgrid(xdim,ydim,zdim))
+
+    xdim_native = xdim
+    ydim_native = ydim
+    zdim_native = zdim
+
+    if (arw) then
+       attstr = 'stagger'
+       call variableattribute_char(filename,varname,attstr,     &
+                  & varstagger)
+       !----------------------------------------------------------------------
+       ! If variable grid is staggered, assign array dimensions appropriately
+       if(varstagger(1:1) .eq. 'X') then
+          xdim_native = xdim + 1
+       else if(varstagger(1:1) .eq. 'Y') then
+          ydim_native = ydim + 1
+       else if(varstagger(1:1) .eq. 'Z') then
+          zdim_native = zdim + 1
+       end if ! if(varstagger(1:1) .eq. 'X')
+    endif
+
+    zdim_local = nlevs
+    if(nlevs == 1) then
+       zdim_native = 1
+    end if 
+
+    ! Define local variable dimensions
+    xdim_local = xdim
+    ydim_local = ydim
+ 
+    ! JP : read variables at native grid
+    if (allocated(vargrid_native)) deallocate(vargrid_native)
+    allocate(vargrid_native(xdim_native,ydim_native,zdim_native))
+
+    ! Ingest variable from external netcdf formatted file
+    call readnetcdfdata(filename,vargrid_native,varname,     &
+            & xdim_native,ydim_native,zdim_native)
+
+    !----------------------------------------------------------------------
+    ! Allocate memory local arrays (first check whether they are
+    ! already allocated)
+    if (allocated(vargridin_native)) deallocate(vargridin_native)
+    allocate(vargridin_native(xdim_native,ydim_native,zdim_native))
+
+    !----------------------------------------------------------------------
+    ! Loop through vertical coordinate
+    do k = 1, zdim_local
+       ! Initialize counting variable
+       counth = 1
+
+       ! Loop through meridional horizontal coordinate
+       do j = 1, ydim
+          ! Loop through zonal horizontal coordinate
+          do i = 1, xdim
+             ! Assign values to local array
+             workgrid(i,j,k) = grid(counth,k)
+
+             counth = counth + 1
+          end do ! do i = 1, xdim
+       end do ! do j = 1, ydim
+    end do ! k = 1, zdim_local
+
+    ! Interpolate increments to native grid (i.e., from A-grid to
+    ! C-grid; if necessary); on input, workgrid is increments on
+    ! unstaggered grid; on output vargrid_native is increments on
+    ! model-native (i.e., staggered grid); vargridin_native is
+    ! unmodified first guess on native staggered grid
+    call dot2cross(xdim_local,ydim_local,zdim_local,xdim_native,    &
+            ydim_native,zdim_native,workgrid,vargridin_native)
+
+    vargrid_native=vargrid_native+vargridin_native  ! add Increment
+
+    !----------------------------------------------------------------------
+    ! Write analysis variable.
+    call writenetcdfdata(filename,vargrid_native,varname,          &
+             xdim_native,ydim_native,zdim_native)
+
+    ! Deallocate memory for local variables
+    if(allocated(vargrid_native)) deallocate(vargrid_native)
+    if(allocated(workgrid))       deallocate(workgrid)
+
+  end subroutine writewrfvar_native
 
   !======================================================================
   ! writewrfvar: write EnKF-style field in WRF netcdf file; variable is
@@ -2003,6 +2124,107 @@ contains
     if(allocated(vargrid_native)) deallocate(vargrid_native)
     if(allocated(workgrid))       deallocate(workgrid)
   end subroutine writefv3var
+
+  !======================================================================
+  ! writefv3var: write EnKF-style field in FV3 netcdf file; variable is
+  ! interpolated to the native variable grid; all checks for
+  ! grid staggering are contained within this subroutine
+  ! JP : add inc at native grid
+  subroutine writefv3var_native(filename, varname, grid, nlevs)
+    implicit none
+    character(len=500), intent(in) :: filename
+    character(len=12),  intent(in) :: varname
+    integer(i_kind), intent(in) :: nlevs
+    real(r_single),  dimension(npts,nlevs),  intent(in) :: grid
+
+    ! Define variables computed within subroutine
+    real, dimension(:,:,:), allocatable :: workgrid
+    real, dimension(:,:,:), allocatable :: vargrid_native    ! fv3 variable at native grid
+    real, dimension(:,:,:), allocatable :: vargridin_native  ! analysis inc at native grid
+    integer :: xdim, ydim, zdim
+    integer :: xdim_native, ydim_native, zdim_native
+    integer :: xdim_local,  ydim_local,  zdim_local
+
+    ! Define variables requiredfor netcdf variable I/O
+    character(len=50) :: attstr
+    character(len=12) :: varstagger
+
+    ! Define counting variables
+    integer :: i, j, k
+    integer :: counth
+
+    xdim = dimensions%xdim
+    ydim = dimensions%ydim
+    zdim = dimensions%zdim
+
+    ! Allocate memory for local variable
+    allocate(workgrid(xdim,ydim,zdim))
+
+    xdim_native = xdim
+    ydim_native = ydim
+    zdim_native = zdim
+    if(trim(varname)=='u'.or.trim(varname)=='U') then
+       ydim_native = ydim + 1
+    elseif(trim(varname)=='v'.or.trim(varname)=='V') then
+       xdim_native = xdim + 1
+    end if
+
+    ! Define local variable dimensions
+    xdim_local = xdim
+    ydim_local = ydim
+    zdim_local = zdim
+
+    ! JP : read variables at native grid
+    if (allocated(vargrid_native)) deallocate(vargrid_native)
+    allocate(vargrid_native(xdim_native,ydim_native,zdim_native))
+
+    ! Ingest variable from external netcdf formatted file
+    call readnetcdfdata(filename,vargrid_native,varname,     &
+            & xdim_native,ydim_native,zdim_native)
+
+    !----------------------------------------------------------------------
+    ! Allocate memory local arrays (first check whether they are
+    ! already allocated)
+    if (allocated(vargridin_native)) deallocate(vargridin_native)
+    allocate(vargridin_native(xdim_native,ydim_native,zdim_native))
+
+    !----------------------------------------------------------------------
+    ! Loop through vertical coordinate, and REVERSE levels
+    do k = 1, zdim_local
+       ! Initialize counting variable
+       counth = 1
+
+       ! Loop through meridional horizontal coordinate
+       do j = 1, ydim
+          ! Loop through zonal horizontal coordinate
+          do i = 1, xdim
+             ! Assign values to local array
+             workgrid(i,j,k) = grid(counth,zdim_local+1-k)
+
+             counth = counth + 1
+          end do ! do i = 1, xdim
+       end do ! do j = 1, ydim
+    end do ! k = 1, zdim_local
+
+    ! Interpolate increments to native grid (i.e., from A-grid to
+    ! C-grid; if necessary); on input, workgrid is increments on
+    ! unstaggered grid; on output vargrid_native is increments on
+    ! model-native (i.e., staggered grid); vargridin_native is
+    ! unmodified first guess on native staggered grid
+    call dot2cross(xdim_local,ydim_local,zdim_local,xdim_native,    &
+            ydim_native,zdim_native,workgrid,vargridin_native)
+
+    vargrid_native=vargrid_native+vargridin_native ! JP: add increment
+
+    !----------------------------------------------------------------------
+    ! Write analysis variable.
+    call writenetcdfdata(filename,vargrid_native,varname,          &
+             xdim_native,ydim_native,zdim_native)
+
+    ! Deallocate memory for local variables
+    if(allocated(vargrid_native)) deallocate(vargrid_native)
+    if(allocated(workgrid))       deallocate(workgrid)
+  end subroutine writefv3var_native
 !--- CAPS ---
 
   !========================================================================
