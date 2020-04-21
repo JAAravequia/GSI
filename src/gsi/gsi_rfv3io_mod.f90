@@ -179,7 +179,7 @@ subroutine gsi_rfv3io_get_grid_specs(fv3filenamegin,ierr)
   use netcdf, only: nf90_inquire_variable
   use mpimod, only: mype
   use mod_fv3_lola, only: generate_anl_grid
-  use gridmod,  only:nsig,regional_time,regional_fhr,aeta1_ll,aeta2_ll
+  use gridmod,  only:nsig,regional_time,regional_fhr,regional_fmin,aeta1_ll,aeta2_ll
   use gridmod,  only:nlon_regional,nlat_regional,eta1_ll,eta2_ll
   use kinds, only: i_kind,r_kind
   use constants, only: half,zero
@@ -217,6 +217,7 @@ subroutine gsi_rfv3io_get_grid_specs(fv3filenamegin,ierr)
     regional_time(5)=mminute
     regional_time(6)=msecond
     regional_fhr=zero          ! forecast hour set zero for now
+    regional_fmin=zero          ! forecast min set zero for now
 
 !!!!!!!!!!    grid_spec  !!!!!!!!!!!!!!!
     ierr=0
@@ -1995,9 +1996,9 @@ subroutine gsi_fv3ncdf_writeuv_v1(dynvars,varu,varv,mype_io,add_saved)
              workbu_w2(nlon_regional+1,:)=u(nlon_regional,:)
              workbv_w2(nlon_regional+1,:)=v(nlon_regional,:)
 
-             do j=2,nlat_regional-1
-               workbu_s2(:,j)=half*(u(:,j)+u(:,j+1))
-               workbv_s2(:,j)=half*(v(:,j)+v(:,j+1))
+             do j=2,nlat_regional
+               workbu_s2(:,j)=half*(u(:,j-1)+u(:,j))
+               workbv_s2(:,j)=half*(v(:,j-1)+v(:,j))
              enddo
              workbu_s2(:,1)=u(:,1)
              workbv_s2(:,1)=v(:,1)
@@ -2019,18 +2020,18 @@ subroutine gsi_fv3ncdf_writeuv_v1(dynvars,varu,varv,mype_io,add_saved)
              call fv3_ll_to_h(work_au(:,:,k),u,nlon,nlat,nlon_regional,nlat_regional,.true.)
              call fv3_ll_to_h(work_av(:,:,k),v,nlon,nlat,nlon_regional,nlat_regional,.true.)
 
-             do i=2,nlon_regional-1
-               work_bu_w(i,:,k)=half*(u(i,:)+u(i+1,:))
-               work_bv_w(i,:,k)=half*(v(i,:)+v(i+1,:))
+             do i=2,nlon_regional
+               work_bu_w(i,:,k)=half*(u(i-1,:)+u(i,:))
+               work_bv_w(i,:,k)=half*(v(i-1,:)+v(i,:))
              enddo
              work_bu_w(1,:,ilev0+k)=u(1,:)
              work_bv_w(1,:,ilev0+k)=v(1,:)
              work_bu_w(nlon_regional+1,:,ilev0+k)=u(nlon_regional,:)
              work_bv_w(nlon_regional+1,:,ilev0+k)=v(nlon_regional,:)
 
-             do j=2,nlat_regional-1
-               work_bu_s(:,j,ilev0+k)=half*(u(:,j)+u(:,j+1))
-               work_bv_s(:,j,ilev0+k)=half*(v(:,j)+v(:,j+1))
+             do j=2,nlat_regional
+               work_bu_s(:,j,ilev0+k)=half*(u(:,j-1)+u(:,j))
+               work_bv_s(:,j,ilev0+k)=half*(v(:,j-1)+v(:,j))
              enddo
              work_bu_s(:,1,ilev0+k)=u(:,1)
              work_bv_s(:,1,ilev0+k)=v(:,1)
