@@ -142,7 +142,7 @@
                             i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off,&
                             cld_bld_coverage,cld_clr_coverage,&
                             i_cloud_q_innovation,i_ens_mean,DTsTmax,&
-                            l_T_Q_adjust,l_saturate_bkCloud,l_rtma3d,l_precip_vertical_check
+                            l_T_Q_adjust,l_saturate_bkCloud,l_rtma3d,i_precip_vertical_check
   use gsi_metguess_mod, only: gsi_metguess_init,gsi_metguess_final
   use gsi_chemguess_mod, only: gsi_chemguess_init,gsi_chemguess_final
   use tcv_mod, only: init_tcps_errvals,tcp_refps,tcp_width,tcp_ermin,tcp_ermax
@@ -387,8 +387,13 @@
 !  03-11-2019 Collard   Introduce ec_amv_qc as temporary control of GOES-16/17 AMVS
 !  06-19-2019 Hu        Add option reset_bad_radbc for reseting radiance bias correction when it is bad
 !  06-25-2019 Hu        Add option print_obs_para to turn on OBS_PARA list
-!  10-10-2019 Zhao      added options l_rtma3d and l_precip_vertical_check (for
-!                             RTMA3D only now)
+!  10-10-2019 Zhao      added options l_rtma3d and l_precip_vertical_check
+!                       (adjustment to the cloud-analysis retrieved profile of
+!                        Qg/Qs/Qr/QnrQto to alleviate the reflectivity ghost in RTMA3D.)
+!  04-16-2020 Zhao      change option l_precip_vertical_check to i_precip_vertical_check
+!                       option for checking and adjusting the profile of Qr/Qs/Qg/Qnr
+!                       retrieved through cloud analysis to reduce the background
+!                       reflectivity ghost in analysis. (default is 0)
 !
 !EOP
 !-------------------------------------------------------------------------
@@ -1066,10 +1071,15 @@
 !                           where observed cloud cover is missing (default:true).
 !      l_rtma3d      - logical option for turning on configuration for RTMA3D
 !                           (default is .FALSE.)
-!      l_precip_vertical_check - logical option for checking and adjusting
-!                                Qr/Qs/Qg and Qnr after precipitation analysis
+!      i_precip_vertical_check - integer option for checking and adjusting
+!                                Qr/Qs/Qg and Qnr after cloud analysis
 !                                to reduce the background reflectivity ghost in
-!                                analysis. (default is .FALSE.)
+!                                analysis. (default is 0)
+!                           = 0(no adjustment)
+!                           = 1(Clean off Qg only, where dbz_obs_max<=35dbz in the profile)
+!                           = 2(clean Qg as in 1, and adjustment to the retrieved Qr/Qs/Qnr throughout the whole profile)
+!                           = 3(similar to 2, but adjustment to Qr/Qs/Qnr only below maximum reflectivity level
+!                             and where the dbz_obs is missing);
 !
 !       
   namelist/rapidrefresh_cldsurf/dfi_radar_latent_heat_time_period, &
@@ -1091,7 +1101,7 @@
                                 i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off,&
                                 cld_bld_coverage,cld_clr_coverage,&
                                 i_cloud_q_innovation,i_ens_mean,DTsTmax, &
-                                l_T_Q_adjust,l_saturate_bkCloud,l_rtma3d,l_precip_vertical_check
+                                l_T_Q_adjust,l_saturate_bkCloud,l_rtma3d,i_precip_vertical_check
 
 ! chem(options for gsi chem analysis) :
 !     berror_chem       - .true. when background  for chemical species that require

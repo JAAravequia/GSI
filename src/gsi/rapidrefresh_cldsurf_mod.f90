@@ -24,6 +24,10 @@ module rapidrefresh_cldsurf_mod
 !   2018-09-12 Ladwig   added options l_precip_clear_only
 !   2019-10-10 Zhao     added options l_rtma3d and l_precip_vertical_check (for
 !                             RTMA3D only now)
+!   2020-04-16 Zhao     change option l_precip_vertical_check to i_precip_vertical_check
+!                       option for checking and adjusting the profile of Qr/Qs/Qg/Qnr
+!                       retrieved through cloud analysis to reduce the background
+!                       reflectivity ghost in analysis. (default is 0)
 !
 ! 
 ! Subroutines Included:
@@ -165,10 +169,15 @@ module rapidrefresh_cldsurf_mod
 !                        (default:true).
 !      l_rtma3d      - logical option for turning on configuration for RTMA3D
 !                           (default is .FALSE.)
-!      l_precip_vertical_check - logical option for checking and adjusting
+!      i_precip_vertical_check - integer option for checking and adjusting
 !                                Qr/Qs/Qg and Qnr after precipitation analysis
 !                                to reduce the background reflectivity ghost in
-!                                analysis. (default is .FALSE.)
+!                                analysis. (default is 0)
+!                          = 0(no adjustment)
+!                          = 1(Clean off Qg only, where dbz_obs_max<=35dbz in the profile)
+!                          = 2(clean Qg as in 1, and adjustment to the retrieved Qr/Qs/Qnr throughout the whole profile)
+!                          = 3(similar to 2, but adjustment to Qr/Qs/Qnr only below maximum reflectivity level
+!                           and where the dbz_obs is missing);
 !
 ! attributes:
 !   language: f90
@@ -239,7 +248,7 @@ module rapidrefresh_cldsurf_mod
   public :: l_T_Q_adjust
   public :: l_saturate_bkCloud
   public :: l_rtma3d
-  public :: l_precip_vertical_check
+  public :: i_precip_vertical_check
 
   logical l_hydrometeor_bkio
   real(r_kind)  dfi_radar_latent_heat_time_period
@@ -297,7 +306,7 @@ module rapidrefresh_cldsurf_mod
   logical              l_T_Q_adjust
   logical              l_saturate_bkCloud
   logical              l_rtma3d
-  logical              l_precip_vertical_check
+  integer(i_kind)      i_precip_vertical_check
 
 contains
 
@@ -405,7 +414,7 @@ contains
     l_T_Q_adjust= .true.
     l_saturate_bkCloud= .true.
     l_rtma3d            = .false.                     ! turn configuration for rtma3d off          
-    l_precip_vertical_check = .false.                 ! No verical check for precipitation analysis (default)              
+    i_precip_vertical_check = 0                       ! No check and adjustment to retrieved Qr/Qs/Qg (default)
 
     return
   end subroutine init_rapidrefresh_cldsurf

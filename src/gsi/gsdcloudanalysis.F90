@@ -27,8 +27,18 @@ subroutine  gsdcloudanalysis(mype)
 !    2019-10-10  Zhao    - add code to check and adjust Qr/qs/qg and Qnr for
 !                          each verical profile to reduce the background
 !                          reflectivity ghost in final analysis. (for RTMA3D
-!                          only now)
-!
+!                          only now, option l_precip_vertical_check)
+!    2020-04-16  Zhao    - modifications to the code which checks and adjusts the vertical
+!                          profile of Qg/Qr/Qs/Qnr retrieved through cloud analysis to
+!                          alleviate the background ghost reflectivity in analysis.
+!                          Modifications includes:
+!                          1. change option l_precip_vertical_check to i_precip_vertical_check
+!                          2. i_precip_vertical_check:
+!                           = 0(no adjustment, default)
+!                           = 1(Clean off Qg only, where dbz_obs_max<=35dbz in the profile)
+!                           = 2(clean Qg as in 1, and adjustment to the retrieved Qr/Qs/Qnr throughout the whole profile)
+!                           = 3(similar to 2, but adjustment to Qr/Qs/Qnr only below maximum reflectivity level
+!                             and where the dbz_obs is missing);
 !
 !   input argument list:
 !     mype     - processor ID that does this IO
@@ -81,7 +91,7 @@ subroutine  gsdcloudanalysis(mype)
                                       l_use_hydroretrieval_all, &
                                       i_lightpcp, l_numconc, qv_max_inc,ioption, &
                                       l_precip_clear_only,l_fog_off,cld_bld_coverage,cld_clr_coverage,&
-                                      l_T_Q_adjust,l_saturate_bkCloud,l_precip_vertical_check,l_rtma3d  
+                                      l_T_Q_adjust,l_saturate_bkCloud,i_precip_vertical_check,l_rtma3d
 
   use gsi_metguess_mod, only: GSI_MetGuess_Bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
@@ -259,7 +269,9 @@ subroutine  gsdcloudanalysis(mype)
   real(r_kind),parameter    :: rho_w = 999.97_r_kind, rho_a = 1.2_r_kind
   real(r_kind),parameter    :: cldDiameter = 10.0E3_r_kind
 
-  logical       :: print_verbose
+! local variables used for adjustment of qr/qs for RTMA_3D to alleviate ghost reflectivity
+  logical         :: print_verbose
+  integer(i_kind) :: k_cap            ! highest level when adjument is done (used for adjust qr/qs for RTMA_3D)
 
 !
 !
@@ -920,12 +932,16 @@ subroutine  gsdcloudanalysis(mype)
 !         in order to remove/reduce the backround reflectivity "ghost" in
 !         analysis.
 !         Note: here rain_3d, snow_3d have been already changed into unit of kg/kg.
-     if(l_precip_vertical_check ) then
+!     if(l_precip_vertical_check) then
+     if(i_precip_vertical_check > 0) then
 
-        if(mype == 0) &
-           write(6,*)"SUB gsdcloudanalysis: precip_vertical_check start... (only print for pe=",mype,")."
-        if(print_verbose) &
-           write(6,*)"SUB gsdcloudanalysis: precip_vertical_check start... (for pe=",mype,")."
+        if(print_verbose) then
+           write(6,'(1x,A,I4.4,A)')"SUB gsdcloudanalysis: precip_vertical_check start... (for pe=",mype,")."
+        else
+           if(mype == 0) then
+              write(6,'(1x,A,I4.4,A)')"SUB gsdcloudanalysis: precip_vertical_check start ... (only print for pe=",mype,")."
+           end if
+        end if
 
         qnr_limit=200000_r_kind
         dbz_clean_graupel=35.0
@@ -945,36 +961,68 @@ subroutine  gsdcloudanalysis(mype)
               enddo
 !          2. check and adjustment along the profile at each grid point
               if( refmax > 0 .and. (imaxlvl_ref > 0 .and. imaxlvl_ref < nsig ) ) then
-!                cleaning the Graupel, if refmax <= dbz_cleanr_graupel (35dbz)
+                 ! cleaning the Graupel, if refmax <= dbz_clean_graupel (35dbz)
+                 ! because graupel is copied from background, not retrieved in cloud analysis.
+                 ! (as seen above, graupel_3d(i,j,k) = ges_qg(j,i,k) )
                  if( refmax <= dbz_clean_graupel ) graupel_3d(i,j,:) = zero
 
-!                adjusting hydrometeors based on maximum reflectivity level
-                 max_retrieved_qrqs=snow_3d(i,j,imaxlvl_ref)+rain_3d(i,j,imaxlvl_ref)
-                 do k=1,nsig
-                    qrqs_retrieved=snow_3d(i,j,k)+rain_3d(i,j,k)
-                    if(qrqs_retrieved > max_retrieved_qrqs .and. qrqs_retrieved > 0.0001_r_kind) then
-                       ratio_hyd_bk2obs=max(min(max_retrieved_qrqs/qrqs_retrieved,1.0_r_kind),0.0_r_kind)
-                       if(rain_3d(i,j,k) > zero) then
-                          rain_3d(i,j,k) = rain_3d(i,j,k)*ratio_hyd_bk2obs
-                          nrain_3d(i,j,k)= min(nrain_3d(i,j,k)/ratio_hyd_bk2obs*2.5,qnr_limit)
-                       endif
-                       if(snow_3d(i,j,k) > zero) &
-                          snow_3d(i,j,k) = snow_3d(i,j,k)*ratio_hyd_bk2obs
-                    end if
-                 end do
+                 ! adjusting hydrometeors based on maximum reflectivity level
+                 select case (i_precip_vertical_check)
+                    case(2)    ! adjust each level along the profile (1:nsig)
+                       max_retrieved_qrqs=snow_3d(i,j,imaxlvl_ref)+rain_3d(i,j,imaxlvl_ref)
+                       do k=1,nsig
+                          qrqs_retrieved=snow_3d(i,j,k)+rain_3d(i,j,k)
+                          if(qrqs_retrieved > max_retrieved_qrqs .and. qrqs_retrieved > 0.0001_r_kind) then
+                             ratio_hyd_bk2obs=max(min(max_retrieved_qrqs/qrqs_retrieved,1.0_r_kind),0.0_r_kind)
+                             if(rain_3d(i,j,k) > zero) then
+                                rain_3d(i,j,k) = rain_3d(i,j,k)*ratio_hyd_bk2obs
+                                nrain_3d(i,j,k)= min(nrain_3d(i,j,k)/ratio_hyd_bk2obs*2.5_r_kind,qnr_limit)
+                             endif
+                             if(snow_3d(i,j,k) > zero) then
+                                snow_3d(i,j,k) = snow_3d(i,j,k)*ratio_hyd_bk2obs
+                             end if
+                          end if
+                       end do
+                    case(3)    ! adjust the dbz-obs-missed levels below max-dbz layer (1:kcap)
+                               ! based on the qr+qs on max-refl level
+                               ! keep the retrieved cloud analysis as much as possible
+                       max_retrieved_qrqs=snow_3d(i,j,imaxlvl_ref)+rain_3d(i,j,imaxlvl_ref)
+                       k_cap=min(imaxlvl_ref,nsig)
+                       do k=k_cap,1,-1
+                          if( ref_mos_3d(i,j,k) <= -100.0_r_kind ) then   !  dbz-obs-missing level
+                             qrqs_retrieved=snow_3d(i,j,k)+rain_3d(i,j,k)
+                             if(qrqs_retrieved > max_retrieved_qrqs .and. qrqs_retrieved > 0.0001_r_kind) then
+                                ratio_hyd_bk2obs=max(min(max_retrieved_qrqs/qrqs_retrieved,1.0_r_kind),0.0_r_kind)
+                                if(rain_3d(i,j,k) > zero) then
+                                   rain_3d(i,j,k) = rain_3d(i,j,k)*ratio_hyd_bk2obs
+                                   nrain_3d(i,j,k)= min(nrain_3d(i,j,k)/ratio_hyd_bk2obs*2.5_r_kind,qnr_limit)    ! 2.5(old) or 1.0(new4) or 1.5(new5/6) 2.5(old, new7) 2.0(new8)
+                                endif
+                                if(snow_3d(i,j,k) > zero) then
+                                   snow_3d(i,j,k) = snow_3d(i,j,k)*ratio_hyd_bk2obs
+                                end if
+                             end if
+                          end if
+                       end do
+                    case default
+                       rain_3d(i,j,k) = rain_3d(i,j,k)
+                       nrain_3d(i,j,k)= nrain_3d(i,j,k)
+                       snow_3d(i,j,k) = snow_3d(i,j,k)
+                 end select
 
               end if
 
            end do
         end do
 
-        if(mype == 0) &
-           write(6,*)"SUB gsdcloudanalysis: precip_vertical_check is done ... (only print for pe=",mype,")."
-        if(print_verbose) &
-           write(6,*)"SUB gsdcloudanalysis: precip_vertical_check is done ... (for pe=",mype,")."
+        if(print_verbose) then
+           write(6,'(1x,A,I4.4,A)')"SUB gsdcloudanalysis: precip_vertical_check is done ... (for pe=",mype,")."
+        else
+           if(mype == 0) then
+              write(6,'(1x,A,I4.4,A)')"SUB gsdcloudanalysis: precip_vertical_check is done ... (only print for pe=",mype,")."
+           end if
+        end if
 
      end if 
-
 
   elseif(l_precip_clear_only) then !only clear for HRRRE
      do k=1,nsig
