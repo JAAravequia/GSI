@@ -204,11 +204,29 @@ if (nproc .eq. 0) then
    enddo
 
    DEALLOCATE(delp,ps)
-   do k=1,nlevs
-     ! layer pressure from Phillips vertical interpolation.
-     presslmn(:,k) = ((pressimn(:,k)**kap1-pressimn(:,k+1)**kap1)/&
-                      (kap1*(pressimn(:,k)-pressimn(:,k+1))))**kapr
-   end do
+
+!phillips
+!   do k=1,nlevs
+!     ! layer pressure from Phillips vertical interpolation.
+!     presslmn(:,k) = ((pressimn(:,k)**kap1-pressimn(:,k+1)**kap1)/&
+!                      (kap1*(pressimn(:,k)-pressimn(:,k+1))))**kapr
+!   end do
+
+!fv3
+  k=1
+  IF (ptop > 1.E-8 ) THEN
+     presslmn(:,k) = (pressimn(:,k) - pressimn(:,k+1)) &
+          &/ LOG(pressimn(:,k)/pressimn(:,k+1)) 
+  else
+     presslmn(:,k) = (pressimn(:,k) - pressimn(:,k+1)) &
+          &* kap/kap1 
+  endif
+
+  DO k = 2, nlevs
+     presslmn(:,k) = (pressimn(:,k) - pressimn(:,k+1)) &
+          &/ LOG(pressimn(:,k)/pressimn(:,k+1)) 
+  ENDDO
+
    print *,'ensemble mean first guess surface pressure:'
    print *,minval(spressmn),maxval(spressmn)
    ! logp holds log(pressure) or pseudo-height on grid, for each level/variable.

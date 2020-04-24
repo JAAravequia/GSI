@@ -317,8 +317,8 @@ CONTAINS
           CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@ObsError', Errinv)
           Errinv=1_r_kind/Errinv
           CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@ObsValue', Observation)
-          CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@Hofx', Obs_Minus_Forecast_adjusted)
-          CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@Hofx', Obs_Minus_Forecast_unadjusted)
+          CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@hofx', Obs_Minus_Forecast_adjusted)
+          CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@hofx', Obs_Minus_Forecast_unadjusted)
           CALL nc_diag_read_get_var(iunit, 'aerosol_optical_depth_4@KnownObsBias',bias)
           
           IF (lobsdiag_forenkf) THEN
@@ -350,7 +350,7 @@ CONTAINS
              CALL nc_diag_read_init(obsfile2, iunit2)
              
              ALLOCATE(Obs_Minus_Forecast_adjusted2(nobs_curr))
-             CALL nc_diag_read_get_var(iunit2, 'aerosol_optical_depth_4@Hofx', Obs_Minus_Forecast_adjusted2)
+             CALL nc_diag_read_get_var(iunit2, 'aerosol_optical_depth_4@hofx', Obs_Minus_Forecast_adjusted2)
              
              CALL nc_diag_read_close(obsfile2)
              
