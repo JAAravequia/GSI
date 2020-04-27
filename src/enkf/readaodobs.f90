@@ -34,6 +34,9 @@ MODULE readaodobs
   PRIVATE
   PUBLIC :: get_num_aodobs, get_aodobs_data, write_aodobs_data
 
+  REAL(r_kind), PARAMETER :: aod_550_max=5_r_kind
+
+
 CONTAINS
 
 ! get number of ozone observations
@@ -140,11 +143,15 @@ CONTAINS
            num_obs_totdiag = num_obs_totdiag + nobs_curr
            nread = nread + nobs_curr
            do i = 1, nobs_curr
+
              if (Analysis_Use_Flag(i) < 0 .or. Pressure(i) <= 0.001 .or. &
                  Pressure(i) > 120000_r_kind) cycle
-             if (Errinv(i) <= errorlimit .or.  &
-                 Errinv(i) >= errorlimit2 .or.  &
-                 abs(Observation(i)) > 1.e9_r_kind) cycle
+
+
+             IF (Errinv(i) <= errorlimit .OR. Errinv(i) >= errorlimit2 &
+                  &.OR. Observation(i) > aod_550_max &
+                  &.OR. Observation(i) < zero) CYCLE
+
               nkeep = nkeep + 1
               num_obs_tot = num_obs_tot + 1
 
@@ -360,11 +367,13 @@ CONTAINS
 
           DO i = 1, nobs_curr
              nobdiag = nobdiag + 1
-             IF (Analysis_Use_Flag(i) < 0 .OR. Pressure(i) <= 0.001 .OR. &
-                  Pressure(i) > 120000_r_kind) CYCLE
+             IF (Analysis_Use_Flag(i) < 0 .OR. Pressure(i) <= 0.001 &
+                  &.OR. Pressure(i) > 120000_r_kind) CYCLE
              
-             IF (Errinv(i) <= errorlimit .OR. Errinv(i) >= errorlimit2 .OR.  &
-                  ABS(Observation(i)) > 5_r_kind) CYCLE
+             IF (Errinv(i) <= errorlimit .OR. Errinv(i) >= errorlimit2 &
+                  &.OR. Observation(i) > aod_550_max &
+                  &.OR. Observation(i) < zero) CYCLE
+
              nob = nob + 1
              x_used(nobdiag) = 1
              x_code(nob) = 800  ! made up code one channel only 
