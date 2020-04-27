@@ -1,5 +1,7 @@
 import struct
-from sys import exit
+from sys import exit, argv
+import pandas as pd
+
 #! Structure for observation sensitivity information output
 #type obsense_header
 #  sequence
@@ -41,14 +43,48 @@ from sys import exit
 #
 
 
-file = 'osense_2017090812.dat'
-file = 'osense_2017091000.dat'
+
+#if len(sys.argv) > 0:
+if len(argv) > 0:
+    file = argv[1]
+
+
+datacolumns =  [ 'obfit_prior',
+                 'obsprd_prior',
+                 'ensmean_obnobc',
+                 'ensmean_ob',
+                 'ob',
+                 'oberrvar',
+                 'lon',
+                 'lat',
+                 'pres',
+                 'time',
+                 'oberrvar_orig',
+                 'stattype',
+                 'obtype',
+                 'indxsat',
+                 'osense_kin',
+                 'osense_dry',
+                 'osense_moist' ] 
+
+
 
 headerf='<LLLLLLL'
 recordf='=fffffffffffl20slfff'
 
 header_size = struct.calcsize(headerf)
 osense_info_size = struct.calcsize(recordf)
+
+
+convdatatmp=[]
+convrecordtmp=[]
+convanalobstmp=[]
+satdatatmp=[]
+satrecordtmp=[]
+satanalobstmp=[]
+
+
+print('reading file ', file)
 
 with open(file,'rb') as fin:
 
@@ -60,24 +96,38 @@ with open(file,'rb') as fin:
     biaspredsf =  '=' + 'f' * ( npred + 1 )
     biaspreds_size = struct.calcsize(biaspredsf)
 
-
-#    exit()
+    print('read header: idate = ', idate, ', convnum + oznum = ', convnum + oznum, \
+          ', satnum = ', satnum, ' npred = ', npred, ', nanals = ', nanals)
 
     for i in range(0, convnum + oznum):
 
        f = fin.read(8)
        record = fin.read(osense_info_size)
        analobs = fin.read(analobs_size)
-       ( obfit_prior, obsprd_prior, ensmean_obnobc, ensmean_ob, ob, oberrvar, lon, lat, pres, time, oberrvar_orig,stattype, obtype, indxsat, osense_kin, osense_dry, osense_moist ) = struct.unpack(recordf,record)
+       convdatatmp.append( struct.unpack( recordf, record ) )
+
+    print('read conventional data...')
 
     for i in range(0, satnum ):
+#    for i in range(0, 10 ):
 
        f = fin.read(8)
        record = fin.read(osense_info_size)
        analobs = fin.read(analobs_size)
        biaspreds = fin.read(biaspreds_size)
-       ( obfit_prior, obsprd_prior, ensmean_obnobc, ensmean_ob, ob, oberrvar, lon, lat, pres, time, oberrvar_orig,stattype, obtype, indxsat, osense_kin, osense_dry, osense_moist ) = struct.unpack(recordf,record)
- 
+       satdatatmp.append( struct.unpack( recordf, record ) )
+#       if ( indxsat > 3176 ):
+#           print('indxsat=',indxsat,' ',idate)
 
-print(lon, lat, pres, time,obtype)
+    print('read satellite data...')
+
+convdata = pd.DataFrame( convdatatmp, columns = datacolumns )
+
+satdata = pd.DataFrame( satdatatmp, columns = datacolumns )
+
+print(convdata.head()) 
+print(convdata.tail()) 
+print(satdata.head()) 
+print(satdata.tail()) 
+#print(lon, lat, pres, time,obtype)
 
