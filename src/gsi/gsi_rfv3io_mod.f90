@@ -1984,8 +1984,8 @@ subroutine gsi_fv3ncdf_writeuv_v1(dynvars,varu,varv,mype_io,add_saved)
              call fv3_ll_to_h(work_av(:,:,k),v,nlon,nlat,nlon_regional,nlat_regional,.true.)
 !!!!!!!!  add analysis_inc to readin work_b !!!!!!!!!!!!!!!!
              do i=2,nlon_regional
-               workbu_w2(i,:)=half*(u(i-1,:)+u(i+1,:))
-               workbv_w2(i,:)=half*(v(i-1,:)+v(i+1,:))
+               workbu_w2(i,:)=half*(u(i-1,:)+u(i,:))
+               workbv_w2(i,:)=half*(v(i-1,:)+v(i,:))
              enddo
              workbu_w2(1,:)=u(1,:)
              workbv_w2(1,:)=v(1,:)
@@ -2016,9 +2016,9 @@ subroutine gsi_fv3ncdf_writeuv_v1(dynvars,varu,varv,mype_io,add_saved)
              call fv3_ll_to_h(work_au(:,:,k),u,nlon,nlat,nlon_regional,nlat_regional,.true.)
              call fv3_ll_to_h(work_av(:,:,k),v,nlon,nlat,nlon_regional,nlat_regional,.true.)
 
-             do i=2,nlon_regional-1
-               work_bu_w(i,:,k)=half*(u(i,:)+u(i+1,:))
-               work_bv_w(i,:,k)=half*(v(i,:)+v(i+1,:))
+             do i=2,nlon_regional
+               work_bu_w(i,:,k)=half*(u(i-1,:)+u(i,:))
+               work_bv_w(i,:,k)=half*(v(i-1,:)+v(i,:))
              enddo
              work_bu_w(1,:,ilev0+k)=u(1,:)
              work_bv_w(1,:,ilev0+k)=v(1,:)
