@@ -179,7 +179,7 @@ subroutine gsi_rfv3io_get_grid_specs(fv3filenamegin,ierr)
   use netcdf, only: nf90_inquire_variable
   use mpimod, only: mype
   use mod_fv3_lola, only: generate_anl_grid
-  use gridmod,  only:nsig,regional_time,regional_fhr,aeta1_ll,aeta2_ll
+  use gridmod,  only:nsig,regional_time,regional_fhr,regional_fmin,aeta1_ll,aeta2_ll
   use gridmod,  only:nlon_regional,nlat_regional,eta1_ll,eta2_ll
   use kinds, only: i_kind,r_kind
   use constants, only: half,zero
@@ -197,6 +197,7 @@ subroutine gsi_rfv3io_get_grid_specs(fv3filenamegin,ierr)
   character(len=128) :: name
   integer(i_kind) myear,mmonth,mday,mhour,mminute,msecond
   real(r_kind),allocatable:: abk_fv3(:)
+  integer nlon0,nlat0
 
       coupler_res_filenam=fv3filenamegin%couplerres
       grid_spec=fv3filenamegin%grid_spec
@@ -216,6 +217,7 @@ subroutine gsi_rfv3io_get_grid_specs(fv3filenamegin,ierr)
     regional_time(5)=mminute
     regional_time(6)=msecond
     regional_fhr=zero          ! forecast hour set zero for now
+    regional_fmin=zero          ! forecast min set zero for now
 
 !!!!!!!!!!    grid_spec  !!!!!!!!!!!!!!!
     ierr=0
@@ -317,6 +319,8 @@ subroutine gsi_rfv3io_get_grid_specs(fv3filenamegin,ierr)
 
 !!!!!!! setup A grid and interpolation/rotation coeff.
     call generate_anl_grid(nx,ny,grid_lon,grid_lont,grid_lat,grid_latt)
+
+
 
     deallocate (grid_lon,grid_lat,grid_lont,grid_latt)
     deallocate (ak,bk,abk_fv3)
