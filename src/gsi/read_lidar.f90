@@ -125,8 +125,19 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
 
   data lunin / 10 /
 
+!ILIANA
+  integer(i_kind) nex1, nex2, nex3, nex4, nex5, nex6, nex7, nex8 
 
 !**************************************************************************
+!ILIANA
+  nex1=0
+  nex2=0
+  nex3=0
+  nex4=0
+  nex5=0
+  nex6=0
+  nex7=0
+  nex8=0
 ! Initialize variables
   nmrecs=0
   nreal=maxdat
@@ -135,6 +146,9 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
   ilat=3
   ndata=0
   nodata=0
+
+! ILIANA
+ offtime_data=.true.
 
   call getcount_bufr(trim(infile),nmsgmax,maxobs)
   allocate(cdata_all(maxdat,maxobs))
@@ -187,6 +201,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
   end if
 
   write(6,*)'READ_LIDAR: time offset is ',toff,' hours.'
+  write(6,*)'READ_LIDAR: time_correction: ',time_correction
 
 ! Big loop over bufr file	
 
@@ -352,6 +367,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      nhdr  = 10
      dwstr = 'HLSW HLSWEE CONFLG PRES TMDBST BKSTR DWPRS DWTMP DWBR'
      ndwl  = 9
+
      if (.not. allocated(hdr))     allocate(hdr(nhdr))     ! allocate according to # of variables in hdstr
      if (.not. allocated(aeolusd)) allocate(aeolusd(ndwl)) ! aalocate according to # of variables in dwstr
      !read header
@@ -381,11 +397,24 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
 !                                                                            ! of this routine
      t4dv = (real(nmind-iwinbgn,r_kind) + real(hdr(8),r_kind)*r60inv)*r60inv + time_correction
 
+!! ILIANA - Need to fix this time related issue
      if (l4dvar.or.l4densvar) then
-        if (t4dv<zero .OR. t4dv>winlen) return
+      !if (5 > 1) then ! silly test to force code through l4dvar=.true.
+        if (t4dv<zero .OR. t4dv>winlen) then
+        write(6,*)'READ_LIDAR:  line 386 in read_lidar.f90 ###' 
+        return
+        endif
      else
-        time=hdr(4) + time_correction
-        if (abs(time) > ctwind(ikx) .or. abs(time) > twind) return
+        ! !BUG accouding to hlui, but why??? 
+        ! !time=hdr(4) + time_correction
+
+        ! time = float (nmind - minan)*r60inv !Fix from hlui, but doesn't work 
+        
+        !if (abs(time) > ctwind(ikx) .or. abs(time) > twind) then
+        !write(6,*)'READ_LIDAR:  line 392 in read_lidar.f90: time_correction'
+        !return
+        !endif
+        write(6,*)'READ_LIDAR:  SKIP TIME CHECK for now'
      endif
 
 
@@ -421,8 +450,8 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
 !        (VTOP, VBOT, and VCENT, respectively)
 !        Note - for first implementation, I am treating the ob as a point valid at the centroid
 !
-!        Order of variables in horizontal sequence: CRDSIG CLATH CLONH TISE
-!        Order of variables in vertical sequence:   CRDSIG HEITH BEARAZ ELEV SATRG
+!        Order of variables in horizontal sequence: horiz_seq:CRDSIG CLATH CLONH TISE
+!        Order of variables in vertical sequence:   vert_seq: CRDSIG HEITH BEARAZ ELEV SATRG
      call ufbseq(lunin,horiz_seq,n_horiz_seq,1,iret,horiz_seq_str)
 
 !    determine layer depth
@@ -439,12 +468,77 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      vert_seq_str = 'VCENT'
      call ufbseq(lunin,vert_seq,n_vert_seq,1,iret,vert_seq_str)
 
+!ILIANA - eliminate winds by height: Height<250m 
+     if ( vert_seq(2)<=250 ) then                     ! Height<250m 
+        nex1=nex1+1
+        return
+     endif    
+
+!ILIANA - eliminate winds by height: Rayleigh & Pres>850hPa 
+     if ( hdr(9)==1 .and. aeolusd(4)>85000.0 ) then ! Rayleigh & Pres>850hPa
+        nex2=nex2+1
+        return
+     endif
+
+
 !    read horizontal weighted centroid information
 !    read vertical weighted centroid information
      horiz_seq_str = 'HCENT'
      call ufbseq(lunin,horiz_seq,n_horiz_seq,1,iret,horiz_seq_str)
 
      call ufbint(lunin,aeolusd,ndwl,1,iret,dwstr)
+
+!ILIANA - eliminate winds with invalid overall confidence flag
+!         CONFLG- Confidence flag, 0=VALID, 1=INVALID measurement
+     if (aeolusd(3)<0 .or. aeolusd(3)>0  &
+         ) then 
+        nex3=nex3+1
+        return
+     endif        
+
+!ILIANA - eliminate winds by Channel's QC
+     if ( hdr(9)==1 .and.       &            ! Rayleigh
+          aeolusd(2)>12.0 .and. &            ! EE>12m/s
+          aeolusd(4)<=20000.0 ) then         ! Pres<=200hPa
+        nex4=nex4+1
+        return
+     endif
+
+!ILIANA - eliminate winds by Channel's QC
+     if ( hdr(9)==1 .and.       &            ! Rayleigh
+          aeolusd(2)>8.5 .and.  &            ! EE>8.5m/s
+          aeolusd(4)>20000.0 ) then          ! Pres>200hPa
+        nex5=nex5+1
+        return
+     endif
+
+!ILIANA - eliminate winds by Channel's QC
+     if ( hdr(9)==0 .and.       &            ! Mie
+          aeolusd(2)>5.0 ) then              ! EE>5m/s
+        nex6=nex6+1
+        return
+     endif
+
+!ILIANA - eliminate winds by vertical accumulation height < 300m
+     if (layer_depth<300.0) then
+        nex7=nex7+1
+        return
+     endif
+
+
+!ILIANA - inflate OE 
+     if (hdr(9) == 0) then ! Mie
+        aeolusd(2)=2*aeolusd(2)
+        endif
+     if (hdr(9) == 1) then ! Rayleigh
+        aeolusd(2)=1.4*aeolusd(2)
+        endif
+!ILIANA - Blacklist 3 Sept 2019 (any others??)
+     if( idate5(1)==2019 .and. idate5(2)==9 .and.  idate5(3)==3 )then
+        write(6,*)'READ_LIDAR:  Blacklisted date(s) AEOLUS: ', idate5(1), idate5(2), idate5(3)
+        nex8=nex8+1
+        return
+     endif
 
      if (abs(aeolusd(1)) > 1000.0_r_kind) return ! check if observation is realistic 
                                                  !  - 1000 ms-1 chosen somewhat arbitrarily, it appears 
@@ -538,6 +632,8 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
 
 
      return
+
+write(6,*)'READ_LIDAR:  cdata_all POPULATED SUCCESSFULLY '
      
   end subroutine read_aeolus_
 

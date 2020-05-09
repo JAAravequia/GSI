@@ -187,7 +187,7 @@ logical,public :: write_spread_diag = .false.
 ! ensemble perturbations in observation space.
 logical,public :: lobsdiag_forenkf = .false.
 ! if true, use netcdf diag files, otherwise use binary diags
-logical,public :: netcdf_diag = .false.
+logical,public :: netcdf_diag = .true. !.false. !default
 
 namelist /nam_enkf/datestring,datapath,iassim_order,nvars,&
                    covinflatemax,covinflatemin,deterministic,sortinc,&

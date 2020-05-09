@@ -240,6 +240,8 @@ subroutine setupdw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
 ! Read and reformat observations in work arrays.  
   read(lunin)data,luse,ioid
 
+write(6,*)'READ_LIDAR:  cdata_all read in SETUPDW successfully'
+
 !    index information for data array (see reading routine)
   ikxx   =  1  ! index of ob type
   ilon   =  2  ! index of grid relative obs location (x)
@@ -273,6 +275,7 @@ subroutine setupdw(lunin,mype,bwork,awork,nele,nobs,is,conv_diagsave)
      muse(i)=nint(data(iuse,i)) <= jiter
   end do
 
+write(6,*)'READ_LIDAR:  cdata_all read in SETUPDW : NOT EMPTY :) '
 
   dup=one
   do k=1,nobs
