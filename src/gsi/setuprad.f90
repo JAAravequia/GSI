@@ -1220,24 +1220,24 @@ contains
 !                 using NOAA-19 MHS air-mass (and angle?) bias correction coefficient
            if (tempest) then
 ! TCW 02/27/2020: this is the very first attempt (no account for calibration diff)
-!              tempest2mhs_calidiff(1) = 0.0
-!              tempest2mhs_calidiff(2) = 0.0
-!              tempest2mhs_calidiff(3) = 0.0
-!              tempest2mhs_calidiff(4) = 0.0
-!              tempest2mhs_calidiff(5) = 0.0
+              tempest2mhs_calidiff(1) = 0.0
+              tempest2mhs_calidiff(2) = 0.0
+              tempest2mhs_calidiff(3) = 0.0
+              tempest2mhs_calidiff(4) = 0.0
+              tempest2mhs_calidiff(5) = 0.0
 
-! TCW 02/27/2020: use mean difference from calibration differences 
+!! TCW 02/27/2020: use mean difference from calibration differences 
 !              tempest2mhs_calidiff(1) = -0.39
 !              tempest2mhs_calidiff(2) = -1.25
 !              tempest2mhs_calidiff(3) =  0.61
 !              tempest2mhs_calidiff(4) = -0.29
 !              tempest2mhs_calidiff(5) = -0.72
-! TCW 03/17/2020: use updated mean calibration differences (Table 3 in Berg et al, 2020) 
-              tempest2mhs_calidiff(1) = -0.40
-              tempest2mhs_calidiff(2) = -1.46
-              tempest2mhs_calidiff(3) = -0.69
-              tempest2mhs_calidiff(4) = -0.22
-              tempest2mhs_calidiff(5) =  0.88
+!! TCW 03/17/2020: use updated mean calibration differences (Table 3 in Berg et al, 2020) 
+!              tempest2mhs_calidiff(1) = -0.40
+!              tempest2mhs_calidiff(2) = -1.46
+!              tempest2mhs_calidiff(3) = -0.69
+!              tempest2mhs_calidiff(4) = -0.22
+!              tempest2mhs_calidiff(5) =  0.88
 
               tbc(i) = tbc(i) - tempest2mhs_calidiff(i)*air_rad(mm)
            endif
