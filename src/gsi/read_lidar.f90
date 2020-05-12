@@ -126,7 +126,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
   data lunin / 10 /
 
 !ILIANA
-  integer(i_kind) nex1, nex2, nex3, nex4, nex5, nex6, nex7, nex8 
+  integer(i_kind) qc_flag, nex1, nex2, nex3, nex4, nex5, nex6, nex7, nex8 
 
 !**************************************************************************
 !ILIANA
@@ -138,6 +138,8 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
   nex6=0
   nex7=0
   nex8=0
+  qc_flag=0
+
 ! Initialize variables
   nmrecs=0
   nreal=maxdat
@@ -147,8 +149,6 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
   ndata=0
   nodata=0
 
-! ILIANA
- offtime_data=.true.
 
   call getcount_bufr(trim(infile),nmsgmax,maxobs)
   allocate(cdata_all(maxdat,maxobs))
@@ -168,6 +168,8 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
 
 ! Time offset
   call time_4dvar(idate,toff)
+  write(6,*) 'READ_LIDAR:READ_LIDAR idate= ' , idate
+  write(6,*) 'READ_LIDAR:READ_LIDAR  toff= ' , toff
 
 ! If date in lidar file does not agree with analysis date, 
 ! print message and stop program execution.
@@ -200,7 +202,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      time_correction=zero
   end if
 
-  write(6,*)'READ_LIDAR: time offset is ',toff,' hours.'
+  write(6,*)'READ_LIDAR: time offset toff is ',toff,' hours.'
   write(6,*)'READ_LIDAR: time_correction: ',time_correction
 
 ! Big loop over bufr file	
@@ -385,7 +387,6 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
          idate5(3) < 1    .or. idate5(3) >   31 .or. &
          idate5(4) <0     .or. idate5(4) >   24 .or. &
          idate5(5) <0     .or. idate5(5) >   60 )then
-
         write(6,*)'READ_LIDAR:  ### ERROR IN READING AEOLUS BUFR DATA:', &
         ' STRANGE OBS TIME (YMDHM):', idate5(1:5)
         return
@@ -397,9 +398,14 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
 !                                                                            ! of this routine
      t4dv = (real(nmind-iwinbgn,r_kind) + real(hdr(8),r_kind)*r60inv)*r60inv + time_correction
 
+!ILIANA
+    write(6,*)'READ_LIDAR: idate5 OBS TIME (YMDHM):', idate5(1:5)
+    write(6,*)'READ_LIDAR: nmind from w3fs21:', nmind
+    write(6,*)'READ_LIDAR: t4dv', t4dv
+    write(6,*)'READ_LIDAR: window length, winlen',winlen
+
 !! ILIANA - Need to fix this time related issue
      if (l4dvar.or.l4densvar) then
-      !if (5 > 1) then ! silly test to force code through l4dvar=.true.
         if (t4dv<zero .OR. t4dv>winlen) then
         write(6,*)'READ_LIDAR:  line 386 in read_lidar.f90 ###' 
         return
@@ -408,8 +414,11 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
         ! !BUG accouding to hlui, but why??? 
         ! !time=hdr(4) + time_correction
 
-        ! time = float (nmind - minan)*r60inv !Fix from hlui, but doesn't work 
-        
+        time = float (nmind - minan)*r60inv !Fix from hlui, but doesn't work
+   write(6,*)'READ_LIDAR: Non=4dvar branch, time', time
+   write(6,*)'READ_LIDAR: Non=4dvar branch, ikx, ctwind(ikx)', ikx,ctwind(ikx)
+   write(6,*)'READ_LIDAR: Non=4dvar branch, twind', twind       
+
         !if (abs(time) > ctwind(ikx) .or. abs(time) > twind) then
         !write(6,*)'READ_LIDAR:  line 392 in read_lidar.f90: time_correction'
         !return
@@ -471,13 +480,15 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
 !ILIANA - eliminate winds by height: Height<250m 
      if ( vert_seq(2)<=250 ) then                     ! Height<250m 
         nex1=nex1+1
-        return
+        qc_flag=qc_flag+1
+        !return
      endif    
 
 !ILIANA - eliminate winds by height: Rayleigh & Pres>850hPa 
      if ( hdr(9)==1 .and. aeolusd(4)>85000.0 ) then ! Rayleigh & Pres>850hPa
         nex2=nex2+1
-        return
+        qc_flag=qc_flag+10
+        !return
      endif
 
 
@@ -493,7 +504,8 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      if (aeolusd(3)<0 .or. aeolusd(3)>0  &
          ) then 
         nex3=nex3+1
-        return
+        qc_flag=qc_flag+100
+        !return
      endif        
 
 !ILIANA - eliminate winds by Channel's QC
@@ -501,7 +513,8 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
           aeolusd(2)>12.0 .and. &            ! EE>12m/s
           aeolusd(4)<=20000.0 ) then         ! Pres<=200hPa
         nex4=nex4+1
-        return
+        qc_flag=qc_flag+1000
+        !return
      endif
 
 !ILIANA - eliminate winds by Channel's QC
@@ -509,20 +522,23 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
           aeolusd(2)>8.5 .and.  &            ! EE>8.5m/s
           aeolusd(4)>20000.0 ) then          ! Pres>200hPa
         nex5=nex5+1
-        return
+        qc_flag=qc_flag+10000
+        !return
      endif
 
 !ILIANA - eliminate winds by Channel's QC
      if ( hdr(9)==0 .and.       &            ! Mie
           aeolusd(2)>5.0 ) then              ! EE>5m/s
         nex6=nex6+1
-        return
+        qc_flag=qc_flag+100000
+        !return
      endif
 
 !ILIANA - eliminate winds by vertical accumulation height < 300m
      if (layer_depth<300.0) then
         nex7=nex7+1
-        return
+        qc_flag=qc_flag+1000000
+        !return
      endif
 
 
@@ -609,7 +625,8 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      cdata_all(5,ndata)=vert_seq(2)            ! obs height (altitude) (m)
      cdata_all(6,ndata)=vert_seq(4)*deg2rad    ! elevation angle (radians)
      cdata_all(7,ndata)=vert_seq(3)*deg2rad    ! bearing or azimuth (radians)
-     cdata_all(8,ndata)=zero                   ! number of laser shots                   - ZERO FOR NOW
+     !cdata_all(8,ndata)=zero                   ! number of laser shots                   - ZERO FOR NOW
+     cdata_all(8,ndata)=qc_flag
      cdata_all(9,ndata)=zero                   ! number of cloud laser shots             - ZERO FOR NOW
      cdata_all(10,ndata)=layer_depth           ! atmospheric depth
      cdata_all(11,ndata)=aeolusd(1)            ! obs wind (line of sight component) msq
@@ -632,7 +649,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
 
 
      return
-
+write(6,*) nex1, nex2, nex3, nex4, nex5, nex6, nex7, nex8, qc_flag
 write(6,*)'READ_LIDAR:  cdata_all POPULATED SUCCESSFULLY '
      
   end subroutine read_aeolus_
