@@ -126,7 +126,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
   data lunin / 10 /
 
 !ILIANA
-  integer(i_kind) qc_flag, nex1, nex2, nex3, nex4, nex5, nex6, nex7, nex8 
+  integer(i_kind) to, qc_flag, nex1, nex2, nex3, nex4, nex5, nex6, nex7, nex8 
 
 !**************************************************************************
 !ILIANA
@@ -169,6 +169,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
 ! Time offset
   call time_4dvar(idate,toff)
   write(6,*) 'READ_LIDAR:READ_LIDAR idate= ' , idate
+  write(6,*) 'READ_LIDAR:READ_LIDAR iadate= ' , iadate
   write(6,*) 'READ_LIDAR:READ_LIDAR  toff= ' , toff
 
 ! If date in lidar file does not agree with analysis date, 
@@ -207,12 +208,13 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
 
 ! Big loop over bufr file	
 
-  obsloop: do
+  do to=1,100
+  !ILIANA obsloop: do
      call readsb(lunin,iret) 
      if(iret/=0) then
         call readmg(lunin,subset,jdate,iret)
-        if(iret/=0) exit obsloop
-        cycle obsloop
+        if(iret/=0) return ! exit obsloop
+        !cycle obsloop
      end if
      nmrecs=nmrecs+1
 
@@ -223,10 +225,12 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
          call read_aeolus_
          nread = nread + 1
      else 
-         cycle obsloop
+         return !cycle obsloop
      endif
 ! End of bufr read loop
-  end do obsloop
+  !ILIANA end do obsloop
+  enddo
+
 ! Write observations to scratch file
   call count_obs(ndata,maxdat,ilat,ilon,cdata_all,nobs)
   write(lunout) obstype,sis,nreal,nchanl,ilat,ilon
@@ -286,7 +290,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      endif
 
 
-     t4dv = toff + hdr(4)
+     t4dv = toff + hdr(4)  ! hdr(4)=DHR(OBSERVATION TIME MINUS CYCLE TIME)
      if (l4dvar.or.l4densvar) then
         if (t4dv<zero .OR. t4dv>winlen) return
      else
@@ -392,10 +396,34 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
         return
      endif
 
-!    Retrieve obs time
-     call w3fs21(idate5,nmind)
-!                                       ! add in seconds                     ! determined outside
-!                                                                            ! of this routine
+!!!!!!!!!Misplaced block
+!    determine slot in convinfo, including setting type to satid and subtype
+!    For type, WMO Satellite ID (SAID)
+     kx = nint(hdr(1))
+
+!    For subtype:
+!        in bufr:
+!           Channel (RCVCH):  0==Mie, 1==Rayleigh
+!           Classification Type (LL2BCT):  0==Clear, 1==Cloudy
+!        for subtype:
+!           (RCVCH+1)*10 + (LL2BCT)
+!          ...or...
+!           subtype:  10==Mie,clear, 11==Mie,cloudy, 20==Rayleigh,Clear,
+!           21==Rayleigh,Cloudy
+
+     subtype = (nint(hdr(9)) + 1) * 10 + nint(hdr(10))
+     ikx=0
+     do i=1,nconvtype
+        if(trim(obstype) == trim(ioctype(i)) .and. kx == ictype(i) .and. subtype== icsubtype(i))ikx = i
+     end do
+
+!!!!!!!!!!!
+
+
+!    Retrieve obs time in minutes since 00:00 1 Jan 1978
+     call w3fs21(idate5,nmind) 
+!    iwinbgn - time since ref at start of 4dvar window (mins)
+!    t4dv - obs time (analyis relative hour) in hours
      t4dv = (real(nmind-iwinbgn,r_kind) + real(hdr(8),r_kind)*r60inv)*r60inv + time_correction
 
 !ILIANA
@@ -411,19 +439,20 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
         return
         endif
      else
-        ! !BUG accouding to hlui, but why??? 
-        ! !time=hdr(4) + time_correction
+        !FOR DWL data:
+        !time=hdr(4) + time_correction
 
-        time = float (nmind - minan)*r60inv !Fix from hlui, but doesn't work
+        time = float (nmind - minan)*r60inv + time_correction 
    write(6,*)'READ_LIDAR: Non=4dvar branch, time', time
    write(6,*)'READ_LIDAR: Non=4dvar branch, ikx, ctwind(ikx)', ikx,ctwind(ikx)
    write(6,*)'READ_LIDAR: Non=4dvar branch, twind', twind       
+   write(6,*)'READ_LIDAR: Non=4dvar branch, minan', minan
 
-        !if (abs(time) > ctwind(ikx) .or. abs(time) > twind) then
-        !write(6,*)'READ_LIDAR:  line 392 in read_lidar.f90: time_correction'
-        !return
-        !endif
-        write(6,*)'READ_LIDAR:  SKIP TIME CHECK for now'
+        if (abs(time) > ctwind(ikx) .or. abs(time) > twind) then
+        write(6,*)'READ_LIDAR:  Time mess line 392 in read_lidar.f90: time_correction'
+        return
+        endif
+        !write(6,*)'READ_LIDAR:  SKIP TIME CHECK for now'
      endif
 
 
@@ -621,6 +650,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      cdata_all(1,ndata)=ikx                    ! obs type
      cdata_all(2,ndata)=dlon                   ! grid relative longitude
      cdata_all(3,ndata)=dlat                   ! grid relative latitude
+    write(6,*)'READ_LIDAR: t4dv in cdata_all', t4dv
      cdata_all(4,ndata)=t4dv                   ! obs time (analyis relative hour)
      cdata_all(5,ndata)=vert_seq(2)            ! obs height (altitude) (m)
      cdata_all(6,ndata)=vert_seq(4)*deg2rad    ! elevation angle (radians)
@@ -647,10 +677,10 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      cdata_all(26,ndata)=aeolusd(6)            ! retrieval Backscatter
      cdata_all(27,ndata)=aeolusd(9)            ! retrieval derivative of wind w.r.t. Backscatter
 
+write(6,*)'READ_LIDAR: next1-8, qc_flag',  nex1, nex2, nex3, nex4, nex5, nex6, nex7, nex8, qc_flag
+write(6,*)'READ_LIDAR:  cdata_all POPULATED SUCCESSFULLY '
 
      return
-write(6,*) nex1, nex2, nex3, nex4, nex5, nex6, nex7, nex8, qc_flag
-write(6,*)'READ_LIDAR:  cdata_all POPULATED SUCCESSFULLY '
      
   end subroutine read_aeolus_
 
