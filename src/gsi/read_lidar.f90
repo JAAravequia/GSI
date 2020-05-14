@@ -681,7 +681,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      cdata_all(25,ndata)=aeolusd(8)            ! retrieval derivative of wind w.r.t. Temperature
      cdata_all(26,ndata)=aeolusd(6)            ! retrieval Backscatter
      cdata_all(27,ndata)=aeolusd(9)            ! retrieval derivative of wind w.r.t. Backscatter
-
+!ILIANA -test
 !ILIANA
 write(6,*)'READ_LIDAR:READ_AEOLUS nex1,..,nex8, qc_flag',  nex1, nex2, nex3, nex4, nex5, nex6, nex7, nex8, qc_flag
 write(6,*)'READ_LIDAR:READ_AEOLUS  cdata_all POPULATED SUCCESSFULLY '
