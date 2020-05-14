@@ -993,7 +993,7 @@ write(6,*)'READ_LIDAR:  cdata_all read in SETUPDW : NOT EMPTY :) '
            call nc_diag_metadata("Wind_Reduction_Factor_at_10m", sngl(factw)                  )
            call nc_diag_metadata("Elevation_Angle",              sngl(data(ielva,i)*rad2deg)  )
            call nc_diag_metadata("Wind_Azimuth_Angle",           sngl(data(iazm,i)*rad2deg)   )
-           call nc_diag_metadata("Laser_Shot_Count",             sngl(data(inls,i))           )
+           call nc_diag_metadata("Laser_Shot_Count",             sngl(data(inls,i)/1000.0)           )
            call nc_diag_metadata("Cloud_Laser_Shot_Count",       sngl(data(incls,i))          )
            call nc_diag_metadata("Atmospheric_Depth",            sngl(data(iatd,i))           )
 

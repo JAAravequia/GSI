@@ -125,7 +125,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
 
   data lunin / 10 /
 
-!ILIANA
+!ILIANA - temporary diagnostics variables
   integer(i_kind) to, qc_flag, nex1, nex2, nex3, nex4, nex5, nex6, nex7, nex8 
 
 !**************************************************************************
@@ -203,12 +203,12 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      time_correction=zero
   end if
 
-  write(6,*)'READ_LIDAR: time offset toff is ',toff,' hours.'
-  write(6,*)'READ_LIDAR: time_correction: ',time_correction
+!ILIANA
+  write(6,*)'READ_LIDAR:READ_LIDAR time offset toff is ',toff,' hours'
+  write(6,*)'READ_LIDAR:READ_LIDAR time_correction: ',time_correction
 
 ! Big loop over bufr file	
-
-  do to=1,100
+  do to=1,10000
   !ILIANA obsloop: do
      call readsb(lunin,iret) 
      if(iret/=0) then
@@ -374,6 +374,9 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      dwstr = 'HLSW HLSWEE CONFLG PRES TMDBST BKSTR DWPRS DWTMP DWBR'
      ndwl  = 9
 
+!ILIANA - zero-out the qc_flag for each wind obs
+     qc_flag=0
+
      if (.not. allocated(hdr))     allocate(hdr(nhdr))     ! allocate according to # of variables in hdstr
      if (.not. allocated(aeolusd)) allocate(aeolusd(ndwl)) ! aalocate according to # of variables in dwstr
      !read header
@@ -391,12 +394,12 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
          idate5(3) < 1    .or. idate5(3) >   31 .or. &
          idate5(4) <0     .or. idate5(4) >   24 .or. &
          idate5(5) <0     .or. idate5(5) >   60 )then
-        write(6,*)'READ_LIDAR:  ### ERROR IN READING AEOLUS BUFR DATA:', &
+        write(6,*)'READ_LIDAR:READ_AEOLUS  ### ERROR IN READING AEOLUS BUFR DATA:', &
         ' STRANGE OBS TIME (YMDHM):', idate5(1:5)
         return
      endif
 
-!!!!!!!!!Misplaced block
+!ILIANA - This block was misplaced and wrongfuly further down. Keep it here!
 !    determine slot in convinfo, including setting type to satid and subtype
 !    For type, WMO Satellite ID (SAID)
      kx = nint(hdr(1))
@@ -416,66 +419,70 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      do i=1,nconvtype
         if(trim(obstype) == trim(ioctype(i)) .and. kx == ictype(i) .and. subtype== icsubtype(i))ikx = i
      end do
-
-!!!!!!!!!!!
+!ILIANA - End of the previously misplaced block
 
 
 !    Retrieve obs time in minutes since 00:00 1 Jan 1978
-     call w3fs21(idate5,nmind) 
+     call w3fs21(idate5,nmind)
+!ILIANA
+!    Retrieve analysis time in minutes since 00:00 1 Jan 1978
+     call w3fs21(iadate,minan)
+ 
 !    iwinbgn - time since ref at start of 4dvar window (mins)
-!    t4dv - obs time (analyis relative hour) in hours
+!    t4dv - obs time (relative to analyis hour) (hours)
      t4dv = (real(nmind-iwinbgn,r_kind) + real(hdr(8),r_kind)*r60inv)*r60inv + time_correction
 
 !ILIANA
-    write(6,*)'READ_LIDAR: idate5 OBS TIME (YMDHM):', idate5(1:5)
-    write(6,*)'READ_LIDAR: nmind from w3fs21:', nmind
-    write(6,*)'READ_LIDAR: t4dv', t4dv
-    write(6,*)'READ_LIDAR: window length, winlen',winlen
+    write(6,*)'READ_LIDAR:READ_AEOLUS idate5 OBS TIME (YMDHM):', idate5(1:5)
+    write(6,*)'READ_LIDAR:READ_AEOLUS nmind from w3fs21:', nmind
+    write(6,*)'READ_LIDAR:READ_AEOLUS t4dv', t4dv
+    write(6,*)'READ_LIDAR:READ_AEOLUS window length, winlen',winlen
 
-!! ILIANA - Need to fix this time related issue
+!ILIANA - Time check is now fixed
      if (l4dvar.or.l4densvar) then
         if (t4dv<zero .OR. t4dv>winlen) then
-        write(6,*)'READ_LIDAR:  line 386 in read_lidar.f90 ###' 
+        write(6,*)'READ_LIDAR:READ_AEOLUS  line 444 in read_lidar.f90'
+        write(6,*)'READ_LIDAR:READ_AEOLUS  Obs is out of l4dvar/l4densvar AN time window'
         return
         endif
      else
-        !FOR DWL data:
+        !ILIANA - this is only true for DWL data, see: read_dwldat_
         !time=hdr(4) + time_correction
-
         time = float (nmind - minan)*r60inv + time_correction 
-   write(6,*)'READ_LIDAR: Non=4dvar branch, time', time
-   write(6,*)'READ_LIDAR: Non=4dvar branch, ikx, ctwind(ikx)', ikx,ctwind(ikx)
-   write(6,*)'READ_LIDAR: Non=4dvar branch, twind', twind       
-   write(6,*)'READ_LIDAR: Non=4dvar branch, minan', minan
+   !ILIANA - for diagnostics purposes
+   write(6,*)'READ_LIDAR:READ_AEOLUS Non-4dvar branch, time', time
+   write(6,*)'READ_LIDAR:READ_AEOLUS Non-4dvar branch, ikx, ctwind(ikx)', ikx,ctwind(ikx)
+   write(6,*)'READ_LIDAR:READ_AEOLUS Non-4dvar branch, twind', twind       
+   write(6,*)'READ_LIDAR:READ_AEOLUS Non-4dvar branch, minan', minan
 
         if (abs(time) > ctwind(ikx) .or. abs(time) > twind) then
-        write(6,*)'READ_LIDAR:  Time mess line 392 in read_lidar.f90: time_correction'
+        write(6,*)'READ_LIDAR:READ_AEOLUS  line 459 in read_lidar.f90'
+        write(6,*)'READ_LIDAR:READ_AEOLUS  Obs is out of AN time window'
         return
         endif
-        !write(6,*)'READ_LIDAR:  SKIP TIME CHECK for now'
+
      endif
 
-
-
-!    determine slot in convinfo, including setting type to satid and subtype
-!    For type, WMO Satellite ID (SAID)
-     kx = nint(hdr(1))
-
-!    For subtype:
-!        in bufr:
-!           Channel (RCVCH):  0==Mie, 1==Rayleigh
-!           Classification Type (LL2BCT):  0==Clear, 1==Cloudy
-!        for subtype:
-!           (RCVCH+1)*10 + (LL2BCT)
-!          ...or...
-!           subtype:  10==Mie,clear, 11==Mie,cloudy, 20==Rayleigh,Clear, 21==Rayleigh,Cloudy
-
-     subtype = (nint(hdr(9)) + 1) * 10 + nint(hdr(10))
-     ikx=0
-     do i=1,nconvtype
-        if(trim(obstype) == trim(ioctype(i)) .and. kx == ictype(i) .and. subtype == icsubtype(i))ikx = i
-     end do
-
+!ILIANA - this block was moved higher up
+!!    determine slot in convinfo, including setting type to satid and subtype
+!!    For type, WMO Satellite ID (SAID)
+!     kx = nint(hdr(1))
+!
+!!    For subtype:
+!!        in bufr:
+!!           Channel (RCVCH):  0==Mie, 1==Rayleigh
+!!           Classification Type (LL2BCT):  0==Clear, 1==Cloudy
+!!        for subtype:
+!!           (RCVCH+1)*10 + (LL2BCT)
+!!          ...or...
+!!           subtype:  10==Mie,clear, 11==Mie,cloudy, 20==Rayleigh,Clear, 21==Rayleigh,Cloudy
+!
+!     subtype = (nint(hdr(9)) + 1) * 10 + nint(hdr(10))
+!     ikx=0
+!     do i=1,nconvtype
+!        if(trim(obstype) == trim(ioctype(i)) .and. kx == ictype(i) .and. subtype == icsubtype(i))ikx = i
+!     end do
+!ILIANA - end of obsolete block
 
 
 ! more to do? - jumping to data
@@ -501,7 +508,6 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      vert_seq_str = 'VBOT'
      call ufbseq(lunin,vert_seq,n_vert_seq,1,iret,vert_seq_str)
      layer_depth = layer_depth - vert_seq(2)
-
 !    read vertical weighted centroid information
      vert_seq_str = 'VCENT'
      call ufbseq(lunin,vert_seq,n_vert_seq,1,iret,vert_seq_str)
@@ -519,7 +525,6 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
         qc_flag=qc_flag+10
         !return
      endif
-
 
 !    read horizontal weighted centroid information
 !    read vertical weighted centroid information
@@ -570,7 +575,6 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
         !return
      endif
 
-
 !ILIANA - inflate OE 
      if (hdr(9) == 0) then ! Mie
         aeolusd(2)=2*aeolusd(2)
@@ -580,7 +584,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
         endif
 !ILIANA - Blacklist 3 Sept 2019 (any others??)
      if( idate5(1)==2019 .and. idate5(2)==9 .and.  idate5(3)==3 )then
-        write(6,*)'READ_LIDAR:  Blacklisted date(s) AEOLUS: ', idate5(1), idate5(2), idate5(3)
+        write(6,*)'READ_LIDAR:READ_AEOLUS  Blacklisted date(s) AEOLUS: ', idate5(1), idate5(2), idate5(3)
         nex8=nex8+1
         return
      endif
@@ -597,7 +601,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
 
      if( abs(dlat_earth) > r90  .or. abs(dlon_earth) > r360 .or. &
         (abs(dlat_earth) == r90 .and. dlon_earth /= zero) )then
-        write(6,*)'READ_LIDAR:  ### ERROR IN READING AEOLUS BUFR DATA:', &
+        write(6,*)'READ_LIDAR:READ_AEOLUS ERROR IN READING AEOLUS BUFR DATA:', &
            ' STRANGE OBS POINT (LAT,LON):', dlat, dlon
         return
      endif
@@ -637,7 +641,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      usage = zero
      if(icuse(ikx) < 0)usage=100._r_kind
      if(aeolusd(3) > 0)usage=101._r_kind
-
+!ILIANA - make sure that the code just above is in sync with my QC
 
 
 !     hdstr = 'SAID SIID YEAR MNTH DAYS HOUR MINU SECW RCVCH LL2BCT'
@@ -650,13 +654,14 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      cdata_all(1,ndata)=ikx                    ! obs type
      cdata_all(2,ndata)=dlon                   ! grid relative longitude
      cdata_all(3,ndata)=dlat                   ! grid relative latitude
-    write(6,*)'READ_LIDAR: t4dv in cdata_all', t4dv
      cdata_all(4,ndata)=t4dv                   ! obs time (analyis relative hour)
      cdata_all(5,ndata)=vert_seq(2)            ! obs height (altitude) (m)
      cdata_all(6,ndata)=vert_seq(4)*deg2rad    ! elevation angle (radians)
      cdata_all(7,ndata)=vert_seq(3)*deg2rad    ! bearing or azimuth (radians)
      !cdata_all(8,ndata)=zero                   ! number of laser shots                   - ZERO FOR NOW
+     !ILIANA - temporary use this slot for qc_flag
      cdata_all(8,ndata)=qc_flag
+
      cdata_all(9,ndata)=zero                   ! number of cloud laser shots             - ZERO FOR NOW
      cdata_all(10,ndata)=layer_depth           ! atmospheric depth
      cdata_all(11,ndata)=aeolusd(1)            ! obs wind (line of sight component) msq
@@ -677,8 +682,9 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      cdata_all(26,ndata)=aeolusd(6)            ! retrieval Backscatter
      cdata_all(27,ndata)=aeolusd(9)            ! retrieval derivative of wind w.r.t. Backscatter
 
-write(6,*)'READ_LIDAR: next1-8, qc_flag',  nex1, nex2, nex3, nex4, nex5, nex6, nex7, nex8, qc_flag
-write(6,*)'READ_LIDAR:  cdata_all POPULATED SUCCESSFULLY '
+!ILIANA
+write(6,*)'READ_LIDAR:READ_AEOLUS nex1,..,nex8, qc_flag',  nex1, nex2, nex3, nex4, nex5, nex6, nex7, nex8, qc_flag
+write(6,*)'READ_LIDAR:READ_AEOLUS  cdata_all POPULATED SUCCESSFULLY '
 
      return
      
