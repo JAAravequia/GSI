@@ -24,7 +24,7 @@ subroutine general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr,
   real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),intent(  out) :: g_u,g_v,&
        g_vor,g_div,g_cwmr,g_q,g_oz,g_tv
   real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),intent(  out),optional :: g_cf
-  real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),optional,intent(out)::g_o,g_o2
+  real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),intent(  out),optional :: g_o,g_o2
 
 
 ! !DESCRIPTION: Transfer contents of 2-d array global to 3-d subdomain array
@@ -392,7 +392,7 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
    istatus=0
    call gsi_bundlegetpointer(gfs_bundle,'ps',g_ps  ,ier);istatus=istatus+ier
    call gsi_bundlegetpointer(gfs_bundle,'q' ,g_q   ,ier);istatus=istatus+ier
-   if (lsidea) then !
+   if (lsidea) then
        call gsi_bundlegetpointer(gfs_bundle,'o' ,g_o   ,ier);istatus=istatus+ier
        call gsi_bundlegetpointer(gfs_bundle,'o2',g_o2  ,ier);istatus=istatus+ier
    end if
@@ -752,7 +752,7 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
          ilev(icount)=k
 
          if (mype==mype_use(icount)) then
-!   O mixing ratio
+             ! O mixing ratio
              if (sighead%ntrac>3) then
                 sigdati%i = nlevs * (2+4) + 2 + k ! o, 4th tracer
                 sigdati%f => specwrk_4
@@ -779,7 +779,7 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
           iflag(icount)=12
           ilev(icount)=k
           if (mype==mype_use(icount)) then
-!   O2 mixing ratio
+             ! O2 mixing ratio
              if (sighead%ntrac>4) then
                 sigdati%i = nlevs * (2+5) + 2 + k    ! o2, 5th tracer
                 sigdati%f => specwrk_4
@@ -845,7 +845,7 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
          end do
          call sigio_cnvtdv8(grd%lat2*grd%lon2,grd%lat2*grd%lon2,&
               grd%nsig,idvc5,idvm5,ntracer,iret,g_tv,g_trac,cp5,1)
-         deallocate( g_trac)
+         deallocate( g_trac )
       endif
 
       ! Convert dry temperature to virtual temperature

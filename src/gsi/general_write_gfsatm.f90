@@ -91,25 +91,6 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
 
     logical :: lloop
 
-    interface
-        subroutine general_gather(grd,g_ps,g_tv,g_vor,g_div,g_q,g_oz,g_cwmr, &
-           icountx,ivar,ilev,work,g_o,g_o2)
-            use kinds, only: r_kind,i_kind
-            use mpimod, only: npe,mpi_comm_world,ierror,mpi_rtype
-            use general_sub2grid_mod, only: sub2grid_info
-            use gridmod, only: strip,lsidea
-            use constants, only: zero
-            type(sub2grid_info)                   ,intent(in   ) :: grd
-            integer(i_kind),intent(inout) :: icountx
-            integer(i_kind),dimension(npe),intent(inout):: ivar,ilev
-            real(r_kind),dimension(grd%itotsub),intent(out) :: work
-            real(r_kind),dimension(grd%lat2,grd%lon2)     ,intent(  in) :: g_ps
-            real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),intent(  in) :: g_tv,&
-                g_vor,g_div,g_q,g_oz,g_cwmr
-            real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),optional,intent(in)::g_o,g_o2
-        end subroutine
-    end interface
-
 !*************************************************************************
     ! Handle case of NCEP SIGIO
 
@@ -117,9 +98,9 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
     iret_write=0
     nlatm2=grd%nlat-2
     if (lsidea) then
-        itotflds=8*grd%nsig+2 ! Hardwired for now!  vor,div,tv,q,oz,cwmr,ps,z,o,o2
+       itotflds=8*grd%nsig+2 ! Hardwired for now!  vor,div,tv,q,oz,cwmr,ps,z,o,o2
     else
-        itotflds=6*grd%nsig+2  ! Hardwired for now!  vor,div,tv,q,oz,cwmr,ps,z
+       itotflds=6*grd%nsig+2 !                     vor,div,tv,q,oz,cwmr,ps,z
     end if
     lloop=.true.
 
@@ -242,15 +223,15 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
         if ( idthrm5 == 3 ) then
            allocate( sub_trac(grd%lat2,grd%lon2,grd%nsig,ntracer) )
            do k=1,ntracer
-               if(k==1) sub_trac(:,:,:,k)=sub_q(:,:,:)
-               if(k==2) sub_trac(:,:,:,k)=sub_oz(:,:,:)
-               if(k==3) sub_trac(:,:,:,k)=sub_cwmr(:,:,:)
-               if(k==4) sub_trac(:,:,:,k)=sub_o(:,:,:)
-               if(k==5) sub_trac(:,:,:,k)=sub_o2(:,:,:)
+              if(k==1) sub_trac(:,:,:,k)=sub_q
+              if(k==2) sub_trac(:,:,:,k)=sub_oz
+              if(k==3) sub_trac(:,:,:,k)=sub_cwmr
+              if(k==4) sub_trac(:,:,:,k)=sub_o
+              if(k==5) sub_trac(:,:,:,k)=sub_o2
            end do
            call sigio_cnvtdv8(grd%lat2*grd%lon2,&
-               grd%lat2*grd%lon2,grd%nsig,idvc5,idvm5,ntracer,&
-               iret,work_tv,sub_trac,cp5,-1)
+                grd%lat2*grd%lon2,grd%nsig,idvc5,idvm5,ntracer,&
+                iret,work_tv,sub_trac,cp5,-1)
            deallocate( sub_trac)
         end if
     endif
@@ -265,7 +246,7 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
            call general_gather(grd,work_ps,work_tv,sub_vor,sub_div,sub_q,sub_oz,&
                 sub_cwmr,icount,ivar,ilev,work,sub_o,sub_o2)
         else
-            call general_gather(grd,work_ps,work_tv,sub_vor,sub_div,sub_q,sub_oz,&
+           call general_gather(grd,work_ps,work_tv,sub_vor,sub_div,sub_q,sub_oz,&
                 sub_cwmr,icount,ivar,ilev,work)
         end if
 
@@ -292,10 +273,10 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
                    sigdati%i = sighead%levs * (2+2) + 2 + klev
                 else if ( kvar == 8 ) then ! cw, 3rd tracer
                    sigdati%i = sighead%levs * (2+3) + 2 + klev
-                else if ( lsidea .and. kvar==9 ) then
-                   sigdati%i = sighead%levs * (2+4) + 2 + klev       ! O, 4th tracer
-                else if ( lsidea .and. kvar==10 ) then
-                   sigdati%i = sighead%levs * (2+5) + 2 + klev       ! O2, 5th tracer
+                else if ( lsidea .and. kvar==9 ) then  ! o, 4th tracer
+                   sigdati%i = sighead%levs * (2+4) + 2 + klev
+                else if ( lsidea .and. kvar==10 ) then ! o2, 5th tracer
+                   sigdati%i = sighead%levs * (2+5) + 2 + klev
                 endif
 
                 if ( klev > 0 ) then
@@ -413,7 +394,7 @@ subroutine general_gather(grd,g_ps,g_tv,g_vor,g_div,g_q,g_oz,g_cwmr, &
   real(r_kind),dimension(grd%lat2,grd%lon2)     ,intent(  in) :: g_ps
   real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),intent(  in) :: g_tv,&
        g_vor,g_div,g_q,g_oz,g_cwmr
-  real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),optional,intent(in)::g_o,g_o2
+  real(r_kind),dimension(grd%lat2,grd%lon2,grd%nsig),intent(in),optional::g_o,g_o2
 
 ! !DESCRIPTION: Transfer contents of 3d subdomains to 2d work arrays over pes
 !
@@ -484,12 +465,13 @@ subroutine general_gather(grd,g_ps,g_tv,g_vor,g_div,g_q,g_oz,g_cwmr, &
         klev=icount-2-5*(grd%nsig)
         ilev(k)=klev
         call strip(g_cwmr(:,:,klev) ,sub(:,k))
-    ! IDEA tracers here
+
     else if( lsidea .and. ( icount>=6*(grd%nsig)+3 .and. icount<=7*(grd%nsig)+2 ) )then
         ivar(k)=9
         klev=icount-2-6*(grd%nsig)
         ilev(k)=klev
         call strip(g_o(:,:,klev) ,sub(:,k))
+
     else if( lsidea .and. ( icount>=7*(grd%nsig)+3 .and. icount<=8*(grd%nsig)+2 ) )then
         ivar(k)=10
         klev=icount-2-7*(grd%nsig)

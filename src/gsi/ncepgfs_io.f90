@@ -156,7 +156,6 @@ contains
     type(spec_vars):: sp_b
     type(sub2grid_info) :: grd_t
 
-! lsidea stuff
     if (lsidea) then
        n3d = 10
        allocate(vars3d(n3d))
@@ -184,9 +183,9 @@ contains
     inner_vars=1
 
     if (lsidea) then
-        num_fields=min(10*grd_a%nsig+2,npe)
+       num_fields=min(10*grd_a%nsig+2,npe)
     else
-        num_fields=min(8*grd_a%nsig+2,npe)
+       num_fields=min(8*grd_a%nsig+2,npe)
     endif
 
 !  Create temporary communication information fore read routines
@@ -1227,7 +1226,6 @@ end subroutine write_ghg_grid
     real(r_kind),pointer,dimension(:,:,:):: aux_qs
     real(r_kind),pointer,dimension(:,:,:):: aux_qg
     real(r_kind),pointer,dimension(:,:,:):: aux_cf
-!   for idea
     real(r_kind),pointer,dimension(:,:,:):: aux_o
     real(r_kind),pointer,dimension(:,:,:):: aux_o2
 
@@ -1345,10 +1343,10 @@ end subroutine write_ghg_grid
     call gsi_bundlegetpointer(atm_bundle,'cw',aux_cwmr,istatus)
     if ( istatus == 0 ) aux_cwmr = zero
     if (lsidea) then
-        call gsi_bundlegetpointer(atm_bundle,'o',aux_o,istatus)
-        if ( istatus == 0 ) aux_o = zero
-        call gsi_bundlegetpointer(atm_bundle,'o2',aux_o2,istatus)
-        if ( istatus == 0 ) aux_o2 = zero
+       call gsi_bundlegetpointer(atm_bundle,'o',aux_o,istatus)
+       if ( istatus == 0 ) aux_o = zero
+       call gsi_bundlegetpointer(atm_bundle,'o2',aux_o2,istatus)
+       if ( istatus == 0 ) aux_o2 = zero
     end if
     
     ! if aerosols
