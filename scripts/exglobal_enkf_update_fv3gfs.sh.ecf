@@ -66,10 +66,14 @@ RADSTAT=${RADSTAT:-${APREFIX}radstat}
 ENKFSTAT=${ENKFSTAT:-${APREFIX}enkfstat}
 
 # Namelist parameters
+USE_CORRELATED_OBERRS=${USE_CORRELATED_OBERRS:-"NO"}
 NMEM_ENKF=${NMEM_ENKF:-80}
 NAM_ENKF=${NAM_ENKF:-""}
 SATOBS_ENKF=${SATOBS_ENKF:-""}
 OZOBS_ENKF=${OZOBS_ENKF:-""}
+if [ $USE_CORRELATED_OBERRS == "YES" ]; then
+   use_correlated_oberrs=".true."
+fi
 imp_physics=${imp_physics:-"99"}
 lupp=${lupp:-".true."}
 corrlength=${corrlength:-1250}

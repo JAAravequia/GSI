@@ -50,7 +50,7 @@ module m_radNode
      real(r_kind),dimension(:,:),pointer :: dtb_dvar => NULL()
                                       !  radiance jacobian (nsigradjac,nchan)
 
-     real(r_kind),dimension(:,:),pointer :: rsqrtinv => NULL()
+     real(r_kind),dimension(:),pointer :: rsqrtinv => NULL()
                                       !  square root of inverse of R, only used
                                       !  if using correlated obs
      integer(i_kind),dimension(:),pointer :: icx => NULL()
@@ -58,6 +58,7 @@ module m_radNode
      integer(i_kind) :: nchan         !  number of channels for this profile
      integer(i_kind) :: ij(4)         !  horizontal locations
      logical         :: use_corr_obs  !  logical to indicate if using correlated obs
+     integer(i_kind) :: iuse_PredOper_type = 0
      !logical         :: luse          !  flag indicating if ob is used in pen.
 
      !integer(i_kind) :: idv,iob              ! device id and obs index for sorting

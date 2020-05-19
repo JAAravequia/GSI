@@ -80,6 +80,7 @@ subroutine gsisub(init_pass,last_pass)
   use gridmod, only: wrf_mass_regional,wrf_nmm_regional,nems_nmmb_regional,cmaq_regional
   use mpimod, only: mype,npe,mpi_comm_world,ierror
   use radinfo, only: radinfo_read
+  use correlated_obsmod, only: corr_ob_initialize,corr_ob_finalize
   use pcpinfo, only: pcpinfo_read,create_pcp_random,&
        destroy_pcp_random
   use aeroinfo, only: aeroinfo_read
@@ -151,7 +152,8 @@ subroutine gsisub(init_pass,last_pass)
 ! Read info files for assimilation of various obs
   if (init_pass) then
      if (.not.twodvar_regional) then
-        call radinfo_read(miter)
+        call radinfo_read
+        call corr_ob_initialize
         call radiance_obstype_init
         call radiance_parameter_cloudy_init
         call ozinfo_read
@@ -202,6 +204,7 @@ subroutine gsisub(init_pass,last_pass)
   
   if(last_pass) then
 !    Deallocate arrays
+     call corr_ob_finalize
      call destroy_pcp_random
 #ifndef HAVE_ESMF
      call destroy_grid_vars

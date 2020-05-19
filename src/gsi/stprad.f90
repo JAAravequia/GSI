@@ -128,16 +128,19 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
 
 ! Declare local variables
   integer(i_kind) istatus
-  integer(i_kind) nn,n,ic,k,nx,j1,j2,j3,j4,kk, mm, ic1
+  integer(i_kind) nn,n,ic,k,nx,j1,j2,j3,j4,kk, mm, ic1,ncr
   real(r_kind) val2,val,w1,w2,w3,w4
   real(r_kind),dimension(nsigradjac):: tdir,rdir
   real(r_kind) cg_rad,wgross,wnotgross
   integer(i_kind),dimension(nsig) :: j1n,j2n,j3n,j4n
   real(r_kind),dimension(max(1,nstep)) :: term,rad
   type(radNode), pointer :: radptr
+  real(r_kind),allocatable,dimension(:) :: biasvects
+  real(r_kind),allocatable,dimension(:) :: biasvectr
   real(r_kind),pointer,dimension(:) :: rt,rq,rcw,roz,ru,rv,rqg,rqh,rqi,rql,rqr,rqs
   real(r_kind),pointer,dimension(:) :: st,sq,scw,soz,su,sv,sqg,sqh,sqi,sql,sqr,sqs
   real(r_kind),pointer,dimension(:) :: rst,sst
+  real(r_quad) :: valr_quad,vals_quad
 
   out=zero_quad
 
@@ -266,6 +269,23 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
 
            end do
         end if
+        if(nstep > 0)then
+            allocate(biasvects(radptr%nchan))
+            allocate(biasvectr(radptr%nchan))
+            do nn=1,radptr%nchan
+              ic1=radptr%icx(nn)
+              vals_quad = zero_quad
+              valr_quad = zero_quad
+              do nx=1,npred
+                vals_quad = vals_quad + spred(nx,ic1)*radptr%pred(nx,nn)
+                valr_quad = valr_quad + rpred(nx,ic1)*radptr%pred(nx,nn)
+              end do
+              biasvects(nn) = vals_quad
+              biasvectr(nn) = valr_quad
+            end do
+        endif
+
+        ncr=0
         do nn=1,radptr%nchan
 
            val2=-radptr%res(nn)
@@ -274,21 +294,16 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
               val = zero
 !             contribution from bias corection
               ic=radptr%icx(nn)
-              if (radptr%use_corr_obs) then  
-                 do mm=1,radptr%nchan 
-                    do nx=1,npred
-                       ic1=radptr%icx(mm)
-                       val2=val2+spred(nx,ic1)*radptr%rsqrtinv(mm,nn)*radptr%pred(nx,mm)
-                       val=val+rpred(nx,ic1)*radptr%rsqrtinv(mm,nn)*radptr%pred(nx,mm)
-                    end do
+              if(radptr%use_corr_obs) then
+                 do mm=1,nn
+                    ncr=ncr+1
+                    val2=val2+radptr%rsqrtinv(ncr)*biasvects(mm)
+                    val =val +radptr%rsqrtinv(ncr)*biasvectr(mm)
                  end do
               else
-                 do nx=1,npred
-                    val2=val2+spred(nx,ic)*radptr%pred(nx,nn)
-                    val =val +rpred(nx,ic)*radptr%pred(nx,nn)
-                 end do
+                 val2=val2+biasvects(nn)
+                 val =val +biasvectr(nn)
               end if
-!              end do
  
 !             contribution from atmosphere
               do k=1,nsigradjac
@@ -326,6 +341,7 @@ subroutine stprad(radhead,dval,xval,rpred,spred,out,sges,nstep)
            end do
 
         end do
+        if(nstep > 0) deallocate(biasvects, biasvectr)
      end if
 
      radptr => radNode_nextcast(radptr)

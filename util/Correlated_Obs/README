@@ -18,7 +18,7 @@ It is possible to run this program in single or double precision.  In kinds.f90,
 
 There are two ways to run cov_calc.  The bottleneck of this program is in dealing with the radstat files.  Using parallel_run.sh will process the radstat files in parallel.  To use this script, edit its first few lines, and then simply run it. Both run.sh and parallel_run.sh contain options to specify which computational method to use (Desroziers or Hollingsworth-Lönnberg), and a choice to use only actively assimialted channels (recommended for Desroziers) or all channels. 
 
-If the amount of radstat files is small, or they have already been processed (see below), then run.sh can be used.  Edit its first few lines and submit submit_job.sh as a job. 
+If the amount of radstat files is small, or they have already been processed (see below), then run.sh can be used.  Edit its first few lines and submit submit_theia.sh or submit_wcoss.sh as a job. 
 
 cov_calc requires the files diag_$instr_anl.$date and diag and diag_$instr_ges.$date from the radstat files.  The first analysis diag file must be renamed danl_0001, the second renamed danl_0002, etc, while the first background file must be renamed dges_0001 and so on.  Even if a diag file is missing, the danl and dges files count up by one each time.  The scripts parallel_run.sh and run.sh process the radstat files in this manner.  
 

@@ -242,6 +242,7 @@ SMOOTH_ENKF=${SMOOTH_ENKF:-"YES"}
 DOIAU=${DOIAU:-"NO"}
 DO_CALC_INCREMENT=${DO_CALC_INCREMENT:-"YES"}
 INCREMENTS_TO_ZERO=${INCREMENTS_TO_ZERO:-"'NONE'"}
+USE_CORRELATED_OBERRS=${USE_CORRELATED_OBERRS:-"YES"}
 
 # Get header information from Guess files
 LONB=${LONB:-$($NEMSIOGET $ATMGES dimx | grep -i "dimx" | awk -F"= " '{print $2}' | awk -F" " '{print $1}')}  # 'get LONB
@@ -404,7 +405,30 @@ $NLN $AEROINFO     aeroinfo
 $NLN $SCANINFO     scaninfo
 $NLN $HYBENSINFO   hybens_info
 $NLN $OBERROR      errtable
+#If using correlated error, link to the covariance files
+if [ $USE_CORRELATED_OBERRS == "YES" ];  then
+  if grep -q "Rcov" $ANAVINFO ;  then
+     if ls ${FIXgsi}/Rcov* 1> /dev/null 2>&1; then
+       $NLN ${FIXgsi}/Rcov* $DATA
+       echo "using correlated obs error"
+     else
+       echo "Error: Satellite error covariance files are missing."
+       echo "Check for the required Rcov files in " $ANAVINFO
+       exit 1
+     fi
+  else
+     echo "Error: Satellite error covariance info missing in " $ANAVINFO
+     exit 1
+  fi
 
+# Correlated error utlizes mkl lapack.  Found it necesary to fix the
+# number of mkl threads to ensure reproducible results independent
+# of the job configuration.
+  export MKL_NUM_THREADS=1
+
+else
+  echo "not using correlated obs error"
+fi
 ##############################################################
 # CRTM Spectral and Transmittance coefficients
 mkdir -p crtm_coeffs
