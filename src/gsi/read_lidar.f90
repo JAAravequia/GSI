@@ -126,7 +126,8 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
   data lunin / 10 /
 
 !ILIANA - temporary diagnostics variables
-  integer(i_kind) to, qc_flag, nex1, nex2, nex3, nex4, nex5, nex6, nex7, nex8 
+  integer(i_kind) to, qc_flag
+  integer(i_kind) nex1, nex2, nex3, nex4, nex5, nex6, nex7, nex8, nex9 
 
 !**************************************************************************
 !ILIANA
@@ -138,6 +139,7 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
   nex6=0
   nex7=0
   nex8=0
+  nex9=0
   qc_flag=0
 
 ! Initialize variables
@@ -371,8 +373,8 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
   subroutine read_aeolus_
      hdstr = 'SAID SIID YEAR MNTH DAYS HOUR MINU SECW RCVCH LL2BCT'
      nhdr  = 10
-     dwstr = 'HLSW HLSWEE CONFLG PRES TMDBST BKSTR DWPRS DWTMP DWBR'
-     ndwl  = 9
+     dwstr = 'HLSW HLSWEE CONFLG PRES TMDBST BKSTR DWPRS DWTMP DWBR HOIL'
+     ndwl  = 10
 
 !ILIANA - zero-out the qc_flag for each wind obs
      qc_flag=0
@@ -519,6 +521,17 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
         !return
      endif    
 
+!    read horizontal weighted centroid information
+!    read vertical weighted centroid information
+     horiz_seq_str = 'HCENT'
+     call ufbseq(lunin,horiz_seq,n_horiz_seq,1,iret,horiz_seq_str)
+
+     call ufbint(lunin,aeolusd,ndwl,1,iret,dwstr)
+
+     if (abs(aeolusd(1)) > 1000.0_r_kind) return !check if observation/HLOS is realistic 
+     ! 1000 ms-1 is chosen arbitrarily, it appears unrealistic obs are reported as 1.0e11.  
+     ! If the obs magnitude is larger than threshhold; cycle loop on unrealistic obs
+
 !ILIANA - eliminate winds by height: Rayleigh & Pres>850hPa 
      if ( hdr(9)==1 .and. aeolusd(4)>85000.0 ) then ! Rayleigh & Pres>850hPa
         nex2=nex2+1
@@ -526,12 +539,6 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
         !return
      endif
 
-!    read horizontal weighted centroid information
-!    read vertical weighted centroid information
-     horiz_seq_str = 'HCENT'
-     call ufbseq(lunin,horiz_seq,n_horiz_seq,1,iret,horiz_seq_str)
-
-     call ufbint(lunin,aeolusd,ndwl,1,iret,dwstr)
 
 !ILIANA - eliminate winds with invalid overall confidence flag
 !         CONFLG- Confidence flag, 0=VALID, 1=INVALID measurement
@@ -582,12 +589,33 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      if (hdr(9) == 1) then ! Rayleigh
         aeolusd(2)=1.4*aeolusd(2)
         endif
+
 !ILIANA - Blacklist 3 Sept 2019 (any others??)
      if( idate5(1)==2019 .and. idate5(2)==9 .and.  idate5(3)==3 )then
         write(6,*)'READ_LIDAR:READ_AEOLUS  Blacklisted date(s) AEOLUS: ', idate5(1), idate5(2), idate5(3)
         nex8=nex8+1
+        qc_flag=qc_flag+10000000
         return
      endif
+
+!ILIANA - eliminate Rayleigh winds by horizontal accumulation length <60km
+     if ( hdr(9)==1 .and.   & 
+          aeolusd(10)<60000 ) then              ! HOIL<60km
+        nex9=nex9+1
+        qc_flag=qc_flag+100000000
+        !return
+     endif
+
+!ILIANA - eliminate top bin Observations, thresholds are empirically determined 
+     if (hdr(9) == 0 .and.  &  ! Mie
+         vert_seq(2)>15000) then
+        return
+     endif
+     if (hdr(9) == 1 .and.  &  ! Rayleigh
+        vert_seq(2)>27000) then
+        return
+     endif
+
 
      if (abs(aeolusd(1)) > 1000.0_r_kind) return ! check if observation is realistic 
                                                  !  - 1000 ms-1 chosen somewhat arbitrarily, it appears 
@@ -683,7 +711,8 @@ subroutine read_lidar(nread,ndata,nodata,infile,obstype,lunout,twind,sis,nobs)
      cdata_all(27,ndata)=aeolusd(9)            ! retrieval derivative of wind w.r.t. Backscatter
 !ILIANA -test
 !ILIANA
-write(6,*)'READ_LIDAR:READ_AEOLUS nex1,..,nex8, qc_flag',  nex1, nex2, nex3, nex4, nex5, nex6, nex7, nex8, qc_flag
+write(6,*)'READ_LIDAR:READ_AEOLUS nex1,..,nex9, qc_flag',  &
+          nex1, nex2, nex3, nex4, nex5, nex6, nex7, nex8, nex9, qc_flag
 write(6,*)'READ_LIDAR:READ_AEOLUS  cdata_all POPULATED SUCCESSFULLY '
 
      return
