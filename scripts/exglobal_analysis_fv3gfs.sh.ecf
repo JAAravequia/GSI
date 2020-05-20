@@ -29,7 +29,7 @@ pwd=$(pwd)
 export NWPROD=${NWPROD:-$pwd}
 export HOMEgfs=${HOMEgfs:-$NWPROD}
 export HOMEgsi=${HOMEgsi:-$NWPROD}
-FIXgsi=${FIXgsi:-$HOMEgsi/fix}
+FIXgsi=${FIXgsi:-$HOMEgsi/fix/fix_gsi}
 GSIEXEC=${GSIEXEC:-$HOMEgsi/exec/global_gsi.x}
 export DATA=${DATA:-$pwd/analysis.$$}
 export COMIN=${COMIN:-$pwd}
@@ -77,17 +77,15 @@ export CYCLVARS=${CYCLVARS:-""}
 export FHOUR=${FHOUR:-0}
 export DELTSFC=${DELTSFC:-6}
 export FIXgsm=${FIXgsm:-$HOMEgfs/fix/fix_am}
-export FIXfv3=${FIXfv3:-$HOMEgfs/fix/fix_fv3_gmted2010}
 
-DOGAUSFCANL=${DOGAUSFCANL-"NO"}
+DOGAUSFCANL=${DOGAUSFCANL-"YES"}
 GAUSFCANLSH=${GAUSFCANLSH:-$HOMEgfs/ush/gaussian_sfcanl.sh}
 export GAUSFCANLEXE=${GAUSFCANLEXE:-$HOMEgfs/exec/gaussian_sfcanl.exe}
 NTHREADS_GAUSFCANL=${NTHREADS_GAUSFCANL:-1}
 APRUN_GAUSFCANL=${APRUN_GAUSFCANL:-${APRUN:-""}}
 
 # FV3 specific info (required for global_cycle)
-export CASE=${CASE:-"C384"}
-ntiles=${ntiles:-6}
+export CASE=${CASE:-"62"}
 
 # Microphysics in the model; 99:ZC, 11:GFDLMP
 imp_physics=${imp_physics:-99}
@@ -167,7 +165,6 @@ OMPSTCBF=${OMPSTCBF:-${COMIN_OBS}/${OPREFIX}ompst8.tm00.bufr_d${OSUFFIX}}
 GOMEBF=${GOMEBF:-${COMIN_OBS}/${OPREFIX}gome.tm00.bufr_d${OSUFFIX}}
 OMIBF=${OMIBF:-${COMIN_OBS}/${OPREFIX}omi.tm00.bufr_d${OSUFFIX}}
 MLSBF=${MLSBF:-${COMIN_OBS}/${OPREFIX}mls.tm00.bufr_d${OSUFFIX}}
-OMPSLPBF=${OMPSLPBF:-${COMIN_OBS}/${OPREFIX}ompslp.tm00.bufr_d${OSUFFIX}}
 SMIPCP=${SMIPCP:-${COMIN_OBS}/${OPREFIX}spssmi.tm00.bufr_d${OSUFFIX}}
 TMIPCP=${TMIPCP:-${COMIN_OBS}/${OPREFIX}sptrmm.tm00.bufr_d${OSUFFIX}}
 GPSROBF=${GPSROBF:-${COMIN_OBS}/${OPREFIX}gpsro.tm00.bufr_d${OSUFFIX}}
@@ -178,20 +175,20 @@ B1AVHPM=${B1AVHPM:-${COMIN_OBS}/${OPREFIX}avcspm.tm00.bufr_d${OSUFFIX}}
 # Guess files
 GPREFIX=${GPREFIX:-""}
 GSUFFIX=${GSUFFIX:-""}
-SFCG03=${SFCG03:-${COMIN_GES}/${GPREFIX}sfcf003${GSUFFIX}}
-SFCG04=${SFCG04:-${COMIN_GES}/${GPREFIX}sfcf004${GSUFFIX}}
-SFCG05=${SFCG05:-${COMIN_GES}/${GPREFIX}sfcf005${GSUFFIX}}
-SFCGES=${SFCGES:-${COMIN_GES}/${GPREFIX}sfcf006${GSUFFIX}}
-SFCG07=${SFCG07:-${COMIN_GES}/${GPREFIX}sfcf007${GSUFFIX}}
-SFCG08=${SFCG08:-${COMIN_GES}/${GPREFIX}sfcf008${GSUFFIX}}
-SFCG09=${SFCG09:-${COMIN_GES}/${GPREFIX}sfcf009${GSUFFIX}}
-ATMG03=${ATMG03:-${COMIN_GES}/${GPREFIX}atmf003${GSUFFIX}}
-ATMG04=${ATMG04:-${COMIN_GES}/${GPREFIX}atmf004${GSUFFIX}}
-ATMG05=${ATMG05:-${COMIN_GES}/${GPREFIX}atmf005${GSUFFIX}}
-ATMGES=${ATMGES:-${COMIN_GES}/${GPREFIX}atmf006${GSUFFIX}}
-ATMG07=${ATMG07:-${COMIN_GES}/${GPREFIX}atmf007${GSUFFIX}}
-ATMG08=${ATMG08:-${COMIN_GES}/${GPREFIX}atmf008${GSUFFIX}}
-ATMG09=${ATMG09:-${COMIN_GES}/${GPREFIX}atmf009${GSUFFIX}}
+SFCG03=${SFCG03:-${COMIN_GES}/${GPREFIX}sfcf03${GSUFFIX}}
+SFCG04=${SFCG04:-${COMIN_GES}/${GPREFIX}sfcf04${GSUFFIX}}
+SFCG05=${SFCG05:-${COMIN_GES}/${GPREFIX}sfcf05${GSUFFIX}}
+SFCGES=${SFCGES:-${COMIN_GES}/${GPREFIX}sfcf06${GSUFFIX}}
+SFCG07=${SFCG07:-${COMIN_GES}/${GPREFIX}sfcf07${GSUFFIX}}
+SFCG08=${SFCG08:-${COMIN_GES}/${GPREFIX}sfcf08${GSUFFIX}}
+SFCG09=${SFCG09:-${COMIN_GES}/${GPREFIX}sfcf09${GSUFFIX}}
+ATMG03=${ATMG03:-${COMIN_GES}/${GPREFIX}atmf03${GSUFFIX}}
+ATMG04=${ATMG04:-${COMIN_GES}/${GPREFIX}atmf04${GSUFFIX}}
+ATMG05=${ATMG05:-${COMIN_GES}/${GPREFIX}atmf05${GSUFFIX}}
+ATMGES=${ATMGES:-${COMIN_GES}/${GPREFIX}atmf06${GSUFFIX}}
+ATMG07=${ATMG07:-${COMIN_GES}/${GPREFIX}atmf07${GSUFFIX}}
+ATMG08=${ATMG08:-${COMIN_GES}/${GPREFIX}atmf08${GSUFFIX}}
+ATMG09=${ATMG09:-${COMIN_GES}/${GPREFIX}atmf09${GSUFFIX}}
 GBIAS=${GBIAS:-${COMIN_GES}/${GPREFIX}abias}
 GBIASPC=${GBIASPC:-${COMIN_GES}/${GPREFIX}abias_pc}
 GBIASAIR=${GBIASAIR:-${COMIN_GES}/${GPREFIX}abias_air}
@@ -246,10 +243,10 @@ INCREMENTS_TO_ZERO=${INCREMENTS_TO_ZERO:-"'NONE'"}
 USE_CORRELATED_OBERRS=${USE_CORRELATED_OBERRS:-"YES"}
 
 # Get header information from Guess files
-LONB=${LONB:-$($NEMSIOGET $ATMGES dimx | grep -i "dimx" | awk -F"= " '{print $2}' | awk -F" " '{print $1}')}  # 'get LONB
-LATB=${LATB:-$($NEMSIOGET $ATMGES dimy | grep -i "dimy" | awk -F"= " '{print $2}' | awk -F" " '{print $1}')}  # 'get LATB
-LEVS=${LEVS:-$($NEMSIOGET $ATMGES dimz | grep -i "dimz" | awk -F"= " '{print $2}' | awk -F" " '{print $1}')}  # 'get LEVS
-JCAP=${JCAP:-$($NEMSIOGET $ATMGES jcap | grep -i "jcap" | awk -F"= " '{print $2}' | awk -F" " '{print $1}')}  # 'get JCAP
+LONB=${LONB:-$($SIGHDR $ATMGES lonb)}
+LATB=${LATB:-$($SIGHDR $ATMGES latb)}
+LEVS=${LEVS:-$($SIGHDR $ATMGES levs)}
+JCAP=${JCAP:-$($SIGHDR $ATMGES jcap)}
 [ $JCAP -eq -9999 -a $LATB -ne -9999 ] && JCAP=$((LATB-2))
 [ $LONB -eq -9999 -o $LATB -eq -9999 -o $LEVS -eq -9999 -o $JCAP -eq -9999 ] && exit -9999
 
@@ -294,7 +291,7 @@ SATANGL=${SATANGL:-${FIXgsi}/global_satangbias.txt}
 SATINFO=${SATINFO:-${FIXgsi}/global_satinfo.txt}
 RADCLOUDINFO=${RADCLOUDINFO:-${FIXgsi}/cloudy_radiance_info.txt}
 ATMSFILTER=${ATMSFILTER:-${FIXgsi}/atms_beamwidth.txt}
-ANAVINFO=${ANAVINFO:-${FIXgsi}/global_anavinfo.l${LEVS}.txt}
+ANAVINFO=${ANAVINFO:-${FIXgsi}/global_wdas_anavinfo.l${LEVS}.txt}
 CONVINFO=${CONVINFO:-${FIXgsi}/global_convinfo.txt}
 INSITUINFO=${INSITUINFO:-${FIXgsi}/global_insituinfo.txt}
 OZINFO=${OZINFO:-${FIXgsi}/global_ozinfo.txt}
@@ -665,6 +662,10 @@ if [ $DOHYBVAR = "YES" ]; then
    fi
 fi
 
+SETUP="use_gfs_nemsio=.false."
+GRIDOPTS="lsidea=.true."
+STRONGOPTS="tlnmc_option=0"
+
 if [ $DONST = "YES" ]; then
    NST="nstinfo=$NSTINFO,fac_dtl=$FAC_DTL,fac_tsl=$FAC_TSL,zsea1=$ZSEA1,zsea2=$ZSEA2,$NST"
 fi
@@ -874,56 +875,8 @@ export ERR=$?
 export err=$ERR
 $ERRSCRIPT || exit 2
 
-##############################################################
-# Calculate analysis increment here before releasing FV3 forecast
-if [ $DO_CALC_INCREMENT = "YES" ]; then
-  if [ $DOIAU = "YES" -a $l4densvar = ".true." -a $lwrite4danl = ".true." ]; then
-     ncmd=7
-     $NLN sigf03 atmges_mem001 ; $NLN siga03 atmanl_mem001 ; $NLN ${COMOUT}/${APREFIX}atmi003.nc atminc_mem001
-     $NLN sigf04 atmges_mem002 ; $NLN siga04 atmanl_mem002 ; $NLN ${COMOUT}/${APREFIX}atmi004.nc atminc_mem002
-     $NLN sigf05 atmges_mem003 ; $NLN siga05 atmanl_mem003 ; $NLN ${COMOUT}/${APREFIX}atmi005.nc atminc_mem003
-     $NLN sigf06 atmges_mem004 ; $NLN siganl atmanl_mem004 ; $NLN ${COMOUT}/${APREFIX}atminc.nc  atminc_mem004
-     $NLN sigf07 atmges_mem005 ; $NLN siga07 atmanl_mem005 ; $NLN ${COMOUT}/${APREFIX}atmi007.nc atminc_mem005
-     $NLN sigf08 atmges_mem006 ; $NLN siga08 atmanl_mem006 ; $NLN ${COMOUT}/${APREFIX}atmi008.nc atminc_mem006
-     $NLN sigf09 atmges_mem007 ; $NLN siga09 atmanl_mem007 ; $NLN ${COMOUT}/${APREFIX}atmi009.nc atminc_mem007
-  else
-     ncmd=1
-     $NLN sigf06 atmges_mem001 ; $NLN siganl atmanl_mem001 ; $NLN ${COMOUT}/${APREFIX}atminc.nc  atminc_mem001
-  fi
-
-  export OMP_NUM_THREADS=$NTHREADS_CALCINC
-  $NCP $CALCINCEXEC $DATA
-
-  rm calc_increment.nml
-  cat > calc_increment.nml << EOF
-&setup
-  datapath = './'
-  analysis_filename = 'atmanl'
-  firstguess_filename = 'atmges'
-  increment_filename = 'atminc'
-  debug = .false.
-  nens = $ncmd
-  imp_physics = $imp_physics
-/
-&zeroinc
-  incvars_to_zero = $INCREMENTS_TO_ZERO
-/
-EOF
-  cat calc_increment.nml
-
-  APRUN=$(eval echo $APRUN_CALCINC)
-  $APRUN $DATA/$(basename $CALCINCEXEC)
-  rc=$?
-
-  export ERR=$rc
-  export err=$ERR
-  $ERRSCRIPT || exit 3
-fi
-
 # Update surface fields in the FV3 restart's using global_cycle
 if [ $DOGCYCLE = "YES" ]; then
-
-    mkdir -p $COMOUT/RESTART
 
     # Global cycle requires these files
     export FNTSFA=${FNTSFA:-$COMIN_OBS/${OPREFIX}rtgssthr.grb}
@@ -958,18 +911,8 @@ if [ $DOGCYCLE = "YES" ]; then
     fi
 
     if [ $DOIAU = "YES" ]; then
-        # update surface restarts at the beginning of the window, if IAU
-        # For now assume/hold dtfanl.nc valid at beginning of window
-        for n in $(seq 1 $ntiles); do
-            $NLN $COMIN_GES/RESTART/$bPDY.${bcyc}0000.sfc_data.tile${n}.nc $DATA/fnbgsi.00$n
-            $NLN $COMOUT/RESTART/$bPDY.${bcyc}0000.sfcanl_data.tile${n}.nc $DATA/fnbgso.00$n
-            $NLN $FIXfv3/$CASE/${CASE}_grid.tile${n}.nc                    $DATA/fngrid.00$n
-            $NLN $FIXfv3/$CASE/${CASE}_oro_data.tile${n}.nc                $DATA/fnorog.00$n
-        done
-
         export APRUNCY=$APRUN_CYCLE
         export OMP_NUM_THREADS_CY=$NTHREADS_CYCLE
-        export MAX_TASKS_CY=$ntiles
 
         $CYCLESH
         rc=$?
@@ -977,17 +920,9 @@ if [ $DOGCYCLE = "YES" ]; then
         export err=$ERR
         $ERRSCRIPT || exit 11
     fi
-    # update surface restarts at middle of window
-    for n in $(seq 1 $ntiles); do
-        $NLN $COMIN_GES/RESTART/$PDY.${cyc}0000.sfc_data.tile${n}.nc $DATA/fnbgsi.00$n
-        $NLN $COMOUT/RESTART/$PDY.${cyc}0000.sfcanl_data.tile${n}.nc $DATA/fnbgso.00$n
-        $NLN $FIXfv3/$CASE/${CASE}_grid.tile${n}.nc                  $DATA/fngrid.00$n
-        $NLN $FIXfv3/$CASE/${CASE}_oro_data.tile${n}.nc              $DATA/fnorog.00$n
-    done
 
     export APRUNCY=$APRUN_CYCLE
     export OMP_NUM_THREADS_CY=$NTHREADS_CYCLE
-    export MAX_TASKS_CY=$ntiles
 
     $CYCLESH
     rc=$?
