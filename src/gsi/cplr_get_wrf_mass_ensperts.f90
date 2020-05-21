@@ -64,7 +64,8 @@ contains
       use gsi_4dvar,     only: nhr_assimilation
 ! --- CAPS --->
       use caps_radaruse_mod, only: l_use_log_qx, l_use_log_qx_pval, l_use_log_nt, cld_nt_updt ! chenll
-      use caps_radaruse_mod, only: l_use_dbz_caps                                             
+      use caps_radaruse_mod, only: l_use_dbz_caps 
+      use caps_radaruse_mod, only: l_cvpnr, cvpnr_pval                                            
 ! <--- CAPS ---
    
 
@@ -406,6 +407,12 @@ contains
                                    else
                                        if(mype==0 .and. i==10 .and. j==10 .and. k==10) write(6,*)'updating qnr in hybrid analysis : NO log-transform to member-->',n
                                    end if
+                                   if (l_cvpnr) then
+                                       if (qnr(j,i,k) < one) then
+                                           qnr(j,i,k) = one
+                                       end if
+                                       qnr(j,i,k) = ((qnr(j,i,k)**cvpnr_pval)-1)/cvpnr_pval
+                                   endif
                                    w3(j,i,k) = qnr(j,i,k)
                                    x3(j,i,k)=x3(j,i,k)+qnr(j,i,k)
                                end do
@@ -2765,6 +2772,7 @@ end subroutine write_spread_dualres_qcld_regional
    use gsi_bundlemod, only: gsi_gridcreate
    use guess_grids,   only: ntguessig
    use caps_radaruse_mod, only: l_use_log_qx, l_use_log_nt, cld_nt_updt
+   use caps_radaruse_mod, only: l_cvpnr, cvpnr_pval
 
    implicit none
    class(get_wrf_mass_ensperts_class), intent(inout) :: this
@@ -2998,6 +3006,13 @@ end subroutine write_spread_dualres_qcld_regional
                                  else
                                    if(mype==0 .and. i==10 .and. j==10 .and. k==10) write(6,*)'updating qnr in hybrid analysis : NO log-transform to member-->',n
                                  end if
+                                   if (l_cvpnr) then
+                                       if (qnr(j,i,k) < one) then
+                                           qnr(j,i,k) = one
+                                       end if
+                                       qnr(j,i,k) =((qnr(j,i,k)**cvpnr_pval)-1)/cvpnr_pval
+                                   endif
+
                                  w3(j,i,k) = qnr(j,i,k)
                                  x3(j,i,k)=x3(j,i,k)+qnr(j,i,k)
                              end do

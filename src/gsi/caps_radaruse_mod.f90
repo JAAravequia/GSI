@@ -36,6 +36,7 @@ MODULE caps_radaruse_mod
   public :: i_melt_snow, i_melt_graupel
   public :: cld_cv, cld_nt_updt, l_use_log_nt
   public :: i_w_updt
+  public :: l_cvpnr, cvpnr_pval
 
   public :: Cr,     Pr
   public :: Cs_dry, Ps_dry, Cs_wet, Ps_wet
@@ -92,6 +93,9 @@ MODULE caps_radaruse_mod
 
   integer   :: i_w_updt                  ! w (vertical velocity) is analysis variable and updated
                                          ! 0: not analyzed ; 1: analyzed
+
+  logical   :: l_cvpnr                   ! power tranform for qnr
+  real      :: cvpnr_pval                ! power value for qnr
 
 ! options for correction of azimuth and tilt angles of radar observations (used in read_radar.f90)
   logical   :: l_correct_azmu
@@ -212,6 +216,9 @@ contains
                              ! 0: not analyzed ; 1: analyzed
 
     l_use_log_nt    = .FALSE.     ! no log transform to number concentration in analysis
+
+    l_cvpnr = .FALSE.
+    cvpnr_pval = 0.6
 
   return
   end subroutine init_radaruse_caps

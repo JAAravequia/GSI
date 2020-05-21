@@ -180,7 +180,8 @@
                                l_plt_be_stats, l_be_T_dep, l_gpht2gmht,             &
                                l_plt_diag_rw, l_chk_bmwth,                          &
                                i_melt_snow, i_melt_graupel,                         &
-                               cld_cv, cld_nt_updt, l_use_log_nt,  i_w_updt
+                               cld_cv, cld_nt_updt, l_use_log_nt,  i_w_updt,        &
+                               l_cvpnr, cvpnr_pval
   ! --- CAPS ---
   use ncepnems_io, only: init_nems,imp_physics,lupp
   use wrf_vars_mod, only: init_wrf_vars
@@ -964,7 +965,8 @@
                          refl_lowbnd_rw, refl_lowbnd_dbz,                 &
                          l_plt_diag_rw, l_chk_bmwth,                      &
                          i_melt_snow, i_melt_graupel,                     &
-                         cld_cv, cld_nt_updt, l_use_log_nt,  i_w_updt
+                         cld_cv, cld_nt_updt, l_use_log_nt,  i_w_updt,    &
+                         l_cvpnr, cvpnr_pval
 ! --- CAPS ---
 
 ! LAG_DATA (lagrangian data assimilation related variables):

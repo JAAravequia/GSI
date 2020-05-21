@@ -1393,6 +1393,7 @@ contains
     use setupdbz_lib,only: hx_dart
     use obsmod,only: if_model_dbz
     use caps_radaruse_mod, only: l_use_log_qx, l_use_log_qx_pval, l_use_log_nt, l_use_dbz_caps ! CAPS ! chenll
+    use caps_radaruse_mod, only: l_cvpnr, cvpnr_pval
 
     implicit none
     class(read_wrf_mass_guess_class),intent(inout) :: this
@@ -2178,6 +2179,10 @@ contains
                       if ( l_use_log_nt ) then
                         ges_qnr(j,i,k) = log(max(ges_qnr(j,i,k),1.0E-2_r_kind))
                       end if
+                      if (l_cvpnr) then
+                        ges_qnr(j,i,k)=((max(ges_qnr(j,i,k),1.0E-2_r_kind)**cvpnr_pval)-1)/cvpnr_pval !added by cliu
+                      endif
+
 ! --- CAPS ---
 
   !                    ges_tten(j,i,k,it) = real(all_loc(j,i,ktt),r_kind)
@@ -2404,9 +2409,12 @@ contains
                             !  ges_qr(j,i,k) = log(max(ges_qr(j,i,k),1.0E-6_r_kind))
                             !  ges_qs(j,i,k) = log(max(ges_qs(j,i,k),1.0E-6_r_kind))
                             !  ges_qg(j,i,k) = log(max(ges_qg(j,i,k),1.0E-6_r_kind))
+
+
                                ges_qr(j,i,k)=((max(ges_qr(j,i,k),1.0E-6_r_kind))**l_use_log_qx_pval-1)/l_use_log_qx_pval
                                ges_qs(j,i,k)=((max(ges_qs(j,i,k),1.0E-6_r_kind))**l_use_log_qx_pval-1)/l_use_log_qx_pval
                                ges_qg(j,i,k)=((max(ges_qg(j,i,k),1.0E-6_r_kind))**l_use_log_qx_pval-1)/l_use_log_qx_pval
+
 
                               !cliu for test 0 hydrometeor mixing ratio background
 

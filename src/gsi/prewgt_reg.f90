@@ -102,6 +102,7 @@ subroutine prewgt_reg(mype)
                                be_qr, be_qs, be_qg, hscl_qx, vscl_qx,&
                                l_set_be_rw, l_set_be_dbz,&
                                l_use_log_qx, l_use_log_qx_pval,&             ! chenll
+                               l_cvpnr, cvpnr_pval,&             ! lhq
                                l_plt_be_stats, l_be_T_dep,&
                                l_use_rw_caps, l_use_dbz_caps, lvldbg
 ! --- CAPS ---
@@ -231,7 +232,8 @@ subroutine prewgt_reg(mype)
   if (l_be_T_dep) then
       allocate ( vz_cld(1:nsig) )                      ; vz_cld   = zero;
       allocate ( dsv_cld(1:lon2, 1:nsig, 1:lat2) )     ; dsv_cld  = zero;
-      allocate ( corz_cld(1:lon2, 1:lat2, 1:nsig, 3) ) ; corz_cld = zero;
+      !allocate ( corz_cld(1:lon2, 1:lat2, 1:nsig, 3) ) ; corz_cld = zero;
+      allocate ( corz_cld(1:lon2, 1:lat2, 1:nsig, 4) ) ; corz_cld = zero;  !!lhq +qnr
   end if
 ! --- CAPS ---
 
@@ -502,7 +504,7 @@ subroutine prewgt_reg(mype)
            end do
         end do
 ! --- CAPS ---
-     else if ( n==nrf3_qr .or. n==nrf3_qs .or. n==nrf3_qg ) then
+     else if ( n==nrf3_qr .or. n==nrf3_qs .or. n==nrf3_qg .or. n==nrf3_qnr) then
 
         if ( l_be_T_dep ) then
             if (mype==0) &
@@ -615,10 +617,38 @@ subroutine prewgt_reg(mype)
                                 call calc_corz_cld_qg(tsen, l_use_log_qx_pval, corz_cld(i,j,k,3))
                                 !write(6,*) 'be_qg=',corz_cld(i,j,k,3)
                                 dssv(j,i,k,n)=dsv_cld(i,k,j) *0.05_r_kind* corz_cld(i,j,k,3) * as3d(n)                       
-! <--- CAPS ---
                             else
                               call berror_qcld_tdep(mype,tsen,3,corz_cld(i,j,k,3))
-                              dssv(j,i,k,n)=dsv_cld(i,k,j) * corz_cld(i,j,k,3) * as3d(n)
+                              dssv(j,i,k,n)=dsv_cld(i,k,j) * corz_cld(i,j,k,3) *as3d(n)
+                            end if
+
+                        else if (n==nrf3_qnr) then
+! --- CAPS --->
+                            !lhq
+                            if( l_cvpnr==.true. .and.cvpnr_pval==0.6_r_kind) then   
+                                call calc_corz_cld_qnr(tsen, cvpnr_pval,corz_cld(i,j,k,4))
+                                dssv(j,i,k,n)=dsv_cld(i,k,j) *0.05_r_kind*corz_cld(i,j,k,4) * as3d(n)
+                            else if( l_cvpnr==.true. .and.cvpnr_pval==1.0_r_kind) then
+                                call calc_corz_cld_qnr(tsen, cvpnr_pval,corz_cld(i,j,k,4))
+                                dssv(j,i,k,n)=dsv_cld(i,k,j) * corz_cld(i,j,k,4)* as3d(n)
+                            else if( l_cvpnr==.true. .and.cvpnr_pval==0.000001_r_kind) then
+                                call calc_corz_cld_qnr(tsen, cvpnr_pval,corz_cld(i,j,k,4))
+                                dssv(j,i,k,n)=dsv_cld(i,k,j) * corz_cld(i,j,k,4)* as3d(n)
+                            else if( l_cvpnr==.true. .and.cvpnr_pval==0.4_r_kind) then
+                                call calc_corz_cld_qnr(tsen, cvpnr_pval,corz_cld(i,j,k,4))
+                                dssv(j,i,k,n)=dsv_cld(i,k,j) *0.05_r_kind*corz_cld(i,j,k,4) * as3d(n)
+                            else if( l_cvpnr==.true..and.cvpnr_pval==0.2_r_kind) then
+                                call calc_corz_cld_qnr(tsen,cvpnr_pval,corz_cld(i,j,k,4))
+                                dssv(j,i,k,n)=dsv_cld(i,k,j)*0.05_r_kind*corz_cld(i,j,k,4) * as3d(n)
+                            else if( l_cvpnr==.true..and.cvpnr_pval==0.8_r_kind) then
+                                call calc_corz_cld_qnr(tsen,cvpnr_pval,corz_cld(i,j,k,4))
+                                dssv(j,i,k,n)=dsv_cld(i,k,j)*0.05_r_kind*corz_cld(i,j,k,4) * as3d(n)
+
+
+! <--- CAPS ---
+                            !else
+                            !  call berror_qcld_tdep(mype,tsen,4,corz_cld(i,j,k,4))
+                            !  dssv(j,i,k,n)=dsv_cld(i,k,j) * corz_cld(i,j,k,4) * as3d(n)
                             end if
                         else
                             write(6,*) &
@@ -1067,7 +1097,7 @@ real(r_kind) :: t0_kelvin =273.15_r_kind
 !               8.0_r_kind,  10.0_r_kind,  12.0_r_kind,  14.0_r_kind,  16.0_r_kind,  18.0_r_kind, &
 !              20.0_r_kind,  22.0_r_kind,  24.0_r_kind,  26.0_r_kind,  28.0_r_kind,  30.0_r_kind/)
 
-   if ( log_qx_pval == 0.5_r_kind ) then
+   if ( log_qx_pval > 0.45_r_kind .and. log_qx_pval <= 0.55_r_kind) then
       if ((temp_k-t0_kelvin) .le. -62.0_r_kind) then
          val_corz_cld=zero
       else if(((temp_k-t0_kelvin) .gt. -62.0_r_kind)&
@@ -1160,7 +1190,7 @@ real(r_kind) :: t0_kelvin =273.15_r_kind
       else if((temp_k-t0_kelvin) .gt. 30.0_r_kind) then
          val_corz_cld=4.88E-2_r_kind
       end if
-  else if ( log_qx_pval == 1.0_r_kind ) then
+  else if ( log_qx_pval > 0.95_r_kind .and. log_qx_pval <= 1.05_r_kind ) then
       if((temp_k-t0_kelvin) .le. -62.0_r_kind) then
          val_corz_cld=zero
       else if(((temp_k-t0_kelvin) .gt. -62.0_r_kind)&
@@ -1253,7 +1283,7 @@ real(r_kind) :: t0_kelvin =273.15_r_kind
       else if((temp_k-t0_kelvin) .gt. 30.0_r_kind) then
          val_corz_cld=8.33E-4_r_kind
       end if
-  else if ( log_qx_pval == 0.000001_r_kind ) then
+  else if ( log_qx_pval < 0.01_r_kind ) then
       if((temp_k-t0_kelvin) .le. -62.0_r_kind) then
          val_corz_cld=zero
       else if(((temp_k-t0_kelvin) .gt. -62.0_r_kind)&
@@ -1346,7 +1376,7 @@ real(r_kind) :: t0_kelvin =273.15_r_kind
       else if((temp_k-t0_kelvin) .gt. 30.0_r_kind) then
          val_corz_cld=3.98_r_kind
       end if
-  else if ( log_qx_pval == 0.4_r_kind ) then
+  else if ( log_qx_pval > 0.35_r_kind .and. log_qx_pval <= 0.45_r_kind) then
       if((temp_k-t0_kelvin) .le. -62.0_r_kind) then
          val_corz_cld=zero
       else if(((temp_k-t0_kelvin) .gt. -62.0_r_kind)&
@@ -1457,7 +1487,7 @@ real(r_kind) :: t0_kelvin =273.15_r_kind
 !              -4.0_r_kind,  -2.0_r_kind,   0.0_r_kind,   2.0_r_kind,   4.0_r_kind,   6.0_r_kind, &
 !               8.0_r_kind,  10.0_r_kind,  12.0_r_kind,  14.0_r_kind,  16.0_r_kind,  18.0_r_kind, &
 
-  if ( log_qx_pval == 0.5_r_kind ) then
+  if ( log_qx_pval > 0.45_r_kind .and. log_qx_pval <= 0.55_r_kind ) then
       if((temp_k-t0_kelvin) .le. -62.0_r_kind) then
          val_corz_cld=6.57E-2_r_kind
       else if(((temp_k-t0_kelvin) .gt. -62.0_r_kind)&
@@ -1550,7 +1580,7 @@ real(r_kind) :: t0_kelvin =273.15_r_kind
       else if((temp_k-t0_kelvin) .gt. 30.0_r_kind) then
          val_corz_cld=zero
       end if
-  else if ( log_qx_pval == 1.0_r_kind ) then
+  else if ( log_qx_pval > 0.95_r_kind .and. log_qx_pval <= 1.05_r_kind ) then
       if((temp_k-t0_kelvin) .le. -62.0_r_kind) then
          val_corz_cld=2.10E-3_r_kind
       else if(((temp_k-t0_kelvin) .gt. -62.0_r_kind)&
@@ -1643,7 +1673,7 @@ real(r_kind) :: t0_kelvin =273.15_r_kind
       else if((temp_k-t0_kelvin) .gt. 30.0_r_kind) then
          val_corz_cld=zero
       end if
-  else if ( log_qx_pval == 0.000001_r_kind ) then
+  else if ( log_qx_pval < 0.01_r_kind ) then
       if((temp_k-t0_kelvin) .le. -62.0_r_kind) then
          val_corz_cld=3.44_r_kind
       else if(((temp_k-t0_kelvin) .gt. -62.0_r_kind)&
@@ -1736,7 +1766,7 @@ real(r_kind) :: t0_kelvin =273.15_r_kind
       else if((temp_k-t0_kelvin) .gt. 30.0_r_kind) then
          val_corz_cld=zero
       end if
-  else if ( log_qx_pval == 0.4_r_kind ) then
+  else if ( log_qx_pval > 0.35 .and. log_qx_pval <= 0.45_r_kind ) then
       if((temp_k-t0_kelvin) .le. -62.0_r_kind) then
          val_corz_cld=0.1303_r_kind
       else if(((temp_k-t0_kelvin) .gt. -62.0_r_kind)&
@@ -1848,7 +1878,7 @@ real(r_kind) :: t0_kelvin =273.15_r_kind
 !               8.0_r_kind,  10.0_r_kind,  12.0_r_kind,  14.0_r_kind,  16.0_r_kind,  18.0_r_kind, &
 !              20.0_r_kind,  22.0_r_kind,  24.0_r_kind,  26.0_r_kind,  28.0_r_kind,  30.0_r_kind/)
 
-  if ( log_qx_pval == 0.5_r_kind ) then
+  if ( log_qx_pval > 0.45_r_kind .and. log_qx_pval <= 0.55_r_kind ) then
       if((temp_k-t0_kelvin) .le. -62.0_r_kind) then
          val_corz_cld=4.66E-2_r_kind
       else if(((temp_k-t0_kelvin) .gt. -62.0_r_kind)& 
@@ -1941,7 +1971,7 @@ real(r_kind) :: t0_kelvin =273.15_r_kind
       else if((temp_k-t0_kelvin) .gt. 30.0_r_kind) then
          val_corz_cld=zero
       end if
-  else if ( log_qx_pval == 1.0_r_kind ) then
+  else if ( log_qx_pval > 0.95_r_kind .and. log_qx_pval <= 1.05_r_kind ) then
       if((temp_k-t0_kelvin) .le. -62.0_r_kind) then
          val_corz_cld=8.45E-4_r_kind
       else if(((temp_k-t0_kelvin) .gt. -62.0_r_kind)&
@@ -2034,7 +2064,7 @@ real(r_kind) :: t0_kelvin =273.15_r_kind
       else if((temp_k-t0_kelvin) .gt. 30.0_r_kind) then
          val_corz_cld=zero
       end if
-  else if ( log_qx_pval == 0.000001_r_kind ) then
+  else if ( log_qx_pval < 0.01_r_kind ) then
       if((temp_k-t0_kelvin) .le. -62.0_r_kind) then
          val_corz_cld=3.73_r_kind
       else if(((temp_k-t0_kelvin) .gt. -62.0_r_kind)&
@@ -2127,7 +2157,7 @@ real(r_kind) :: t0_kelvin =273.15_r_kind
       else if((temp_k-t0_kelvin) .gt. 30.0_r_kind) then
          val_corz_cld=zero
       end if
-  else if ( log_qx_pval == 0.4_r_kind ) then
+  else if ( log_qx_pval > 0.35_r_kind .and. log_qx_pval <= 0.45_r_kind ) then
       if((temp_k-t0_kelvin) .le. -62.0_r_kind) then
          val_corz_cld=0.1091_r_kind
       else if(((temp_k-t0_kelvin) .gt. -62.0_r_kind)&
@@ -2222,4 +2252,593 @@ real(r_kind) :: t0_kelvin =273.15_r_kind
       end if
   end if
 end subroutine calc_corz_cld_qg
+
+!
+subroutine calc_corz_cld_qnr(temp_k, log_qx_pval, val_corz_cld)
+use kinds, only: r_kind
+
+real(r_kind), intent(in)    :: temp_k
+real(r_kind), intent(in)    :: log_qx_pval
+real(r_kind), intent(out)   :: val_corz_cld
+
+! local 
+real(r_kind) :: t0_kelvin =273.15_r_kind
+!real(r_kind), dimension(30) :: temp_table
+!temp_table=(/-62.0_r_kind, -54.0_r_kind, -46.0_r_kind, -38.0_r_kind,
+!-30.0_r_kind, -26.0_r_kind, &
+!             -22.0_r_kind, -18.0_r_kind, -14.0_r_kind, -10.0_r_kind,
+!             -8.0_r_kind,  -6.0_r_kind, &
+!              -4.0_r_kind,  -2.0_r_kind,   0.0_r_kind,   2.0_r_kind,
+!              4.0_r_kind,   6.0_r_kind, &
+!               8.0_r_kind,  10.0_r_kind,  12.0_r_kind,  14.0_r_kind,
+!               16.0_r_kind,  18.0_r_kind, &
+!              20.0_r_kind,  22.0_r_kind,  24.0_r_kind,  26.0_r_kind,
+!              28.0_r_kind,  30.0_r_kind/)
+
+  if ( log_qx_pval > 0.15_r_kind .and. log_qx_pval <= 0.35_r_kind ) then
+      if((temp_k-t0_kelvin) .le. -62.0_r_kind) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -62.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -54.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -54.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -46.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -46.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -38.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -38.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -30.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -30.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -26.0_r_kind)) then
+         val_corz_cld=9.485_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -26.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -22.0_r_kind)) then
+         val_corz_cld=9.97631_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -22.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -18.0_r_kind)) then
+         val_corz_cld=10.26889_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -18.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -14.0_r_kind)) then
+         val_corz_cld=10.44881_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -14.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -10.0_r_kind)) then
+         val_corz_cld=10.38219_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -10.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -8.0_r_kind)) then
+         val_corz_cld=9.66746_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -8.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -6.0_r_kind)) then
+         val_corz_cld=10.11691_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -6.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -4.0_r_kind)) then
+         val_corz_cld=9.17874_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -4.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -2.0_r_kind)) then
+         val_corz_cld=9.36543_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -2.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 0.0_r_kind)) then
+         val_corz_cld=8.92244_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 0.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 2.0_r_kind)) then
+         val_corz_cld=9.46162_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 2.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 4.0_r_kind)) then
+         val_corz_cld=8.96573_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 4.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 6.0_r_kind)) then
+         val_corz_cld=8.16076_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 6.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 8.0_r_kind)) then
+         val_corz_cld=7.15516_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 8.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 10.0_r_kind)) then
+         val_corz_cld=6.40303_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 10.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 12.0_r_kind)) then
+         val_corz_cld=6.06015_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 12.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 14.0_r_kind)) then
+         val_corz_cld=5.94796_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 14.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 16.0_r_kind)) then
+         val_corz_cld=6.13248_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 16.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 18.0_r_kind)) then
+         val_corz_cld=5.73713_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 18.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 20.0_r_kind)) then
+         val_corz_cld=5.15828_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 20.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 22.0_r_kind)) then
+         val_corz_cld=4.61217_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 22.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 24.0_r_kind)) then
+         val_corz_cld=4.11024_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 24.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 26.0_r_kind)) then
+         val_corz_cld=3.70197_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 26.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 28.0_r_kind)) then
+         val_corz_cld=3.09048_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 28.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 30.0_r_kind)) then
+         val_corz_cld=2.80425_r_kind
+      else if((temp_k-t0_kelvin) .gt. 30.0_r_kind) then
+         val_corz_cld=2.52145_r_kind
+      end if
+  else if ( log_qx_pval > 0.95_r_kind .and. log_qx_pval <= 1.05_r_kind ) then
+      if((temp_k-t0_kelvin) .le. -62.0_r_kind) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -62.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -54.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -54.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -46.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -46.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -38.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -38.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -30.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -30.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -26.0_r_kind)) then
+         val_corz_cld=3495.01948_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -26.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -22.0_r_kind)) then
+         val_corz_cld=3359.95630_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -22.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -18.0_r_kind)) then
+         val_corz_cld=3279.37776_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -18.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -14.0_r_kind)) then
+         val_corz_cld=3259.62172_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -14.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -10.0_r_kind)) then
+         val_corz_cld=3261.44242_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -10.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -8.0_r_kind)) then
+         val_corz_cld=2954.79599_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -8.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -6.0_r_kind)) then
+         val_corz_cld=3253.80263_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -6.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -4.0_r_kind)) then
+         val_corz_cld=2568.17691_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -4.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -2.0_r_kind)) then
+         val_corz_cld=3046.86640_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -2.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 0.0_r_kind)) then
+         val_corz_cld=2554.11253_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 0.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 2.0_r_kind)) then
+         val_corz_cld=3056.95997_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 2.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 4.0_r_kind)) then
+         val_corz_cld=2758.72759_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 4.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 6.0_r_kind)) then
+         val_corz_cld=2715.80791_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 6.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 8.0_r_kind)) then
+         val_corz_cld=2433.42795_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 8.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 10.0_r_kind)) then
+         val_corz_cld=2178.34221_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 10.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 12.0_r_kind)) then
+         val_corz_cld=2055.50023_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 12.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 14.0_r_kind)) then
+         val_corz_cld=1984.83334_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 14.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 16.0_r_kind)) then
+         val_corz_cld=2253.66838_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 16.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 18.0_r_kind)) then
+         val_corz_cld=2054.66838_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 18.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 20.0_r_kind)) then
+         val_corz_cld=1667.54278_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 20.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 22.0_r_kind)) then
+         val_corz_cld=1168.21613_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 22.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 24.0_r_kind)) then
+         val_corz_cld=771.84911_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 24.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 26.0_r_kind)) then
+         val_corz_cld=536.23827_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 26.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 28.0_r_kind)) then
+         val_corz_cld=321.23091_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 28.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 30.0_r_kind)) then
+         val_corz_cld=227.87040_r_kind
+      else if((temp_k-t0_kelvin) .gt. 30.0_r_kind) then
+         val_corz_cld=166.08732_r_kind
+      end if
+  else if ( log_qx_pval < 0.01_r_kind ) then
+      if((temp_k-t0_kelvin) .le. -62.0_r_kind) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -62.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -54.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -54.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -46.0_r_kind)) then
+         val_corz_cld=aero
+      else if(((temp_k-t0_kelvin) .gt. -46.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -38.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -38.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -30.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -30.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -26.0_r_kind)) then
+         val_corz_cld=1.34076_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -26.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -22.0_r_kind)) then
+         val_corz_cld=1.46285_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -22.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -18.0_r_kind)) then
+         val_corz_cld=1.59837_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -18.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -14.0_r_kind)) then
+         val_corz_cld=1.71920_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -14.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -10.0_r_kind)) then
+         val_corz_cld=1.76760_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -10.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -8.0_r_kind)) then
+         val_corz_cld=1.73899_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -8.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -6.0_r_kind)) then
+         val_corz_cld=1.79985_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -6.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -4.0_r_kind)) then
+         val_corz_cld=1.71070_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -4.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -2.0_r_kind)) then
+         val_corz_cld=1.70535_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -2.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 0.0_r_kind)) then
+         val_corz_cld=1.63083_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 0.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 2.0_r_kind)) then
+         val_corz_cld=1.65737_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 2.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 4.0_r_kind)) then
+         val_corz_cld=1.53212_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 4.0_r_kind)&
+         .and. ((temp_k-t0_kelvin) .le. 6.0_r_kind)) then
+         val_corz_cld=1.36688_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 6.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 8.0_r_kind)) then
+         val_corz_cld=1.02706_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 8.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 10.0_r_kind)) then
+         val_corz_cld=0.83546_r_kind
+     else if(((temp_k-t0_kelvin) .gt. 10.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 12.0_r_kind)) then
+         val_corz_cld=0.72720_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 12.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 14.0_r_kind)) then
+         val_corz_cld=0.70228_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 14.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 16.0_r_kind)) then
+         val_corz_cld=0.72675_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 16.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 18.0_r_kind)) then
+         val_corz_cld=0.70138_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 18.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 20.0_r_kind)) then
+         val_corz_cld=0.65538_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 20.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 22.0_r_kind)) then
+         val_corz_cld=0.61329_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 22.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 24.0_r_kind)) then
+         val_corz_cld=0.57782_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 24.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 26.0_r_kind)) then
+         val_corz_cld=0.54962_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 26.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 28.0_r_kind)) then
+         val_corz_cld=0.49000_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 28.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 30.0_r_kind)) then
+         val_corz_cld=0.46413_r_kind
+      else if((temp_k-t0_kelvin) .gt. 30.0_r_kind) then
+         val_corz_cld=0.43088_r_kind
+      end if
+  else if ( log_qx_pval > 0.35_r_kind .and. log_qx_pval <= 0.45_r_kind ) then
+      if((temp_k-t0_kelvin) .le. -62.0_r_kind) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -62.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -54.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -54.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -46.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -46.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -38.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -38.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -30.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -30.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -26.0_r_kind)) then
+         val_corz_cld=43.33112_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -26.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -22.0_r_kind)) then
+         val_corz_cld=46.78213_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -22.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -18.0_r_kind)) then
+         val_corz_cld=47.86116_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -18.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -14.0_r_kind)) then
+         val_corz_cld=47.78372_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -14.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -10.0_r_kind)) then
+         val_corz_cld=46.25078_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -10.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -8.0_r_kind)) then
+         val_corz_cld=41.49728_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -8.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -6.0_r_kind)) then
+         val_corz_cld=43.10740_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -6.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -4.0_r_kind)) then
+         val_corz_cld=37.92371_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -4.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -2.0_r_kind)) then
+         val_corz_cld=37.73387_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -2.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 0.0_r_kind)) then
+         val_corz_cld=35.22413_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 0.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 2.0_r_kind)) then
+         val_corz_cld=38.20840_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 2.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 4.0_r_kind)) then
+         val_corz_cld=36.05816_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 4.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 6.0_r_kind)) then
+         val_corz_cld=33.35756_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 6.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 8.0_r_kind)) then
+         val_corz_cld=30.89302_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 8.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 10.0_r_kind)) then
+         val_corz_cld=28.43813_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 10.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 12.0_r_kind)) then
+         val_corz_cld=27.58614_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 12.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 14.0_r_kind)) then
+         val_corz_cld=27.27685_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 14.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 16.0_r_kind)) then
+         val_corz_cld=26.12844_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 16.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 18.0_r_kind)) then
+         val_corz_cld=22.76230_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 18.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 20.0_r_kind)) then
+         val_corz_cld=19.36064_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 20.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 22.0_r_kind)) then
+         val_corz_cld=16.41313_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 22.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 24.0_r_kind)) then
+         val_corz_cld=13.71713_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 24.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 26.0_r_kind)) then
+         val_corz_cld=11.63848_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 26.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 28.0_r_kind)) then
+         val_corz_cld=9.01309_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 28.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 30.0_r_kind)) then
+         val_corz_cld=7.77490_r_kind
+      else if((temp_k-t0_kelvin) .gt. 30.0_r_kind) then
+         val_corz_cld=6.71456_r_kind
+      end if
+  else if ( log_qx_pval > 0.55_r_kind .and. log_qx_pval <= 0.75_r_kind ) then
+      if((temp_k-t0_kelvin) .le. -62.0_r_kind) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -62.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -54.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -54.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -46.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -46.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -38.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -38.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -30.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -30.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -26.0_r_kind)) then
+         val_corz_cld=248.35315_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -26.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -22.0_r_kind)) then
+         val_corz_cld=281.41940_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -22.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -18.0_r_kind)) then
+         val_corz_cld=290.07470_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -18.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -14.0_r_kind)) then
+         val_corz_cld=286.54191_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -14.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -10.0_r_kind)) then
+         val_corz_cld=271.70061_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -10.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -8.0_r_kind)) then
+         val_corz_cld=243.48175_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -8.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -6.0_r_kind)) then
+         val_corz_cld=242.15677_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -6.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -4.0_r_kind)) then
+         val_corz_cld=214.39841_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -4.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -2.0_r_kind)) then
+         val_corz_cld=204.90672_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -2.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 0.0_r_kind)) then
+         val_corz_cld=184.78424_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 0.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 2.0_r_kind)) then
+         val_corz_cld=212.82253_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 2.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 4.0_r_kind)) then
+         val_corz_cld=204.18614_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 4.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 6.0_r_kind)) then
+         val_corz_cld=191.03116_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 6.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 8.0_r_kind)) then
+         val_corz_cld=184.32626_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 8.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 10.0_r_kind)) then
+         val_corz_cld=172.88378_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 10.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 12.0_r_kind)) then
+         val_corz_cld=173.22089_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 12.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 14.0_r_kind)) then
+         val_corz_cld=169.51436_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 14.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 16.0_r_kind)) then
+         val_corz_cld=133.14491_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 16.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 18.0_r_kind)) then
+         val_corz_cld=101.04275_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 18.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 20.0_r_kind)) then
+         val_corz_cld=79.26567_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 20.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 22.0_r_kind)) then
+         val_corz_cld=63.33042_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 22.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 24.0_r_kind)) then
+         val_corz_cld=49.25802_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 24.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 26.0_r_kind)) then
+         val_corz_cld=39.22117_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 26.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 28.0_r_kind)) then
+         val_corz_cld=27.98290_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 28.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 30.0_r_kind)) then
+         val_corz_cld=22.77527_r_kind
+      else if((temp_k-t0_kelvin) .gt. 30.0_r_kind) then
+         val_corz_cld=18.73216_r_kind
+      end if
+  else if ( log_qx_pval > 0.75_r_kind .and. log_qx_pval <= 0.95_r_kind ) then
+      if((temp_k-t0_kelvin) .le. -62.0_r_kind) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -62.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -54.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -54.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -46.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -46.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -38.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -38.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -30.0_r_kind)) then
+         val_corz_cld=zero
+      else if(((temp_k-t0_kelvin) .gt. -30.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -26.0_r_kind)) then
+         val_corz_cld=1683.85896_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -26.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -22.0_r_kind)) then
+         val_corz_cld=2030.55185_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -22.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -18.0_r_kind)) then
+         val_corz_cld=2134.04860_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -18.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -14.0_r_kind)) then
+         val_corz_cld=2107.52824_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -14.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -10.0_r_kind)) then
+         val_corz_cld=1970.77384_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -10.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -8.0_r_kind)) then
+         val_corz_cld=1836.79082_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -8.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -6.0_r_kind)) then
+         val_corz_cld=1655.23752_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -6.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -4.0_r_kind)) then
+         val_corz_cld=1541.02462_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -4.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. -2.0_r_kind)) then
+         val_corz_cld=1401.70998_r_kind
+      else if(((temp_k-t0_kelvin) .gt. -2.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 0.0_r_kind)) then
+         val_corz_cld=1199.47684_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 0.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 2.0_r_kind)) then
+         val_corz_cld=1552.23711_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 2.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 4.0_r_kind)) then
+         val_corz_cld=1570.17413_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 4.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 6.0_r_kind)) then
+         val_corz_cld=1466.94096_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 6.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 8.0_r_kind)) then
+         val_corz_cld=1520.38137_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 8.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 10.0_r_kind)) then
+         val_corz_cld=1454.40128_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 10.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 12.0_r_kind)) then
+         val_corz_cld=1502.99309_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 12.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 14.0_r_kind)) then
+         val_corz_cld=1412.71476_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 14.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 16.0_r_kind)) then
+         val_corz_cld=828.60360_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 16.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 18.0_r_kind)) then
+         val_corz_cld=503.31973_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 18.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 20.0_r_kind)) then
+         val_corz_cld=351.04665_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 20.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 22.0_r_kind)) then
+         val_corz_cld=263.12892_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 22.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 24.0_r_kind)) then
+         val_corz_cld=189.18421_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 24.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 26.0_r_kind)) then
+         val_corz_cld=140.92174_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 26.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 28.0_r_kind)) then
+         val_corz_cld=92.23219_r_kind
+      else if(((temp_k-t0_kelvin) .gt. 28.0_r_kind)&
+          .and. ((temp_k-t0_kelvin) .le. 30.0_r_kind)) then
+         val_corz_cld=70.31765_r_kind
+      else if((temp_k-t0_kelvin) .gt. 30.0_r_kind) then
+         val_corz_cld=54.63960_r_kind
+      end if
+
+
+  end if
+end subroutine calc_corz_cld_qnr
+
+
+                                                                                   
+
 ! <--- CAPS ---

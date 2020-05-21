@@ -1868,6 +1868,7 @@ contains
     use caps_radaruse_mod, only: l_use_log_qx, l_use_log_qx_pval, l_use_log_nt, cld_nt_updt !chenll
     use caps_radaruse_mod, only: l_use_dbz_caps
     use caps_radaruse_mod, only: init_mm_qnr
+    use caps_radaruse_mod, only: l_cvpnr, cvpnr_pval
 ! --- CAPS ---
 
     implicit none
@@ -2472,6 +2473,8 @@ contains
                             qnr_tmp=max(ges_qnr(j,i,k)-1.0E-2_r_kind,0.0)
                          endif
                          ! if (qnr_tmp <= one ) qnr_tmp = zero
+                      elseif (l_cvpnr) then                         
+                         qnr_tmp=max((cvpnr_pval*ges_qnr(j,i,k)+1)**(1/cvpnr_pval)-1.0E-2_r_kind,0.0)
                       else
                           qnr_tmp=ges_qnr(j,i,k)
                       end if

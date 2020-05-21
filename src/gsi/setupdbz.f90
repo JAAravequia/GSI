@@ -209,6 +209,7 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
   use qcmod, only: ptopq,pbotq
   use converr, only: ptabl
   use caps_radaruse_mod, only: l_use_log_qx, l_use_log_qx_pval, l_gpht2gmht, lvldbg, l_set_oerr_ratio_dbz ! chenll
+  use caps_radaruse_mod, only: l_cvpnr, cvpnr_pval  !cliu added
   use caps_radaruse_mod, only: i_melt_snow, i_melt_graupel
   use caps_radaruse_mod, only: Cr,     Pr,                     &
                                Cs_dry, Ps_dry, Cs_wet, Ps_wet, &
@@ -806,6 +807,9 @@ subroutine setupdbz(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,radardbz_d
         if (mphyopt == 108 .or. mphyopt == 2 ) then
            call tintrp31(ges_nr,qscalar(P_NR),dlat,dlon,dpres,dtime, &
               hrdifsig,mype,nfldsig)
+           if (l_cvpnr) then
+              qscalar(P_NR)=(cvpnr_pval*qscalar(P_NR)+1)**(1/cvpnr_pval)
+           end if
            qscalar(P_NR)=qscalar(P_NR)*RHO  ! convert qnr to unit demanded by operators
         end if
 
