@@ -85,60 +85,60 @@ module general_sub2grid_mod
    public :: sub2grid_info
 
    interface general_sub2grid
-     module procedure general_sub2grid_r_single_rank11
-     module procedure general_sub2grid_r_single_rank14
-     module procedure general_sub2grid_r_single_rank4
-     module procedure general_sub2grid_r_double_rank11
-     module procedure general_sub2grid_r_double_rank14
-     module procedure general_sub2grid_r_double_rank4
+      module procedure general_sub2grid_r_single_rank11
+      module procedure general_sub2grid_r_single_rank14
+      module procedure general_sub2grid_r_single_rank4
+      module procedure general_sub2grid_r_double_rank11
+      module procedure general_sub2grid_r_double_rank14
+      module procedure general_sub2grid_r_double_rank4
    end interface
 
    interface general_grid2sub
-     module procedure general_grid2sub_r_single_rank11
-     module procedure general_grid2sub_r_single_rank41
-     module procedure general_grid2sub_r_single_rank4
-     module procedure general_grid2sub_r_double_rank11
-     module procedure general_grid2sub_r_double_rank41
-     module procedure general_grid2sub_r_double_rank4
+      module procedure general_grid2sub_r_single_rank11
+      module procedure general_grid2sub_r_single_rank41
+      module procedure general_grid2sub_r_single_rank4
+      module procedure general_grid2sub_r_double_rank11
+      module procedure general_grid2sub_r_double_rank41
+      module procedure general_grid2sub_r_double_rank4
    end interface
 
    interface general_gather2grid
-     module procedure general_gather2grid_r_single_rank11
-     module procedure general_gather2grid_r_single_rank13
-     module procedure general_gather2grid_r_single_rank3
-     module procedure general_gather2grid_r_double_rank11
-     module procedure general_gather2grid_r_double_rank13
-     module procedure general_gather2grid_r_double_rank3
+      module procedure general_gather2grid_r_single_rank11
+      module procedure general_gather2grid_r_single_rank13
+      module procedure general_gather2grid_r_single_rank3
+      module procedure general_gather2grid_r_double_rank11
+      module procedure general_gather2grid_r_double_rank13
+      module procedure general_gather2grid_r_double_rank3
    end interface
 
    interface general_scatter2sub
-     module procedure general_scatter2sub_r_single_rank11
-     module procedure general_scatter2sub_r_single_rank31
-     module procedure general_scatter2sub_r_single_rank3
-     module procedure general_scatter2sub_r_double_rank11
-     module procedure general_scatter2sub_r_double_rank31
-     module procedure general_scatter2sub_r_double_rank3
+      module procedure general_scatter2sub_r_single_rank11
+      module procedure general_scatter2sub_r_single_rank31
+      module procedure general_scatter2sub_r_single_rank3
+      module procedure general_scatter2sub_r_double_rank11
+      module procedure general_scatter2sub_r_double_rank31
+      module procedure general_scatter2sub_r_double_rank3
    end interface
 
    interface general_suba2sube
-     module procedure general_suba2sube_r_single_rank1
-     module procedure general_suba2sube_r_single_rank4
-     module procedure general_suba2sube_r_double_rank1
-     module procedure general_suba2sube_r_double_rank4
+      module procedure general_suba2sube_r_single_rank1
+      module procedure general_suba2sube_r_single_rank4
+      module procedure general_suba2sube_r_double_rank1
+      module procedure general_suba2sube_r_double_rank4
    end interface
 
    interface general_sube2suba
-      module procedure general_sube2suba_r_single_rank1
-      module procedure general_sube2suba_r_single_rank4
-      module procedure general_sube2suba_r_double_rank1
-      module procedure general_sube2suba_r_double_rank4
+       module procedure general_sube2suba_r_single_rank1
+       module procedure general_sube2suba_r_single_rank4
+       module procedure general_sube2suba_r_double_rank1
+       module procedure general_sube2suba_r_double_rank4
    end interface
 
    interface general_sube2suba_ad
-      module procedure general_sube2suba_r_single_rank1_ad
-      module procedure general_sube2suba_r_single_rank4_ad
-      module procedure general_sube2suba_r_double_rank1_ad
-      module procedure general_sube2suba_r_double_rank4_ad
+       module procedure general_sube2suba_r_single_rank1_ad
+       module procedure general_sube2suba_r_single_rank4_ad
+       module procedure general_sube2suba_r_double_rank1_ad
+       module procedure general_sube2suba_r_double_rank4_ad
    end interface
 
    type sub2grid_info
@@ -519,13 +519,13 @@ subroutine get_iuse_pe(npe,nz,iuse_pe)
      else                    
         nskip=npe-nz
         if(nskip > 0)then
-          skip2=float(npe)/float(nskip)
-          point=zero
-          do i=1,nskip
-            ipoint=min(max(0,nint(point)),npe) 
-            iuse_pe(ipoint)=0
-            point=point+skip2
-          end do
+           skip2=real(npe,r_kind)/real(nskip,r_kind)
+           point=zero
+           do i=1,nskip
+              ipoint=min(max(0,nint(point)),npe) 
+              iuse_pe(ipoint)=0
+              point=point+skip2
+           end do
         end if
         icount=0
         do i=0,npe-1
@@ -578,10 +578,10 @@ end subroutine get_iuse_pe
          deallocate(s%irc_s,s%ird_s,s%isc_g,s%isd_g,s%displs_s,s%rdispls_s,s%sendcounts_s,s%sdispls_s)
          deallocate(s%ijn_s,s%kbegin,s%kend,s%lnames,s%names)
          if(present(s_ref)) then
-            s%ltosj   => NULL()
-            s%ltosi   => NULL()
-            s%ltosj_s => NULL()
-            s%ltosi_s => NULL()
+            s%ltosj   => null()
+            s%ltosi   => null()
+            s%ltosj_s => null()
+            s%ltosi_s => null()
          else
             deallocate(s%ltosj,s%ltosi,s%ltosj_s,s%ltosi_s)
          end if
@@ -622,7 +622,7 @@ end subroutine get_iuse_pe
 !
 !$$$
   use kinds, only: i_kind
-  use mpimod, only: nxPE, nyPE
+  use mpimod, only: nxpe, nype
   use mpeu_util, only: die
   implicit none
 
@@ -645,12 +645,12 @@ end subroutine get_iuse_pe
 ! end if
 ! If a layout is provided, use it for the domain decomposition
 ! ------------------------------------------------------------
-  if ( nxPE > 0 .AND. nyPE > 0 ) then
+  if ( nxpe > 0 .and. nype > 0 ) then
 
      if( npe/=nxpe*nype ) then
-         call die(myname_,'NPE inconsistent from  NxPE NyPE ',npe)
+        call die(myname_,'NPE inconsistent from  NxPE NyPE ',npe)
      endif
-     call general_deter_subdomain_withLayout(npe,nxPE,nyPE,mype,nlat,nlon,regional, &
+     call general_deter_subdomain_withlayout(npe,nxpe,nype,mype,nlat,nlon,regional, &
                     periodic,periodic_s,lon1,lon2,lat1,lat2,ilat1,istart,jlon1,jstart)
 
 ! Otherwise, use NCEP original algorithm
@@ -729,7 +729,7 @@ end subroutine get_iuse_pe
 
 ! compute local subdomain (offset and sizes)
 
-  K=0
+  k=0
   jstart0 = 1
   do j=1,nype
      istart0 = 1
@@ -755,8 +755,8 @@ end subroutine get_iuse_pe
 !@              periodic_s(k) = .true.
 !@           end if
 !@        end if
-     END DO
-  END DO
+     end do
+  end do
 
   if ( print_verbose ) then
      do k=1,nxpe*nype
@@ -805,7 +805,7 @@ end subroutine get_iuse_pe
 !
 !$$$ end documentation block
 
-   implicit   none
+   implicit none
 
    integer(i_kind),intent(in   ) :: dim_world, ndes
    integer(i_kind),intent(inout) :: dim(0:ndes-1)
@@ -876,7 +876,7 @@ end subroutine get_iuse_pe
 !     Compute number of points on full grid and target number of
 !     point per mpi task (pe)
       npts=nlat*nlon
-      anperpe=float(npts)/float(npe)
+      anperpe=real(npts,r_kind)/real(npe,r_kind)
 
 !     Start with square subdomains
       nrnc=sqrt(anperpe)
@@ -966,8 +966,8 @@ end subroutine get_iuse_pe
       real(r_single),     intent(in   ) :: sub_vars(:)
       real(r_single),    intent(inout)  :: grid_vars(:)
 
-      real(r_single),pointer,dimension(:,:,:,:) :: sub_vars_r4=>NULL()
-      real(r_single),pointer,dimension(:,:,:,:) :: grid_vars_r4=>NULL()
+      real(r_single),pointer,dimension(:,:,:,:) :: sub_vars_r4=>null()
+      real(r_single),pointer,dimension(:,:,:,:) :: grid_vars_r4=>null()
       integer(i_kind) mold4(2,2,2,2)
 
       sub_vars_r4  => rerank(sub_vars ,mold4,(/s%inner_vars,s%lat2,s%lon2,s%num_fields/))
@@ -1010,7 +1010,7 @@ end subroutine get_iuse_pe
       real(r_single),     intent(in   ) :: sub_vars(:)
       real(r_single),     intent(  out) :: grid_vars(:,:,:,:)
 
-      real(r_single),pointer,dimension(:,:,:,:) :: sub_vars_r4=>NULL()
+      real(r_single),pointer,dimension(:,:,:,:) :: sub_vars_r4=>null()
       integer(i_kind) mold4(2,2,2,2)
 
       sub_vars_r4  => rerank(sub_vars,mold4,(/s%inner_vars,s%lat2,s%lon2,s%num_fields/))
@@ -1146,8 +1146,8 @@ end subroutine get_iuse_pe
       real(r_single), intent(in   )     :: grid_vars(:)
       real(r_single),     intent(inout) :: sub_vars(:)
 
-      real(r_single),pointer,dimension(:,:,:,:) :: grid_vars_r4=>NULL()
-      real(r_single),pointer,dimension(:,:,:,:) :: sub_vars_r4=>NULL()
+      real(r_single),pointer,dimension(:,:,:,:) :: grid_vars_r4=>null()
+      real(r_single),pointer,dimension(:,:,:,:) :: sub_vars_r4=>null()
       integer(i_kind) mold4(2,2,2,2)
 
       grid_vars_r4=> rerank(grid_vars,mold4,(/s%inner_vars,s%nlat,s%nlon,s%kend_alloc-s%kbegin_loc+1/))
@@ -1190,7 +1190,7 @@ end subroutine get_iuse_pe
       real(r_single), intent(in   )     :: grid_vars(s%inner_vars,s%nlat,s%nlon,s%kbegin_loc:s%kend_alloc)
       real(r_single),     intent(inout) :: sub_vars(:)
 
-      real(r_single),pointer,dimension(:,:,:,:) :: sub_vars_r4=>NULL()
+      real(r_single),pointer,dimension(:,:,:,:) :: sub_vars_r4=>null()
       integer(i_kind) mold4(2,2,2,2)
 
       sub_vars_r4 => rerank(sub_vars,mold4,(/s%inner_vars,s%lat2,s%lon2,s%num_fields/))
@@ -1254,7 +1254,7 @@ end subroutine get_iuse_pe
 !     reorganize for eventual distribution to local domains
       iskip(1)=0
       do n=2,s%npe
-        iskip(n)=iskip(n-1)+s%ijn_s(n-1)*(s%kend_loc-s%kbegin_loc+1)
+         iskip(n)=iskip(n-1)+s%ijn_s(n-1)*(s%kend_loc-s%kbegin_loc+1)
       end do
 !$omp parallel do  schedule(dynamic,1) private(n,k,i,jlon,ii,ilat,iloc,icount)
       do k=s%kbegin_loc,s%kend_loc
@@ -1316,8 +1316,8 @@ end subroutine get_iuse_pe
       real(r_double),     intent(in   ) :: sub_vars(:)
       real(r_double),     intent(inout) :: grid_vars(:)
 
-      real(r_double),pointer,dimension(:,:,:,:) :: sub_vars_r4=>NULL()
-      real(r_double),pointer,dimension(:,:,:,:) :: grid_vars_r4=>NULL()
+      real(r_double),pointer,dimension(:,:,:,:) :: sub_vars_r4=>null()
+      real(r_double),pointer,dimension(:,:,:,:) :: grid_vars_r4=>null()
       integer(i_kind) mold4(2,2,2,2)
 
       sub_vars_r4  => rerank(sub_vars, mold4,(/s%inner_vars,s%lat2,s%lon2,s%num_fields/))
@@ -1360,7 +1360,7 @@ end subroutine get_iuse_pe
       real(r_double),     intent(in   ) :: sub_vars(:)
       real(r_double),     intent(  out) :: grid_vars(:,:,:,:)
 
-      real(r_double),pointer,dimension(:,:,:,:) :: sub_vars_r4=>NULL()
+      real(r_double),pointer,dimension(:,:,:,:) :: sub_vars_r4=>null()
       integer(i_kind) mold4(2,2,2,2)
 
       sub_vars_r4  => rerank(sub_vars,mold4,(/s%inner_vars,s%lat2,s%lon2,s%num_fields/))
@@ -1496,8 +1496,8 @@ end subroutine get_iuse_pe
       real(r_double),     intent(in   ) :: grid_vars(:)
       real(r_double),     intent(inout) :: sub_vars(:)
 
-      real(r_double),pointer,dimension(:,:,:,:) :: grid_vars_r4=>NULL()
-      real(r_double),pointer,dimension(:,:,:,:) :: sub_vars_r4=>NULL()
+      real(r_double),pointer,dimension(:,:,:,:) :: grid_vars_r4=>null()
+      real(r_double),pointer,dimension(:,:,:,:) :: sub_vars_r4=>null()
       integer(i_kind) mold4(2,2,2,2)
 
       grid_vars_r4 => rerank(grid_vars,mold4,(/s%inner_vars,s%nlat,s%nlon,s%kend_alloc-s%kbegin_loc+1/))
@@ -1540,7 +1540,7 @@ end subroutine get_iuse_pe
       real(r_double),     intent(in   ) :: grid_vars(s%inner_vars,s%nlat,s%nlon,s%kbegin_loc:s%kend_alloc)
       real(r_double),     intent(inout) :: sub_vars(:)
 
-      real(r_double),pointer,dimension(:,:,:,:) :: sub_vars_r4=>NULL()
+      real(r_double),pointer,dimension(:,:,:,:) :: sub_vars_r4=>null()
       integer(i_kind) mold4(2,2,2,2)
 
       sub_vars_r4 => rerank(sub_vars,mold4,(/s%inner_vars,s%lat2,s%lon2,s%num_fields/))
@@ -1602,7 +1602,7 @@ end subroutine get_iuse_pe
 !     reorganize for eventual distribution to local domains
       iskip(1)=0
       do n=2,s%npe
-        iskip(n)=iskip(n-1)+s%ijn_s(n-1)*(s%kend_loc-s%kbegin_loc+1)
+         iskip(n)=iskip(n-1)+s%ijn_s(n-1)*(s%kend_loc-s%kbegin_loc+1)
       end do
 !$omp parallel do  schedule(dynamic,1) private(n,k,i,jlon,ii,ilat,iloc,icount)
       do k=s%kbegin_loc,s%kend_loc
@@ -1664,8 +1664,8 @@ end subroutine get_iuse_pe
       real(r_single),    intent(inout)  :: grid_vars(:)
       integer(i_kind),    intent(in   ) :: gridpe
 
-      real(r_single),pointer,dimension(:,:,:) :: sub_vars_r3=>NULL()
-      real(r_single),pointer,dimension(:,:,:) :: grid_vars_r3=>NULL()
+      real(r_single),pointer,dimension(:,:,:) :: sub_vars_r3=>null()
+      real(r_single),pointer,dimension(:,:,:) :: grid_vars_r3=>null()
       integer(i_kind) mold3(2,2,2)
 
       sub_vars_r3  => rerank(sub_vars ,mold3,(/s%inner_vars,s%lat2,s%lon2/))
@@ -1715,7 +1715,7 @@ end subroutine get_iuse_pe
       real(r_single),     intent(  out) :: grid_vars(:,:,:)
       integer(i_kind),    intent(in   ) :: gridpe
 
-      real(r_single),pointer,dimension(:,:,:) :: sub_vars_r3=>NULL()
+      real(r_single),pointer,dimension(:,:,:) :: sub_vars_r3=>null()
       integer(i_kind) mold3(2,2,2)
 
       sub_vars_r3  => rerank(sub_vars,mold3,(/s%inner_vars,s%lat2,s%lon2/))
@@ -1847,8 +1847,8 @@ end subroutine get_iuse_pe
       real(r_double),     intent(inout) :: grid_vars(:)
       integer(i_kind),    intent(in   ) :: gridpe
 
-      real(r_double),pointer,dimension(:,:,:) :: sub_vars_r3=>NULL()
-      real(r_double),pointer,dimension(:,:,:) :: grid_vars_r3=>NULL()
+      real(r_double),pointer,dimension(:,:,:) :: sub_vars_r3=>null()
+      real(r_double),pointer,dimension(:,:,:) :: grid_vars_r3=>null()
       integer(i_kind) mold3(2,2,2)
 
       sub_vars_r3  => rerank(sub_vars, mold3,(/s%inner_vars,s%lat2,s%lon2/))
@@ -1892,7 +1892,7 @@ end subroutine get_iuse_pe
       real(r_double),     intent(  out) :: grid_vars(:,:,:)
       integer(i_kind),    intent(in   ) :: gridpe
 
-      real(r_double),pointer,dimension(:,:,:) :: sub_vars_r3=>NULL()
+      real(r_double),pointer,dimension(:,:,:) :: sub_vars_r3=>null()
       integer(i_kind) mold3(2,2,2)
 
       sub_vars_r3  => rerank(sub_vars,mold3,(/s%inner_vars,s%lat2,s%lon2/))
@@ -1977,7 +1977,7 @@ end subroutine get_iuse_pe
             do i=1,s%ijn(n)
                iloc=iloc+1
                do ii=1,s%inner_vars
-                temp(ii,iloc)=work(ii,i + iskip)
+                  temp(ii,iloc)=work(ii,i + iskip)
                end do
             end do
             iskip=iskip+s%ijn(n)
@@ -2030,8 +2030,8 @@ end subroutine get_iuse_pe
       real(r_single),     intent(inout) :: sub_vars(:)
       integer(i_kind),intent(in   )     :: gridpe
 
-      real(r_single),pointer,dimension(:,:,:) :: grid_vars_r3=>NULL()
-      real(r_single),pointer,dimension(:,:,:) :: sub_vars_r3=>NULL()
+      real(r_single),pointer,dimension(:,:,:) :: grid_vars_r3=>null()
+      real(r_single),pointer,dimension(:,:,:) :: sub_vars_r3=>null()
       integer(i_kind) mold3(2,2,2)
 
       grid_vars_r3=> rerank(grid_vars,mold3,(/s%inner_vars,s%nlat,s%nlon/))
@@ -2075,7 +2075,7 @@ end subroutine get_iuse_pe
       real(r_single),     intent(inout) :: sub_vars(:)
       integer(i_kind),intent(in   )     :: gridpe
 
-      real(r_single),pointer,dimension(:,:,:) :: sub_vars_r3=>NULL()
+      real(r_single),pointer,dimension(:,:,:) :: sub_vars_r3=>null()
       integer(i_kind) mold3(2,2,2)
 
       sub_vars_r3 => rerank(sub_vars,mold3,(/s%inner_vars,s%lat2,s%lon2/))
@@ -2185,8 +2185,8 @@ end subroutine get_iuse_pe
       real(r_double),     intent(inout) :: sub_vars(:)
       integer(i_kind),intent(in   )     :: gridpe
 
-      real(r_double),pointer,dimension(:,:,:) :: grid_vars_r3=>NULL()
-      real(r_double),pointer,dimension(:,:,:) :: sub_vars_r3=>NULL()
+      real(r_double),pointer,dimension(:,:,:) :: grid_vars_r3=>null()
+      real(r_double),pointer,dimension(:,:,:) :: sub_vars_r3=>null()
       integer(i_kind) mold3(2,2,2)
 
       grid_vars_r3 => rerank(grid_vars,mold3,(/s%inner_vars,s%nlat,s%nlon/))
@@ -2230,7 +2230,7 @@ end subroutine get_iuse_pe
       real(r_double),     intent(inout) :: sub_vars(:)
       integer(i_kind),    intent(in   ) :: gridpe
 
-      real(r_double),pointer,dimension(:,:,:) :: sub_vars_r3=>NULL()
+      real(r_double),pointer,dimension(:,:,:) :: sub_vars_r3=>null()
       integer(i_kind) mold3(2,2,2)
 
       sub_vars_r3 => rerank(sub_vars,mold3,(/s%inner_vars,s%lat2,s%lon2/))
@@ -2344,8 +2344,8 @@ end subroutine get_iuse_pe
       real(r_single),        intent(inout) :: suba_vars(:)
       logical,               intent(in   ) :: regional
 
-      real(r_single),pointer,dimension(:,:,:,:) :: sube_vars_r4=>NULL()
-      real(r_single),pointer,dimension(:,:,:,:) :: suba_vars_r4=>NULL()
+      real(r_single),pointer,dimension(:,:,:,:) :: sube_vars_r4=>null()
+      real(r_single),pointer,dimension(:,:,:,:) :: suba_vars_r4=>null()
       integer(i_kind) mold4(2,2,2,2)
 
       sube_vars_r4 => rerank(sube_vars,mold4,(/se%inner_vars,se%lat2,se%lon2,se%num_fields/))
@@ -2408,7 +2408,7 @@ end subroutine get_iuse_pe
          stop
       else
          do k=se%kbegin_loc,se%kend_loc
-           vectorx(k)=se%vector(k)
+            vectorx(k)=se%vector(k)
          end do
          call g_egrid2agrid(p_e2a,gride_vars,grida_vars,se%kbegin_loc,se%kend_loc,vectorx)
       end if
@@ -2456,8 +2456,8 @@ end subroutine get_iuse_pe
       real(r_double),        intent(inout) :: suba_vars(:)
       logical,               intent(in   ) :: regional
 
-      real(r_double),pointer,dimension(:,:,:,:) :: sube_vars_r4=>NULL()
-      real(r_double),pointer,dimension(:,:,:,:) :: suba_vars_r4=>NULL()
+      real(r_double),pointer,dimension(:,:,:,:) :: sube_vars_r4=>null()
+      real(r_double),pointer,dimension(:,:,:,:) :: suba_vars_r4=>null()
       integer(i_kind) mold4(2,2,2,2)
 
       sube_vars_r4 => rerank(sube_vars,mold4,(/se%inner_vars,se%lat2,se%lon2,se%num_fields/))
@@ -2519,7 +2519,7 @@ end subroutine get_iuse_pe
          call egrid2agrid(p_e2a,gride_vars,grida_vars,se%kbegin_loc,se%kend_loc)
       else
          do k=se%kbegin_loc,se%kend_loc
-           vectorx(k)=se%vector(k)
+            vectorx(k)=se%vector(k)
          end do
          call g_egrid2agrid(p_e2a,gride_vars,grida_vars,se%kbegin_loc,se%kend_loc,vectorx)
       end if
@@ -2567,8 +2567,8 @@ end subroutine get_iuse_pe
       real(r_single),        intent(in   ) :: suba_vars(:)
       logical,               intent(in   ) :: regional
 
-      real(r_single),pointer,dimension(:,:,:,:) :: sube_vars_r4=>NULL()
-      real(r_single),pointer,dimension(:,:,:,:) :: suba_vars_r4=>NULL()
+      real(r_single),pointer,dimension(:,:,:,:) :: sube_vars_r4=>null()
+      real(r_single),pointer,dimension(:,:,:,:) :: suba_vars_r4=>null()
       integer(i_kind) mold4(2,2,2,2)
 
       sube_vars_r4 => rerank(sube_vars,mold4,(/se%inner_vars,se%lat2,se%lon2,se%num_fields/))
@@ -2628,7 +2628,7 @@ end subroutine get_iuse_pe
          call egrid2agrid_ad(p_e2a,gride_vars,grida_vars,se%kbegin_loc,se%kend_loc)
       else
          do k=se%kbegin_loc,se%kend_loc
-           vectorx(k)=se%vector(k)
+            vectorx(k)=se%vector(k)
          end do
          call g_egrid2agrid_ad(p_e2a,gride_vars,grida_vars,se%kbegin_loc,se%kend_loc,vectorx)
       end if
@@ -2676,8 +2676,8 @@ end subroutine get_iuse_pe
       real(r_double),        intent(in   ) :: suba_vars(:)
       logical,               intent(in   ) :: regional
 
-      real(r_double),pointer,dimension(:,:,:,:) :: sube_vars_r4=>NULL()
-      real(r_double),pointer,dimension(:,:,:,:) :: suba_vars_r4=>NULL()
+      real(r_double),pointer,dimension(:,:,:,:) :: sube_vars_r4=>null()
+      real(r_double),pointer,dimension(:,:,:,:) :: suba_vars_r4=>null()
       integer(i_kind) mold4(2,2,2,2)
 
       sube_vars_r4 => rerank(sube_vars,mold4,(/se%inner_vars,se%lat2,se%lon2,se%num_fields/))
@@ -2737,7 +2737,7 @@ end subroutine get_iuse_pe
          call egrid2agrid_ad(p_e2a,gride_vars,grida_vars,se%kbegin_loc,se%kend_loc)
       else
          do k=se%kbegin_loc,se%kend_loc
-           vectorx(k)=se%vector(k)
+            vectorx(k)=se%vector(k)
          end do
          call g_egrid2agrid_ad(p_e2a,gride_vars,grida_vars,se%kbegin_loc,se%kend_loc,vectorx)
       end if
@@ -2785,8 +2785,8 @@ end subroutine get_iuse_pe
       real(r_single),        intent(inout) :: sube_vars(:)
       logical,               intent(in   ) :: regional
 
-      real(r_single),pointer,dimension(:,:,:,:) :: suba_vars_r4=>NULL()
-      real(r_single),pointer,dimension(:,:,:,:) :: sube_vars_r4=>NULL()
+      real(r_single),pointer,dimension(:,:,:,:) :: suba_vars_r4=>null()
+      real(r_single),pointer,dimension(:,:,:,:) :: sube_vars_r4=>null()
       integer(i_kind) mold4(2,2,2,2)
 
       suba_vars_r4 => rerank(suba_vars,mold4,(/sa%inner_vars,sa%lat2,sa%lon2,sa%num_fields/))
@@ -2848,7 +2848,7 @@ end subroutine get_iuse_pe
          stop
       else
          do k=se%kbegin_loc,se%kend_loc
-           vectorx(k)=se%vector(k)
+            vectorx(k)=se%vector(k)
          end do
          call g_agrid2egrid(p_e2a,grida_vars,gride_vars,se%kbegin_loc,se%kend_loc,vectorx)
       end if
@@ -2896,8 +2896,8 @@ end subroutine get_iuse_pe
       real(r_double),        intent(inout) :: sube_vars(:)
       logical,               intent(in   ) :: regional
 
-      real(r_double),pointer,dimension(:,:,:,:) :: suba_vars_r4=>NULL()
-      real(r_double),pointer,dimension(:,:,:,:) :: sube_vars_r4=>NULL()
+      real(r_double),pointer,dimension(:,:,:,:) :: suba_vars_r4=>null()
+      real(r_double),pointer,dimension(:,:,:,:) :: sube_vars_r4=>null()
       integer(i_kind) mold4(2,2,2,2)
 
       suba_vars_r4 => rerank(suba_vars,mold4,(/sa%inner_vars,sa%lat2,sa%lon2,sa%num_fields/))
@@ -2958,7 +2958,7 @@ end subroutine get_iuse_pe
          call agrid2egrid(p_e2a,grida_vars,gride_vars,se%kbegin_loc,se%kend_loc)
       else
          do k=se%kbegin_loc,se%kend_loc
-           vectorx(k)=se%vector(k)
+            vectorx(k)=se%vector(k)
          end do
          call g_agrid2egrid(p_e2a,grida_vars,gride_vars,se%kbegin_loc,se%kend_loc,vectorx)
       end if

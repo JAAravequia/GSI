@@ -21,12 +21,12 @@ Module ATMS_Spatial_Average_Mod
 ! Declare module level parameters
   real(r_double), parameter    :: Missing_Value=1.e11_r_double
 
-CONTAINS 
+contains 
 
-  SUBROUTINE ATMS_Spatial_Average(Num_Obs, NChanl, FOV, Time, BT_InOut, &
+  subroutine ATMS_Spatial_Average(Num_Obs, NChanl, FOV, Time, BT_InOut, &
        Scanline, Error_Status)
 
-    IMPLICIT NONE
+    implicit none
     
     ! Declare passed variables
     integer(i_kind) ,intent(in   ) :: Num_Obs, NChanl
@@ -68,7 +68,7 @@ CONTAINS
     integer(i_kind) :: ios, max_scan, mintime
     integer(i_kind) :: nxaverage(nchanl), nyaverage(nchanl)
     integer(i_Kind) :: channelnumber(nchanl),qc_dist(nchanl)
-    integer(i_kind), ALLOCATABLE ::  scanline_back(:,:)
+    integer(i_kind), allocatable ::  scanline_back(:,:)
 
     real(r_kind) :: sampling_dist, beamwidth(nchanl) 
     real(r_kind) :: newwidth(nchanl), cutoff(nchanl),err(nchanl)
@@ -76,91 +76,91 @@ CONTAINS
 
     Error_Status=0
 
-    IF (NChanl > MaxChans) THEN
-       WRITE(0,*) 'Unexpected number of ATMS channels: ',nchanl
+    if (NChanl > MaxChans) then
+       write(0,*) 'Unexpected number of ATMS channels: ',nchanl
        Error_Status = 1
-       RETURN
-    END IF
+       return
+    end if
 
     ! Read the beamwidth requirements
-    OPEN(lninfile,file='atms_beamwidth.txt',form='formatted',status='old', &
+    open(lninfile,file='atms_beamwidth.txt',form='formatted',status='old', &
          iostat=ios)
-    IF (ios /= 0) THEN
-       WRITE(*,*) 'Unable to open atms_beamwidth.txt'
+    if (ios /= 0) then
+       write(*,*) 'Unable to open atms_beamwidth.txt'
        Error_Status=1
-       RETURN
-    ENDIF
+       return
+    endif
     wmosatid=999
     read(lninfile,'(a30)',iostat=ios) Cline
-    DO WHILE (wmosatid /= atms1c_h_wmosatid .AND. ios == 0)
-       DO WHILE (Cline(1:1) == '#')
+    do while (wmosatid /= atms1c_h_wmosatid .and. ios == 0)
+       do while (Cline(1:1) == '#')
           read(lninfile,'(a30)') Cline
-       ENDDO
-       READ(Cline,*) wmosatid
+       enddo
+       read(Cline,*) wmosatid
        
        read(lninfile,'(a30)') Cline
-       DO WHILE (Cline(1:1) == '#')
+       do while (Cline(1:1) == '#')
           read(lninfile,'(a30)') Cline
-       ENDDO
-       READ(Cline,*) version
+       enddo
+       read(Cline,*) version
        
        read(lninfile,'(a30)') Cline
-       DO WHILE (Cline(1:1) == '#')
+       do while (Cline(1:1) == '#')
           read(lninfile,'(a30)') Cline
-       ENDDO
-       READ(Cline,*) sampling_dist
+       enddo
+       read(Cline,*) sampling_dist
        
        read(lninfile,'(a30)') Cline
-       DO WHILE (Cline(1:1) == '#')
+       do while (Cline(1:1) == '#')
           read(lninfile,'(a30)') Cline
-       ENDDO
-       READ(Cline,*) nchannels
+       enddo
+       read(Cline,*) nchannels
       
        read(lninfile,'(a30)') Cline
        if (nchannels > 0) then 
-          DO ichan=1,nchannels
+          do ichan=1,nchannels
              read(lninfile,'(a30)') Cline
-             DO WHILE (Cline(1:1) == '#')
+             do while (Cline(1:1) == '#')
                 read(lninfile,'(a30)') Cline
-             ENDDO
-             READ(Cline,*) channelnumber(ichan),beamwidth(ichan), &
+             enddo
+             read(Cline,*) channelnumber(ichan),beamwidth(ichan), &
                   newwidth(ichan),cutoff(ichan),nxaverage(ichan), &
                   nyaverage(ichan), qc_dist(ichan)
-          ENDDO
+          enddo
        end if
        read(lninfile,'(a30)',iostat=ios) Cline
-    ENDDO
-    IF (wmosatid /= atms1c_h_wmosatid) THEN
-       WRITE(*,*) 'ATMS_Spatial_Averaging: sat id not matched in atms_beamwidth.dat'
+    enddo
+    if (wmosatid /= atms1c_h_wmosatid) then
+       write(*,*) 'ATMS_Spatial_Averaging: sat id not matched in atms_beamwidth.dat'
        Error_Status=1
-       RETURN
-    ENDIF
-    CLOSE(lninfile)
+       return
+    endif
+    close(lninfile)
   
 
     ! Determine scanline from time
-    MinTime = MINVAL(Time)
-    Scanline(:)   = NINT((Time(1:Num_Obs)-MinTime)/Scan_Interval)+1
-    Max_Scan=MAXVAL(Scanline)
+    MinTime = minval(Time)
+    Scanline(:)   = nint((Time(1:Num_Obs)-MinTime)/Scan_Interval)+1
+    Max_Scan=maxval(Scanline)
     
-    ALLOCATE(BT_Image(Max_FOV,Max_Scan,nchanl))
-    ALLOCATE(Scanline_Back(Max_FOV,Max_Scan))
+    allocate(BT_Image(Max_FOV,Max_Scan,nchanl))
+    allocate(Scanline_Back(Max_FOV,Max_Scan))
     BT_Image(:,:,:) = 1000.0_r_kind
     
     ScanLine_Back(:,:) = -1
-    DO I=1,Num_Obs
+    do I=1,Num_Obs
        bt_image(FOV(I),Scanline(I),:)=bt_inout(:,I)
        Scanline_Back(FOV(I),Scanline(I))=I
-    END DO
+    end do
 
 !$omp parallel do schedule(dynamic,1) private(ichan,iscan,ios,ifov)
-    DO IChan=1,nchanl
+    do IChan=1,nchanl
     
        err(ichan)=0
    
        ! Set all scan positions to missing in a scanline if one is missing
        do iscan=1,max_scan
-          if (ANY(bt_image(:,iscan,ichan) > 500.0_r_kind)) &
+          if (any(bt_image(:,iscan,ichan) > 500.0_r_kind)) &
              bt_image(:,iscan,ichan)=1000.0_r_kind
        enddo
 
@@ -168,25 +168,25 @@ CONTAINS
        ! (otherwise bt_inout just keeps the same value):
        do i=1,nchannels
           if (channelnumber(i) == ichan) then
-             CALL MODIFY_BEAMWIDTH ( max_fov, max_scan, bt_image(:,:,ichan), &
+             call modify_beamwidth ( max_fov, max_scan, bt_image(:,:,ichan), &
                   sampling_dist, beamwidth(i), newwidth(i), &
                   cutoff(i), nxaverage(i), nyaverage(i), &
                   qc_dist(i), MinBT(Ichan), MaxBT(IChan), IOS)
 
-             IF (IOS == 0) THEN
+             if (IOS == 0) then
                 do iscan=1,max_scan
                    do ifov=1,max_fov
-                      IF (Scanline_Back(IFov, IScan) > 0) &
+                      if (Scanline_Back(IFov, IScan) > 0) &
                         bt_inout(ichan,Scanline_Back(IFov, IScan)) = &
                         BT_Image(ifov,iscan,ichan)
                    end do
                 end do
-             ELSE
+             else
                 err(ichan)=1
-             END IF
+             end if
           end if
        end do
-    END DO
+    end do
 
     do ichan=1,nchanl
       if(err(ichan) >= 1)then
@@ -195,13 +195,13 @@ CONTAINS
       end if
     end do
 
-    DEALLOCATE(BT_Image, Scanline_Back)
+    deallocate(BT_Image, Scanline_Back)
     
-END Subroutine ATMS_Spatial_Average
+end subroutine ATMS_Spatial_Average
 
 
 
-SUBROUTINE MODIFY_BEAMWIDTH ( nx, ny, image, sampling_dist,& 
+subroutine modify_beamwidth ( nx, ny, image, sampling_dist,& 
      beamwidth, newwidth, mtfcutoff, nxaverage, nyaverage, qc_dist, &
      Minval, MaxVal, Error)
      
@@ -246,50 +246,50 @@ SUBROUTINE MODIFY_BEAMWIDTH ( nx, ny, image, sampling_dist,&
 ! Declarations:
 
 
-      IMPLICIT NONE
+      implicit none
 ! Parameters
-      INTEGER(I_KIND), PARAMETER :: nxmax=128  !Max number of spots per scan line
-      INTEGER(I_KIND), PARAMETER :: nymax=8192 !Max number of lines. Allows 6hrs of ATMS.
+      integer(i_kind), parameter :: nxmax=128  !Max number of spots per scan line
+      integer(i_kind), parameter :: nymax=8192 !Max number of lines. Allows 6hrs of ATMS.
 
 ! Arguments
-      INTEGER(I_KIND), INTENT(IN)  :: nx, ny         !Size of image
-      REAL(R_KIND), INTENT(INOUT)  :: image(nx,ny)   !BT or radiance image
-      REAL(R_KIND), INTENT(IN)     :: sampling_dist  !typically degrees
-      REAL(R_KIND), INTENT(IN)     :: beamwidth      !ditto
-      REAL(R_KIND), INTENT(IN)     :: newwidth       !ditto
-      REAL(R_KIND), INTENT(IN)     :: mtfcutoff      !0.0 to 1.0
-      INTEGER(I_KIND), INTENT(IN)  :: nxaverage      !Number of samples to average (or zero)
-      INTEGER(I_KIND), INTENT(IN)  :: nyaverage      !Number of samples to average (or zero)
-      INTEGER(I_KIND), INTENT(IN)  :: qc_dist        !Number of samples around missing data to set to 
-      REAL(R_KIND), INTENT(IN)     :: maxval         !BTs above this are considered missing
-      REAL(R_KIND), INTENT(IN)     :: minval         !BTs below this are considered missing
-      INTEGER(I_KIND), INTENT(OUT) :: Error          !Error Status
+      integer(i_kind), intent(in)  :: nx, ny         !Size of image
+      real(r_kind), intent(inout)  :: image(nx,ny)   !BT or radiance image
+      real(r_kind), intent(in)     :: sampling_dist  !typically degrees
+      real(r_kind), intent(in)     :: beamwidth      !ditto
+      real(r_kind), intent(in)     :: newwidth       !ditto
+      real(r_kind), intent(in)     :: mtfcutoff      !0.0 to 1.0
+      integer(i_kind), intent(in)  :: nxaverage      !Number of samples to average (or zero)
+      integer(i_kind), intent(in)  :: nyaverage      !Number of samples to average (or zero)
+      integer(i_kind), intent(in)  :: qc_dist        !Number of samples around missing data to set to 
+      real(r_kind), intent(in)     :: maxval         !BTs above this are considered missing
+      real(r_kind), intent(in)     :: minval         !BTs below this are considered missing
+      integer(i_kind), intent(out) :: Error          !Error Status
        
 ! Local variables
-      INTEGER(I_KIND) :: nxpad, nypad, dx, dy
-      INTEGER(I_KIND) :: i,j,k,ix,iy, ii, jj
-      INTEGER(I_KIND) :: ifirst
-      INTEGER(I_KIND) :: xpow2, ypow2
-      INTEGER(I_KIND) :: nxav2, nyav2, naverage
-      INTEGER(I_KIND) :: deltax, minii, maxii, minjj, maxjj
-      REAL(R_KIND), ALLOCATABLE :: mtfxin(:),mtfxout(:)
-      REAL(R_KIND), ALLOCATABLE :: mtfyin(:),mtfyout(:)
-      REAL(R_KIND) :: mtfin,mtfout,mtf_constant
-      REAL(R_KIND), ALLOCATABLE :: mtfpad(:,:)
-      REAL(R_KIND), ALLOCATABLE :: imagepad(:,:)
-      REAL(R_KIND) :: f,df,factor
-      REAL(R_KIND) :: PI, LN2, LNcsquared
-      LOGICAL :: missing
-      LOGICAL, ALLOCATABLE :: gooddata_map(:,:)
+      integer(i_kind) :: nxpad, nypad, dx, dy
+      integer(i_kind) :: i,j,k,ix,iy, ii, jj
+      integer(i_kind) :: ifirst
+      integer(i_kind) :: xpow2, ypow2
+      integer(i_kind) :: nxav2, nyav2, naverage
+      integer(i_kind) :: deltax, minii, maxii, minjj, maxjj
+      real(r_kind), allocatable :: mtfxin(:),mtfxout(:)
+      real(r_kind), allocatable :: mtfyin(:),mtfyout(:)
+      real(r_kind) :: mtfin,mtfout,mtf_constant
+      real(r_kind), allocatable :: mtfpad(:,:)
+      real(r_kind), allocatable :: imagepad(:,:)
+      real(r_kind) :: f,df,factor
+      real(r_kind) :: PI, LN2, LNcsquared
+      logical :: missing
+      logical, allocatable :: gooddata_map(:,:)
 
 
 ! End of declarations
 !-----------------------------------------
       
-      PI = 4.0_r_kind*atan(1.0)
+      PI = 4.0_r_kind*atan(1.0_r_kind)
       LN2 = LOG(2.0_r_kind)
       MTF_Constant=-(PI/(2*sampling_dist))**2/LN2
-      IF (mtfcutoff > 0.0_r_kind) LNcsquared = LOG(mtfcutoff)**2
+      if (mtfcutoff > 0.0_r_kind) LNcsquared = log(mtfcutoff)**2
       nxav2 = nxaverage/2
       nyav2 = nyaverage/2
       naverage = nxaverage*nyaverage
@@ -298,221 +298,221 @@ SUBROUTINE MODIFY_BEAMWIDTH ( nx, ny, image, sampling_dist,&
 !1) Pad the image up to the nearest power of 2 in each dimension, by reversing
 !the points near the edge.
 
-      xpow2 = INT(LOG(nx*1.0_r_kind)/LN2 + 1.0_r_kind)
-      ypow2 = INT(LOG(ny*1.0_r_kind)/LN2 + 1.0_r_kind)
+      xpow2 = int(log(nx*1.0_r_kind)/LN2 + 1.0_r_kind)
+      ypow2 = int(log(ny*1.0_r_kind)/LN2 + 1.0_r_kind)
       nxpad = 2**xpow2
       nypad = 2**ypow2
       dx = (nxpad - nx)/2
       dy = (nypad - ny)/2
 
-      IF (nxpad > nxmax) THEN
+      if (nxpad > nxmax) then
          write(*,*) 'ATMS_Spatial_Average: nx too large, maximum allowed value is ',nxmax-1
          Error = 1
-         RETURN
-      END IF
+         return
+      end if
       
-      IF (nypad > nymax) THEN
+      if (nypad > nymax) then
          write(*,*) 'ATMS_Spatial_Average: ny too large, maximum allowed value is ',nymax-1
          Error = 1
-         RETURN
-      END IF
+         return
+      end if
 
-      ALLOCATE(mtfxin(nxpad),mtfxout(nxpad))
-      ALLOCATE(mtfyin(nypad),mtfyout(nypad))
-      ALLOCATE(mtfpad(nxpad,nypad))
-      ALLOCATE(imagepad(nxpad,nypad))
-      ALLOCATE(gooddata_map(nxmax,nymax))
+      allocate(mtfxin(nxpad),mtfxout(nxpad))
+      allocate(mtfyin(nypad),mtfyout(nypad))
+      allocate(mtfpad(nxpad,nypad))
+      allocate(imagepad(nxpad,nypad))
+      allocate(gooddata_map(nxmax,nymax))
 
 !Loop over scan positions
-      DO j=dy+1,dy+ny
-        DO i=dx+1,dx+nx
+      do j=dy+1,dy+ny
+        do i=dx+1,dx+nx
           if (image(i-dx,j-dy) < minval) &
                image(i-dx,j-dy) = minval - 1.0_r_kind
           if (image(i-dx,j-dy) > maxval ) &
                image(i-dx,j-dy) = maxval + 1.0_r_kind
           imagepad(i,j) = image(i-dx,j-dy)   !Take a copy of the input data
-          gooddata_map(i,j) = .TRUE.   ! Initialised for step 6)
-        ENDDO
+          gooddata_map(i,j) = .true.   ! Initialised for step 6)
+        enddo
 
 !Interpolate missing points in the along-track direction
 
         ifirst = -1
         missing = .false.
         
-        DO i=dx+1,dx+nx
-          IF (.not.missing) THEN
-            IF (imagepad(i,j) >= minval .AND. imagepad(i,j) <= maxval) THEN
+        do i=dx+1,dx+nx
+          if (.not.missing) then
+            if (imagepad(i,j) >= minval .and. imagepad(i,j) <= maxval) then
               ifirst = i
-            ELSE
+            else
               missing = .true.
-            ENDIF
-          ELSE
-            IF (imagepad(i,j) >= minval .AND. imagepad(i,j) <= maxval) THEN  !First good point 
+            endif
+          else
+            if (imagepad(i,j) >= minval .and. imagepad(i,j) <= maxval) then  !First good point 
                                                                              ! after missing
                missing = .false.
-               IF (ifirst == -1) THEN
-                  DO k=dx+1,i-1
+               if (ifirst == -1) then
+                  do k=dx+1,i-1
                      imagepad(k,j) = imagepad(i,j)      !Constant
-                  ENDDO
-               ELSE
-                  DO k=ifirst+1,i-1
+                  enddo
+               else
+                  do k=ifirst+1,i-1
                      factor = (i-k)*1.0_r_kind/(i-ifirst)      !Interpolate
                      imagepad(k,j) = imagepad(ifirst,j)*factor + &
                           imagepad(i,j)*(1.0_r_kind-factor)
-                  ENDDO
-               ENDIF
-            ENDIF
-          ENDIF
-        ENDDO
-        IF (missing) THEN         !Last scan is missing
-          IF (ifirst >= 1) then
-            DO k=ifirst+1,dx+nx
+                  enddo
+               endif
+            endif
+          endif
+        enddo
+        if (missing) then         !Last scan is missing
+          if (ifirst >= 1) then
+            do k=ifirst+1,dx+nx
               imagepad(k,j) = imagepad(ifirst,j)     !Constant
-            ENDDO
-          ENDIF
-        ENDIF          
+            enddo
+          endif
+        endif          
 
 !Continue padding the edges
 
-        DO i=1,dx
+        do i=1,dx
           imagepad(i,j) = imagepad(dx+dx+2-i,j)
-        ENDDO
-        DO i=nx+dx+1,nxpad
+        enddo
+        do i=nx+dx+1,nxpad
           imagepad(i,j) = imagepad(nx+dx+nx+dx-i,j)
-        ENDDO
-     ENDDO
-     DO j=1,dy
-        DO i=1,nxpad
+        enddo
+     enddo
+     do j=1,dy
+        do i=1,nxpad
            imagepad(i,j) = imagepad(i,dy+dy+2-j)
-        ENDDO
-     ENDDO
-     DO j=ny+dy+1,nypad
-        DO i=1,nxpad
+        enddo
+     enddo
+     do j=ny+dy+1,nypad
+        do i=1,nxpad
            imagepad(i,j) = imagepad(i,ny+dy+ny+dy-j)
-        ENDDO
-     ENDDO
+        enddo
+     enddo
 
 !2) Compute the MTF modifications. Assume beams are Gaussian.
 
-      IF (newwidth > 0) THEN
+      if (newwidth > 0) then
         df = 1.0_r_kind/nxpad
-        DO i=1,nxpad/2+1
+        do i=1,nxpad/2+1
           f = df*(i-1)      !DC to Nyquist
           mtfxin(i) = exp(MTF_Constant*(f*beamwidth)**2)
           mtfxout(i) = exp(MTF_Constant*(f*newwidth)**2)
-          IF (i > 1 .AND. i < nxpad/2+1) THEN
+          if (i > 1 .and. i < nxpad/2+1) then
             mtfxin(nxpad-i+2) = mtfxin(i)
             mtfxout(nxpad-i+2) = mtfxout(i)
-          ENDIF
-        ENDDO
+          endif
+        enddo
         df = 1.0_r_kind/nypad
-        DO i=1,nypad/2+1
+        do i=1,nypad/2+1
           f = df*(i-1)      !DC to Nyquist
           mtfyin(i) = exp(MTF_Constant*(f*beamwidth)**2)
           mtfyout(i) = exp(MTF_Constant*(f*newwidth)**2)
-          IF (i > 1 .AND. i < nypad/2+1) THEN
+          if (i > 1 .and. i < nypad/2+1) then
             mtfyin(nypad-i+2) = mtfyin(i)
             mtfyout(nypad-i+2) = mtfyout(i)
-          ENDIF
-        ENDDO
-        DO i=1,nxpad
-          DO j=1,nypad
+          endif
+        enddo
+        do i=1,nxpad
+          do j=1,nypad
             mtfin = mtfxin(i)*mtfyin(j)
             mtfout = mtfxout(i)*mtfyout(j)
-            if (mtfcutoff > 0.0_r_kind) THEN
+            if (mtfcutoff > 0.0_r_kind) then
               mtfpad(i,j) = (mtfout * &
-                exp(-LN2/LNcsquared*(LOG(mtfout))**2))/mtfin
+                exp(-LN2/LNcsquared*(log(mtfout))**2))/mtfin
             else
               mtfpad(i,j) = mtfout/mtfin
             endif
-          ENDDO
-        ENDDO
+          enddo
+        enddo
 
 !3) Fourier transform, line by line then column by column.
 !After each FFT, points 1 to nxpad/2+1 contain the real part of the spectrum,
 !the rest contain the imaginary part in reverse order.
 
-        DO j=1,nypad
-           CALL SFFTCF(imagepad(:,j),nxpad,xpow2)
-        ENDDO
+        do j=1,nypad
+           call sfftcf(imagepad(:,j),nxpad,xpow2)
+        enddo
 
-        DO i=1,nxpad
-           CALL SFFTCF(imagepad(i,:),nypad,ypow2)
+        do i=1,nxpad
+           call sfftcf(imagepad(i,:),nypad,ypow2)
 
 !4) Multiply the spectrum by the MTF factor
-           DO j=1,nypad
+           do j=1,nypad
               imagepad(i,j) = imagepad(i,j)*mtfpad(i,j)
-           ENDDO
-        ENDDO
+           enddo
+        enddo
 
 !5) Inverse Fourier transform, column by column then line by line 
 
-        DO i=1,nxpad
-          CALL SFFTCB(imagepad(i,:),nypad,ypow2)
-        ENDDO
+        do i=1,nxpad
+          call sfftcb(imagepad(i,:),nypad,ypow2)
+        enddo
 
-        DO j=1,nypad
-          CALL SFFTCB(imagepad(:,j),nxpad,xpow2)
-        ENDDO
-     ENDIF   !New width is specified
+        do j=1,nypad
+          call sfftcb(imagepad(:,j),nxpad,xpow2)
+        enddo
+     endif   !New width is specified
 
 !6) Reset missing values in gooddata_map, based on qc_dist and the values 
 !   in the input image array
 
      ! Set the ends of the image to missing in the along track direction
      ! (doing the same across track will remove too much data)
-     gooddata_map(:,1:MIN(qc_dist,ny))=.FALSE.
-     gooddata_map(:,MAX(ny-qc_dist+1,1):ny)=.FALSE.
+     gooddata_map(:,1:min(qc_dist,ny))=.false.
+     gooddata_map(:,max(ny-qc_dist+1,1):ny)=.false.
      
-     DO j=1,ny
-        DO i=1,nx
-           IF (image(i,j) <= minval .OR. image(i,j) >= maxval ) THEN
+     do j=1,ny
+        do i=1,nx
+           if (image(i,j) <= minval .or. image(i,j) >= maxval ) then
               minjj=max(j+dy-qc_dist,1)
               maxjj=min(j+dy+qc_dist,nymax)
-              DO jj=minjj,maxjj
-                 deltax=INT(SQRT(REAL(qc_dist**2 - (jj-j-dy)**2 )))
+              do jj=minjj,maxjj
+                 deltax=int(sqrt(real(qc_dist**2 - (jj-j-dy)**2 )))
                  minii=max(i+dx-deltax,1)
                  maxii=min(i+dx+deltax,nxmax)
-                 DO ii=minii,maxii
-                    gooddata_map(ii,jj)=.FALSE.
-                 END DO
-              END DO
-           END IF
-        END DO
-     END DO
+                 do ii=minii,maxii
+                    gooddata_map(ii,jj)=.false.
+                 end do
+              end do
+           end if
+        end do
+     end do
 
 !7) Over-write the input image (points that are not missing)
 
-     DO j=1,ny
-        DO i=1,nx
-           IF (gooddata_map(i+dx,j+dy)) THEN
-              IF (nxav2 == 0.0_r_kind .AND. nyav2 == 0) THEN
+     do j=1,ny
+        do i=1,nx
+           if (gooddata_map(i+dx,j+dy)) then
+              if (nxav2 == 0.0_r_kind .and. nyav2 == 0) then
                  image(i,j) = imagepad(i+dx,j+dy)
-              ELSE
+              else
                  image(i,j) = 0.0_r_kind             !Do averaging
-                 DO ix = -nxav2,nxav2
-                    DO iy = -nyav2,nyav2
+                 do ix = -nxav2,nxav2
+                    do iy = -nyav2,nyav2
                        image(i,j) = image(i,j) + imagepad(i+dx+ix,j+dy+iy)
-                    ENDDO
-                 ENDDO
+                    enddo
+                 enddo
                  image(i,j) = image(i,j)/naverage
-              ENDIF
-           ELSE
+              endif
+           else
               image(i,j) = missing_value
-           END IF
-        ENDDO
-     ENDDO
+           end if
+        enddo
+     enddo
 
 !8) Deallocate arrays
 
-     DEALLOCATE(mtfxin,mtfxout)
-     DEALLOCATE(mtfyin,mtfyout)
-     DEALLOCATE(mtfpad)
-     DEALLOCATE(imagepad)
-     DEALLOCATE(gooddata_map)
+     deallocate(mtfxin,mtfxout)
+     deallocate(mtfyin,mtfyout)
+     deallocate(mtfpad)
+     deallocate(imagepad)
+     deallocate(gooddata_map)
 
-     RETURN
-   END SUBROUTINE MODIFY_BEAMWIDTH
+     return
+   end subroutine modify_beamwidth
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
@@ -542,144 +542,144 @@ SUBROUTINE MODIFY_BEAMWIDTH ( nx, ny, image, sampling_dist,&
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
-      SUBROUTINE SFFTCF( X, N, M )
+      subroutine sfftcf( x, n, m )
 
-      IMPLICIT NONE
+      implicit none
 
 ! ... Parameters ...
-      REAL(R_KIND), PARAMETER :: SQRT2 = 1.4142135623730950488
-      REAL(R_KIND), PARAMETER :: TWOPI = 6.2831853071795864769 
+      real(r_kind), parameter :: sqrt2 = 1.4142135623730950488_r_kind
+      real(r_kind), parameter :: twopi = 6.2831853071795864769_r_kind
 
 ! ... Scalar arguments ...
-      INTEGER(I_KIND), INTENT(IN) :: N, M
+      integer(i_kind), intent(in) :: n, m
 ! ... Array arguments ...
-      REAL(R_KIND), INTENT(INOUT) ::  X(N)
+      real(r_kind), intent(inout) ::  x(n)
 ! ... Local scalars ...
-      INTEGER(I_KIND)  J, I, K, IS, ID, I0, I1, I2, I3, I4, I5, I6, I7, I8
-      INTEGER(I_KIND)  N1, N2, N4, N8
-      REAL(R_KIND)  XT, R1, T1, T2, T3, T4, T5, T6
-      REAL(R_KIND)  A, A3, E, CC1, SS1, CC3, SS3
+      integer(i_kind)  j, i, k, is, id, i0, i1, i2, i3, i4, i5, i6, i7, i8
+      integer(i_kind)  n1, n2, n4, n8
+      real(r_kind)  xt, r1, t1, t2, t3, t4, t5, t6
+      real(r_kind)  a, a3, e, cc1, ss1, cc3, ss3
 !
 ! ... Exe. statements ...
 !
-      IF ( N == 1 ) RETURN
+      if ( n == 1 ) return
 !
-      J = 1
-      N1 = N - 1
-      DO 104, I = 1, N1
-         IF ( I < J ) THEN
-            XT = X(J)
-            X(J) = X(I)
-            X(I) = XT
-         END IF
-         K = N / 2
- 102     DO WHILE (K < J) 
-            J = J - K
-            K = K / 2
-         END DO
-         J = J + K
- 104  CONTINUE
+      j = 1
+      n1 = n - 1
+      do 104, i = 1, n1
+         if ( i < j ) then
+            xt = x(j)
+            x(j) = x(i)
+            x(i) = xt
+         end if
+         k = n / 2
+ 102     do while (k < j) 
+            j = j - k
+            k = k / 2
+         end do
+         j = j + k
+ 104  continue
 ! 
-      IS = 1
-      ID = 4
-      LOOP1:DO
-         DO 60, I0 = IS, N, ID
-            I1 = I0 + 1
-            R1 = X(I0)
-            X(I0) = R1 + X(I1)
-            X(I1) = R1 - X(I1)
- 60      CONTINUE
-         IS = 2 * ID - 1
-         ID = 4 * ID
-         IF ( IS >= N ) EXIT LOOP1
-      END DO LOOP1
+      is = 1
+      id = 4
+      loop1:do
+         do 60, i0 = is, n, id
+            i1 = i0 + 1
+            r1 = x(i0)
+            x(I0) = r1 + x(i1)
+            x(I1) = r1 - x(i1)
+ 60      continue
+         is = 2 * id - 1
+         id = 4 * id
+         if ( is >= n ) exit loop1
+      end do loop1
 !
-      N2 = 2
-      DO 10, K = 2, M
-         N2 = N2 * 2
-         N4 = N2 / 4
-         N8 = N2 / 8
-         E = TWOPI / N2
-         IS = 0
-         ID = N2 * 2
-         LOOP2: DO
-            DO 38, I = IS, N-1, ID
-               I1 = I + 1
-               I2 = I1 + N4
-               I3 = I2 + N4
-               I4 = I3 + N4
-               T1 = X(I4) + X(I3)
-               X(I4) = X(I4) - X(I3)
-               X(I3) = X(I1) - T1
-               X(I1) = X(I1) + T1
-               IF ( N4 == 1 ) CYCLE
-               I1 = I1 + N8
-               I2 = I2 + N8
-               I3 = I3 + N8
-               I4 = I4 + N8
-               T1 = ( X(I3) + X(I4) ) / SQRT2
-               T2 = ( X(I3) - X(I4) ) / SQRT2
-               X(I4) = X(I2) - T1
-               X(I3) = - X(I2) - T1
-               X(I2) = X(I1) - T2
-               X(I1) = X(I1) + T2
- 38         CONTINUE
-            IS = 2 * ID - N2
-            ID = 4 * ID
-            IF ( IS >=  N ) EXIT LOOP2
-         END DO LOOP2
-         A = E
-         DO 32, J = 2, N8
-            A3 = 3 * A
-            CC1 = COS(A)
-            SS1 = SIN(A)
-            CC3 = COS(A3)
-            SS3 = SIN(A3)
-            A = J * E
-            IS = 0
-            ID = 2 * N2
-            LOOP3: DO
-               DO 30, I = IS, N-1, ID
-                  I1 = I + J
-                  I2 = I1 + N4
-                  I3 = I2 + N4
-                  I4 = I3 + N4
-                  I5 = I + N4 - J + 2
-                  I6 = I5 + N4
-                  I7 = I6 + N4
-                  I8 = I7 + N4
-                  T1 = X(I3) * CC1 + X(I7) * SS1
-                  T2 = X(I7) * CC1 - X(I3) * SS1
-                  T3 = X(I4) * CC3 + X(I8) * SS3
-                  T4 = X(I8) * CC3 - X(I4) * SS3
-                  T5 = T1 + T3
-                  T6 = T2 + T4
-                  T3 = T1 - T3
-                  T4 = T2 - T4
-                  T2 = X(I6) + T6
-                  X(I3) = T6 - X(I6)
-                  X(I8) = T2
-                  T2 = X(I2) - T3
-                  X(I7) = - X(I2) - T3
-                  X(I4) = T2
-                  T1 = X(I1) + T5
-                  X(I6) = X(I1) - T5
-                  X(I1) = T1
-                  T1 = X(I5) + T4
-                  X(I5) = X(I5) - T4
-                  X(I2) = T1
- 30            CONTINUE
-               IS = 2 * ID - N2
-               ID = 4 * ID
-               IF ( IS >= N ) EXIT LOOP3
-            END DO LOOP3
- 32      CONTINUE
- 10   CONTINUE
-      RETURN
+      n2 = 2
+      do 10, k = 2, m
+         n2 = n2 * 2
+         n4 = n2 / 4
+         n8 = n2 / 8
+         e = twopi / n2
+         is = 0
+         id = n2 * 2
+         loop2: do
+            do 38, i = is, n-1, id
+               i1 = i + 1
+               i2 = i1 + n4
+               i3 = i2 + n4
+               i4 = i3 + n4
+               t1 = x(i4) + x(i3)
+               x(i4) = x(i4) - x(i3)
+               x(i3) = x(i1) - t1
+               x(i1) = x(i1) + t1
+               if ( n4 == 1 ) cycle
+               i1 = i1 + n8
+               i2 = i2 + n8
+               i3 = i3 + n8
+               i4 = i4 + n8
+               t1 = ( x(i3) + x(i4) ) / sqrt2
+               t2 = ( x(i3) - x(i4) ) / sqrt2
+               x(i4) = x(i2) - t1
+               x(i3) = - x(i2) - t1
+               x(i2) = x(i1) - t2
+               x(i1) = x(i1) + t2
+ 38         continue
+            is = 2 * id - n2
+            id = 4 * id
+            if ( is >=  n ) exit loop2
+         end do loop2
+         a = e
+         do 32, j = 2, n8
+            a3 = 3 * a
+            cc1 = cos(a)
+            ss1 = sin(a)
+            cc3 = cos(a3)
+            ss3 = sin(a3)
+            a = j * e
+            is = 0
+            id = 2 * n2
+            loop3: do
+               do 30, i = is, n-1, id
+                  i1 = i + j
+                  i2 = i1 + n4
+                  i3 = i2 + n4
+                  i4 = i3 + n4
+                  i5 = i + n4 - j + 2
+                  i6 = i5 + n4
+                  i7 = i6 + n4
+                  i8 = i7 + n4
+                  t1 = x(i3) * cc1 + x(i7) * ss1
+                  t2 = x(i7) * cc1 - x(i3) * ss1
+                  t3 = x(i4) * cc3 + x(i8) * ss3
+                  t4 = x(i8) * cc3 - x(i4) * ss3
+                  t5 = t1 + t3
+                  t6 = t2 + t4
+                  t3 = t1 - t3
+                  t4 = t2 - t4
+                  t2 = x(i6) + t6
+                  x(i3) = t6 - x(i6)
+                  x(i8) = t2
+                  t2 = x(i2) - t3
+                  x(i7) = - x(i2) - t3
+                  x(i4) = t2
+                  t1 = x(i1) + t5
+                  x(i6) = x(i1) - t5
+                  x(i1) = t1
+                  t1 = x(i5) + t4
+                  x(i5) = x(i5) - t4
+                  x(i2) = t1
+ 30            continue
+               is = 2 * id - n2
+               id = 4 * id
+               if ( is >= n ) exit loop3
+            end do loop3
+ 32      continue
+ 10   continue
+      return
 !
 ! ... End of subroutine SFFTCF ...
 !
-   END SUBROUTINE SFFTCF
+   end subroutine sfftcf
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
@@ -709,146 +709,146 @@ SUBROUTINE MODIFY_BEAMWIDTH ( nx, ny, image, sampling_dist,&
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
-      SUBROUTINE SFFTCB( X, N, M )
+      subroutine sfftcb( x, n, m )
 
       use kinds, only: r_kind,r_double,i_kind
 
-      IMPLICIT NONE
+      implicit none
 
 ! ... Parameters ...
-      REAL(R_KIND), PARAMETER :: SQRT2 = 1.4142135623730950488
-      REAL(R_KIND), PARAMETER :: TWOPI = 6.2831853071795864769 
+      real(r_kind), parameter :: sqrt2 = 1.4142135623730950488_r_kind
+      real(r_kind), parameter :: twopi = 6.2831853071795864769_r_kind
 
 ! ... Scalar arguments ...
-      INTEGER(I_KIND), INTENT(IN) :: N, M
+      integer(i_kind), intent(in) :: n, m
 ! ... Array arguments ...
-      REAL(R_KIND), INTENT(INOUT) ::  X(N)
+      real(r_kind), intent(inout) ::  x(n)
 ! ... Local scalars ...
-      INTEGER(I_KIND)  J, I, K, IS, ID, I0, I1, I2, I3, I4, I5, I6, I7, I8
-      INTEGER(I_KIND)  N1, N2, N4, N8
-      REAL(R_KIND)  XT, R1, T1, T2, T3, T4, T5
-      REAL(R_KIND)  A, A3, E, CC1, SS1, CC3, SS3
+      integer(i_kind)  j, i, k, is, id, i0, i1, i2, i3, i4, i5, i6, i7, i8
+      integer(i_kind)  n1, n2, n4, n8
+      real(r_kind)  xt, r1, t1, t2, t3, t4, t5
+      real(r_kind)  a, a3, e, cc1, ss1, cc3, ss3
 !
 ! ... Exe. statements ...
 !
-      IF ( N == 1 ) RETURN
+      if ( n == 1 ) return
 !
-      N2 = 2 * N
-      DO 10, K = 1, M-1
-         IS = 0
-         ID = N2
-         N2 = N2 / 2
-         N4 = N2 / 4
-         N8 = N4 / 2
-         E = TWOPI / N2
-         LOOP1: DO
-            DO 15, I = IS, N-1, ID
-               I1 = I + 1
-               I2 = I1 + N4
-               I3 = I2 + N4
-               I4 = I3 + N4
-               T1 = X(I1) - X(I3)
-               X(I1) = X(I1) + X(I3)
-               X(I2) = 2 * X(I2)
-               X(I3) = T1 - 2 * X(I4)
-               X(I4) = T1 + 2 * X(I4)
-               IF ( N4 == 1 ) CYCLE
-               I1 = I1 + N8
-               I2 = I2 + N8
-               I3 = I3 + N8
-               I4 = I4 + N8
-               T1 = ( X(I2) - X(I1) ) / SQRT2
-               T2 = ( X(I4) + X(I3) ) / SQRT2
-               X(I1) = X(I1) + X(I2)
-               X(I2) = X(I4) - X(I3)
-               X(I3) = 2 * ( - T2 - T1 )
-               X(I4) = 2 * ( -T2 + T1 )
- 15         CONTINUE
-            IS = 2 * ID - N2
-            ID = 4 * ID
-            IF ( IS >= N-1 ) EXIT LOOP1
-         END DO LOOP1
-         A = E
-         DO 20, J = 2, N8
-            A3 = 3 * A
-            CC1 = COS(A)
-            SS1 = SIN(A)
-            CC3 = COS(A3)
-            SS3 = SIN(A3)
-            A = J * E
-            IS = 0
-            ID = 2 * N2
-            LOOP2: DO
- 40            DO 30, I = IS, N-1, ID
-                  I1 = I + J
-                  I2 = I1 + N4
-                  I3 = I2 + N4
-                  I4 = I3 + N4
-                  I5 = I + N4 - J + 2
-                  I6 = I5 + N4
-                  I7 = I6 + N4
-                  I8 = I7 + N4
-                  T1 = X(I1) - X(I6)
-                  X(I1) = X(I1) + X(I6)
-                  T2 = X(I5) - X(I2)
-                  X(I5) = X(I2) + X(I5)
-                  T3 = X(I8) + X(I3)
-                  X(I6) = X(I8) - X(I3)
-                  T4 = X(I4) + X(I7)
-                  X(I2) = X(I4) - X(I7)
-                  T5 = T1 - T4
-                  T1 = T1 + T4
-                  T4 = T2 - T3
-                  T2 = T2 + T3
-                  X(I3) = T5 * CC1 + T4 * SS1
-                  X(I7) = - T4 * CC1 + T5 * SS1
-                  X(I4) = T1 * CC3 - T2 * SS3
-                  X(I8) = T2 * CC3 + T1 * SS3
- 30            CONTINUE
-               IS = 2 * ID - N2
-               ID = 4 * ID
-               IF ( IS >= N-1 ) EXIT LOOP2
-             END DO LOOP2
- 20      CONTINUE
- 10   CONTINUE
+      n2 = 2 * n
+      do 10, k = 1, m-1
+         is = 0
+         id = n2
+         n2 = n2 / 2
+         n4 = n2 / 4
+         n8 = n4 / 2
+         e = twopi / n2
+         loop1: do
+            do 15, i = is, n-1, id
+               i1 = i + 1
+               i2 = i1 + n4
+               i3 = i2 + n4
+               i4 = i3 + n4
+               t1 = x(i1) - x(i3)
+               x(i1) = x(i1) + x(i3)
+               x(i2) = 2 * x(i2)
+               x(i3) = t1 - 2 * x(i4)
+               x(i4) = t1 + 2 * x(i4)
+               if ( n4 == 1 ) cycle
+               i1 = i1 + n8
+               i2 = i2 + n8
+               i3 = i3 + n8
+               i4 = i4 + n8
+               t1 = ( x(i2) - x(i1) ) / sqrt2
+               t2 = ( x(i4) + x(i3) ) / sqrt2
+               x(i1) = x(i1) + x(i2)
+               x(i2) = x(i4) - x(i3)
+               x(i3) = 2 * ( - t2 - t1 )
+               x(i4) = 2 * ( -t2 + t1 )
+ 15         continue
+            is = 2 * id - n2
+            id = 4 * id
+            if ( is >= n-1 ) exit loop1
+         end do loop1
+         a = e
+         do 20, j = 2, n8
+            a3 = 3 * a
+            cc1 = cos(a)
+            ss1 = sin(a)
+            cc3 = cos(a3)
+            ss3 = sin(a3)
+            a = j * e
+            is = 0
+            id = 2 * n2
+            loop2: do
+ 40            do 30, i = is, n-1, id
+                  i1 = i + j
+                  i2 = i1 + n4
+                  i3 = i2 + n4
+                  i4 = i3 + n4
+                  i5 = i + n4 - j + 2
+                  i6 = i5 + n4
+                  i7 = i6 + n4
+                  i8 = i7 + n4
+                  t1 = x(i1) - x(i6)
+                  x(i1) = x(i1) + x(i6)
+                  t2 = x(i5) - x(i2)
+                  x(i5) = x(i2) + x(i5)
+                  t3 = x(i8) + x(i3)
+                  x(i6) = x(i8) - x(i3)
+                  t4 = x(i4) + x(i7)
+                  x(i2) = x(i4) - x(i7)
+                  t5 = t1 - t4
+                  t1 = t1 + t4
+                  t4 = t2 - t3
+                  t2 = t2 + t3
+                  x(i3) = t5 * cc1 + t4 * ss1
+                  x(i7) = - t4 * cc1 + t5 * ss1
+                  x(i4) = t1 * cc3 - t2 * ss3
+                  x(i8) = t2 * cc3 + t1 * ss3
+ 30            continue
+               is = 2 * id - n2
+               id = 4 * id
+               if ( is >= n-1 ) exit loop2
+             end do loop2
+ 20      continue
+ 10   continue
 !
-      IS = 1
-      ID = 4
-      LOOP3: DO
-         DO 60, I0 = IS, N, ID
-            I1 = I0 + 1
-            R1 = X(I0)
-            X(I0) = R1 + X(I1)
-            X(I1) = R1 - X(I1)
- 60      CONTINUE
-         IS = 2 * ID - 1
-         ID = 4 * ID
-         IF ( IS >= N ) EXIT LOOP3
-      END DO LOOP3
+      is = 1
+      id = 4
+      loop3: do
+         do 60, i0 = is, n, id
+            i1 = i0 + 1
+            r1 = x(i0)
+            x(i0) = r1 + x(i1)
+            x(i1) = r1 - x(i1)
+ 60      continue
+         is = 2 * id - 1
+         id = 4 * id
+         if ( is >= n ) exit loop3
+      end do loop3
 !
-      J = 1
-      N1 = N - 1
-      DO 104, I = 1, N1
-         IF ( I < J ) THEN
-            XT = X(J)
-            X(J) = X(I)
-            X(I) = XT
-         END IF
-         K = N / 2
-         DO WHILE (K < J )         
-            J = J - K
-            K = K / 2
-          END DO
-          J = J + K
- 104  CONTINUE
-      XT = 1.0_r_kind / FLOAT( N )
-      DO 99, I = 1, N
-         X(I) = XT * X(I)
- 99   CONTINUE
-      RETURN
+      j = 1
+      n1 = n - 1
+      do 104, i = 1, n1
+         if ( i < j ) then
+            xt = x(j)
+            x(j) = x(i)
+            x(i) = xt
+         end if
+         k = n / 2
+         do while (k < j )         
+            j = j - k
+            k = k / 2
+         end do
+         j = j + k
+ 104  continue
+      xt = 1.0_r_kind / float( n )
+      do 99, i = 1, n
+         x(i) = xt * x(i)
+ 99   continue
+      return
 !
 ! ... End of subroutine SFFTCB ...
 ! 
-      END SUBROUTINE SFFTCB
+      end subroutine sfftcb
 
-END MODULE ATMS_Spatial_Average_Mod
+end module ATMS_Spatial_Average_Mod

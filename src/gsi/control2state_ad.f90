@@ -97,15 +97,15 @@ integer(i_kind) :: iccldch,icuwnd10m,icvwnd10m
 character(len=3), parameter :: mycvars(ncvars) = (/  &
                 'sf ', 'vp ', 'ps ', 't  ', 'q  ', 'cw ', 'ql ', 'qi ', 'w  ' /)
 logical :: lc_sf,lc_vp,lc_w,lc_ps,lc_t,lc_rh,lc_cw,lc_ql,lc_qi
-real(r_kind),pointer,dimension(:,:)   :: cv_ps=>NULL()
-real(r_kind),pointer,dimension(:,:)   :: cv_lcbas=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: cv_sf=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: cv_vp=>NULL()
-!real(r_kind),pointer,dimension(:,:,:) :: cv_w=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: cv_t=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: cv_rh=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: cv_sfwter=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: cv_vpwter=>NULL()
+real(r_kind),pointer,dimension(:,:)   :: cv_ps=>null()
+real(r_kind),pointer,dimension(:,:)   :: cv_lcbas=>null()
+real(r_kind),pointer,dimension(:,:,:) :: cv_sf=>null()
+real(r_kind),pointer,dimension(:,:,:) :: cv_vp=>null()
+!real(r_kind),pointer,dimension(:,:,:) :: cv_w=>null()
+real(r_kind),pointer,dimension(:,:,:) :: cv_t=>null()
+real(r_kind),pointer,dimension(:,:,:) :: cv_rh=>null()
+real(r_kind),pointer,dimension(:,:,:) :: cv_sfwter=>null()
+real(r_kind),pointer,dimension(:,:,:) :: cv_vpwter=>null()
 
 ! Declare required local state variables
 integer(i_kind), parameter :: nsvars = 12
@@ -115,16 +115,16 @@ character(len=4), parameter :: mysvars(nsvars) = (/  &  ! vars from ST needed he
                 'qr  ', 'qs  ', 'qg  ', 'qh  ' /)
 logical :: ls_u,ls_v,ls_w,ls_prse,ls_q,ls_tsen,ls_ql,ls_qi
 logical :: ls_qr,ls_qs,ls_qg,ls_qh
-real(r_kind),pointer,dimension(:,:)   :: rv_ps=>NULL(),rv_sst=>NULL()
-real(r_kind),pointer,dimension(:,:)   :: rv_gust=>NULL(),rv_vis=>NULL(),rv_pblh=>NULL()
-real(r_kind),pointer,dimension(:,:)   :: rv_wspd10m=>NULL(),rv_tcamt,rv_lcbas=>NULL()
-real(r_kind),pointer,dimension(:,:)   :: rv_td2m=>NULL(),rv_mxtm=>NULL(),rv_mitm=>NULL()
-real(r_kind),pointer,dimension(:,:)   :: rv_pmsl=>NULL(),rv_howv=>NULL(),rv_cldch=>NULL()
-real(r_kind),pointer,dimension(:,:)   :: rv_uwnd10m=>NULL(),rv_vwnd10m=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: rv_u=>NULL(),rv_v=>NULL(),rv_w=>NULL(),rv_dw=>NULL(),rv_prse=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: rv_q=>NULL(),rv_tsen=>NULL(),rv_tv=>NULL(),rv_oz=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: rv_rank3=>NULL()
-real(r_kind),pointer,dimension(:,:)   :: rv_rank2=>NULL()
+real(r_kind),pointer,dimension(:,:)   :: rv_ps=>null(),rv_sst=>null()
+real(r_kind),pointer,dimension(:,:)   :: rv_gust=>null(),rv_vis=>null(),rv_pblh=>null()
+real(r_kind),pointer,dimension(:,:)   :: rv_wspd10m=>null(),rv_tcamt=>null(),rv_lcbas=>null()
+real(r_kind),pointer,dimension(:,:)   :: rv_td2m=>null(),rv_mxtm=>null(),rv_mitm=>null()
+real(r_kind),pointer,dimension(:,:)   :: rv_pmsl=>null(),rv_howv=>null(),rv_cldch=>null()
+real(r_kind),pointer,dimension(:,:)   :: rv_uwnd10m=>null(),rv_vwnd10m=>null()
+real(r_kind),pointer,dimension(:,:,:) :: rv_u=>null(),rv_v=>null(),rv_w=>null(),rv_dw=>null(),rv_prse=>null()
+real(r_kind),pointer,dimension(:,:,:) :: rv_q=>null(),rv_tsen=>null(),rv_tv=>null(),rv_oz=>null()
+real(r_kind),pointer,dimension(:,:,:) :: rv_rank3=>null()
+real(r_kind),pointer,dimension(:,:)   :: rv_rank2=>null()
 
 real(r_kind),allocatable,dimension(:,:,:):: uland,vland,uwter,vwter
 

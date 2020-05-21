@@ -86,6 +86,7 @@ contains
 !   machine:  ibm rs/6000 sp
 !
 !$$$
+    implicit none
 
     jpch_aero = 0               ! number of enteries read from aeroinfo
     diag_aero = .true.          ! default is to generate aerosol diagnostic file

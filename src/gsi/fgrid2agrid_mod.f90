@@ -84,15 +84,15 @@ module fgrid2agrid_mod
      integer(i_kind) mfgrid
      integer(i_kind) magrid
      real(r_kind) grid_ratio
-     integer(i_kind),pointer::iwin(:,:)=>NULL()
-     integer(i_kind),pointer::nwin(:)=>NULL()
-     integer(i_kind),pointer::itwin(:,:)=>NULL()
-     integer(i_kind),pointer::ntwin(:)=>NULL()
-     integer(i_kind),pointer::iswin(:,:)=>NULL()
-     integer(i_kind),pointer::nswin(:)=>NULL()
-     real(r_kind),pointer::win(:,:)=>NULL()
-     real(r_kind),pointer::twin(:,:)=>NULL()
-     real(r_kind),pointer::swin(:,:)=>NULL()
+     integer(i_kind),pointer::iwin(:,:)=>null()
+     integer(i_kind),pointer::nwin(:)=>null()
+     integer(i_kind),pointer::itwin(:,:)=>null()
+     integer(i_kind),pointer::ntwin(:)=>null()
+     integer(i_kind),pointer::iswin(:,:)=>null()
+     integer(i_kind),pointer::nswin(:)=>null()
+     real(r_kind),pointer::win(:,:)=>null()
+     real(r_kind),pointer::twin(:,:)=>null()
+     real(r_kind),pointer::swin(:,:)=>null()
 
   end type fgrid2agrid_cons
 
@@ -329,11 +329,11 @@ module fgrid2agrid_mod
        p%identity=.false.
  
        call get_3ops(p%f2a_lon, &
-                   & p%grid_ratio, p%grid_ratio_lon, &
-                   & p%nlona, p%nlonf, nord_f2a)
+                     p%grid_ratio, p%grid_ratio_lon, &
+                     p%nlona, p%nlonf, nord_f2a)
        call get_3ops(p%f2a_lat, &
-                   & p%grid_ratio, p%grid_ratio_lat, &
-                   & p%nlata, p%nlatf, nord_f2a)
+                     p%grid_ratio, p%grid_ratio_lat, &
+                     p%nlata, p%nlatf, nord_f2a)
 
     end if
 

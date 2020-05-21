@@ -133,10 +133,10 @@ contains
               ptabl_q(k)=half*(etabl_q(itypex,k-1,1)+etabl_q(itypex,k,1))
            enddo
            ptabl_q(34)=etabl_q(itypex,33,1)
-         else
-            write(6,*)'ERROR IN CONVERR_Q: NO OBSERVATION TYPE READ IN'
-            return
-         endif
+        else
+           write(6,*)'ERROR IN CONVERR_Q: NO OBSERVATION TYPE READ IN'
+           return
+        endif
      endif
      close(ietabl_q)
      return

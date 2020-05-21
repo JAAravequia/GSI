@@ -1,12 +1,12 @@
 module wrwrfnmma_mod
-use abstract_wrwrfnmma_mod
-  type, extends(abstract_wrwrfnmma_class) :: wrwrfnmma_class
-  contains
-    procedure, pass(this) :: wrwrfnmma_binary => wrwrfnmma_binary_wrf  
-    procedure, pass(this) :: wrwrfnmma_netcdf => wrwrfnmma_netcdf_wrf  
-    procedure, nopass :: get_bndy_file
-    procedure, pass(this) :: wrnemsnmma_binary
-  end type wrwrfnmma_class
+use abstract_wrwrfnmma_mod, only: abstract_wrwrfnmma_class
+type, extends(abstract_wrwrfnmma_class) :: wrwrfnmma_class
+contains
+  procedure, pass(this) :: wrwrfnmma_binary => wrwrfnmma_binary_wrf  
+  procedure, pass(this) :: wrwrfnmma_netcdf => wrwrfnmma_netcdf_wrf  
+  procedure, nopass :: get_bndy_file
+  procedure, pass(this) :: wrnemsnmma_binary
+end type wrwrfnmma_class
 contains
   subroutine wrwrfnmma_binary_wrf(this,mype)
   !$$$  subprogram documentation block
@@ -120,18 +120,18 @@ contains
     integer(i_kind) icw4crtm,iqtotal,istatus
     real(r_kind) total_ice
     real(r_kind),dimension(lat2,lon2):: work_clwmr,work_fice,work_frain
-    real(r_kind),pointer,dimension(:,:  ):: ges_pd  =>NULL()
-    real(r_kind),pointer,dimension(:,:  ):: ges_ps  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_u   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_v   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_pint=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_q   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_ql  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qi  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qr  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qs  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qg  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qh  =>NULL()
+    real(r_kind),pointer,dimension(:,:  ):: ges_pd  =>null()
+    real(r_kind),pointer,dimension(:,:  ):: ges_ps  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_u   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_v   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_pint=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_q   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_ql  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qi  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qr  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qs  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qg  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qh  =>null()
     real(r_single),allocatable:: pdbg(:),tbg(:,:),qbg(:,:),cwmbg(:,:),ubg(:,:),vbg(:,:)
     real(r_single),allocatable:: pdba(:),tba(:,:),qba(:,:),cwmba(:,:),uba(:,:),vba(:,:)
     real(r_single),allocatable:: pdbg0(:),tbg0(:,:),qbg0(:,:),cwmbg0(:,:),ubg0(:,:),vbg0(:,:)
@@ -201,7 +201,7 @@ contains
   
   
     num_nmm_fields=3+4*lm
-    if(update_pint) num_nmm_fields=num_nmm_fields+lm+1  ! contribution from PINT
+    if(update_pint) num_nmm_fields=num_nmm_fields+lm+1  ! contribution from pint
     if (n_actual_clouds>0) num_nmm_fields=num_nmm_fields+3*lm
     allocate(offset(num_nmm_fields))
     allocate(igtype(num_nmm_fields),kdim(num_nmm_fields),kord(num_nmm_fields))
@@ -228,7 +228,7 @@ contains
        read(lendian_in)
     end do
     read(lendian_in) 
-    read(lendian_in) n_position          !  offset for START_DATE record
+    read(lendian_in) n_position          !  offset for start_date record
     offset_start_date=n_position
     length_start_date=2048
   
@@ -236,14 +236,14 @@ contains
     wrfanl = 'wrf_inout'
     call mpi_file_open(mpi_comm_world,trim(wrfanl),mpi_mode_rdwr,mpi_info_null,mfcst,ierror)
   
-  !     update START_DATE record so it contains new analysis time in place of old starting time
+  !     update start_date record so it contains new analysis time in place of old starting time
     call mpi_file_read_at(mfcst,offset_start_date,chdrbuf,length_start_date,mpi_byte,status,ierror)
     if(mype==0)  then
        call wrwrfmassa%update_start_date(chdrbuf,iyear,imonth,iday,ihour,iminute,isecond)
        call mpi_file_write_at(mfcst,offset_start_date,chdrbuf,length_start_date,mpi_byte,status,ierror)
     end if
   
-  !    update NSTART_HOUR for wrf restart file
+  !    update nstart_hour for wrf restart file
     read(lendian_in) n_position
     offset_nstart_hour=n_position
     if(offset_nstart_hour > 0)then
@@ -489,7 +489,7 @@ contains
           write(6,*)'all_loc for q    = ',k,maxval(all_loc(:,:,kq)),minval(all_loc(:,:,kq)) 
           write(6,*)'all_loc for u    = ',k,maxval(all_loc(:,:,ku)),minval(all_loc(:,:,ku))              
           write(6,*)'all_loc for v    = ',k,maxval(all_loc(:,:,kv)),minval(all_loc(:,:,kv))                   
-        endif
+       endif
   
     end do
     do i=1,lon1
@@ -920,8 +920,8 @@ contains
     call mpi_file_close(mfcst,ierror)
    
     if(use_gfs_stratosphere) then
-        if(mype==0) write(6,*)' at wrwrfnmma_binary: restore ges fields back to extended vertical grid'    
-        call restore_nmmb_gfs 
+       if(mype==0) write(6,*)' at wrwrfnmma_binary: restore ges fields back to extended vertical grid'    
+       call restore_nmmb_gfs 
     endif
     
   end subroutine wrwrfnmma_binary_wrf
@@ -1159,25 +1159,25 @@ contains
     integer(i_kind) iret,ier_cloud,n_actual_clouds,istatus,ierr
     real(r_kind) total_ice
     real(r_kind),dimension(lat2,lon2):: work_clwmr,work_fice,work_frain
-    real(r_kind),pointer,dimension(:,:,:):: ges_cw  =>NULL()
-    real(r_kind),pointer,dimension(:,:  ):: ges_pd  =>NULL()
-    real(r_kind),pointer,dimension(:,:  ):: ges_ps  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_u   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_v   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_w   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_q   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_oz  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_ql  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qi  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qr  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qs  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qg  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qh  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: dfi_tten=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_ref =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_dw   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qli   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_dbz   =>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_cw  =>null()
+    real(r_kind),pointer,dimension(:,:  ):: ges_pd  =>null()
+    real(r_kind),pointer,dimension(:,:  ):: ges_ps  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_u   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_v   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_w   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_q   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_oz  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_ql  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qi  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qr  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qs  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qg  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qh  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: dfi_tten=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_ref =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_dw   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qli   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_dbz   =>null()
     
   !   if use_gfs_stratosphere is true, then convert ges fields from nmmb-gfs 
   !        extended vertical coordinate to nmmb vertical coordinate.
@@ -1256,16 +1256,16 @@ contains
        if ((icw4crtm<=0 .and. iqtotal<=0) .or. ier_cloud/=0) n_actual_clouds=0
 
        if (i_radar_qr>0 .and. i_radar_qli>0) then
-   !    Get pointer to cloud water mixing ratio
-        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql,iret); ier_cloud=iret
-        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi,iret); ier_cloud=iret
-        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qr',ges_qr,iret); ier_cloud=ier_cloud+iret
-        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qli',ges_qli,iret); ier_cloud=ier_cloud+iret
-        if(dbz_exist)&
-        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'dbz',ges_dbz,iret); ier_cloud=ier_cloud+iret
-        if (ier_cloud/=0) n_actual_clouds=0
+   !      Get pointer to cloud water mixing ratio
+          call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ql',ges_ql,iret); ier_cloud=iret
+          call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qi',ges_qi,iret); ier_cloud=iret
+          call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qr',ges_qr,iret); ier_cloud=ier_cloud+iret
+          call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qli',ges_qli,iret); ier_cloud=ier_cloud+iret
+          if(dbz_exist)&
+          call gsi_bundlegetpointer (gsi_metguess_bundle(it),'dbz',ges_dbz,iret); ier_cloud=ier_cloud+iret
+          if (ier_cloud/=0) n_actual_clouds=0
        else
-         n_actual_clouds=0
+          n_actual_clouds=0
        end if
   
     else if (i_gsdcldanal_type==2)then
@@ -1336,41 +1336,41 @@ contains
           call gsi_nemsio_write('vgrd','mid layer','V',kr,work_sub(:,:),mype,mype_input,add_saved)
        endif
                                    !   w
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'w',ges_w,iret)
-     if (iret==0) then
-        call gsi_nemsio_read('w_tot','mid layer','H',kr,work_sub(:,:),mype,mype_input)
-        do i=1,lon2
-           do j=1,lat2
-              work_sub(j,i)=ges_w(j,i,k)-work_sub(j,i)
-           end do
-        end do
-        if(k <= near_sfc) then
-           do i=1,lon2
-              do j=1,lat2
-                 delw(j,i,k)=work_sub(j,i)
-              end do
-           end do
-        end if
-        call gsi_nemsio_write('w_tot','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
-     endif
+       call gsi_bundlegetpointer (gsi_metguess_bundle(it),'w',ges_w,iret)
+       if (iret==0) then
+          call gsi_nemsio_read('w_tot','mid layer','H',kr,work_sub(:,:),mype,mype_input)
+          do i=1,lon2
+             do j=1,lat2
+                work_sub(j,i)=ges_w(j,i,k)-work_sub(j,i)
+             end do
+          end do
+          if(k <= near_sfc) then
+             do i=1,lon2
+                do j=1,lat2
+                   delw(j,i,k)=work_sub(j,i)
+                end do
+             end do
+          end if
+          call gsi_nemsio_write('w_tot','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
+       endif
  
-     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'dwdt',ges_dw,iret)
-     if (iret==0) then
-        call gsi_nemsio_read('dwdt','mid layer','H',kr,work_sub(:,:),mype,mype_input)
-        do i=1,lon2
-           do j=1,lat2
-              work_sub(j,i)=ges_dw(j,i,k)-work_sub(j,i)
-           end do
-        end do
-        if(k <= near_sfc) then
-           do i=1,lon2
-              do j=1,lat2
-                 delv(j,i,k)=work_sub(j,i)
-              end do
-           end do
-        end if
-        call gsi_nemsio_write('dwdt','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
-     endif
+       call gsi_bundlegetpointer (gsi_metguess_bundle(it),'dwdt',ges_dw,iret)
+       if (iret==0) then
+          call gsi_nemsio_read('dwdt','mid layer','H',kr,work_sub(:,:),mype,mype_input)
+          do i=1,lon2
+             do j=1,lat2
+                work_sub(j,i)=ges_dw(j,i,k)-work_sub(j,i)
+             end do
+          end do
+          if(k <= near_sfc) then
+             do i=1,lon2
+                do j=1,lat2
+                   delv(j,i,k)=work_sub(j,i)
+                end do
+             end do
+          end if
+          call gsi_nemsio_write('dwdt','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
+       endif
   
                                      !   q
   
@@ -1398,35 +1398,35 @@ contains
   
   !* use GSD cloud analysis for NMMB
        if(i_gsdcldanal_type==2) then
-  !    write(6,*)'sliu in wrwrfnmma.F90:: enter dump dfi_tten'
-       do i=1,lon2
-          do j=1,lat2
-             work_sub_t(j,i)=ges_tsen(j,i,k,it)
-             work_sub_i(j,i)=ges_qi(j,i,k)
-             work_sub_r(j,i)=ges_qr(j,i,k)
-             work_sub_l(j,i)=ges_ql(j,i,k)
+  !       write(6,*)'sliu in wrwrfnmma.F90:: enter dump dfi_tten'
+          do i=1,lon2
+             do j=1,lat2
+                work_sub_t(j,i)=ges_tsen(j,i,k,it)
+                work_sub_i(j,i)=ges_qi(j,i,k)
+                work_sub_r(j,i)=ges_qr(j,i,k)
+                work_sub_l(j,i)=ges_ql(j,i,k)
+             end do
           end do
-       end do
 
-       add_saved=.false.
-       call gsi_nemsio_write_fraction('f_rain','f_ice','mid layer',kr,       &
-                   work_sub_t(:,:),work_sub_i(:,:),work_sub_r(:,:),work_sub_l(:,:),mype,mype_input)
+          add_saved=.false.
+          call gsi_nemsio_write_fraction('f_rain','f_ice','mid layer',kr,       &
+                      work_sub_t(:,:),work_sub_i(:,:),work_sub_r(:,:),work_sub_l(:,:),mype,mype_input)
   
-       do i=1,lon2
-          do j=1,lat2
-             work_sub(j,i)=ges_qg(j,i,k)
+          do i=1,lon2
+             do j=1,lat2
+                work_sub(j,i)=ges_qg(j,i,k)
+             end do
           end do
-       end do
-       call gsi_nemsio_write('clwmr','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
+          call gsi_nemsio_write('clwmr','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
   
-       call gsi_bundlegetpointer (gsi_metguess_bundle(it),'tten',dfi_tten,iret)
-       do i=1,lon2
-          do j=1,lat2
-             work_sub(j,i)=dfi_tten(j,i,k)
+          call gsi_bundlegetpointer (gsi_metguess_bundle(it),'tten',dfi_tten,iret)
+          do i=1,lon2
+             do j=1,lat2
+                work_sub(j,i)=dfi_tten(j,i,k)
+             end do
           end do
-       end do
-       call gsi_nemsio_write('dfi_tten','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
-       add_saved=.true.
+          call gsi_nemsio_write('dfi_tten','mid layer','H',kr,work_sub(:,:),mype,mype_input,add_saved)
+          add_saved=.true.
        end if
   !* use GSD cloud analysis for NMMB
   
@@ -1521,24 +1521,24 @@ contains
           if (i_radar_qr>0 .and. i_radar_qli>0)then
 
              if( dbz_exist .and. if_model_dbz )then
-               ! refl_10cm
-               call gsi_bundlegetpointer (gsi_metguess_bundle(it),'dbz',ges_dbz,iret)
-               if (iret==0) then
-                 where( ges_dbz < zero )
-                   ges_dbz = zero
-                 end where
-                 work_sub(:,:)=ges_dbz(:,:,k)
-                 call gsi_nemsio_write('refl_10cm','mid layer','H',kr,work_sub(:,:),mype,mype_input,.false.)
-               endif
+                ! refl_10cm
+                call gsi_bundlegetpointer (gsi_metguess_bundle(it),'dbz',ges_dbz,iret)
+                if (iret==0) then
+                   where( ges_dbz < zero )
+                      ges_dbz = zero
+                   end where
+                   work_sub(:,:)=ges_dbz(:,:,k)
+                   call gsi_nemsio_write('refl_10cm','mid layer','H',kr,work_sub(:,:),mype,mype_input,.false.)
+                endif
              end if
     
              do i=1,lon2
-               do j=1,lat2
-                 work_sub_s(j,i)=ges_qli(j,i,k)
-                 work_sub_r(j,i)=ges_qr(j,i,k)
-                 work_sub_l(j,i)=ges_ql(j,i,k)
-                 work_sub_i(j,i)=ges_qi(j,i,k)
-               end do
+                do j=1,lat2
+                   work_sub_s(j,i)=ges_qli(j,i,k)
+                   work_sub_r(j,i)=ges_qr(j,i,k)
+                   work_sub_l(j,i)=ges_ql(j,i,k)
+                   work_sub_i(j,i)=ges_qi(j,i,k)
+                end do
              end do
     
              add_saved=.false.
@@ -1847,18 +1847,18 @@ contains
     integer(i_kind) icw4crtm,iqtotal,istatus
     real(r_kind) total_ice
     real(r_kind),dimension(lat2,lon2):: work_clwmr,work_fice,work_frain
-    real(r_kind),pointer,dimension(:,:  ):: ges_pd  =>NULL()
-    real(r_kind),pointer,dimension(:,:  ):: ges_ps  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_u   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_v   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_pint=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_q   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_ql  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qi  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qr  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qs  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qg  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qh  =>NULL()
+    real(r_kind),pointer,dimension(:,:  ):: ges_pd  =>null()
+    real(r_kind),pointer,dimension(:,:  ):: ges_ps  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_u   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_v   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_pint=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_q   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_ql  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qi  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qr  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qs  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qg  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qh  =>null()
   
     real(r_single),allocatable:: pdbg(:),tbg(:,:),qbg(:,:),cwmbg(:,:),ubg(:,:),vbg(:,:)
     real(r_single),allocatable:: pdba(:),tba(:,:),qba(:,:),cwmba(:,:),uba(:,:),vba(:,:)
@@ -1916,7 +1916,7 @@ contains
     end if
   
     num_nmm_fields=3+4*lm
-    if(update_pint) num_nmm_fields=num_nmm_fields+lm+1  ! contribution from PINT
+    if(update_pint) num_nmm_fields=num_nmm_fields+lm+1  ! contribution from pint
     if (n_actual_clouds>0) num_nmm_fields=num_nmm_fields+4*lm
     num_all_fields=num_nmm_fields
     num_all_pad=num_all_fields
@@ -2131,7 +2131,7 @@ contains
                           n_actual_clouds,im,jm,lm,bdim,igtypeh)
     end if
   
-  !  FIS read/write
+  ! fis read/write
     if(mype == 0) then
        read(lendian_in)temp1
        write(lendian_out)temp1
@@ -2293,15 +2293,15 @@ contains
     end if
   
     if(mype == 0) then
-  ! SM
+  ! sm
        read(lendian_in)temp1
        write(lendian_out)temp1
-  ! SICE
+  ! sice
        read(lendian_in)temp1
        write(lendian_out)temp1
     end if
   
-  ! SST
+  ! sst
     if(update_regsfc) then
        if(mype == 0) write(6,*)' at wrwrfnmma_netcdf: update SST '    
        if(mype == 0) read(lendian_in)temp1
@@ -2336,7 +2336,7 @@ contains
        end if
     end if   !end if check updatesfc
     
-  ! REST OF FIELDS
+  ! Rest of fields
     if (mype == 0) then
        write(6,*)' at wrwrfnmma_netcdf: read/write various surface fields '    
        do k=4,11
@@ -2345,7 +2345,7 @@ contains
        end do
     end if
     
-  ! Update SKIN TEMP
+  ! Update skin temp
     if(update_regsfc) then
        if(mype == 0) write(6,*)' at wrwrfnmma_netcdf: update TSK '   
        if(mype == 0) read(lendian_in)temp1
@@ -2394,7 +2394,7 @@ contains
              if(filled_grid) call fill_nmm_grid2(temp1,im,jm,tempb,igtypeh,2)
              if(half_grid)   call half_nmm_grid2(temp1,im,jm,tempb,igtypeh,2)
              do i=1,iglobal
-               tempa(i)=tempa(i)-tempb(i)
+                tempa(i)=tempa(i)-tempb(i)
              end do
              if(filled_grid) call unfill_nmm_grid2(tempa,im,jm,temp1,igtypeh,2)
              if(half_grid)   call unhalf_nmm_grid2(tempa,im,jm,temp1,igtypeh,2)
@@ -2465,8 +2465,8 @@ contains
     endif
   
     if(use_gfs_stratosphere) then 
-        if(mype==0) write(6,*)' at wrwrfnmma_netcdf: restore ges fields back to extended vertical grid'                             
-        call restore_nmmb_gfs  
+       if(mype==0) write(6,*)' at wrwrfnmma_netcdf: restore ges fields back to extended vertical grid'                             
+       call restore_nmmb_gfs  
     endif
   
   ! write out boundary variables

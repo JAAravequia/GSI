@@ -33,10 +33,10 @@ subroutine co_mop_ak(g,ga,nlevs,ak,ap)
   implicit none
 
 ! Declare passed variables
-  integer(i_kind)                               ,intent(in   ) :: nlevs
-  real(r_kind),dimension(nlevs),intent(in   ) :: g 
-  real(r_kind),dimension(nlevs)                 ,intent(in   ) :: ap
-  real(r_kind),dimension(nlevs,nlevs)           ,intent(in   ) :: ak
+  integer(i_kind)                             ,intent(in   ) :: nlevs
+  real(r_kind),dimension(nlevs)               ,intent(in   ) :: g 
+  real(r_kind),dimension(nlevs)               ,intent(in   ) :: ap
+  real(r_kind),dimension(nlevs,nlevs)         ,intent(in   ) :: ak
   real(r_kind),dimension(nlevs)               ,intent(  out) :: ga
 
 ! Declare local variables
@@ -62,7 +62,7 @@ subroutine co_mop_ak(g,ga,nlevs,ak,ap)
        enddo 
        if(debug) print*,'rsum=',rsum
        rsum=rsum+log10(ap(k))
-       ga(k)=10.0**rsum   
+       ga(k)=10.0_r_kind**rsum   
        if(debug) print*,'ga=',ga(k)
     enddo 
           

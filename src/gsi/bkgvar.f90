@@ -78,11 +78,11 @@ subroutine bkgvar(cvec,iflg)
 
 ! Declare local variables
   integer(i_kind) i,j,k,n,i_sst,i_stl,i_sti,istatus
-  real(r_kind),pointer,dimension(:,:,:)::ptr3d=>NULL()
-  real(r_kind),pointer,dimension(:,:)  ::ptr2d=>NULL()
-  real(r_kind),pointer,dimension(:,:)  ::ptrsst=>NULL()
-  real(r_kind),pointer,dimension(:,:)  ::ptrstl=>NULL()
-  real(r_kind),pointer,dimension(:,:)  ::ptrsti=>NULL()
+  real(r_kind),pointer,dimension(:,:,:)::ptr3d=>null()
+  real(r_kind),pointer,dimension(:,:)  ::ptr2d=>null()
+  real(r_kind),pointer,dimension(:,:)  ::ptrsst=>null()
+  real(r_kind),pointer,dimension(:,:)  ::ptrstl=>null()
+  real(r_kind),pointer,dimension(:,:)  ::ptrsti=>null()
   real(r_kind),dimension(lat2,lon2) :: sst,stl,sti
 
 ! Multipy by variances

@@ -18,6 +18,7 @@ module abstract_get_fv3_regional_ensperts_mod
 !    machine:
 !
 !$$$ end documentation block
+  implicit none
   type, abstract :: abstract_get_fv3_regional_ensperts_class
   contains
     procedure(get_fv3_regional_ensperts), deferred, pass(this) :: get_fv3_regional_ensperts

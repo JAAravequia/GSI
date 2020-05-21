@@ -100,26 +100,26 @@ subroutine calctends_tl(fields,fields_dt,mype)
   type(gsi_bundle) :: xderivative
   type(gsi_bundle) :: yderivative
 
-  real(r_kind),pointer,dimension(:,:,:) :: ges_u=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_v=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_tv=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_q =>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_oz=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_cwmr=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_u=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_v=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_tv=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_q =>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_oz=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_cwmr=>null()
 
-  real(r_kind),pointer,dimension(:,:,:) :: ges_u_lon=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_v_lon=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_tv_lon=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_q_lon =>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_oz_lon=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_cw_lon=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_u_lon=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_v_lon=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_tv_lon=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_q_lon =>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_oz_lon=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_cw_lon=>null()
 
-  real(r_kind),pointer,dimension(:,:,:) :: ges_u_lat=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_v_lat=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_tv_lat=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_q_lat =>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_oz_lat=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_cw_lat=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_u_lat=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_v_lat=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_tv_lat=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_q_lat =>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_oz_lat=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_cw_lat=>null()
 
 ! linearized about guess solution, so set it flag accordingly
   it=ntguessig
@@ -305,7 +305,7 @@ subroutine calctends_tl(fields,fields_dt,mype)
 !   calculate vertical velocity term:  z(dp/dz) (zero at top/bottom interfaces)
 !   if running global, and there is a c(k) coefficient, we call the vvel subroutine
 
-    if ( (.not.regional) .AND. (idvc5==3)) then
+    if ( (.not.regional) .and. (idvc5==3)) then
 
 !     Get horizontal part of temperature tendency for vertical velocity term
 

@@ -51,7 +51,7 @@ subroutine bkgcov(cstate)
 ! Local Variables
   integer(i_kind) n,n3d,istatus,nlevs
   real(r_kind),dimension(nlat*nlon*s2g_raf%nlevs_alloc):: hwork
-  real(r_kind),pointer,dimension(:,:,:):: ptr3d=>NULL()
+  real(r_kind),pointer,dimension(:,:,:):: ptr3d=>null()
 
   nlevs=s2g_raf%nlevs_loc
   n3d=cstate%n3d
@@ -146,7 +146,7 @@ subroutine ckgcov(z,cstate,nval_lenz)
 ! Local Variables
   integer(i_kind) k,n3d,istatus,nlevs
   real(r_kind),dimension(nlat*nlon*s2g_raf%nlevs_alloc):: hwork
-  real(r_kind),dimension(:,:,:),pointer:: ptr3d=>NULL()
+  real(r_kind),dimension(:,:,:),pointer:: ptr3d=>null()
 
   nlevs=s2g_raf%nlevs_loc
 
@@ -231,7 +231,7 @@ subroutine ckgcov_ad(z,cstate,nval_lenz)
 ! Local Variables
   integer(i_kind) k,n3d,istatus,nlevs
   real(r_kind),dimension(nlat*nlon*s2g_raf%nlevs_alloc):: hwork
-  real(r_kind),dimension(:,:,:),pointer:: ptr3d=>NULL()
+  real(r_kind),dimension(:,:,:),pointer:: ptr3d=>null()
 
   nlevs=s2g_raf%nlevs_loc
 

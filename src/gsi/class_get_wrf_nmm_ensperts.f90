@@ -1,4 +1,5 @@
 module abstract_get_wrf_nmm_ensperts_mod
+  implicit none
   type, abstract :: abstract_get_wrf_nmm_ensperts_class
   contains
     procedure(get_wrf_nmm_ensperts), deferred, pass(this) :: get_wrf_nmm_ensperts

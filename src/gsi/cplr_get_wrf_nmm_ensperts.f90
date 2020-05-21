@@ -1,23 +1,24 @@
 module get_wrf_nmm_ensperts_mod
 use abstract_get_wrf_nmm_ensperts_mod
-  type, extends(abstract_get_wrf_nmm_ensperts_class) :: get_wrf_nmm_ensperts_class
-  contains
-    procedure, pass(this) :: get_wrf_nmm_ensperts => get_wrf_nmm_ensperts_wrf
-    procedure, pass(this) :: convert_binary_nmm_ens => convert_binary_nmm_ens_wrf
-    procedure, pass(this) :: general_read_wrf_nmm_binary
-    procedure, pass(this) :: general_read_wrf_nmm_netcdf
-    procedure, nopass :: create_e2a_blend
-    procedure, pass(this) :: grads3a
-    procedure, nopass :: strip_grd
-    procedure, pass(this) :: grads3d
-    procedure, pass(this) :: sub2grid_3a
-    procedure, pass(this) :: generic_grid2sub_ens
-    procedure, nopass :: general_fill_nmm_grid2
-    procedure, nopass :: general_half_nmm_grid2
-    procedure, nopass :: general_reorder2_s
-    procedure, pass(this) :: ens_member_mean_dualres_regional
+implicit none
+type, extends(abstract_get_wrf_nmm_ensperts_class) :: get_wrf_nmm_ensperts_class
+contains
+  procedure, pass(this) :: get_wrf_nmm_ensperts => get_wrf_nmm_ensperts_wrf
+  procedure, pass(this) :: convert_binary_nmm_ens => convert_binary_nmm_ens_wrf
+  procedure, pass(this) :: general_read_wrf_nmm_binary
+  procedure, pass(this) :: general_read_wrf_nmm_netcdf
+  procedure, nopass :: create_e2a_blend
+  procedure, pass(this) :: grads3a
+  procedure, nopass :: strip_grd
+  procedure, pass(this) :: grads3d
+  procedure, pass(this) :: sub2grid_3a
+  procedure, pass(this) :: generic_grid2sub_ens
+  procedure, nopass :: general_fill_nmm_grid2
+  procedure, nopass :: general_half_nmm_grid2
+  procedure, nopass :: general_reorder2_s
+  procedure, pass(this) :: ens_member_mean_dualres_regional
 
-  end type get_wrf_nmm_ensperts_class
+end type get_wrf_nmm_ensperts_class
 contains
   subroutine get_wrf_nmm_ensperts_wrf(this,en_perts,nelen,region_lat_ens,region_lon_ens,ps_bar)
   !$$$  subprogram documentation block
@@ -132,7 +133,7 @@ contains
       endif
   
   !
-  ! INITIALIZE ENSEMBLE MEAN ACCUMULATORS
+  ! Initialize ensemble mean accumulators
       en_bar%values=zero
       
   ! Here assume all ensemble members have the same dimension and resolution.
@@ -251,7 +252,7 @@ contains
       deallocate(vector)
   
   
-  ! LOOP OVER ENSEMBLE MEMBERS 
+  ! Loop over ensemble members 
       do n=1,n_ens
   
          write(filename,"('sigf06_ens_mem',i3.3)") n
@@ -351,18 +352,18 @@ contains
             end do
             deallocate(fields_e,fields_a)
             if(gt_a%lallocated) then
-              deallocate(gt_a%i0_tilde,gt_a%j0_tilde,gt_a%ip_tilde,gt_a%jp_tilde,gt_a%xtilde0,gt_a%ytilde0)
-              deallocate(gt_a%cos_beta_ref,gt_a%sin_beta_ref,gt_a%region_lat,gt_a%region_lon)
-              gt_a%lallocated=.false.
+               deallocate(gt_a%i0_tilde,gt_a%j0_tilde,gt_a%ip_tilde,gt_a%jp_tilde,gt_a%xtilde0,gt_a%ytilde0)
+               deallocate(gt_a%cos_beta_ref,gt_a%sin_beta_ref,gt_a%region_lat,gt_a%region_lon)
+               gt_a%lallocated=.false.
             end if
             if(gt_e%lallocated) then
-              deallocate(gt_e%i0_tilde,gt_e%j0_tilde,gt_e%ip_tilde,gt_e%jp_tilde,gt_e%xtilde0,gt_e%ytilde0)
-              deallocate(gt_e%cos_beta_ref,gt_e%sin_beta_ref,gt_e%region_lat,gt_e%region_lon)
-              gt_e%lallocated=.false.
+               deallocate(gt_e%i0_tilde,gt_e%j0_tilde,gt_e%ip_tilde,gt_e%jp_tilde,gt_e%xtilde0,gt_e%ytilde0)
+               deallocate(gt_e%cos_beta_ref,gt_e%sin_beta_ref,gt_e%region_lat,gt_e%region_lon)
+               gt_e%lallocated=.false.
             end if
             if(p_e2a%lallocated) then
-              deallocate(p_e2a%blend,p_e2a%ya_e,p_e2a%xa_e)
-              p_e2a%lallocated=.false.
+               deallocate(p_e2a%blend,p_e2a%ya_e,p_e2a%xa_e)
+               p_e2a%lallocated=.false.
             end if
             call destroy_egrid2agrid(p_e2a)
   
@@ -423,18 +424,18 @@ contains
             end if
          else
             if(gt_a%lallocated) then
-              deallocate(gt_a%i0_tilde,gt_a%j0_tilde,gt_a%ip_tilde,gt_a%jp_tilde,gt_a%xtilde0,gt_a%ytilde0)
-              deallocate(gt_a%cos_beta_ref,gt_a%sin_beta_ref,gt_a%region_lat,gt_a%region_lon)
-              gt_a%lallocated=.false.
+               deallocate(gt_a%i0_tilde,gt_a%j0_tilde,gt_a%ip_tilde,gt_a%jp_tilde,gt_a%xtilde0,gt_a%ytilde0)
+               deallocate(gt_a%cos_beta_ref,gt_a%sin_beta_ref,gt_a%region_lat,gt_a%region_lon)
+               gt_a%lallocated=.false.
             end if
             if(gt_e%lallocated) then
-              deallocate(gt_e%i0_tilde,gt_e%j0_tilde,gt_e%ip_tilde,gt_e%jp_tilde,gt_e%xtilde0,gt_e%ytilde0)
-              deallocate(gt_e%cos_beta_ref,gt_e%sin_beta_ref,gt_e%region_lat,gt_e%region_lon)
-              gt_e%lallocated=.false.
+               deallocate(gt_e%i0_tilde,gt_e%j0_tilde,gt_e%ip_tilde,gt_e%jp_tilde,gt_e%xtilde0,gt_e%ytilde0)
+               deallocate(gt_e%cos_beta_ref,gt_e%sin_beta_ref,gt_e%region_lat,gt_e%region_lon)
+               gt_e%lallocated=.false.
             end if
             if(p_e2a%lallocated) then
-              deallocate(p_e2a%blend,p_e2a%ya_e,p_e2a%xa_e)
-              p_e2a%lallocated=.false.
+               deallocate(p_e2a%blend,p_e2a%ya_e,p_e2a%xa_e)
+               p_e2a%lallocated=.false.
             end if
             call destroy_egrid2agrid(p_e2a)
   
@@ -596,18 +597,18 @@ contains
             end do
             deallocate(fields_e,fields_e2a)
             if(gt_a%lallocated) then
-              deallocate(gt_a%i0_tilde,gt_a%j0_tilde,gt_a%ip_tilde,gt_a%jp_tilde,gt_a%xtilde0,gt_a%ytilde0)
-              deallocate(gt_a%cos_beta_ref,gt_a%sin_beta_ref,gt_a%region_lat,gt_a%region_lon)
-              gt_a%lallocated=.false.
+               deallocate(gt_a%i0_tilde,gt_a%j0_tilde,gt_a%ip_tilde,gt_a%jp_tilde,gt_a%xtilde0,gt_a%ytilde0)
+               deallocate(gt_a%cos_beta_ref,gt_a%sin_beta_ref,gt_a%region_lat,gt_a%region_lon)
+               gt_a%lallocated=.false.
             end if
             if(gt_e%lallocated) then
-              deallocate(gt_e%i0_tilde,gt_e%j0_tilde,gt_e%ip_tilde,gt_e%jp_tilde,gt_e%xtilde0,gt_e%ytilde0)
-              deallocate(gt_e%cos_beta_ref,gt_e%sin_beta_ref,gt_e%region_lat,gt_e%region_lon)
-              gt_e%lallocated=.false.
+               deallocate(gt_e%i0_tilde,gt_e%j0_tilde,gt_e%ip_tilde,gt_e%jp_tilde,gt_e%xtilde0,gt_e%ytilde0)
+               deallocate(gt_e%cos_beta_ref,gt_e%sin_beta_ref,gt_e%region_lat,gt_e%region_lon)
+               gt_e%lallocated=.false.
             end if
             if(p_e2a%lallocated) then
-              deallocate(p_e2a%blend,p_e2a%ya_e,p_e2a%xa_e)
-              p_e2a%lallocated=.false.
+               deallocate(p_e2a%blend,p_e2a%ya_e,p_e2a%xa_e)
+               p_e2a%lallocated=.false.
             end if
             call destroy_egrid2agrid(p_e2a)
   
@@ -686,7 +687,7 @@ contains
          end if
   
   !
-  ! SAVE ENSEMBLE MEMBER DATA IN COLUMN VECTOR
+  ! Save ensemble member data in column vector
          do ic3=1,nc3d
   
             call gsi_bundlegetpointer(en_perts(n,1),trim(cvars3d(ic3)),w3,istatus)
@@ -858,7 +859,7 @@ contains
       end if
   
   !
-  ! CALCULATE ENSEMBLE MEAN
+  ! Calculate ensemble mean
       bar_norm = one/float(n_ens)
       en_bar%values=en_bar%values*bar_norm
   
@@ -888,7 +889,7 @@ contains
          call mpi_barrier(mpi_comm_world,ierror)
       end if
   !
-  ! CONVERT ENSEMBLE MEMBERS TO ENSEMBLE PERTURBATIONS
+  ! Convert ensemble members to ensemble perturbations
       sig_norm=sqrt(one/max(one,n_ens-one))
   
       do n=1,n_ens
@@ -901,10 +902,10 @@ contains
   
      test=.false.
      if(test)then
-         call mpi_barrier(mpi_comm_world,ierror)
-         call this%ens_member_mean_dualres_regional(en_bar,mype,en_perts,nelen)
-         call mpi_barrier(mpi_comm_world,ierror)
-      end if
+        call mpi_barrier(mpi_comm_world,ierror)
+        call this%ens_member_mean_dualres_regional(en_bar,mype,en_perts,nelen)
+        call mpi_barrier(mpi_comm_world,ierror)
+     end if
   !
      call gsi_bundledestroy(en_bar,istatus)
      if(istatus/=0) then
@@ -1134,7 +1135,7 @@ contains
   !     write(6,*)' convert_binary_nmm_ens: glat(1,nlat),glat(nlon,nlat)=', &
   !          rad2deg*field2(1,nlat_regional),rad2deg*field2(nlon_regional,nlat_regional)
   
-        glat=field2
+       glat=field2
   
   !                  GLON
        call wrf_interface%retrieve_index(index,'GLON',varname_all,nrecs)
@@ -2198,9 +2199,9 @@ contains
   
     ireturn=0
     if(grd%nlon /= nx .or. grd%nlat /= 1+ny/2)then
-      print *,'input grid and output grid are not consistant'
-      ireturn=1
-      return
+       print *,'input grid and output grid are not consistant'
+       ireturn=1
+       return
     endif
   
     if(igtype==1) then
@@ -2516,17 +2517,17 @@ contains
   
        deallocate(region_lat_e,region_lon_e)
   
-  !     istr=INT(xstr)+1
-  !     jstr=INT(ystr)+1
+  !     istr=int(xstr)+1
+  !     jstr=int(ystr)+1
   
-  !     iend=INT(xend)
-  !     jend=INT(yend)
+  !     iend=int(xend)
+  !     jend=int(yend)
   
-       istr=NINT(xstr)
-       jstr=NINT(ystr)
+       istr=nint(xstr)
+       jstr=nint(ystr)
   
-       iend=NINT(xend)
-       jend=NINT(yend)
+       iend=nint(xend)
+       jend=nint(yend)
   
   !     if(mype == 0)print *,'mtong: istr,jstr,iend,jend=', istr,jstr,iend,jend
   
@@ -2604,100 +2605,100 @@ contains
     real(r_single) startp,pinc
   
     if(mype==0) then
-      startp=1._r_single
-      pinc=1._r_single
-      ioutdes=98750
-      ioutdat=98751
-      write(filename,'(a,".des")')trim(fname)
-      write(dsname,'(a,".dat")')trim(fname)
-      open(unit=ioutdes,file=trim(filename),form='formatted')
-      open(unit=ioutdat,file=trim(dsname),form='unformatted')
-      rewind ioutdes
-      rewind ioutdat
-      do i=1,50000
-        write(datdes(i),'(112a1)')(blank,k=1,112)
-      end do
-      write(datdes(1),'("DSET ^",a50)')dsname
-      write(datdes(2),'("options big_endian sequential")')
-      write(datdes(3),'("TITLE ",a50)')title
-      write(datdes(4),'("UNDEF ",e11.2)')undef
-      next=5
-      write(datdes(next),'("XDEF ",i5," LINEAR ",f7.2,f7.2)')grd%nlon,startp,pinc
-      next=next+1
-      write(datdes(next),'("YDEF ",i5," LINEAR ",f7.2,f7.2)')grd%nlat,startp,pinc
-      next=next+1
-      write(datdes(next),'("ZDEF ",i5," LINEAR ",f7.2,f7.2)')nvert,startp,pinc
-      next=next+1
-      koutmax=1
-      write(datdes(next),'("TDEF ",i5," LINEAR 00Z01Jan2000 12hr")')koutmax
-      next=next+1
-      write(datdes(next),'("VARS 5")')
-      next=next+1
-      write(datdes(next),'("u   ",i5," 99 u   ")')nvert
-      next=next+1
-      write(datdes(next),'("v   ",i5," 99 v   ")')nvert
-      next=next+1
-      write(datdes(next),'("t   ",i5," 99 t   ")')nvert
-      next=next+1
-      write(datdes(next),'("q   ",i5," 99 q   ")')nvert
-      next=next+1
-      write(datdes(next),'("pd  ",i5," 99 pd  ")')0
-      next=next+1
-      write(datdes(next),'("ENDVARS")')
-      last=next
-      write(ioutdes,'(a112)')(datdes(i),i=1,last)
+       startp=1._r_single
+       pinc=1._r_single
+       ioutdes=98750
+       ioutdat=98751
+       write(filename,'(a,".des")')trim(fname)
+       write(dsname,'(a,".dat")')trim(fname)
+       open(unit=ioutdes,file=trim(filename),form='formatted')
+       open(unit=ioutdat,file=trim(dsname),form='unformatted')
+       rewind ioutdes
+       rewind ioutdat
+       do i=1,50000
+          write(datdes(i),'(112a1)')(blank,k=1,112)
+       end do
+       write(datdes(1),'("DSET ^",a50)')dsname
+       write(datdes(2),'("options big_endian sequential")')
+       write(datdes(3),'("TITLE ",a50)')title
+       write(datdes(4),'("UNDEF ",e11.2)')undef
+       next=5
+       write(datdes(next),'("XDEF ",i5," LINEAR ",f7.2,f7.2)')grd%nlon,startp,pinc
+       next=next+1
+       write(datdes(next),'("YDEF ",i5," LINEAR ",f7.2,f7.2)')grd%nlat,startp,pinc
+       next=next+1
+       write(datdes(next),'("ZDEF ",i5," LINEAR ",f7.2,f7.2)')nvert,startp,pinc
+       next=next+1
+       koutmax=1
+       write(datdes(next),'("TDEF ",i5," LINEAR 00Z01Jan2000 12hr")')koutmax
+       next=next+1
+       write(datdes(next),'("VARS 5")')
+       next=next+1
+       write(datdes(next),'("u   ",i5," 99 u   ")')nvert
+       next=next+1
+       write(datdes(next),'("v   ",i5," 99 v   ")')nvert
+       next=next+1
+       write(datdes(next),'("t   ",i5," 99 t   ")')nvert
+       next=next+1
+       write(datdes(next),'("q   ",i5," 99 q   ")')nvert
+       next=next+1
+       write(datdes(next),'("pd  ",i5," 99 pd  ")')0
+       next=next+1
+       write(datdes(next),'("ENDVARS")')
+       last=next
+       write(ioutdes,'(a112)')(datdes(i),i=1,last)
     endif
     do k=1,nvert
-      call this%sub2grid_3a(grd,u(1,1,k),work,0,mype)
-      if(mype==0) then
-        do j=1,grd%nlon ; do i=1,grd%nlat
-            outfield(j,i)=work(i,j)
-        end do ; end do
-        write(ioutdat)outfield
-      end if
+       call this%sub2grid_3a(grd,u(1,1,k),work,0,mype)
+       if(mype==0) then
+          do j=1,grd%nlon ; do i=1,grd%nlat
+             outfield(j,i)=work(i,j)
+          end do ; end do
+          write(ioutdat)outfield
+       end if
     end do
   
     do k=1,nvert
-      call this%sub2grid_3a(grd,v(1,1,k),work,0,mype)
-      if(mype==0) then
-        do j=1,grd%nlon ; do i=1,grd%nlat
-            outfield(j,i)=work(i,j)
-        end do ; end do
-        write(ioutdat)outfield
-      end if
+       call this%sub2grid_3a(grd,v(1,1,k),work,0,mype)
+       if(mype==0) then
+          do j=1,grd%nlon ; do i=1,grd%nlat
+             outfield(j,i)=work(i,j)
+          end do ; end do
+          write(ioutdat)outfield
+       end if
     end do
   
     do k=1,nvert
-      call this%sub2grid_3a(grd,tsen(1,1,k),work,0,mype)
-      if(mype==0) then
-        do j=1,grd%nlon ; do i=1,grd%nlat
-            outfield(j,i)=work(i,j)
-        end do ; end do
-        write(ioutdat)outfield
-      end if
+       call this%sub2grid_3a(grd,tsen(1,1,k),work,0,mype)
+       if(mype==0) then
+          do j=1,grd%nlon ; do i=1,grd%nlat
+             outfield(j,i)=work(i,j)
+          end do ; end do
+          write(ioutdat)outfield
+       end if
     end do
   
     do k=1,nvert
-      call this%sub2grid_3a(grd,q(1,1,k),work,0,mype)
-      if(mype==0) then
-        do j=1,grd%nlon ; do i=1,grd%nlat
-            outfield(j,i)=work(i,j)
-        end do ; end do
-        write(ioutdat)outfield
-      end if
+       call this%sub2grid_3a(grd,q(1,1,k),work,0,mype)
+       if(mype==0) then
+          do j=1,grd%nlon ; do i=1,grd%nlat
+             outfield(j,i)=work(i,j)
+          end do ; end do
+          write(ioutdat)outfield
+       end if
     end do
   
     call this%sub2grid_3a(grd,pd(1,1),work,0,mype)
     if(mype==0) then
-      do j=1,grd%nlon ; do i=1,grd%nlat
+       do j=1,grd%nlon ; do i=1,grd%nlat
           outfield(j,i)=work(i,j)
-      end do ; end do
-      write(ioutdat)outfield
+       end do ; end do
+       write(ioutdat)outfield
     end if
   
     if(mype==0) then
-      close(ioutdes)
-      close(ioutdat)
+       close(ioutdes)
+       close(ioutdat)
     end if
   end subroutine grads3a
   
@@ -2731,56 +2732,56 @@ contains
     real(r_single) startp,pinc
   
     if(mype==0) then
-      startp=1._r_single
-      pinc=1._r_single
-      ioutdes=98752
-      ioutdat=98753
-      write(filename,'(a,"x3d.ctl")')trim(fname)
-      write(dsname,'(a,"x3d.dat")')trim(fname)
-      open(unit=ioutdes,file=trim(filename),form='formatted')
-      open(unit=ioutdat,file=trim(dsname),form='unformatted')
-      rewind ioutdes
-      rewind ioutdat
-      do i=1,50000
-        write(datdes(i),'(112a1)')(blank,k=1,112)
-      end do
-      write(datdes(1),'("DSET ^",a50)')dsname
-      write(datdes(2),'("options big_endian sequential")')
-      write(datdes(3),'("TITLE ",a50)')title
-      write(datdes(4),'("UNDEF ",e11.2)')undef
-      next=5
-      write(datdes(next),'("XDEF ",i5," LINEAR ",f7.2,f7.2)')grd%nlon,startp,pinc
-      next=next+1
-      write(datdes(next),'("YDEF ",i5," LINEAR ",f7.2,f7.2)')grd%nlat,startp,pinc
-      next=next+1
-      write(datdes(next),'("ZDEF ",i5," LINEAR ",f7.2,f7.2)')nvert,startp,pinc
-      next=next+1
-      koutmax=1
-      write(datdes(next),'("TDEF ",i5," LINEAR 00Z01Jan2000 12hr")')koutmax
-      next=next+1
-      write(datdes(next),'("VARS 1")')
-      next=next+1
-      write(datdes(next),'("f3d   ",i5," 99 f3d   ")')nvert
-      next=next+1
-      write(datdes(next),'("ENDVARS")')
-      last=next
-      write(ioutdes,'(a112)')(datdes(i),i=1,last)
-      write(6,'(a112)')(datdes(i),i=1,last)
+       startp=1._r_single
+       pinc=1._r_single
+       ioutdes=98752
+       ioutdat=98753
+       write(filename,'(a,"x3d.ctl")')trim(fname)
+       write(dsname,'(a,"x3d.dat")')trim(fname)
+       open(unit=ioutdes,file=trim(filename),form='formatted')
+       open(unit=ioutdat,file=trim(dsname),form='unformatted')
+       rewind ioutdes
+       rewind ioutdat
+       do i=1,50000
+          write(datdes(i),'(112a1)')(blank,k=1,112)
+       end do
+       write(datdes(1),'("DSET ^",a50)')dsname
+       write(datdes(2),'("options big_endian sequential")')
+       write(datdes(3),'("TITLE ",a50)')title
+       write(datdes(4),'("UNDEF ",e11.2)')undef
+       next=5
+       write(datdes(next),'("XDEF ",i5," LINEAR ",f7.2,f7.2)')grd%nlon,startp,pinc
+       next=next+1
+       write(datdes(next),'("YDEF ",i5," LINEAR ",f7.2,f7.2)')grd%nlat,startp,pinc
+       next=next+1
+       write(datdes(next),'("ZDEF ",i5," LINEAR ",f7.2,f7.2)')nvert,startp,pinc
+       next=next+1
+       koutmax=1
+       write(datdes(next),'("TDEF ",i5," LINEAR 00Z01Jan2000 12hr")')koutmax
+       next=next+1
+       write(datdes(next),'("VARS 1")')
+       next=next+1
+       write(datdes(next),'("f3d   ",i5," 99 f3d   ")')nvert
+       next=next+1
+       write(datdes(next),'("ENDVARS")')
+       last=next
+       write(ioutdes,'(a112)')(datdes(i),i=1,last)
+       write(6,'(a112)')(datdes(i),i=1,last)
     endif
   
     do k=1,nvert
-      call this%sub2grid_3a(grd,field(1,1,k),work,0,mype)
-      if(mype==0) then
-        do j=1,grd%nlon ; do i=1,grd%nlat
-            outfield(j,i)=work(i,j)
-        end do ; end do
-        write(ioutdat)outfield
-      end if
+       call this%sub2grid_3a(grd,field(1,1,k),work,0,mype)
+       if(mype==0) then
+          do j=1,grd%nlon ; do i=1,grd%nlat
+             outfield(j,i)=work(i,j)
+          end do ; end do
+          write(ioutdat)outfield
+       end if
     end do
   
     if(mype==0) then
-      close(ioutdes)
-      close(ioutdat)
+       close(ioutdes)
+       close(ioutdat)
     end if
   
   end subroutine grads3d
@@ -2810,17 +2811,17 @@ contains
     mm1=mype+1
   
     do j=1,grd%lon1*grd%lat1
-      zsm(j)=zero
+       zsm(j)=zero
     end do
     call this%strip_grd(grd,sub,zsm)
     call mpi_gatherv(zsm,grd%ijn(mm1),mpi_rtype, &
                    work1,grd%ijn,grd%displs_g,mpi_rtype, &
                    gridpe,mpi_comm_world,ierror)
     if(mype==gridpe) then
-      do k=1,grd%iglobal
-        i=grd%ltosi(k) ; j=grd%ltosj(k)
-        grid(i,j)=work1(k)
-      end do
+       do k=1,grd%iglobal
+          i=grd%ltosi(k) ; j=grd%ltosj(k)
+          grid(i,j)=work1(k)
+       end do
     end if
   
   end subroutine sub2grid_3a
@@ -2936,24 +2937,24 @@ contains
     real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2),target::dum2
     character(24) filename
   
-  !      create simple regular grid
-          call gsi_gridcreate(grid_anl,grd_anl%lat2,grd_anl%lon2,grd_anl%nsig)
-          call gsi_gridcreate(grid_ens,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)
+  ! create simple regular grid
+    call gsi_gridcreate(grid_anl,grd_anl%lat2,grd_anl%lon2,grd_anl%nsig)
+    call gsi_gridcreate(grid_ens,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)
   
-  !      create two internal bundles, one on analysis grid and one on ensemble grid
+  ! create two internal bundles, one on analysis grid and one on ensemble grid
   
-         call gsi_bundlecreate (suba,grid_anl,'ensemble work',istatus, &
-                                   names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
-         if(istatus/=0) then
-            write(6,*)' in ens_spread_dualres_regional: trouble creating bundle_anl bundle'
-            call stop2(999)
-         endif
-         call gsi_bundlecreate (sube,grid_ens,'ensemble work ens',istatus, &
-                                   names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
-         if(istatus/=0) then
-            write(6,*)' ens_spread_dualres_regional: trouble creating bundle_ens bundle'
-            call stop2(999)
-         endif
+    call gsi_bundlecreate (suba,grid_anl,'ensemble work',istatus, &
+                              names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
+    if(istatus/=0) then
+       write(6,*)' in ens_spread_dualres_regional: trouble creating bundle_anl bundle'
+       call stop2(999)
+    endif
+    call gsi_bundlecreate (sube,grid_ens,'ensemble work ens',istatus, &
+                              names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
+    if(istatus/=0) then
+       write(6,*)' ens_spread_dualres_regional: trouble creating bundle_ens bundle'
+       call stop2(999)
+    endif
   
     sig_norm_inv=sqrt(n_ens-one)
   

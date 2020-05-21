@@ -46,11 +46,11 @@ public predictors, allocate_preds, deallocate_preds, &
 public:: predictors_getdim
 
 type predictors
-   real(r_kind), pointer :: values(:) => NULL()
+   real(r_kind), pointer :: values(:) => null()
 
-   real(r_kind), pointer :: predr(:) => NULL()
-   real(r_kind), pointer :: predp(:) => NULL()
-   real(r_kind), pointer :: predt(:) => NULL()
+   real(r_kind), pointer :: predr(:) => null()
+   real(r_kind), pointer :: predp(:) => null()
+   real(r_kind), pointer :: predt(:) => null()
 
    logical :: lallocated = .false.
 end type predictors
@@ -60,9 +60,9 @@ integer(i_kind),save :: nrclen,nsclen,npclen,ntclen
 logical :: llinit = .false.
 
 ! ----------------------------------------------------------------------
-INTERFACE ASSIGNMENT (=)
-MODULE PROCEDURE assign_scalar2preds, assign_preds2preds
-END INTERFACE
+interface assignment (=)
+module procedure assign_scalar2preds, assign_preds2preds
+end interface
 ! ----------------------------------------------------------------------
 contains
 ! ----------------------------------------------------------------------
@@ -166,7 +166,7 @@ subroutine allocate_preds(yst)
      call stop2(102)
   end if
 
-  ALLOCATE(yst%values(nrclen))
+  allocate(yst%values(nrclen))
   yst%values = zero
 
   ii=0
@@ -214,10 +214,10 @@ subroutine deallocate_preds(yst)
   type(predictors), intent(inout) :: yst
 
   if (yst%lallocated) then 
-     NULLIFY(yst%predr)
-     NULLIFY(yst%predp)
-     NULLIFY(yst%predt)
-     DEALLOCATE(yst%values)
+     nullify(yst%predr)
+     nullify(yst%predp)
+     nullify(yst%predt)
+     deallocate(yst%values)
      yst%lallocated = .false.
   else
      write(6,*) 'deallocate_preds warning: trying to dealloc() vector not allocated'
@@ -254,9 +254,9 @@ subroutine assign_scalar2preds(yst,pval)
   real(r_kind)    , intent(in   ) :: pval
   integer(i_kind) :: ii
 
-  DO ii=1,nrclen
+  do ii=1,nrclen
      yst%values(ii)=pval
-  ENDDO
+  enddo
 
   return
 end subroutine assign_scalar2preds
@@ -289,9 +289,9 @@ subroutine assign_preds2preds(yst,xst)
   type(predictors), intent(in   ) :: xst
   integer(i_kind) :: ii
 
-  DO ii=1,nrclen
+  do ii=1,nrclen
      yst%values(ii)=xst%values(ii)
-  ENDDO
+  enddo
 
   return
 end subroutine assign_preds2preds

@@ -56,15 +56,15 @@ subroutine fpvsx_ad( t, es, t_ad, es_ad, adjoint )
   real(r_kind) w
 
 !----------------------------------------------
-! RESET LOCAL ADJOINT VARIABLES
+! Reset local adjoint variables
 !----------------------------------------------
   tr_ad = zero
   w_ad = zero
 !----------------------------------------------
-! ROUTINE BODY
+! Routine body
 !----------------------------------------------
 !----------------------------------------------
-! FUNCTION AND TAPE COMPUTATIONS
+! Function and tape computations
 !----------------------------------------------
 
   tr = ttp/t
@@ -80,7 +80,7 @@ subroutine fpvsx_ad( t, es, t_ad, es_ad, adjoint )
   if (.not.adjoint) return
 
 !----------------------------------------------
-! ADJOINT COMPUTATIONS
+! Adjoint computations
 !----------------------------------------------
   if (t >= ttp) then
      tr_ad = tr_ad+es_ad*((-(psatk*tr**xa*xb*exp(xb*(one-tr))))+psatk*xa* &
@@ -143,15 +143,15 @@ subroutine fpvsx_tl( t, es, t_d, es_d )
   real(r_kind) w
 
 !----------------------------------------------
-! RESET LOCAL ADJOINT VARIABLES
+! Reset local adjoint variables
 !----------------------------------------------
   tr_d = zero
   w_d = zero
 !----------------------------------------------
-! ROUTINE BODY
+! Routine body
 !----------------------------------------------
 !----------------------------------------------
-! FUNCTION AND TAPE COMPUTATIONS
+! Function and tape computations
 !----------------------------------------------
 
   tr = ttp/t
@@ -176,5 +176,5 @@ subroutine fpvsx_tl( t, es, t_d, es_d )
            +(one-w)*psatk*xai*tr_d*tr**(xai-1)*exp(xbi*(one-tr)) &
            -xbi*tr_d*(one-w)*psatk*tr**xai*exp(xbi*(one-tr))
   endif
-RETURN
-END subroutine fpvsx_TL
+return
+end subroutine fpvsx_tl

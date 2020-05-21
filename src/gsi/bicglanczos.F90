@@ -29,22 +29,22 @@ module bicglanczos
 !   pcgprecond       - Apply preconditioning
 !
 ! Variable Definitions:
-!   LMPCGL  : .T. ====> precondition conjugate-gradient minimization
-!   R_MAX_CNUM_PC : Maximum allowed condition number for the preconditioner
-!   NPCVECS : number of vectors which make up the preconditioner
+!   lmpcgl  : .T. ====> precondition conjugate-gradient minimization
+!   r_max_cnum_pc : Maximum allowed condition number for the preconditioner
+!   npcvecs : number of vectors which make up the preconditioner
 !
-!   YVCGLPC: eigenvectors (from an earlier minimization)
+!   yvcglpc: eigenvectors (from an earlier minimization)
 !            that are used to construct the preconditioner.
-!   RCGLPC : eigenvalues (from an earlier minimization)
+!   rcglpc : eigenvalues (from an earlier minimization)
 !            that are used to construct the preconditioner.
-!   NVCGLPC: the number of eigenpairs used to form the preconditioner.
+!   nvcglpc: the number of eigenpairs used to form the preconditioner.
 !
-!   YVCGLEV: eigenvectors for the current minimization.
-!   RCGLEV : eigenvalues for the current minimization.
-!   NVCGLEV: the number of eigenpairs for the current minimization.
+!   yvcglev: eigenvectors for the current minimization.
+!   rcglev : eigenvalues for the current minimization.
+!   nvcglev: the number of eigenpairs for the current minimization.
 !
-!   YVCGLWK: work array of eigenvectors
-!   YUCGLWK: work array of eigenvectors
+!   yvcglwk: work array of eigenvectors
+!   yucglwk: work array of eigenvectors
 !
 ! attributes:
 !   language: f90
@@ -76,33 +76,33 @@ implicit none
 private
 save
 public pcglanczos, setup_pcglanczos, save_pcgprecond, setup_pcgprecond,& 
-       pcgprecond, LMPCGL
+       pcgprecond, lmpcgl
 
 !=============================================================
-logical      :: LTCOST_ = .false.
-logical      :: LMPCGL  = .false.
+logical      :: ltcost_ = .false.
+logical      :: lmpcgl  = .false.
 logical      :: allocated_work_vectors=.false.
-real(r_kind) :: R_MAX_CNUM_PC = 10.0_r_kind
+real(r_kind) :: r_max_cnum_pc = 10.0_r_kind
 real(r_kind) :: xmin_ritz = 1.0_r_kind
 real(r_kind) :: pkappa = 0.1_r_kind
-real(r_kind) :: CG_TOL = 0.001_r_kind
+real(r_kind) :: cg_tol = 0.001_r_kind
 
-integer(i_kind)           :: NPCVECS, NVCGLPC, NVCGLEV
-REAL(r_kind), ALLOCATABLE :: RCGLPC(:)
-REAL(r_kind), ALLOCATABLE :: RCGLEV(:)
+integer(i_kind)           :: npcvecs, nvcglpc, nvcglev
+real(r_kind), allocatable :: rcglpc(:)
+real(r_kind), allocatable :: rcglev(:)
 
 integer(i_kind)           :: nprt,maxiter
 
-TYPE(control_vector), ALLOCATABLE, DIMENSION(:) :: YVCGLPC
-TYPE(control_vector), ALLOCATABLE, DIMENSION(:) :: YVCGLEV
-TYPE(control_vector), ALLOCATABLE, DIMENSION(:) :: YUCGLEV
-TYPE(control_vector), ALLOCATABLE, DIMENSION(:) :: YVCGLWK
+type(control_vector), allocatable, dimension(:) :: yvcglpc
+type(control_vector), allocatable, dimension(:) :: yvcglev
+type(control_vector), allocatable, dimension(:) :: yucglev
+type(control_vector), allocatable, dimension(:) :: yvcglwk
 type(control_vector), allocatable, dimension(:) :: cglwork
 type(control_vector), allocatable, dimension(:) :: cglworkhat
 
 ! --------------------------------------
-integer(i_kind), PARAMETER :: N_DEFAULT_REAL_KIND = r_single
-integer(i_kind), PARAMETER :: N_DOUBLE_KIND       = r_double
+integer(i_kind), parameter :: n_default_real_kind = r_single
+integer(i_kind), parameter :: n_double_kind       = r_double
 
 !=============================================================
 contains
@@ -138,14 +138,14 @@ if (iorthomax>0) then
       cglwork(ii)=zero
       CALL allocate_cv(cglworkhat(ii))
       cglworkhat(ii)=zero
-   ENDDO
+   enddo
    allocated_work_vectors=.true.
 endif 
 
 if (jiter==kiterstart) then
-  NPCVECS=0
-  NVCGLPC=0
-  NVCGLEV=0
+  npcvecs=0
+  nvcglpc=0
+  nvcglev=0
 endif
 
  if (jiter>1 .and. ldsave )then
@@ -203,10 +203,10 @@ integer(i_kind)           :: kminit,kmaxevecs,kconv
 logical                   :: lsavinc
 
 ! --------------------------------------
-REAL             :: Z_DEFAULT_REAL      ! intentionally not real(r_kind)
-integer(i_kind), PARAMETER :: N_DEFAULT_REAL_KIND = KIND(Z_DEFAULT_REAL)
-DOUBLE PRECISION :: DL_DOUBLE_PRECISION ! intentionally not real(r_double)
-integer(i_kind), PARAMETER :: N_DOUBLE_KIND       = KIND(DL_DOUBLE_PRECISION)
+real             :: z_default_real      ! intentionally not real(r_kind)
+integer(i_kind), parameter :: n_default_real_kind = kind(z_default_real)
+double precision :: dl_double_precision ! intentionally not real(r_double)
+integer(i_kind), parameter :: n_double_kind       = kind(dl_double_precision)
 
 
 !<<<
@@ -218,12 +218,12 @@ integer              :: iortho
 !---------------------------------------------------
 
 #ifdef ibm_sp
-    logical,allocatable:: select(:)
-    integer(i_kind):: n,i,j,ldz
-    integer(i_kind):: iopt,lda,naux
-    integer(i_kind),allocatable:: indx(:)
-    real(r_kind),allocatable:: aux(:),w_order(:)
-    complex(r_kind),allocatable:: w(:),z(:)
+logical,allocatable:: select(:)
+integer(i_kind):: n,i,j,ldz
+integer(i_kind):: iopt,lda,naux
+integer(i_kind),allocatable:: indx(:)
+real(r_kind),allocatable:: aux(:),w_order(:)
+complex(r_kind),allocatable:: w(:),z(:)
 #endif
 
 ! Initialize timer
@@ -273,7 +273,7 @@ if(diag_precon) then
   call precond(diry)
 end if
 
-if(LMPCGL) then 
+if(lmpcgl) then 
    dirx=zero
    call pcgprecond(gradx,dirx)
    do jj=1,ilen
@@ -328,8 +328,8 @@ inner_iteration: do iter=1,kmaxit
 !    xtry%values(jj)=xhat%values(jj)+dirx%values(jj)
 !    ytry%values(jj)=yhat%values(jj)+diry%values(jj)
 !  end do
-   xtry=dirx
-   ytry=diry
+  xtry=dirx
+  ytry=diry
 
 ! Apply the Hessian
   lsavinc=.false.
@@ -358,7 +358,7 @@ inner_iteration: do iter=1,kmaxit
   if(iorthomax>0) then
     iortho=min(iter,iorthomax)
     do jm=iortho,1,-1
-       zdla = DOT_PRODUCT(gradx,cglworkhat(jm))
+       zdla = dot_product(gradx,cglworkhat(jm))
        do jj=1,ilen
           gradx%values(jj) = gradx%values(jj) - zdla*cglwork(jm)%values(jj)
        end do
@@ -367,7 +367,7 @@ inner_iteration: do iter=1,kmaxit
 
 ! Apply B or the preconditioner
 
-  if(LMPCGL) then 
+  if(lmpcgl) then 
      call pcgprecond(gradx,grady)
   else 
      call bkerror(gradx,grady)
@@ -395,7 +395,7 @@ inner_iteration: do iter=1,kmaxit
   if(iorthomax>0) then
      iortho=min(iter,iorthomax)
      do jm=iortho,1,-1
-        zdla = DOT_PRODUCT(grady,cglwork(jm))
+        zdla = dot_product(grady,cglwork(jm))
         do jj=1,ilen
            grady%values(jj) = grady%values(jj) - zdla*cglworkhat(jm)%values(jj)
         end do
@@ -472,138 +472,138 @@ if(kconv>0 .and. lsavevecs) then
 ! ------------------------------------------------------------------------------
 ! Lanczos diagnostics
 ! ------------------------------------------------------------------------------
-allocate(zdiag(0:kconv),ztoff(kconv),zwork(2*kconv))
-allocate(zritz(0:kconv),zbnds(0:kconv))
-allocate(zevecs(kconv+1,kconv+1))
+   allocate(zdiag(0:kconv),ztoff(kconv),zwork(2*kconv))
+   allocate(zritz(0:kconv),zbnds(0:kconv))
+   allocate(zevecs(kconv+1,kconv+1))
 
 ! Build tri-diagonal matrix
-info=0
-zdiag(0)=delta(0)
-do ii=1,kconv
-  zdiag(ii)=delta(ii)+beta(ii)*beta(ii)*delta(ii-1)
-enddo
-do ii=0,kconv
-  zdiag(ii)=zdiag(ii)*gam(ii)*gam(ii)
-enddo
-do ii=1,kconv
-  ztoff(ii)=-beta(ii)*gam(ii)*gam(ii-1)*delta(ii-1)
-enddo
+   info=0
+   zdiag(0)=delta(0)
+   do ii=1,kconv
+     zdiag(ii)=delta(ii)+beta(ii)*beta(ii)*delta(ii-1)
+   enddo
+   do ii=0,kconv
+     zdiag(ii)=zdiag(ii)*gam(ii)*gam(ii)
+   enddo
+   do ii=1,kconv
+     ztoff(ii)=-beta(ii)*gam(ii)*gam(ii-1)*delta(ii-1)
+   enddo
 
-zge=sqrt(DOT_PRODUCT(cglwork(kconv+1),cglwork(kconv+1)))
-zge=zge* ztoff(kconv)
+   zge=sqrt(dot_product(cglwork(kconv+1),cglwork(kconv+1)))
+   zge=zge* ztoff(kconv)
 
 #ifdef ibm_sp
 
-!   Use ESSL
-    iopt=1
-    n=kconv+1
-    lda=n
-    ldz=kconv+1
-    naux=2*n
-    allocate(select(n),indx(n),w(n),z(n),aux(naux),w_order(n))
+!  Use ESSL
+   iopt=1
+   n=kconv+1
+   lda=n
+   ldz=kconv+1
+   naux=2*n
+   allocate(select(n),indx(n),w(n),z(n),aux(naux),w_order(n))
 
-!   Additional initializations
-    select=.false.    ! select not used for iopt=1
-    w=zero
-    z=zero
-    aux=zero
+!  Additional initializations
+   select=.false.    ! select not used for iopt=1
+   w=zero
+   z=zero
+   aux=zero
 
-!   Call ESSL routines
-    if (r_kind == N_DEFAULT_REAL_KIND) then
-       call SGEEV(iopt, zdiag, lda, w, z, ldz, select, n, aux, naux)
-       do i=1,n
-          w_order(i)=real(w(i),r_kind)
-       end do
-       call SSORTX(w_order,1,n,indx)  ! sort eigenvalues into ascending order
-    ELSEIF (r_kind == N_DOUBLE_KIND) then
-       call DGEEV(iopt, zdiag, lda, w, z, ldz, select, n, aux, naux)
-       do i=1,n
-          w_order(i)=real(w(i),r_kind)
-       end do
-       call DSORTX(w_order,1,n,indx)  ! sort eigenvalues into ascending order
-    else
-       write(6,*)'STEQR: r_kind is neither default real nor double precision'
-       call stop2(319)
-    endif
+!  Call ESSL routines
+   if (r_kind == n_default_real_kind) then
+      call sgeev(iopt, zdiag, lda, w, z, ldz, select, n, aux, naux)
+      do i=1,n
+         w_order(i)=real(w(i),r_kind)
+      end do
+      call ssortx(w_order,1,n,indx)  ! sort eigenvalues into ascending order
+   elseif (r_kind == n_double_kind) then
+      call dgeev(iopt, zdiag, lda, w, z, ldz, select, n, aux, naux)
+      do i=1,n
+         w_order(i)=real(w(i),r_kind)
+      end do
+      call dsortx(w_order,1,n,indx)  ! sort eigenvalues into ascending order
+   else
+      write(6,*)'STEQR: r_kind is neither default real nor double precision'
+      call stop2(319)
+   endif
 
-!   Load ESSL eigenvalues and eigenvectors into output arrays
-    do j=1,n
-       zdiag(j)=w_order(j)          ! eigenvalues
-       jj=indx(j)
-       ztoff(j)=real(z(j),r_kind) ! eigenvectors
-    end do
+!  Load ESSL eigenvalues and eigenvectors into output arrays
+   do j=1,n
+      zdiag(j)=w_order(j)          ! eigenvalues
+      jj=indx(j)
+      ztoff(j)=real(z(j),r_kind) ! eigenvectors
+   end do
 
-!   Deallocate work arrays
-    deallocate(select,indx,w,z,aux,w_order)
+!  Deallocate work arrays
+   deallocate(select,indx,w,z,aux,w_order)
 
 #else
 
 !   Use LAPACK
 ! Get eigen-pairs of tri-diagonal matrix
-if(iter /= 1) then
-   if (r_kind==N_DEFAULT_REAL_KIND) then
-      call SSTEQR('I',kconv+1,zdiag,ztoff,zevecs,kconv+1,zwork,info)
-   elseif (r_kind==N_DOUBLE_KIND) then
-      call DSTEQR('I',kconv+1,zdiag,ztoff,zevecs,kconv+1,zwork,info)
-   else
-      write(6,*)trim(myname),': r_kind is neither default real nor double precision'
-      call stop2(319)
+   if(iter /= 1) then
+      if (r_kind==n_default_real_kind) then
+         call ssteqr('I',kconv+1,zdiag,ztoff,zevecs,kconv+1,zwork,info)
+      elseif (r_kind==n_double_kind) then
+         call dsteqr('I',kconv+1,zdiag,ztoff,zevecs,kconv+1,zwork,info)
+      else
+         write(6,*)trim(myname),': r_kind is neither default real nor double precision'
+         call stop2(319)
+      endif
+   else 
+      zevecs(1,1) =one
    endif
-else 
-   zevecs(1,1) =one
-endif
 #endif
 
-if (info/=0) then
-  write(6,*)trim(myname),': SSTEQR/DSTEQR returned info=',info
-  call stop2(320)
-endif
+   if (info/=0) then
+     write(6,*)trim(myname),': SSTEQR/DSTEQR returned info=',info
+     call stop2(320)
+   endif
 
 ! Error bounds
-zritz(:)=zdiag(:)
-zbndlm = zeta*zritz(kconv)
+   zritz(:)=zdiag(:)
+   zbndlm = zeta*zritz(kconv)
 
-if (mype==0) write(6,*)trim(myname),': ritz values are:  ',zritz(:)
-zbnds(:)=abs(zge*zevecs(kconv+1,:))
-if (mype==0) write(6,*)trim(myname),': error bounds are: ',zbnds(:)
-zbnds(:)=zbnds(:)/zritz(:)
-if (mype==0) write(6,*)trim(myname),': relative errors:  ',zbnds(:)
+   if (mype==0) write(6,*)trim(myname),': ritz values are:  ',zritz(:)
+   zbnds(:)=abs(zge*zevecs(kconv+1,:))
+   if (mype==0) write(6,*)trim(myname),': error bounds are: ',zbnds(:)
+   zbnds(:)=zbnds(:)/zritz(:)
+   if (mype==0) write(6,*)trim(myname),': relative errors:  ',zbnds(:)
 
 ! Compute the eigenvectors
 
 !if (lsavevecs) then
 
-   NVCGLEV = 0
+   nvcglev = 0
    do jk=iter,1,-1
-      if (zbnds(jk) <= pkappa .AND. zritz(jk) > xmin_ritz) then
-         NVCGLEV=NVCGLEV+1
+      if (zbnds(jk) <= pkappa .and. zritz(jk) > xmin_ritz) then
+         nvcglev=nvcglev+1
       endif
-   ENDDO
+   enddo
    if (mype==0) write(6,*) &
-        & 'Number of eigenpairs converged to requested accuracy NVCGLEV=',NVCGLEV
-   
-   NVCGLEV= min(nwrvecs,NVCGLEV) 
-   if(mype==0) write(6,*) 'Number of eigenvectors to be calculated is', NVCGLEV
-   
-   ALLOCATE(RCGLEV(NVCGLEV))
-   ALLOCATE(YVCGLEV(NVCGLEV))
-   ALLOCATE(YUCGLEV(NVCGLEV))
-   DO ii=1,NVCGLEV
-      CALL allocate_cv(YVCGLEV(ii))
-      CALL allocate_cv(YUCGLEV(ii))
-   ENDDO
+          'Number of eigenpairs converged to requested accuracy NVCGLEV=',nvcglev
+
+   nvcglev= min(nwrvecs,nvcglev) 
+   if(mype==0) write(6,*) 'Number of eigenvectors to be calculated is', nvcglev
+
+   allocate(rcglev(nvcglev))
+   allocate(yvcglev(nvcglev))
+   allocate(yucglev(nvcglev))
+   do ii=1,nvcglev
+      call allocate_cv(yvcglev(ii))
+      call allocate_cv(yucglev(ii))
+   enddo
 
    ii=0
    do jk=iter,1,-1
-      if (zbnds(jk) <= pkappa .AND. zritz(jk) > xmin_ritz .AND. ii < NVCGLEV) then
+      if (zbnds(jk) <= pkappa .and. zritz(jk) > xmin_ritz .and. ii < nvcglev) then
          ii = ii+1
-         RCGLEV(ii) = zritz(jk)
-         YVCGLEV(ii) = zero
-         YUCGLEV(ii) = zero
+         rcglev(ii) = zritz(jk)
+         yvcglev(ii) = zero
+         yucglev(ii) = zero
          xtry=zero
          ytry=zero
          isize=size(xtry%values)
-    
+ 
          do jm=1,iter
             do jj=1,isize
                xtry%values(jj)=xtry%values(jj)+cglwork(jm)%values(jj)*zevecs(jm,jk)
@@ -614,62 +614,62 @@ if (mype==0) write(6,*)trim(myname),': relative errors:  ',zbnds(:)
                ytry%values(jj)= ytry%values(jj)+cglworkhat(jm)%values(jj)*zevecs(jm,jk)
             enddo
          enddo
-         zdla=DOT_PRODUCT(xtry,ytry)
+         zdla=dot_product(xtry,ytry)
          do jj=1,isize
             xtry%values(jj)=xtry%values(jj)/sqrt(zdla)
             ytry%values(jj)=ytry%values(jj)/sqrt(zdla)
          end do
-         
+      
          do jj=1,isize
-            YVCGLEV(ii)%values(jj) = xtry%values(jj)
-            YUCGLEV(ii)%values(jj) = ytry%values(jj)
+            yvcglev(ii)%values(jj) = xtry%values(jj)
+            yucglev(ii)%values(jj) = ytry%values(jj)
          end do
 
          do jm=1,ii-1
-            zdla=DOT_PRODUCT (YUCGLEV(jm),YVCGLEV(ii))
+            zdla=dot_product (yucglev(jm),yvcglev(ii))
             do jj=1,isize
-               YVCGLEV(ii)%values(jj) = YVCGLEV(ii)%values(jj) - zdla*YVCGLEV(jm)%values(jj)
+               yvcglev(ii)%values(jj) = yvcglev(ii)%values(jj) - zdla*yvcglev(jm)%values(jj)
             enddo
          enddo
          do jm=1,ii-1
-            zdla=DOT_PRODUCT (YVCGLEV(jm),YUCGLEV(ii))
+            zdla=dot_product (yvcglev(jm),yucglev(ii))
             do jj=1,isize
-               YUCGLEV(ii)%values(jj) = YUCGLEV(ii)%values(jj) - zdla*YUCGLEV(jm)%values(jj)
+               yucglev(ii)%values(jj) = yucglev(ii)%values(jj) - zdla*yucglev(jm)%values(jj)
             enddo
          enddo
-         zdla=DOT_PRODUCT (YVCGLEV(ii),YUCGLEV(ii))
-         YVCGLEV(ii)%values = YVCGLEV(ii)%values / sqrt(zdla)
-         YUCGLEV(ii)%values = YUCGLEV(ii)%values / sqrt(zdla)
+         zdla=dot_product (yvcglev(ii),yucglev(ii))
+         yvcglev(ii)%values = yvcglev(ii)%values / sqrt(zdla)
+         yucglev(ii)%values = yucglev(ii)%values / sqrt(zdla)
       endif
-   ENDDO
+   enddo
    
    ii=0
    do jk=iter,1,-1
-      if((zbnds(jk) < pkappa).and.(zritz(jk) > xmin_ritz) .and. (ii < NVCGLEV)) then 
+      if((zbnds(jk) < pkappa).and.(zritz(jk) > xmin_ritz) .and. (ii < nvcglev)) then 
          ii = ii+1
-         YVCGLEV(ii) = zero 
-         YVCGLEV(ii)%values = YUCGLEV(ii)%values  ! Since we only need to save ytry, we keep in YVCGLEV
+         yvcglev(ii) = zero 
+         yvcglev(ii)%values = yucglev(ii)%values  ! Since we only need to save ytry, we keep in YVCGLEV
                                                   ! to avoid too much change in the preconditiong code
       end if
    end do
-   
-   if (mype==0.and.NVCGLEV>0) then
+
+   if (mype==0.and.nvcglev>0) then
       write(6,'(/)')
       write(6,*)'Calculated eigenvectors for the following eigenvalues:'
-      write(6,*)'RCGLEV=',RCGLEV(1:NVCGLEV)
+      write(6,*)'RCGLEV=',rcglev(1:nvcglev)
       write(6,'(/)')
    endif
    
-   DO jj=1,NVCGLEV
-      CALL DEALLOCATE_CV(YUCGLEV(jj))
-   ENDDO
-   DEALLOCATE(YUCGLEV)
+   do jj=1,nvcglev
+      call deallocate_cv(yucglev(jj))
+   enddo
+   deallocate(yucglev)
 !end if
 
 
-deallocate(zevecs)
-deallocate(zritz,zbnds)
-deallocate(zdiag,ztoff,zwork)
+   deallocate(zevecs)
+   deallocate(zritz,zbnds)
+   deallocate(zdiag,ztoff,zwork)
 endif ! kconv>0
 ! ------------------------------------------------------------------------------
 ! Release memory
@@ -702,87 +702,87 @@ end subroutine pcglanczos
 ! ------------------------------------------------------------------------------
 subroutine save_pcgprecond(ldsave)
 
-IMPLICIT NONE
+implicit none
 
 logical, intent(in)       :: ldsave
 
-INTEGER(i_kind)           :: ii,jj, iunit, ivecs, isize
-REAL(r_kind)              :: zz
-CHARACTER(LEN=13)         :: clfile
+integer(i_kind)           :: ii,jj, iunit, ivecs, isize
+real(r_kind)              :: zz
+character(len=13)         :: clfile
 
 if (ldsave) then
 
 !--- read eigenvalues of the preconditioner
 
-  NPCVECS = NVCGLEV+NVCGLPC
+  npcvecs = nvcglev+nvcglpc
   if (mype==0) write(6,*)'save_pcgprecond: NVCGLEV,NVCGLPC,NPCVECS=', &
-                                      & NVCGLEV,NVCGLPC,NPCVECS
+                                        nvcglev,nvcglpc,npcvecs
 
-  ALLOCATE(YVCGLWK(npcvecs))
+  allocate(yvcglwk(npcvecs))
   ii=0
 
 !--- copy preconditioner vectors to work file
 
-  if (mype==0.and.NVCGLPC>0) write(6,*)'save_pcgprecond: RCGLPC=',RCGLPC
-  DO jj=1,NVCGLPC
+  if (mype==0.and.nvcglpc>0) write(6,*)'save_pcgprecond: RCGLPC=',rcglpc
+  do jj=1,nvcglpc
     ii=ii+1
-    zz=sqrt(RCGLPC(jj)-one)
-    CALL allocate_cv(YVCGLWK(ii))
-    YVCGLWK(ii)%values = zz * YVCGLPC(jj)%values
-    CALL deallocate_cv(YVCGLPC(jj))
-  ENDDO
-  IF (ALLOCATED(YVCGLPC)) DEALLOCATE(YVCGLPC)
-  IF (ALLOCATED( RCGLPC)) deallocate( RCGLPC)
-  NVCGLPC=0
+    zz=sqrt(rcglpc(jj)-one)
+    call allocate_cv(yvcglwk(ii))
+    yvcglwk(ii)%values = zz * yvcglpc(jj)%values
+    call deallocate_cv(yvcglpc(jj))
+  enddo
+  if (allocated(yvcglpc)) deallocate(yvcglpc)
+  if (allocated( rcglpc)) deallocate( rcglpc)
+  nvcglpc=0
 
 !--- copy and transform eigenvectors of preconditioned Hessian
  
-  if (mype==0.and.NVCGLEV>0) write(6,*)'save_pcgprecond: RCGLEV=',RCGLEV
-  DO jj=1,NVCGLEV
+  if (mype==0.and.nvcglev>0) write(6,*)'save_pcgprecond: RCGLEV=',rcglev
+  do jj=1,nvcglev
     ii=ii+1
-  !  zz=sqrt(one - one/RCGLEV(jj))
-    zz = MIN(10._r_kind,RCGLEV(jj))
+  !  zz=sqrt(one - one/rcglev(jj))
+    zz = min(10._r_kind,rcglev(jj))
     zz = sqrt(one - one/zz)
-    CALL allocate_cv(YVCGLWK(ii))
-    YVCGLWK(ii)%values = zz * YVCGLEV(jj)%values
-    CALL deallocate_cv(YVCGLEV(jj))
-  ENDDO
+    call allocate_cv(yvcglwk(ii))
+    yvcglwk(ii)%values = zz * yvcglev(jj)%values
+    call deallocate_cv(yvcglev(jj))
+  enddo
  
-  IF (ALLOCATED(YVCGLEV)) DEALLOCATE(YVCGLEV)
-  IF (ALLOCATED(YUCGLEV)) DEALLOCATE(YUCGLEV)
-  IF (ALLOCATED( RCGLEV)) deallocate( RCGLEV)
-  NVCGLEV=0
+  if (allocated(yvcglev)) deallocate(yvcglev)
+  if (allocated(yucglev)) deallocate(yucglev)
+  if (allocated( rcglev)) deallocate( rcglev)
+  nvcglev=0
   
 !--- Save the eigenvectors
 
 !+  if (l4dvar) then
-   ivecs=MIN(npcvecs,nwrvecs)
-    DO jj=1,ivecs
-      clfile='evec.XXX.YYYY'
-      WRITE(clfile(6:8) ,'(I3.3)') jiter
-      WRITE(clfile(10:13),'(I4.4)') jj
-      call write_cv(YVCGLWK(jj),clfile)
-    ENDDO
+  ivecs=min(npcvecs,nwrvecs)
+  do jj=1,ivecs
+    clfile='evec.XXX.YYYY'
+    write(clfile(6:8) ,'(I3.3)') jiter
+    write(clfile(10:13),'(I4.4)') jj
+    call write_cv(yvcglwk(jj),clfile)
+  enddo
 
-    if (mype==0) then
-      iunit=78
-      clfile='numpcvecs.XXX'
-      WRITE(clfile(11:13),'(I3.3)') jiter
-      open(iunit,file=clfile)
-      write(iunit,*)ivecs
-      close(iunit)
-    endif
+  if (mype==0) then
+    iunit=78
+    clfile='numpcvecs.XXX'
+    write(clfile(11:13),'(I3.3)') jiter
+    open(iunit,file=clfile)
+    write(iunit,*)ivecs
+    close(iunit)
+  endif
 
-    DO ii=1,npcvecs
-      CALL deallocate_cv(YVCGLWK(ii))
-    ENDDO
-    DEALLOCATE(YVCGLWK)
+  do ii=1,npcvecs
+    call deallocate_cv(yvcglwk(ii))
+  enddo
+  deallocate(yvcglwk)
 !+  else
 !+   ! do ii=nwrvecs+1,npcvecs   ! nwrvecs here is -1, the do loop would with 0 ==> allocation pb.  
 !+     do ii=1,npcvecs 
-!+      CALL deallocate_cv(YVCGLWK(ii))
+!+      CALL deallocate_cv(yvcglwk(ii))
 !+    enddo
-   !  npcvecs=MIN(npcvecs,nwrvecs)
+   !  npcvecs=min(npcvecs,nwrvecs)
 !+  endif
 
 endif
@@ -811,75 +811,75 @@ end subroutine save_pcgprecond
 ! ------------------------------------------------------------------------------
 subroutine setup_pcgprecond()
 
-IMPLICIT NONE
+implicit none
 
-INTEGER(i_kind)                :: jj,jk,ii,iunit
-CHARACTER(LEN=13)              :: clfile
+integer(i_kind)                :: jj,jk,ii,iunit
+character(len=13)              :: clfile
 
 !--- read vectors, apply change of variable and copy to work file
 
 
 !+ if (l4dvar) then
-  iunit=78
-  clfile='numpcvecs.XXX'
-  WRITE(clfile(11:13),'(I3.3)') jiter-1
-  open(iunit,file=clfile)
-  read(iunit,*)npcvecs
-  close(iunit)
-  if (npcvecs<1) then
-    write(6,*)'setup_pcgprecond: no vectors for preconditioner',npcvecs
-    call stop2(140)
-  end if
+iunit=78
+clfile='numpcvecs.XXX'
+write(clfile(11:13),'(I3.3)') jiter-1
+open(iunit,file=clfile)
+read(iunit,*)npcvecs
+close(iunit)
+if (npcvecs<1) then
+  write(6,*)'setup_pcgprecond: no vectors for preconditioner',npcvecs
+  call stop2(140)
+end if
 
  
 
-  ALLOCATE(YVCGLWK(npcvecs))
-  DO ii=1,npcvecs
-    CALL allocate_cv(YVCGLWK(ii))
-  ENDDO
+allocate(yvcglwk(npcvecs))
+do ii=1,npcvecs
+  call allocate_cv(yvcglwk(ii))
+enddo
 
   
 
-  do jj=1,npcvecs
-    clfile='evec.XXX.YYYY'
-    WRITE(clfile(6:8) ,'(I3.3)') jiter-1
-    WRITE(clfile(10:13),'(I4.4)') jj
-    call read_cv(yvcglwk(jj),clfile)
-  ENDDO
+do jj=1,npcvecs
+  clfile='evec.XXX.YYYY'
+  write(clfile(6:8) ,'(I3.3)') jiter-1
+  write(clfile(10:13),'(I4.4)') jj
+  call read_cv(yvcglwk(jj),clfile)
+enddo
 !+ endif
   
 
-  IF (ALLOCATED(YVCGLPC)) THEN
-     DO jj=1,NVCGLPC
-        CALL DEALLOCATE_CV(YVCGLPC(jj))
-     ENDDO
-     DEALLOCATE(YVCGLPC)
-     NVCGLPC=0
-  ENDIF
-  IF (ALLOCATED(RCGLPC)) DEALLOCATE(RCGLPC)
+if (allocated(yvcglpc)) then
+   do jj=1,nvcglpc
+      call deallocate_cv(yvcglpc(jj))
+   enddo
+   deallocate(yvcglpc)
+   nvcglpc=0
+endif
+if (allocated(rcglpc)) deallocate(rcglpc)
  
-  NVCGLPC = npcvecs
+nvcglpc = npcvecs
   
-  ALLOCATE (YVCGLPC(NVCGLPC))
-  DO jj=1,NVCGLPC
-    CALL ALLOCATE_CV(YVCGLPC(jj))
-  ENDDO
+allocate (yvcglpc(nvcglpc))
+do jj=1,nvcglpc
+  call allocate_cv(yvcglpc(jj))
+enddo
  
-  DO jj=1,NVCGLPC
-     YVCGLPC(jj) = zero
-     do jk=1,YVCGLPC(jj)%lencv
-        YVCGLPC(jj)%values(jk) = yvcglwk(jj)%values(jk)
-     enddo
-  ENDDO
-  LMPCGL = .true.
+do jj=1,nvcglpc
+   yvcglpc(jj) = zero
+   do jk=1,yvcglpc(jj)%lencv
+      yvcglpc(jj)%values(jk) = yvcglwk(jj)%values(jk)
+   enddo
+enddo
+lmpcgl = .true.
 
 
-DO jj=1,npcvecs
-   CALL DEALLOCATE_CV(YVCGLWK(jj))
-ENDDO
-DEALLOCATE(YVCGLWK)
+do jj=1,npcvecs
+   call deallocate_cv(yvcglwk(jj))
+enddo
+deallocate(yvcglwk)
 
-NPCVECS = 0
+npcvecs = 0
 
 
 return
@@ -891,17 +891,17 @@ end subroutine setup_pcgprecond
 ! ------------------------------------------------------------------------------
 subroutine pcgprecond(xcvx,ycvx)
 
-IMPLICIT NONE
+implicit none
 
-TYPE(CONTROL_VECTOR) , INTENT(INout)  :: xcvx
-TYPE(CONTROL_VECTOR) , INTENT(INOUT) :: ycvx
+type(control_vector) , intent(inout) :: xcvx
+type(control_vector) , intent(inout) :: ycvx
 
-REAL(r_kind)        :: zdp(NVCGLPC)
-INTEGER(i_kind)     :: jk, ji
+real(r_kind)        :: zdp(nvcglpc)
+integer(i_kind)     :: jk, ji
  
 ycvx=zero
-do jk=1,NVCGLPC
-   zdp(jk) = 0.
+do jk=1,nvcglpc
+   zdp(jk) = 0._r_kind
 enddo
 
 !Apply B
@@ -922,15 +922,15 @@ if(l_hyb_ens) then
 end if
 
 
-do jk=1,NVCGLPC
-    zdp(jk) = DOT_PRODUCT(xcvx,YVCGLPC(jk))
+do jk=1,nvcglpc
+    zdp(jk) = dot_product(xcvx,yvcglpc(jk))
 enddo
 
-DO jk=1,NVCGLPC
-   DO ji=1,xcvx%lencv
-      ycvx%values(ji) = ycvx%values(ji) - YVCGLPC(jk)%values(ji) * zdp(jk)
-   ENDDO
-ENDDO
+do jk=1,nvcglpc
+   do ji=1,xcvx%lencv
+      ycvx%values(ji) = ycvx%values(ji) - yvcglpc(jk)%values(ji) * zdp(jk)
+   enddo
+enddo
 
 return
 end subroutine pcgprecond

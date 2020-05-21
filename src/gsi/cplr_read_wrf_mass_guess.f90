@@ -1,17 +1,18 @@
 module read_wrf_mass_guess_mod
-use abstract_read_wrf_mass_guess_mod
+use abstract_read_wrf_mass_guess_mod, only:abstract_read_wrf_mass_guess_class
 use kinds, only: i_kind
-  type, extends(abstract_read_wrf_mass_guess_class) :: read_wrf_mass_guess_class 
-  contains
-    procedure, pass(this) :: read_wrf_mass_netcdf_guess => read_wrf_mass_netcdf_guess_wrf
-    procedure, pass(this) :: read_wrf_mass_binary_guess => read_wrf_mass_binary_guess_wrf 
-    procedure, nopass :: transfer_jbuf2ibuf
-    procedure, pass(this) :: generic_grid2sub
-    procedure, nopass :: expand_ibuf
-    procedure, nopass :: move_ibuf_hg
-    procedure, nopass :: move_ibuf_ihg
-    procedure, nopass :: reorder2_s
-  end type read_wrf_mass_guess_class 
+implicit none
+type, extends(abstract_read_wrf_mass_guess_class) :: read_wrf_mass_guess_class 
+contains
+  procedure, pass(this) :: read_wrf_mass_netcdf_guess => read_wrf_mass_netcdf_guess_wrf
+  procedure, pass(this) :: read_wrf_mass_binary_guess => read_wrf_mass_binary_guess_wrf 
+  procedure, nopass :: transfer_jbuf2ibuf
+  procedure, pass(this) :: generic_grid2sub
+  procedure, nopass :: expand_ibuf
+  procedure, nopass :: move_ibuf_hg
+  procedure, nopass :: move_ibuf_ihg
+  procedure, nopass :: reorder2_s
+end type read_wrf_mass_guess_class 
 contains
   subroutine read_wrf_mass_binary_guess_wrf(this,mype)
   !$$$  subprogram documentation block
@@ -106,10 +107,10 @@ contains
     use constants, only: zero,one,grav,fv,zero_single,rd_over_cp_mass,one_tenth,h300,r10,r100
     use constants, only: r0_01
     use gsi_io, only: lendian_in,verbose
-    use rapidrefresh_cldsurf_mod, only: l_hydrometeor_bkio,l_gsd_soilTQ_nudge,i_use_2mq4b,i_use_2mt4b
+    use rapidrefresh_cldsurf_mod, only: l_hydrometeor_bkio,l_gsd_soiltq_nudge,i_use_2mq4b,i_use_2mt4b
     use wrf_mass_guess_mod, only: soil_temp_cld,isli_cld,ges_xlon,ges_xlat,ges_tten,create_cld_grids
-    use gsi_bundlemod, only: GSI_BundleGetPointer
-    use gsi_metguess_mod, only: gsi_metguess_get,GSI_MetGuess_Bundle
+    use gsi_bundlemod, only: gsi_bundlegetpointer
+    use gsi_metguess_mod, only: gsi_metguess_get,gsi_metguess_bundle
     use native_endianness, only: byte_swap
     use mpeu_util, only: die
     implicit none
@@ -169,27 +170,27 @@ contains
     integer(i_kind) ier, istatus
     integer(i_kind) n_actual_clouds
   
-    real(r_kind), pointer :: ges_ps_it (:,:  )=>NULL()
-    real(r_kind), pointer :: ges_th2_it(:,:  )=>NULL()
-    real(r_kind), pointer :: ges_q2_it (:,:  )=>NULL()
-    real(r_kind), pointer :: ges_tsk_it(:,:  )=>NULL()
-    real(r_kind), pointer :: ges_soilt1_it(:,:)=>NULL()
-    real(r_kind), pointer :: ges_tslb_it(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_smois_it(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_z_it  (:,:  )=>NULL()
-    real(r_kind), pointer :: ges_u_it  (:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_v_it  (:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_tv_it (:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_q_it  (:,:,:)=>NULL()
+    real(r_kind), pointer :: ges_ps_it (:,:  )=>null()
+    real(r_kind), pointer :: ges_th2_it(:,:  )=>null()
+    real(r_kind), pointer :: ges_q2_it (:,:  )=>null()
+    real(r_kind), pointer :: ges_tsk_it(:,:  )=>null()
+    real(r_kind), pointer :: ges_soilt1_it(:,:)=>null()
+    real(r_kind), pointer :: ges_tslb_it(:,:,:)=>null()
+    real(r_kind), pointer :: ges_smois_it(:,:,:)=>null()
+    real(r_kind), pointer :: ges_z_it  (:,:  )=>null()
+    real(r_kind), pointer :: ges_u_it  (:,:,:)=>null()
+    real(r_kind), pointer :: ges_v_it  (:,:,:)=>null()
+    real(r_kind), pointer :: ges_tv_it (:,:,:)=>null()
+    real(r_kind), pointer :: ges_q_it  (:,:,:)=>null()
   
-    real(r_kind), pointer :: ges_qc (:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_qi (:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_qr (:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_qs (:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_qg (:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_qnr(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_qni(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_qnc(:,:,:)=>NULL()
+    real(r_kind), pointer :: ges_qc (:,:,:)=>null()
+    real(r_kind), pointer :: ges_qi (:,:,:)=>null()
+    real(r_kind), pointer :: ges_qr (:,:,:)=>null()
+    real(r_kind), pointer :: ges_qs (:,:,:)=>null()
+    real(r_kind), pointer :: ges_qg (:,:,:)=>null()
+    real(r_kind), pointer :: ges_qnr(:,:,:)=>null()
+    real(r_kind), pointer :: ges_qni(:,:,:)=>null()
+    real(r_kind), pointer :: ges_qnc(:,:,:)=>null()
   
     integer(i_kind) iadd
     character(132) memoryorder
@@ -224,14 +225,14 @@ contains
   !       Get pointer for each of the hydrometeors from guess at time index "it"
           ier=0
           it=ntguessig
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql', ges_qc, istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qi', ges_qi, istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qr', ges_qr, istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qg', ges_qg, istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnr',ges_qnr,istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qni',ges_qni,istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnc',ges_qnc,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'ql', ges_qc, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qi', ges_qi, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qr', ges_qr, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qg', ges_qg, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qnr',ges_qnr,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qni',ges_qni,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qnc',ges_qnc,istatus );ier=ier+istatus
           if (ier/=0) n_actual_clouds=0
        end if
   
@@ -239,7 +240,7 @@ contains
        num_mass_fields=15+5*lm+2*nsig_soil
 !    The 9 3D cloud analysis fields are: ql,qi,qr,qs,qg,qnr,qni,qnc,tt
        if(l_hydrometeor_bkio .and. n_actual_clouds>0) num_mass_fields=num_mass_fields+9*lm+2    
-       if(l_gsd_soilTQ_nudge) num_mass_fields=num_mass_fields+2
+       if(l_gsd_soiltq_nudge) num_mass_fields=num_mass_fields+2
        num_loc_groups=num_mass_fields/npe
        if(print_verbose) then
           write(6,'(" read_wrf_mass_guess: lm            =",i6)')lm
@@ -282,26 +283,26 @@ contains
   
   ! get pointers for typical meteorological fields
           ier=0
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ps',ges_ps_it,istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'z', ges_z_it, istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'u', ges_u_it, istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'v', ges_v_it, istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tv',ges_tv_it,istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q' ,ges_q_it, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'ps',ges_ps_it,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'z', ges_z_it, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'u', ges_u_it, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'v', ges_v_it, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'tv',ges_tv_it,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'q' ,ges_q_it, istatus );ier=ier+istatus
           if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields, ier =',ier)
   
-          if (l_gsd_soilTQ_nudge .or.i_use_2mt4b>0) then
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'th2m', ges_th2_it,istatus );ier=ier+istatus 
+          if (l_gsd_soiltq_nudge .or.i_use_2mt4b>0) then
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'th2m', ges_th2_it,istatus );ier=ier+istatus 
              if (ier/=0) call die(trim(myname),'cannot get pointers for th2m, ier=',ier)
           endif
 
-          if (l_gsd_soilTQ_nudge) then
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tskn', ges_tsk_it,istatus );ier=ier+istatus
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tsoil',ges_soilt1_it,istatus );ier=ier+istatus
+          if (l_gsd_soiltq_nudge) then
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'tskn', ges_tsk_it,istatus );ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'tsoil',ges_soilt1_it,istatus );ier=ier+istatus
              if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields, ier =',ier)
           endif
           if (i_use_2mq4b>0) then
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q2m'  ,ges_q2_it,istatus);ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'q2m'  ,ges_q2_it,istatus);ier=ier+istatus
              if (ier/=0) call die(trim(myname),'cannot get pointers for q2m, ier =',ier)
           endif
   
@@ -310,14 +311,14 @@ contains
   
   ! get pointer to relevant instance of cloud-related background
              ier=0
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql', ges_qc, istatus );ier=ier+istatus
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qi', ges_qi, istatus );ier=ier+istatus
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qr', ges_qr, istatus );ier=ier+istatus
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qg', ges_qg, istatus );ier=ier+istatus
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnr',ges_qnr,istatus );ier=ier+istatus
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qni',ges_qni,istatus );ier=ier+istatus
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnc',ges_qnc,istatus );ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'ql', ges_qc, istatus );ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qi', ges_qi, istatus );ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qr', ges_qr, istatus );ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qg', ges_qg, istatus );ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qnr',ges_qnr,istatus );ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qni',ges_qni,istatus );ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qnc',ges_qnc,istatus );ier=ier+istatus
              if (ier/=0 .and. mype == 0) then
                  write(6,*)'READ_WRF_MASS_BINARY_GUESS: getpointer failed, cannot do cloud analysis'
                  l_hydrometeor_bkio=.false.
@@ -544,7 +545,7 @@ contains
           offset(i)=n_position ; length(i)=im*jm ; igtype(i)=1 ; kdim(i)=1
           if(print_verbose) write(6,*)' q2 i,igtype(i),offset(i) = ',i,igtype(i),offset(i)
   
-          if(l_gsd_soilTQ_nudge) then
+          if(l_gsd_soiltq_nudge) then
              i=i+1 ; i_soilt1=i                                               ! soilt1
              read(lendian_in) n_position
              offset(i)=n_position ; length(i)=im*jm ; igtype(i)=1 ; kdim(i)=1
@@ -876,10 +877,10 @@ contains
                 this_length=(jend(mype)-jbegin(mype)+1)*im*lm
                 call mpi_file_read_at(mfcst,this_offset,jbuf(1,1,jbegin(mype)),this_length, &
                                     mpi_integer,status,ierror)
-             if(byte_swap) then
-                num_swap=this_length
-                call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
-             end if
+                if(byte_swap) then
+                   num_swap=this_length
+                   call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
+                end if
                 call this%transfer_jbuf2ibuf(jbuf,jbegin(mype),jend(mype),ibuf,kbegin(mype),kend(mype), &
                    jbegin,jend,kbegin,kend,mype,npe,im,jm,lm,im+1,jm+1,i_qc,i_qc+lm-1)
                 deallocate(jbuf)
@@ -892,10 +893,10 @@ contains
                 this_length=(jend(mype)-jbegin(mype)+1)*im*lm
                 call mpi_file_read_at(mfcst,this_offset,jbuf(1,1,jbegin(mype)),this_length, &
                                     mpi_integer,status,ierror)
-             if(byte_swap) then
-                num_swap=this_length
-                call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
-             end if
+                if(byte_swap) then
+                   num_swap=this_length
+                   call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
+                end if
                 call this%transfer_jbuf2ibuf(jbuf,jbegin(mype),jend(mype),ibuf,kbegin(mype),kend(mype), &
                    jbegin,jend,kbegin,kend,mype,npe,im,jm,lm,im+1,jm+1,i_qr,i_qr+lm-1)
                 deallocate(jbuf)
@@ -908,10 +909,10 @@ contains
                 this_length=(jend(mype)-jbegin(mype)+1)*im*lm
                 call mpi_file_read_at(mfcst,this_offset,jbuf(1,1,jbegin(mype)),this_length, &
                                     mpi_integer,status,ierror)
-             if(byte_swap) then
-                num_swap=this_length
-                call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
-             end if
+                if(byte_swap) then
+                   num_swap=this_length
+                   call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
+                end if
                 call this%transfer_jbuf2ibuf(jbuf,jbegin(mype),jend(mype),ibuf,kbegin(mype),kend(mype), &
                    jbegin,jend,kbegin,kend,mype,npe,im,jm,lm,im+1,jm+1,i_qi,i_qi+lm-1)
                 deallocate(jbuf)
@@ -924,10 +925,10 @@ contains
                 this_length=(jend(mype)-jbegin(mype)+1)*im*lm
                 call mpi_file_read_at(mfcst,this_offset,jbuf(1,1,jbegin(mype)),this_length, &
                                     mpi_integer,status,ierror)
-             if(byte_swap) then
-                num_swap=this_length
-                call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
-             end if
+                if(byte_swap) then
+                   num_swap=this_length
+                   call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
+                end if
                 call this%transfer_jbuf2ibuf(jbuf,jbegin(mype),jend(mype),ibuf,kbegin(mype),kend(mype), &
                    jbegin,jend,kbegin,kend,mype,npe,im,jm,lm,im+1,jm+1,i_qs,i_qs+lm-1)
                 deallocate(jbuf)
@@ -940,10 +941,10 @@ contains
                 this_length=(jend(mype)-jbegin(mype)+1)*im*lm
                 call mpi_file_read_at(mfcst,this_offset,jbuf(1,1,jbegin(mype)),this_length, &
                                     mpi_integer,status,ierror)
-             if(byte_swap) then
-                num_swap=this_length
-                call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
-             end if
+                if(byte_swap) then
+                   num_swap=this_length
+                   call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
+                end if
                 call this%transfer_jbuf2ibuf(jbuf,jbegin(mype),jend(mype),ibuf,kbegin(mype),kend(mype), &
                    jbegin,jend,kbegin,kend,mype,npe,im,jm,lm,im+1,jm+1,i_qg,i_qg+lm-1)
                 deallocate(jbuf)
@@ -956,10 +957,10 @@ contains
                 this_length=(jend(mype)-jbegin(mype)+1)*im*lm
                 call mpi_file_read_at(mfcst,this_offset,jbuf(1,1,jbegin(mype)),this_length, &
                                     mpi_integer,status,ierror)
-             if(byte_swap) then
-                num_swap=this_length
-                call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
-             end if
+                if(byte_swap) then
+                   num_swap=this_length
+                   call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
+                end if
                 call this%transfer_jbuf2ibuf(jbuf,jbegin(mype),jend(mype),ibuf,kbegin(mype),kend(mype), &
                    jbegin,jend,kbegin,kend,mype,npe,im,jm,lm,im+1,jm+1,i_qnr,i_qnr+lm-1)
                 deallocate(jbuf)
@@ -972,10 +973,10 @@ contains
                 this_length=(jend(mype)-jbegin(mype)+1)*im*lm
                 call mpi_file_read_at(mfcst,this_offset,jbuf(1,1,jbegin(mype)),this_length, &
                                   mpi_integer,status,ierror)
-             if(byte_swap) then
-                num_swap=this_length
-                call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
-             end if
+                if(byte_swap) then
+                   num_swap=this_length
+                   call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
+                end if
                 call this%transfer_jbuf2ibuf(jbuf,jbegin(mype),jend(mype),ibuf,kbegin(mype),kend(mype), &
                    jbegin,jend,kbegin,kend,mype,npe,im,jm,lm,im+1,jm+1,i_qni,i_qni+lm-1)
                 deallocate(jbuf)
@@ -988,10 +989,10 @@ contains
                 this_length=(jend(mype)-jbegin(mype)+1)*im*lm
                 call mpi_file_read_at(mfcst,this_offset,jbuf(1,1,jbegin(mype)),this_length, &
                                     mpi_integer,status,ierror)
-             if(byte_swap) then
-                num_swap=this_length
-                call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
-             end if
+                if(byte_swap) then
+                   num_swap=this_length
+                   call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
+                end if
                 call this%transfer_jbuf2ibuf(jbuf,jbegin(mype),jend(mype),ibuf,kbegin(mype),kend(mype), &
                    jbegin,jend,kbegin,kend,mype,npe,im,jm,lm,im+1,jm+1,i_qnc,i_qnc+lm-1)
                 deallocate(jbuf)
@@ -1005,10 +1006,10 @@ contains
                 this_length=(jend(mype)-jbegin(mype)+1)*im*lm
                 call mpi_file_read_at(mfcst,this_offset,jbuf(1,1,jbegin(mype)),this_length, &
                                     mpi_integer,status,ierror)
-             if(byte_swap) then
-                num_swap=this_length
-                call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
-             end if
+                if(byte_swap) then
+                   num_swap=this_length
+                   call to_native_endianness_i4(jbuf(1,1,jbegin(mype)),num_swap)
+                end if
                 call this%transfer_jbuf2ibuf(jbuf,jbegin(mype),jend(mype),ibuf,kbegin(mype),kend(mype), &
                    jbegin,jend,kbegin,kend,mype,npe,im,jm,lm,im+1,jm+1,i_tt,i_tt+lm-1)
                 deallocate(jbuf)
@@ -1020,10 +1021,10 @@ contains
           do k=kbegin(mype),kend(mype)
              if(kdim(k)==1.or.kord(k)==1) then
                 call mpi_file_read_at(mfcst,offset(k),ibuf(1,k),length(k),mpi_integer,status,ierror)
-             if(byte_swap) then
-                num_swap=length(k)
-                call to_native_endianness_i4(ibuf(1,k),num_swap)
-             end if
+                if(byte_swap) then
+                   num_swap=length(k)
+                   call to_native_endianness_i4(ibuf(1,k),num_swap)
+                end if
                 if(igtype(k)==1) call this%expand_ibuf(ibuf(1,k),im  ,jm  ,im+1,jm+1)
                 if(igtype(k)==-1)call this%expand_ibuf(ibuf(1,k),im  ,jm  ,im+1,jm+1)
                 if(igtype(k)==2) call this%expand_ibuf(ibuf(1,k),im+1,jm  ,im+1,jm+1)
@@ -1134,11 +1135,11 @@ contains
              end do
           end do
   
-          if(l_gsd_soilTQ_nudge) then
+          if(l_gsd_soiltq_nudge) then
              ier=0
-             call GSI_BundleGetPointer (GSI_MetGuess_Bundle(it),'smoist',ges_smois_it,istatus)
+             call gsi_bundlegetpointer (gsi_metguess_bundle(it),'smoist',ges_smois_it,istatus)
              ier=ier+istatus
-             call GSI_BundleGetPointer (GSI_MetGuess_Bundle(it),'tslb'  ,ges_tslb_it ,istatus)
+             call gsi_bundlegetpointer (gsi_metguess_bundle(it),'tslb'  ,ges_tslb_it ,istatus)
              ier=ier+istatus
              if (ier/=0) call die(trim(myname),'cannot get pointers for tslb/smois, ier =',ier)
              ksmois=i_smois-1
@@ -1171,7 +1172,7 @@ contains
           do i=1,lon2
              do j=1,lat2
   
-  !             NOTE:  MASS surface elevation is multiplied by g, so divide by g below
+  !             Note:  MASS surface elevation is multiplied by g, so divide by g below
                 ges_z_it(j,i) = all_loc(j,i,i_fis)/grav
   
   !             Convert psfc units of mb and then convert to log(psfc) in cb
@@ -1187,15 +1188,15 @@ contains
                    ges_xlon(j,i,it)=real(all_loc(j,i,i_xlon),r_kind)/rad2deg_single
                    ges_xlat(j,i,it)=real(all_loc(j,i,i_xlat),r_kind)/rad2deg_single
                 endif
-                if(l_gsd_soilTQ_nudge) then
+                if(l_gsd_soiltq_nudge) then
                    ges_th2_it(j,i)=real(all_loc(j,i,i_th2),r_kind)
                    ges_tsk_it(j,i)=real(all_loc(j,i,i_tsk),r_kind)
                    ges_soilt1_it(j,i)=real(all_loc(j,i,i_soilt1),r_kind)
                 endif
                 if(i_use_2mq4b>0) then
-                  ges_q2_it(j,i)=real(all_loc(j,i,i_q2),r_kind)
+                   ges_q2_it(j,i)=real(all_loc(j,i,i_q2),r_kind)
   ! Convert 2m guess mixing ratio to specific humidity
-                  ges_q2_it(j,i) = ges_q2_it(j,i)/(one+ges_q2_it(j,i))
+                   ges_q2_it(j,i) = ges_q2_it(j,i)/(one+ges_q2_it(j,i))
                 endif
   
              end do
@@ -1328,7 +1329,7 @@ contains
   !   input argument list:
   !     mype     - pe number
   !
-  !     NOTES:  need to pay special attention to various surface fields to make sure
+  !     Notes:  need to pay special attention to various surface fields to make sure
   !             they are correct (check units).  fact10 needs to be computed from 
   !             10m wind, which is included in wrf mass interface file.
   !
@@ -1361,9 +1362,9 @@ contains
     use rapidrefresh_cldsurf_mod, only: l_hydrometeor_bkio,l_gsd_soiltq_nudge
     use rapidrefresh_cldsurf_mod, only: i_use_2mq4b,i_use_2mt4b
     use wrf_mass_guess_mod, only: soil_temp_cld,isli_cld,ges_xlon,ges_xlat,ges_tten,create_cld_grids
-    use gsi_bundlemod, only: GSI_BundleGetPointer
-    use gsi_metguess_mod, only: gsi_metguess_get,GSI_MetGuess_Bundle
-    use gsi_chemguess_mod, only: GSI_ChemGuess_Bundle, gsi_chemguess_get
+    use gsi_bundlemod, only: gsi_bundlegetpointer
+    use gsi_metguess_mod, only: gsi_metguess_get,gsi_metguess_bundle
+    use gsi_chemguess_mod, only: gsi_chemguess_bundle, gsi_chemguess_get
     use mpeu_util, only: die
     use guess_grids, only: ges_w_btlev
     use wrf_vars_mod, only : w_exist, dbz_exist
@@ -1419,46 +1420,46 @@ contains
     character(len=5),allocatable :: cvar(:)
     real(r_kind)   :: ges_rho, tsn
   
-    real(r_kind), pointer :: ges_ps_it (:,:  )=>NULL()
-    real(r_kind), pointer :: ges_th2_it(:,:  )=>NULL()
-    real(r_kind), pointer :: ges_q2_it (:,:  )=>NULL()
-    real(r_kind), pointer :: ges_tsk_it(:,:  )=>NULL()
-    real(r_kind), pointer :: ges_soilt1_it(:,:)=>NULL()
-    real(r_kind), pointer :: ges_tslb_it(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_smois_it(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_z_it  (:,:  )=>NULL()
-    real(r_kind), pointer :: ges_u_it  (:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_v_it  (:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_tv_it (:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_q_it  (:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_w_it  (:,:,:)=>NULL()
+    real(r_kind), pointer :: ges_ps_it (:,:  )=>null()
+    real(r_kind), pointer :: ges_th2_it(:,:  )=>null()
+    real(r_kind), pointer :: ges_q2_it (:,:  )=>null()
+    real(r_kind), pointer :: ges_tsk_it(:,:  )=>null()
+    real(r_kind), pointer :: ges_soilt1_it(:,:)=>null()
+    real(r_kind), pointer :: ges_tslb_it(:,:,:)=>null()
+    real(r_kind), pointer :: ges_smois_it(:,:,:)=>null()
+    real(r_kind), pointer :: ges_z_it  (:,:  )=>null()
+    real(r_kind), pointer :: ges_u_it  (:,:,:)=>null()
+    real(r_kind), pointer :: ges_v_it  (:,:,:)=>null()
+    real(r_kind), pointer :: ges_tv_it (:,:,:)=>null()
+    real(r_kind), pointer :: ges_q_it  (:,:,:)=>null()
+    real(r_kind), pointer :: ges_w_it  (:,:,:)=>null()
   
-    real(r_kind), pointer :: ges_qc (:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_qi (:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_qr (:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_qs (:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_qg (:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_qnr(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_qni(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_qnc(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_dbz(:,:,:)=>NULL()
+    real(r_kind), pointer :: ges_qc (:,:,:)=>null()
+    real(r_kind), pointer :: ges_qi (:,:,:)=>null()
+    real(r_kind), pointer :: ges_qr (:,:,:)=>null()
+    real(r_kind), pointer :: ges_qs (:,:,:)=>null()
+    real(r_kind), pointer :: ges_qg (:,:,:)=>null()
+    real(r_kind), pointer :: ges_qnr(:,:,:)=>null()
+    real(r_kind), pointer :: ges_qni(:,:,:)=>null()
+    real(r_kind), pointer :: ges_qnc(:,:,:)=>null()
+    real(r_kind), pointer :: ges_dbz(:,:,:)=>null()
   
-    real(r_kind), pointer :: ges_sulf(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_bc1(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_bc2(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_oc1(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_oc2(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_dust1(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_dust2(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_dust3(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_dust4(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_dust5(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_seas1(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_seas2(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_seas3(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_seas4(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_p25(:,:,:)=>NULL()
-    real(r_kind), pointer :: ges_pm2_5(:,:,:)=>NULL()
+    real(r_kind), pointer :: ges_sulf(:,:,:)=>null()
+    real(r_kind), pointer :: ges_bc1(:,:,:)=>null()
+    real(r_kind), pointer :: ges_bc2(:,:,:)=>null()
+    real(r_kind), pointer :: ges_oc1(:,:,:)=>null()
+    real(r_kind), pointer :: ges_oc2(:,:,:)=>null()
+    real(r_kind), pointer :: ges_dust1(:,:,:)=>null()
+    real(r_kind), pointer :: ges_dust2(:,:,:)=>null()
+    real(r_kind), pointer :: ges_dust3(:,:,:)=>null()
+    real(r_kind), pointer :: ges_dust4(:,:,:)=>null()
+    real(r_kind), pointer :: ges_dust5(:,:,:)=>null()
+    real(r_kind), pointer :: ges_seas1(:,:,:)=>null()
+    real(r_kind), pointer :: ges_seas2(:,:,:)=>null()
+    real(r_kind), pointer :: ges_seas3(:,:,:)=>null()
+    real(r_kind), pointer :: ges_seas4(:,:,:)=>null()
+    real(r_kind), pointer :: ges_p25(:,:,:)=>null()
+    real(r_kind), pointer :: ges_pm2_5(:,:,:)=>null()
     logical print_verbose
     associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
     end associate
@@ -1483,23 +1484,23 @@ contains
   !       Get pointer for each of the hydrometeors from guess at time index "it"
           it=ntguessig
           ier=0
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql', ges_qc, istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qi', ges_qi, istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qr', ges_qr, istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qg', ges_qg, istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnr',ges_qnr,istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qni',ges_qni,istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnc',ges_qnc,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'ql', ges_qc, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qi', ges_qi, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qr', ges_qr, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qg', ges_qg, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qnr',ges_qnr,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qni',ges_qni,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qnc',ges_qnc,istatus );ier=ier+istatus
           if (ier/=0) n_actual_clouds=0
        end if
        if( dbz_exist )then
-         call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'dbz',ges_dbz,istatus );ier=ier+istatus
+         call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'dbz',ges_dbz,istatus );ier=ier+istatus
        end if
-       if (l_gsd_soilTQ_nudge) then
+       if (l_gsd_soiltq_nudge) then
           ier=0
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tskn', ges_tsk_it, istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tsoil',ges_soilt1_it,istatus);ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'tskn', ges_tsk_it, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'tsoil',ges_soilt1_it,istatus);ier=ier+istatus
           if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields, ier =',ier)
        endif
   
@@ -1512,7 +1513,7 @@ contains
        num_mass_fields=num_mass_fields_base
 !    The 9 3D cloud analysis fields are: ql,qi,qr,qs,qg,qnr,qni,qnc,tt
        if(l_hydrometeor_bkio .and.n_actual_clouds>0) num_mass_fields=num_mass_fields+9*lm+2
-       if(l_gsd_soilTQ_nudge) num_mass_fields=num_mass_fields+2*(nsig_soil-1)+1
+       if(l_gsd_soiltq_nudge) num_mass_fields=num_mass_fields+2*(nsig_soil-1)+1
        if(i_use_2mt4b > 0 ) num_mass_fields=num_mass_fields + 2
        if(i_use_2mq4b > 0 .and. i_use_2mt4b <=0 ) num_mass_fields=num_mass_fields + 1
 
@@ -1656,7 +1657,7 @@ contains
        i=i+1 ; i_v10=i                                               ! v10
        write(identity(i),'("record ",i3,"--v10")')i
        jsig_skip(i)=0 ; igtype(i)=1
-       if(l_gsd_soilTQ_nudge) then
+       if(l_gsd_soiltq_nudge) then
           i_smois=i+1
           do k=1,nsig_soil
              i=i+1                                                      ! smois
@@ -1685,7 +1686,7 @@ contains
           write(identity(i),'("record ",i3,"--q2")')i
           jsig_skip(i)=0 ; igtype(i)=1
        endif
-       if(l_gsd_soilTQ_nudge) then
+       if(l_gsd_soiltq_nudge) then
           i=i+1 ; i_soilt1=i                                         ! soilt1
           write(identity(i),'("record ",i3,"--soilt1(",i2,")")')i,k
           jsig_skip(i)=0 ; igtype(i)=1
@@ -1880,40 +1881,40 @@ contains
   
   ! typical meteorological fields
           ier=0
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ps',ges_ps_it,istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'z', ges_z_it, istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'u', ges_u_it, istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'v', ges_v_it, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'ps',ges_ps_it,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'z', ges_z_it, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'u', ges_u_it, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'v', ges_v_it, istatus );ier=ier+istatus
           if (w_exist) &
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'w', ges_w_it, istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tv',ges_tv_it,istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q' ,ges_q_it, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'w', ges_w_it, istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'tv',ges_tv_it,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'q' ,ges_q_it, istatus );ier=ier+istatus
           if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields, ier =',ier)
           if(i_use_2mt4b > 0 .or. i_use_2mq4b > 0) then
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it),'q2m',ges_q2_it,istatus ); ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it),'q2m',ges_q2_it,istatus ); ier=ier+istatus
              if (ier/=0) call die(trim(myname),'cannot get pointers for q2m, ier =',ier)
           endif
           if (i_use_2mt4b > 0) then
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'th2m',ges_th2_it, istatus );ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'th2m',ges_th2_it, istatus );ier=ier+istatus
              if (ier/=0) call die(trim(myname),'cannot get pointers for th2m,ier =',ier)
           endif
-          if (l_gsd_soilTQ_nudge) then
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tskn',ges_tsk_it, istatus );ier=ier+istatus 
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tsoil',ges_soilt1_it,istatus);ier=ier+istatus
+          if (l_gsd_soiltq_nudge) then
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'tskn',ges_tsk_it, istatus );ier=ier+istatus 
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'tsoil',ges_soilt1_it,istatus);ier=ier+istatus
              if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields, ier =',ier)
           endif
   
   ! hydrometeors
           if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
   !          Get pointer for each of the hydrometeors from guess at time index "it"
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ql', ges_qc, istatus );ier=ier+istatus
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qi', ges_qi, istatus );ier=ier+istatus
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qr', ges_qr, istatus );ier=ier+istatus
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qg', ges_qg, istatus );ier=ier+istatus
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnr',ges_qnr,istatus );ier=ier+istatus
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qni',ges_qni,istatus );ier=ier+istatus
-             call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'qnc',ges_qnc,istatus );ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'ql', ges_qc, istatus );ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qi', ges_qi, istatus );ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qr', ges_qr, istatus );ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qs', ges_qs, istatus );ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qg', ges_qg, istatus );ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qnr',ges_qnr,istatus );ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qni',ges_qni,istatus );ier=ier+istatus
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'qnc',ges_qnc,istatus );ier=ier+istatus
              kqc=i_0+i_qc-1
              kqr=i_0+i_qr-1
              kqs=i_0+i_qs-1
@@ -1925,13 +1926,13 @@ contains
              ktt=i_0+i_tt-1
           endif
           if( dbz_exist ) then
-            call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'dbz',ges_dbz,istatus );ier=ier+istatus
-            if( if_model_dbz )kdbz=i_0+i_dbz-1
+             call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'dbz',ges_dbz,istatus );ier=ier+istatus
+             if( if_model_dbz )kdbz=i_0+i_dbz-1
           end if
           if ( laeroana_gocart ) then
   
              if (aero_ratios) then 
-                IF (mype==0) write(6,*) 'aero_ratios = .true. disabled - reset aero_ratios = .false. Aborting'
+                if (mype==0) write(6,*) 'aero_ratios = .true. disabled - reset aero_ratios = .false. Aborting'
                 call stop2(3)
              endif
   
@@ -1945,51 +1946,51 @@ contains
              do iv = 1, n_gocart_var
                 if ( ier == 0 ) then
                    select case ( trim(cvar(iv)) )
-                   case ( 'sulf' )
-                      call GSI_BundleGetPointer(GSI_ChemGuess_Bundle(it),cvar(iv),ges_sulf,istatus);ier=ier+istatus                                                              
-                      indx_sulf = iv
-                   case ( 'bc1' )
-                      call GSI_BundleGetPointer(GSI_ChemGuess_Bundle(it),cvar(iv),ges_bc1,istatus);ier=ier+istatus                                                              
-                      indx_bc1 = iv
-                   case ( 'bc2' )
-                      call GSI_BundleGetPointer(GSI_ChemGuess_Bundle(it),cvar(iv),ges_bc2,istatus);ier=ier+istatus                                                              
-                      indx_bc2 = iv
-                   case ( 'oc1' )
-                      call GSI_BundleGetPointer(GSI_ChemGuess_Bundle(it),cvar(iv),ges_oc1,istatus);ier=ier+istatus                                                              
-                      indx_oc1 = iv
-                   case ( 'oc2' )
-                      call GSI_BundleGetPointer(GSI_ChemGuess_Bundle(it),cvar(iv),ges_oc2,istatus);ier=ier+istatus                                                              
-                      indx_oc2 = iv
-                   case ( 'dust1' )
-                      call GSI_BundleGetPointer(GSI_ChemGuess_Bundle(it),cvar(iv),ges_dust1,istatus);ier=ier+istatus                                                              
-                      indx_dust1 = iv
-                   case ( 'dust2' )
-                      call GSI_BundleGetPointer(GSI_ChemGuess_Bundle(it),cvar(iv),ges_dust2,istatus);ier=ier+istatus                                                              
-                      indx_dust2 = iv
-                   case ( 'dust3' )
-                      call GSI_BundleGetPointer(GSI_ChemGuess_Bundle(it),cvar(iv),ges_dust3,istatus);ier=ier+istatus                                                              
-                      indx_dust3 = iv
-                   case ( 'dust4' )
-                      call GSI_BundleGetPointer(GSI_ChemGuess_Bundle(it),cvar(iv),ges_dust4,istatus);ier=ier+istatus                                                              
-                      indx_dust4 = iv
-                   case ( 'dust5' )
-                      call GSI_BundleGetPointer(GSI_ChemGuess_Bundle(it),cvar(iv),ges_dust5,istatus);ier=ier+istatus                                                              
-                      indx_dust5 = iv
-                   case ( 'seas1' )
-                      call GSI_BundleGetPointer(GSI_ChemGuess_Bundle(it),cvar(iv),ges_seas1,istatus);ier=ier+istatus                                                              
-                      indx_seas1 = iv
-                   case ( 'seas2' )
-                      call GSI_BundleGetPointer(GSI_ChemGuess_Bundle(it),cvar(iv),ges_seas2,istatus);ier=ier+istatus                                                              
-                      indx_seas2 = iv
-                   case ( 'seas3' )
-                      call GSI_BundleGetPointer(GSI_ChemGuess_Bundle(it),cvar(iv),ges_seas3,istatus);ier=ier+istatus                                                              
-                      indx_seas3 = iv
-                   case ( 'seas4' )
-                      call GSI_BundleGetPointer(GSI_ChemGuess_Bundle(it),cvar(iv),ges_seas4,istatus);ier=ier+istatus                                                              
-                      indx_seas4 = iv
-                   case ( 'p25' )
-                      call GSI_BundleGetPointer(GSI_ChemGuess_Bundle(it),cvar(iv),ges_p25,istatus);ier=ier+istatus                                                              
-                      indx_p25 = iv
+                      case ( 'sulf' )
+                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),cvar(iv),ges_sulf,istatus);ier=ier+istatus                                                              
+                         indx_sulf = iv
+                      case ( 'bc1' )
+                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),cvar(iv),ges_bc1,istatus);ier=ier+istatus                                                              
+                         indx_bc1 = iv
+                      case ( 'bc2' )
+                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),cvar(iv),ges_bc2,istatus);ier=ier+istatus                                                              
+                         indx_bc2 = iv
+                      case ( 'oc1' )
+                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),cvar(iv),ges_oc1,istatus);ier=ier+istatus                                                              
+                         indx_oc1 = iv
+                      case ( 'oc2' )
+                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),cvar(iv),ges_oc2,istatus);ier=ier+istatus                                                              
+                         indx_oc2 = iv
+                      case ( 'dust1' )
+                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),cvar(iv),ges_dust1,istatus);ier=ier+istatus                                                              
+                         indx_dust1 = iv
+                      case ( 'dust2' )
+                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),cvar(iv),ges_dust2,istatus);ier=ier+istatus                                                              
+                         indx_dust2 = iv
+                      case ( 'dust3' )
+                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),cvar(iv),ges_dust3,istatus);ier=ier+istatus                                                              
+                         indx_dust3 = iv
+                      case ( 'dust4' )
+                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),cvar(iv),ges_dust4,istatus);ier=ier+istatus                                                              
+                         indx_dust4 = iv
+                      case ( 'dust5' )
+                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),cvar(iv),ges_dust5,istatus);ier=ier+istatus                                                              
+                         indx_dust5 = iv
+                      case ( 'seas1' )
+                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),cvar(iv),ges_seas1,istatus);ier=ier+istatus                                                              
+                         indx_seas1 = iv
+                      case ( 'seas2' )
+                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),cvar(iv),ges_seas2,istatus);ier=ier+istatus                                                              
+                         indx_seas2 = iv
+                      case ( 'seas3' )
+                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),cvar(iv),ges_seas3,istatus);ier=ier+istatus                                                              
+                         indx_seas3 = iv
+                      case ( 'seas4' )
+                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),cvar(iv),ges_seas4,istatus);ier=ier+istatus                                                              
+                         indx_seas4 = iv
+                      case ( 'p25' )
+                         call gsi_bundlegetpointer(gsi_chemguess_bundle(it),cvar(iv),ges_p25,istatus);ier=ier+istatus                                                              
+                         indx_p25 = iv
                    end select
                 endif
                 if (ier/=0 .and. mype == 0) then
@@ -2009,7 +2010,7 @@ contains
              iv=1
              cvar(1)='pm2_5'
   
-             call GSI_BundleGetPointer(GSI_ChemGuess_Bundle(it),cvar(iv),ges_pm2_5,istatus)
+             call gsi_bundlegetpointer(gsi_chemguess_bundle(it),cvar(iv),ges_pm2_5,istatus)
              ier=ier+istatus
              if (ier/=0 .and. mype == 0) then
                 write(6,*)'READ_WRF_MASS_NETCDF_GUESS: getpointer failed ',  &
@@ -2068,7 +2069,7 @@ contains
                    q_integral(j,i) = q_integral(j,i)+deltasigma*ges_q_it(j,i,k)
                    q_integralc4h(j,i) = q_integralc4h(j,i)+deltasigmac4h*ges_q_it(j,i,k)
                    if(w_exist) then
-                     ges_w_it(j,i,k) = 0.5*real((all_loc(j,i,kw)+all_loc(j,i,kw+1)),r_kind)
+                      ges_w_it(j,i,k) = 0.5_r_kind*real((all_loc(j,i,kw)+all_loc(j,i,kw+1)),r_kind)
                    end if
   
   !                Convert guess mixing ratio to specific humidity
@@ -2144,11 +2145,11 @@ contains
           endif
   
   
-          if(l_gsd_soilTQ_nudge) then
+          if(l_gsd_soiltq_nudge) then
              ier=0
-             call GSI_BundleGetPointer (GSI_MetGuess_Bundle(it),'smoist',ges_smois_it,istatus)
+             call gsi_bundlegetpointer (gsi_metguess_bundle(it),'smoist',ges_smois_it,istatus)
              ier=ier+istatus
-             call GSI_BundleGetPointer (GSI_MetGuess_Bundle(it),'tslb'  ,ges_tslb_it ,istatus)
+             call gsi_bundlegetpointer (gsi_metguess_bundle(it),'tslb'  ,ges_tslb_it ,istatus)
              ier=ier+istatus
              if (ier/=0) call die(trim(myname),'cannot get pointers for tslb/smois, ier =',ier)
              ksmois=i_0+i_smois-1
@@ -2190,7 +2191,7 @@ contains
           do i=1,lon2
              do j=1,lat2
   
-  !             NOTE:  MASS surface elevation is multiplied by g, so divide by g below
+  !             Note:  MASS surface elevation is multiplied by g, so divide by g below
                 ges_z_it(j,i)    = real(all_loc(j,i,i_0+i_fis),r_kind)/grav
   
   !             Convert psfc units of mb and then convert to log(psfc) in cb
@@ -2203,7 +2204,7 @@ contains
                    ges_th2_it(j,i)=real(all_loc(j,i,i_0+i_th2),r_kind)
                 endif
   ! for GSD soil nudging
-                if(l_gsd_soilTQ_nudge) then
+                if(l_gsd_soiltq_nudge) then
                    ges_tsk_it(j,i)=real(all_loc(j,i,i_0+i_tsk),r_kind)
                    ges_soilt1_it(j,i)=real(all_loc(j,i,i_0+i_soilt1),r_kind)
                 endif

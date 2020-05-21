@@ -77,14 +77,14 @@ subroutine bkgvar_rewgt(sfvar,vpvar,tvar,psvar,mype)
   real(r_kind) max_dps,max_dps0,rmax_dps0
   integer(i_kind) i,j,k,l,nsmth,mm1,nf,ier,istatus
 
-  real(r_kind),dimension(:,:  ),pointer::ges_ps_01 =>NULL()
-  real(r_kind),dimension(:,:  ),pointer::ges_ps_nf =>NULL()
-  real(r_kind),dimension(:,:,:),pointer::ges_div_01=>NULL()
-  real(r_kind),dimension(:,:,:),pointer::ges_div_nf=>NULL()
-  real(r_kind),dimension(:,:,:),pointer::ges_vor_01=>NULL()
-  real(r_kind),dimension(:,:,:),pointer::ges_vor_nf=>NULL()
-  real(r_kind),dimension(:,:,:),pointer::ges_tv_01 =>NULL()
-  real(r_kind),dimension(:,:,:),pointer::ges_tv_nf =>NULL()
+  real(r_kind),dimension(:,:  ),pointer::ges_ps_01 =>null()
+  real(r_kind),dimension(:,:  ),pointer::ges_ps_nf =>null()
+  real(r_kind),dimension(:,:,:),pointer::ges_div_01=>null()
+  real(r_kind),dimension(:,:,:),pointer::ges_div_nf=>null()
+  real(r_kind),dimension(:,:,:),pointer::ges_vor_01=>null()
+  real(r_kind),dimension(:,:,:),pointer::ges_vor_nf=>null()
+  real(r_kind),dimension(:,:,:),pointer::ges_tv_01 =>null()
+  real(r_kind),dimension(:,:,:),pointer::ges_tv_nf =>null()
 
 ! Initialize local arrays
   psresc=zero
@@ -99,7 +99,7 @@ subroutine bkgvar_rewgt(sfvar,vpvar,tvar,psvar,mype)
   balt   =zero ; bald    =zero ; balps =zero
 
 ! Set count to number of global grid points in quad precision
-  fcount = float(nlat)*float(nlon)
+  fcount = real(nlat,r_quad)*real(nlon,r_quad)
 
 ! Set parameter for communication
   mm1=mype+1

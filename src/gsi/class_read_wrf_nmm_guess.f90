@@ -1,4 +1,5 @@
 module abstract_read_wrf_nmm_guess_mod
+  implicit none
   type, abstract :: abstract_read_wrf_nmm_guess_class
   contains
     procedure(read_wrf_nmm_binary_guess), deferred, pass(this) :: read_wrf_nmm_binary_guess 

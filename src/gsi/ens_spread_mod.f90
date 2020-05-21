@@ -59,26 +59,26 @@ subroutine ens_spread_dualres_regional(en_bar)
   real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2,grd_anl%nsig),target::dum3
   real(r_kind),dimension(grd_anl%lat2,grd_anl%lon2),target::dum2
 
-!      create simple regular grid
-        call gsi_gridcreate(grid_anl,grd_anl%lat2,grd_anl%lon2,grd_anl%nsig)
-        call gsi_gridcreate(grid_ens,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)
+! create simple regular grid
+  call gsi_gridcreate(grid_anl,grd_anl%lat2,grd_anl%lon2,grd_anl%nsig)
+  call gsi_gridcreate(grid_ens,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)
 
-!      create two internal bundles, one on analysis grid and one on ensemble grid
+! create two internal bundles, one on analysis grid and one on ensemble grid
 
-       call gsi_bundlecreate (suba,grid_anl,'ensemble work',istatus, &
-                                 names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
-       if(istatus/=0) then
-          write(6,*)' in ens_spread_dualres_regional: trouble creating bundle_anl bundle'
-          call stop2(999)
-       endif
-       call gsi_bundlecreate (sube,grid_ens,'ensemble work ens',istatus, &
-                                 names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
-       if(istatus/=0) then
-          write(6,*)' ens_spread_dualres_regional: trouble creating bundle_ens bundle'
-          call stop2(999)
-       endif
+  call gsi_bundlecreate (suba,grid_anl,'ensemble work',istatus, &
+                            names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
+  if(istatus/=0) then
+     write(6,*)' in ens_spread_dualres_regional: trouble creating bundle_anl bundle'
+     call stop2(999)
+  endif
+  call gsi_bundlecreate (sube,grid_ens,'ensemble work ens',istatus, &
+                            names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
+  if(istatus/=0) then
+     write(6,*)' ens_spread_dualres_regional: trouble creating bundle_ens bundle'
+     call stop2(999)
+  endif
 
-  sp_norm=(one/float(n_ens))
+  sp_norm=(one/real(n_ens,r_kind))
 
   sube%values=zero
 !
@@ -95,7 +95,7 @@ subroutine ens_spread_dualres_regional(en_bar)
      end do
 
      do i=1,nelen
-       sube%values(i) = sqrt(sp_norm*sig_norm_sq_inv*sube%values(i))
+        sube%values(i) = sqrt(sp_norm*sig_norm_sq_inv*sube%values(i))
      end do
   else
      do n=1,n_ens
@@ -106,7 +106,7 @@ subroutine ens_spread_dualres_regional(en_bar)
      end do
  
      do i=1,nelen
-       sube%values(i) = sqrt(sp_norm*sube%values(i))
+        sube%values(i) = sqrt(sp_norm*sube%values(i))
      end do
   end if
 

@@ -91,17 +91,17 @@ character(len=4), parameter :: mysvars(nsvars) = (/  &  ! vars from SV needed he
         'u   ', 'v   ', 'prse', 'q   ', 'tsen',  'tv  ', 'ps  ','ql  ', 'qi  ' /)
 character(len=max_varname_length),allocatable,dimension(:) :: cvars2dpm  ! names of 2d fields including
                                                                          !  motley vars (if any)
-real(r_kind),pointer,dimension(:,:)   :: sv_ps=>NULL()
-real(r_kind),pointer,dimension(:,:)   :: sv_sst=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: sv_u=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: sv_v=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: sv_prse=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: sv_q=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: sv_tsen=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: sv_tv=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: sv_oz=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: sv_rank3=>NULL()
-real(r_kind),pointer,dimension(:,:)   :: sv_rank2=>NULL()
+real(r_kind),pointer,dimension(:,:)   :: sv_ps=>null()
+real(r_kind),pointer,dimension(:,:)   :: sv_sst=>null()
+real(r_kind),pointer,dimension(:,:,:) :: sv_u=>null()
+real(r_kind),pointer,dimension(:,:,:) :: sv_v=>null()
+real(r_kind),pointer,dimension(:,:,:) :: sv_prse=>null()
+real(r_kind),pointer,dimension(:,:,:) :: sv_q=>null()
+real(r_kind),pointer,dimension(:,:,:) :: sv_tsen=>null()
+real(r_kind),pointer,dimension(:,:,:) :: sv_tv=>null()
+real(r_kind),pointer,dimension(:,:,:) :: sv_oz=>null()
+real(r_kind),pointer,dimension(:,:,:) :: sv_rank3=>null()
+real(r_kind),pointer,dimension(:,:)   :: sv_rank2=>null()
 
 logical :: do_balance,do_getprs_tl,do_normal_rh_to_q,do_tv_to_tsen,do_getuv,cw_to_hydro
 

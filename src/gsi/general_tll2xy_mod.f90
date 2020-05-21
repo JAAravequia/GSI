@@ -7,7 +7,7 @@ module general_tll2xy_mod
 ! abstract: This module contains generalized tll2xy and related routines to convert
 !             earth lat lon coordinates to grid coordinates for an orthogonal
 !             non-staggered grid for which the earth lat and lon is known for each grid point.
-!            NOTE: all routines tested against same routines in gridmod, using region_lat, region_lon first,
+!            Note: all routines tested against same routines in gridmod, using region_lat, region_lon first,
 !                then random x,y,ug,vg.  get exact match between gridmod routines and the corresponding
 !                  general_ routines here.  See subroutine test1_general_ll2xy at end of this module.
 !
@@ -56,16 +56,16 @@ module general_tll2xy_mod
       real(r_kind) atilde_x,btilde_x,atilde_y,btilde_y
       real(r_kind) btilde_xinv,btilde_yinv
       integer(i_kind) nlon,nlat,nxtilde,nytilde
-      integer(i_kind),pointer::i0_tilde(:,:) => NULL()
-      integer(i_kind),pointer::j0_tilde(:,:) => NULL()
-      integer(i_byte),pointer::ip_tilde(:,:) => NULL()
-      integer(i_byte),pointer::jp_tilde(:,:) => NULL()
-      real(r_kind),pointer::xtilde0(:,:) => NULL()
-      real(r_kind),pointer::ytilde0(:,:) => NULL()
-      real(r_kind),pointer::cos_beta_ref(:,:) => NULL()
-      real(r_kind),pointer::sin_beta_ref(:,:) => NULL()
-      real(r_kind),pointer::region_lat(:,:) => NULL()
-      real(r_kind),pointer::region_lon(:,:) => NULL()
+      integer(i_kind),pointer::i0_tilde(:,:) => null()
+      integer(i_kind),pointer::j0_tilde(:,:) => null()
+      integer(i_byte),pointer::ip_tilde(:,:) => null()
+      integer(i_byte),pointer::jp_tilde(:,:) => null()
+      real(r_kind),pointer::xtilde0(:,:) => null()
+      real(r_kind),pointer::ytilde0(:,:) => null()
+      real(r_kind),pointer::cos_beta_ref(:,:) => null()
+      real(r_kind),pointer::sin_beta_ref(:,:) => null()
+      real(r_kind),pointer::region_lat(:,:) => null()
+      real(r_kind),pointer::region_lon(:,:) => null()
       logical:: lallocated = .false.
 
    end type llxy_cons
@@ -262,48 +262,48 @@ module general_tll2xy_mod
 
 !   transform so pole is at rlat0,rlon0 and 0 meridian is tangent to earth latitude at rlat0,rlon0.
 
-        clat0=clata(i,j) ; slat0=slata(i,j) ; clon0=clona(i,j) ; slon0=slona(i,j)
+     clat0=clata(i,j) ; slat0=slata(i,j) ; clon0=clona(i,j) ; slon0=slona(i,j)
 !    now obtain new coordinates for m1 and p1 points.
 
-        clat_p1=clata(i+1,j) ; slat_p1=slata(i+1,j) ; clon_p1=clona(i+1,j) ; slon_p1=slona(i+1,j)
+     clat_p1=clata(i+1,j) ; slat_p1=slata(i+1,j) ; clon_p1=clona(i+1,j) ; slon_p1=slona(i+1,j)
 
-        x=clat_p1*clon_p1 ; y=clat_p1*slon_p1 ; z=slat_p1
-        xt=x*clon0+y*slon0 ; yt=-x*slon0+y*clon0 ; zt=z
-        yb=zt*clat0-xt*slat0
-        xb=yt
-        zb=xt*clat0+zt*slat0
-        rlonb_p1=atan2(yb,xb)
-        clonb_p1=cos(rlonb_p1)
-        slonb_p1=sin(rlonb_p1)
-        crot=clonb_p1
-        srot=slonb_p1
-        gt%cos_beta_ref(i,j)=crot*clon0-srot*slon0
-        gt%sin_beta_ref(i,j)=srot*clon0+crot*slon0
+     x=clat_p1*clon_p1 ; y=clat_p1*slon_p1 ; z=slat_p1
+     xt=x*clon0+y*slon0 ; yt=-x*slon0+y*clon0 ; zt=z
+     yb=zt*clat0-xt*slat0
+     xb=yt
+     zb=xt*clat0+zt*slat0
+     rlonb_p1=atan2(yb,xb)
+     clonb_p1=cos(rlonb_p1)
+     slonb_p1=sin(rlonb_p1)
+     crot=clonb_p1
+     srot=slonb_p1
+     gt%cos_beta_ref(i,j)=crot*clon0-srot*slon0
+     gt%sin_beta_ref(i,j)=srot*clon0+crot*slon0
 
      i=gt%nlon
 
 !   transform so pole is at rlat0,rlon0 and 0 meridian is tangent to earth latitude at rlat0,rlon0.
 
-        clat0=clata(i,j) ; slat0=slata(i,j) ; clon0=clona(i,j) ; slon0=slona(i,j)
+     clat0=clata(i,j) ; slat0=slata(i,j) ; clon0=clona(i,j) ; slon0=slona(i,j)
 
 !    now obtain new coordinates for m1 and p1 points.
 
-        clat_m1=clata(i-1,j) ; slat_m1=slata(i-1,j) ; clon_m1=clona(i-1,j) ; slon_m1=slona(i-1,j)
+     clat_m1=clata(i-1,j) ; slat_m1=slata(i-1,j) ; clon_m1=clona(i-1,j) ; slon_m1=slona(i-1,j)
 
-        x=clat_m1*clon_m1 ; y=clat_m1*slon_m1 ; z=slat_m1
-        xt=x*clon0+y*slon0 ; yt=-x*slon0+y*clon0 ; zt=z
-        yb=zt*clat0-xt*slat0
-        xb=yt
-        zb=xt*clat0+zt*slat0
+     x=clat_m1*clon_m1 ; y=clat_m1*slon_m1 ; z=slat_m1
+     xt=x*clon0+y*slon0 ; yt=-x*slon0+y*clon0 ; zt=z
+     yb=zt*clat0-xt*slat0
+     xb=yt
+     zb=xt*clat0+zt*slat0
 
-        rlonb_m1=atan2(-yb,-xb)   !  the minus signs here are so line for m1 is directed same
-        clonb_m1=cos(rlonb_m1)
-        slonb_m1=sin(rlonb_m1)
+     rlonb_m1=atan2(-yb,-xb)   !  the minus signs here are so line for m1 is directed same
+     clonb_m1=cos(rlonb_m1)
+     slonb_m1=sin(rlonb_m1)
 
-        crot=clonb_m1
-        srot=slonb_m1
-        gt%cos_beta_ref(i,j)=crot*clon0-srot*slon0
-        gt%sin_beta_ref(i,j)=srot*clon0+crot*slon0
+     crot=clonb_m1
+     srot=slonb_m1
+     gt%cos_beta_ref(i,j)=crot*clon0-srot*slon0
+     gt%sin_beta_ref(i,j)=srot*clon0+crot*slon0
   end do
   deallocate(clata,slata,clona,slona)
 
@@ -605,8 +605,8 @@ subroutine general_get_xytilde_domain(gt,nx0,ny0,rlons0,rlats0, &
 !
 !$$$ end documentation block
 
-   use kinds, only: r_kind,i_kind
-   use constants, only: one, deg2rad,half,zero,r10
+  use kinds, only: r_kind,i_kind
+  use constants, only: one, deg2rad,half,zero,r10
 !  define parameters for xy domain which optimally overlays input grid
 
   implicit none
@@ -1159,12 +1159,12 @@ subroutine test1_general_ll2xy
   end do
 !              compare grid_lons_test, grid_lats_test to grid_lons,grid_lats--should be identical
   if(mype==0) then
-      write(0,*)' min,max grid_lons=',minval(grid_lons),maxval(grid_lons)
-      write(0,*)' min,max grid_lons_test=',minval(grid_lons_test),maxval(grid_lons_test)
-      write(0,*)' min,max grid_lats=',minval(grid_lats),maxval(grid_lats)
-      write(0,*)' min,max grid_lats_test=',minval(grid_lats_test),maxval(grid_lats_test)
-      write(0,*)' max err grid_lons_test=',maxval(abs(grid_lons-grid_lons_test))
-      write(0,*)' max err grid_lats_test=',maxval(abs(grid_lats-grid_lats_test))
+     write(0,*)' min,max grid_lons=',minval(grid_lons),maxval(grid_lons)
+     write(0,*)' min,max grid_lons_test=',minval(grid_lons_test),maxval(grid_lons_test)
+     write(0,*)' min,max grid_lats=',minval(grid_lats),maxval(grid_lats)
+     write(0,*)' min,max grid_lats_test=',minval(grid_lats_test),maxval(grid_lats_test)
+     write(0,*)' max err grid_lons_test=',maxval(abs(grid_lons-grid_lons_test))
+     write(0,*)' max err grid_lats_test=',maxval(abs(grid_lats-grid_lats_test))
   end if
   errmax_lat=zero
   errmax_lon=zero
@@ -1265,12 +1265,12 @@ subroutine test3_egrid2points
         ymax=max(y(1),ymax)
      end do
   end do
-                       if(mype==0) write(0,*)' min,max(region_lat)=',minval(region_lat),maxval(region_lat)
+  if(mype==0) write(0,*)' min,max(region_lat)=',minval(region_lat),maxval(region_lat)
   xmin=.8_r_kind*xmin
   xmax=.8_r_kind*xmax
   ymin=.8_r_kind*ymin
   ymax=.8_r_kind*ymax
-                 if(mype==0) write(0,*)' xmin,max,ymin,max=',xmin,xmax,ymin,ymax
+  if(mype==0) write(0,*)' xmin,max,ymin,max=',xmin,xmax,ymin,ymax
   nxe=nlon/3
   nye=nlat/3
   allocate(region_lat_e(nye,nxe),region_lon_e(nye,nxe))
@@ -1297,18 +1297,18 @@ subroutine test3_egrid2points
      end do
   end do
   call outgrads1(out1,nxe,nye,'region_lon_e')
-                       if(mype==0) write(0,*)' min,max(region_lat_e)=',minval(region_lat_e),maxval(region_lat_e)
+  if(mype==0) write(0,*)' min,max(region_lat_e)=',minval(region_lat_e),maxval(region_lat_e)
 
 !  initialize merge_grid_e_to_grid_a
 
   nord_e2a=4
-        if(mype==0) write(0,*)' at 2 in test3'
-        if(mype==0) write(0,*)' min,max(region_lat_e)=',minval(region_lat_e),maxval(region_lat_e)
-        if(mype==0) write(0,*)' min,max(region_lon_e)=',minval(region_lon_e),maxval(region_lon_e)
-        if(mype==0) write(0,*)' min,max(region_lat)=',minval(region_lat),maxval(region_lat)
-        if(mype==0) write(0,*)' min,max(region_lon)=',minval(region_lon),maxval(region_lon)
-        if(mype==0) write(0,*)' nye,nxe,nlat,nlon,nord_e2a,nord_blend,nmix=',&
-                                nye,nxe,nlat,nlon,nord_e2a,nord_blend,nmix
+  if(mype==0) write(0,*)' at 2 in test3'
+  if(mype==0) write(0,*)' min,max(region_lat_e)=',minval(region_lat_e),maxval(region_lat_e)
+  if(mype==0) write(0,*)' min,max(region_lon_e)=',minval(region_lon_e),maxval(region_lon_e)
+  if(mype==0) write(0,*)' min,max(region_lat)=',minval(region_lat),maxval(region_lat)
+  if(mype==0) write(0,*)' min,max(region_lon)=',minval(region_lon),maxval(region_lon)
+  if(mype==0) write(0,*)' nye,nxe,nlat,nlon,nord_e2a,nord_blend,nmix=',&
+                          nye,nxe,nlat,nlon,nord_e2a,nord_blend,nmix
   call merge_grid_e_to_grid_a_initialize(region_lat_e,region_lon_e,region_lat,region_lon, &
                   nye,nxe,nlat,nlon,nord_e2a,nord_blend,nmix,gt_e,gt_a,p_e2a)
 
@@ -1326,12 +1326,12 @@ subroutine test3_egrid2points
         exact_stream_a(i,j)=cos(region_lat(i,j))*sin(region_lat(i,j))*sin(region_lon(i,j))
      end do
   end do
-        if(mype==0) write(0,*)' min,max(test_stream_e)=',minval(test_stream_e),maxval(test_stream_e)
-        if(mype==0) write(0,*)' min,max(exact_stream_a)=',minval(exact_stream_a),maxval(exact_stream_a)
-        if(mype==0) write(0,*)' at 3 in test3'
+  if(mype==0) write(0,*)' min,max(test_stream_e)=',minval(test_stream_e),maxval(test_stream_e)
+  if(mype==0) write(0,*)' min,max(exact_stream_a)=',minval(exact_stream_a),maxval(exact_stream_a)
+  if(mype==0) write(0,*)' at 3 in test3'
   call merge_grid_e_to_grid_a(test_stream_e,exact_stream_a,test_stream_a,gt_e,gt_a,p_e2a)
-        if(mype==0) write(0,*)' at 4 in test3'
-        if(mype==0) write(0,*)' min,max(test_stream_a)=',minval(test_stream_a),maxval(test_stream_a)
+  if(mype==0) write(0,*)' at 4 in test3'
+  if(mype==0) write(0,*)' min,max(test_stream_a)=',minval(test_stream_a),maxval(test_stream_a)
   call merge_grid_e_to_grid_a(region_lat_e,region_lat,testlata,gt_e,gt_a,p_e2a)
   call merge_grid_e_to_grid_a(region_lon_e,region_lon,testlona,gt_e,gt_a,p_e2a)
 
@@ -1369,7 +1369,7 @@ subroutine test3_egrid2points
      end do
   end do
   call outgrads1(out1,nlon,nlat,'blend')
-                       if(mype==0) write(0,*)' at 8 in test3'
+  if(mype==0) write(0,*)' at 8 in test3'
   errmax=zero
   fmax=zero
   do j=1,nlon
@@ -1420,68 +1420,68 @@ subroutine test3_egrid2points
 !                                         i,j,nye,nxe,ue(i,j),ve(i,j),region_lon_e(i,j)*rad2deg,xe,ye
      end do
   end do
-                       if(mype==0) write(0,*)' at 10 in test3'
-   do j=1,nlon
-      xa=j
-      do i=1,nlat
-         ya=i
-         vearth_test=sin(region_lat(i,j))*cos(region_lon(i,j))
-         uearth_test=-sin(region_lon(i,j))*cos(two*region_lat(i,j))
-!           reorient from earth coordinates to a-grid coordinates
-         call general_rotate_wind_ll2xy(gt_a,uearth_test,vearth_test,ua_exact(i,j),va_exact(i,j), &
-                                        region_lon(i,j),xa,ya)
-      end do
-   end do
-                       if(mype==0) write(0,*)' at 11 in test3'
+  if(mype==0) write(0,*)' at 10 in test3'
+  do j=1,nlon
+     xa=j
+     do i=1,nlat
+        ya=i
+        vearth_test=sin(region_lat(i,j))*cos(region_lon(i,j))
+        uearth_test=-sin(region_lon(i,j))*cos(two*region_lat(i,j))
+!          reorient from earth coordinates to a-grid coordinates
+        call general_rotate_wind_ll2xy(gt_a,uearth_test,vearth_test,ua_exact(i,j),va_exact(i,j), &
+                                       region_lon(i,j),xa,ya)
+     end do
+  end do
+  if(mype==0) write(0,*)' at 11 in test3'
   call merge_vgrid_e_to_vgrid_a(ue,ve,ua_exact,va_exact,ua,va,gt_e,gt_a,p_e2a)
-                       if(mype==0) write(0,*)' at 12 in test3'
-   do i=1,nlat
-      do j=1,nlon
-         out1(j,i)=ua(i,j)
-      end do
-   end do
-                       if(mype==0) write(0,*)' at 13 in test3'
-   do i=1,nlat
-      do j=1,nlon
-         out2(j,i)=va(i,j)
-      end do
-   end do
-                       if(mype==0) write(0,*)' at 14 in test3'
-   call outgrads1(out1,nlon,nlat,'u1')
-   call outgrads1(out2,nlon,nlat,'v1')
-                       if(mype==0) write(0,*)' at 15 in test3'
-   do i=1,nlat
-      do j=1,nlon
-         out1(j,i)=ua_exact(i,j)
-      end do
-   end do
-   do i=1,nlat
-      do j=1,nlon
-         out2(j,i)=va_exact(i,j)
-      end do
-   end do
-                       if(mype==0) write(0,*)' at 16 in test3'
-   call outgrads1(out1,nlon,nlat,'u1exact')
-   call outgrads1(out2,nlon,nlat,'v1exact')
-                       if(mype==0) write(0,*)' at 17 in test3'
-   ii=0
-   do j=1,nlon
-      do i=1,nlat
-         ii=ii+1
-         out1(j,i)=p_e2a%xa_e(ii)
-      end do
-   end do
-   ii=0
-   do j=1,nlon
-      do i=1,nlat
-         ii=ii+1
-         out2(j,i)=p_e2a%ya_e(ii)
-      end do
-   end do
-                       if(mype==0) write(0,*)' at 18 in test3'
-   call outgrads1(out1,nlon,nlat,'xa_e')
-   call outgrads1(out2,nlon,nlat,'ya_e')
-                       if(mype==0) write(0,*)' at 19 in test3'
+  if(mype==0) write(0,*)' at 12 in test3'
+  do i=1,nlat
+     do j=1,nlon
+        out1(j,i)=ua(i,j)
+     end do
+  end do
+  if(mype==0) write(0,*)' at 13 in test3'
+  do i=1,nlat
+     do j=1,nlon
+        out2(j,i)=va(i,j)
+     end do
+  end do
+  if(mype==0) write(0,*)' at 14 in test3'
+  call outgrads1(out1,nlon,nlat,'u1')
+  call outgrads1(out2,nlon,nlat,'v1')
+  if(mype==0) write(0,*)' at 15 in test3'
+  do i=1,nlat
+     do j=1,nlon
+        out1(j,i)=ua_exact(i,j)
+     end do
+  end do
+  do i=1,nlat
+     do j=1,nlon
+        out2(j,i)=va_exact(i,j)
+     end do
+  end do
+  if(mype==0) write(0,*)' at 16 in test3'
+  call outgrads1(out1,nlon,nlat,'u1exact')
+  call outgrads1(out2,nlon,nlat,'v1exact')
+  if(mype==0) write(0,*)' at 17 in test3'
+  ii=0
+  do j=1,nlon
+     do i=1,nlat
+        ii=ii+1
+        out1(j,i)=p_e2a%xa_e(ii)
+     end do
+  end do
+  ii=0
+  do j=1,nlon
+     do i=1,nlat
+        ii=ii+1
+        out2(j,i)=p_e2a%ya_e(ii)
+     end do
+  end do
+  if(mype==0) write(0,*)' at 18 in test3'
+  call outgrads1(out1,nlon,nlat,'xa_e')
+  call outgrads1(out2,nlon,nlat,'ya_e')
+  if(mype==0) write(0,*)' at 19 in test3'
 
   deallocate(region_lat_e,region_lon_e)
   deallocate(out1,out2)

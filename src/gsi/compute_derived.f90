@@ -161,11 +161,11 @@ subroutine compute_derived(mype,init_pass)
   real(r_kind),allocatable,dimension(:,:,:):: ges_v
   real(r_kind),allocatable,dimension(:,:,:):: ges_tv
 
-  real(r_kind),pointer,dimension(:,:  ):: ptr2d   =>NULL()
-  real(r_kind),pointer,dimension(:,:,:):: ges_q   =>NULL()
-  real(r_kind),pointer,dimension(:,:,:):: ges_ql  =>NULL()
-  real(r_kind),pointer,dimension(:,:,:):: ges_qi  =>NULL()
-  real(r_kind),pointer,dimension(:,:,:):: ges_cwmr=>NULL()
+  real(r_kind),pointer,dimension(:,:  ):: ptr2d   =>null()
+  real(r_kind),pointer,dimension(:,:,:):: ges_q   =>null()
+  real(r_kind),pointer,dimension(:,:,:):: ges_ql  =>null()
+  real(r_kind),pointer,dimension(:,:,:):: ges_qi  =>null()
+  real(r_kind),pointer,dimension(:,:,:):: ges_cwmr=>null()
 
 ! for anisotropic mode
   integer(i_kind):: k1,ivar,kvar,igauss,iq_loc
@@ -291,23 +291,23 @@ subroutine compute_derived(mype,init_pass)
 ! now that we have derivs, get time tendencies if necessary
           if(init_pass) then
 
-           if(allocated(ges_ps)) call getprs(ges_ps,ges_3dp)
+            if(allocated(ges_ps)) call getprs(ges_ps,ges_3dp)
 
-           call calctends(mype,ges_teta(1,1,1,it),ges_3dp,gsi_metguess_bundle(it), &
-                          gsi_xderivative_bundle(it),gsi_yderivative_bundle(it),&
-                          gsi_tendency_bundle)
+            call calctends(mype,ges_teta(1,1,1,it),ges_3dp,gsi_metguess_bundle(it), &
+                           gsi_xderivative_bundle(it),gsi_yderivative_bundle(it),&
+                           gsi_tendency_bundle)
 
-           if(l_tlnmc .and. write_diag(jiter) .and. baldiag_full) then
-              fullfield=.true.
+            if(l_tlnmc .and. write_diag(jiter) .and. baldiag_full) then
+               fullfield=.true.
 
-              call init_vars_('tendency')
+               call init_vars_('tendency')
 
-              call strong_bal_correction(ges_u_ten,ges_v_ten,ges_tv_ten,ges_prs_ten(:,:,1),mype, &
-                                         ges_u,ges_v,ges_tv,&
-                                         ges_ps,print_verbose,fullfield,.false.,.true.)
+               call strong_bal_correction(ges_u_ten,ges_v_ten,ges_tv_ten,ges_prs_ten(:,:,1),mype, &
+                                          ges_u,ges_v,ges_tv,&
+                                          ges_ps,print_verbose,fullfield,.false.,.true.)
 
-              call final_vars_('tendency')
-           end if
+               call final_vars_('tendency')
+            end if
           end if       ! (init_pass)
         end if
      end if
@@ -468,7 +468,7 @@ subroutine compute_derived(mype,init_pass)
                     do i=indices%ips,indices%ipe
                        l =max(min(int(rllatf(i,j)),mlat),1)
                        l2=min((l+1),mlat)
-                       dl2=rllatf(i,j)-float(l)
+                       dl2=rllatf(i,j)-real(l,r_kind)
                        dl1=one-dl2
 
                        factk=dl1*corz(l,kvar,nrf3_q)+dl2*corz(l2,kvar,nrf3_q)
@@ -568,8 +568,8 @@ subroutine compute_derived(mype,init_pass)
   implicit none
   character(len=*) thiscase
 
-  real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
-  real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
+  real(r_kind),dimension(:,:  ),pointer:: rank2=>null()
+  real(r_kind),dimension(:,:,:),pointer:: rank3=>null()
   character(len=5) :: varname
   integer(i_kind) istatus
 

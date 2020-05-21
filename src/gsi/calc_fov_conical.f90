@@ -69,36 +69,36 @@
 ! plot_test_conical_fov.f90
  real(r_kind), private, dimension(nchan,instrumentrange(1):instrumentrange(2))   &
                                   :: fovangle   =  reshape ( (/                  &
- 			 .7950_r_kind, .7950_r_kind, .8350_r_kind, .8000_r_kind, & 
+                         .7950_r_kind, .7950_r_kind, .8350_r_kind, .8000_r_kind, & 
                          .7725_r_kind, .7000_r_kind, .7150_r_kind, .4050_r_kind, &
-			 .3650_r_kind, .3650_r_kind, .3650_r_kind,1.9450_r_kind, &
-			2.0975_r_kind,1.8550_r_kind,1.2100_r_kind,1.2275_r_kind, &
+                         .3650_r_kind, .3650_r_kind, .3650_r_kind,1.9450_r_kind, &
+                        2.0975_r_kind,1.8550_r_kind,1.2100_r_kind,1.2275_r_kind, &
                          .4125_r_kind, .4000_r_kind, .6600_r_kind, .6925_r_kind, &
-			 .6925_r_kind, .6925_r_kind, .6925_r_kind, .6925_r_kind, &
+                         .6925_r_kind, .6925_r_kind, .6925_r_kind, .6925_r_kind, &
                         0.7900_r_kind,0.7800_r_kind,0.7850_r_kind,0.7900_r_kind, &
                         0.7750_r_kind,0.7150_r_kind,0.7000_r_kind,0.4225_r_kind, &
-			0.3825_r_kind,0.3825_r_kind,0.3825_r_kind,1.9300_r_kind, &
+                        0.3825_r_kind,0.3825_r_kind,0.3825_r_kind,1.9300_r_kind, &
                         1.9125_r_kind,1.8550_r_kind,1.2025_r_kind,1.2150_r_kind, &
                         0.4175_r_kind,0.4100_r_kind,0.6775_r_kind,0.6950_r_kind, &
-			0.6950_r_kind,0.6950_r_kind,0.6950_r_kind,0.6950_r_kind, &
+                        0.6950_r_kind,0.6950_r_kind,0.6950_r_kind,0.6950_r_kind, &
                         0.7775_r_kind,0.7825_r_kind,0.7675_r_kind,0.7750_r_kind, &
                         0.8674_r_kind,0.7125_r_kind,0.7050_r_kind,0.3975_r_kind, &
-			0.4625_r_kind,0.4625_r_kind,0.4625_r_kind,1.9100_r_kind, &
+                        0.4625_r_kind,0.4625_r_kind,0.4625_r_kind,1.9100_r_kind, &
                         1.9450_r_kind,1.8920_r_kind,1.2120_r_kind,1.1950_r_kind, &
                         0.4050_r_kind,0.4175_r_kind,0.6800_r_kind,0.7025_r_kind, &
-			0.7025_r_kind,0.7025_r_kind,0.7025_r_kind,0.7025_r_kind, &
+                        0.7025_r_kind,0.7025_r_kind,0.7025_r_kind,0.7025_r_kind, &
                         0.8400_r_kind,0.8125_r_kind,0.8225_r_kind,0.8075_r_kind, &
                         0.8375_r_kind,0.7025_r_kind,0.6950_r_kind,0.3875_r_kind, &
-			0.4425_r_kind,0.4425_r_kind,0.4425_r_kind,1.8975_r_kind, &
-			1.9075_r_kind,1.8700_r_kind,1.2300_r_kind,1.1950_r_kind, &
+                        0.4425_r_kind,0.4425_r_kind,0.4425_r_kind,1.8975_r_kind, &
+                        1.9075_r_kind,1.8700_r_kind,1.2300_r_kind,1.1950_r_kind, &
                         0.4150_r_kind,0.4125_r_kind,0.7025_r_kind,0.6550_r_kind, &
-			0.6550_r_kind,0.6550_r_kind,0.6550_r_kind,0.6550_r_kind, &
-			0.8075_r_kind,0.7900_r_kind,0.7725_r_kind,0.7625_r_kind, &
+                        0.6550_r_kind,0.6550_r_kind,0.6550_r_kind,0.6550_r_kind, &
+                        0.8075_r_kind,0.7900_r_kind,0.7725_r_kind,0.7625_r_kind, &
                         0.8000_r_kind,0.7050_r_kind,0.6975_r_kind,0.4275_r_kind, &
-			0.3750_r_kind,0.3750_r_kind,0.3750_r_kind,1.8725_r_kind, &
-			1.8750_r_kind,1.8525_r_kind,1.1400_r_kind,1.1875_r_kind, &
+                        0.3750_r_kind,0.3750_r_kind,0.3750_r_kind,1.8725_r_kind, &
+                        1.8750_r_kind,1.8525_r_kind,1.1400_r_kind,1.1875_r_kind, &
                         0.4050_r_kind,0.4200_r_kind,0.7050_r_kind,0.7225_r_kind, &
-			0.7225_r_kind,0.7225_r_kind,0.7225_r_kind,0.7225_r_kind/) , (/nchan,maxinstr/) )
+                        0.7225_r_kind,0.7225_r_kind,0.7225_r_kind,0.7225_r_kind/) , (/nchan,maxinstr/) )
 
  real(r_kind), private, pointer, dimension(:,:,:) :: ssmiscoeff 
 
@@ -1101,7 +1101,7 @@ subroutine inside_fov_conical(instr,ichan,satellite_azimuth,lat,lon, &
      py = ssmiscoeff(0,2,ichan) + ssmiscoeff(1,2,ichan)*y    + ssmiscoeff(2,2,ichan)*y**2 &
                                 + ssmiscoeff(3,2,ichan)*y**3 + ssmiscoeff(4,2,ichan)*y**4 &
                                 + ssmiscoeff(5,2,ichan)*y**5 + ssmiscoeff(6,2,ichan)*y**6 &
-	                        + ssmiscoeff(7,2,ichan)*y**7  
+                                + ssmiscoeff(7,2,ichan)*y**7  
 
      p = -(px+py) ! power in dB (positive)
 

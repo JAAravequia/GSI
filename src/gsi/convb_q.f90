@@ -84,7 +84,7 @@ contains
      integer(i_kind):: ier
 
      allocate(btabl_q(ld,33,6),isuble_bq(ld,5))
-        allocate(bptabl_q(34))
+     allocate(bptabl_q(34))
      
 
      btabl_q=1.e9_r_kind

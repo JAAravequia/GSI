@@ -1259,20 +1259,20 @@ subroutine general_sptranf_v_v(sp_a,sp_b,waved,wavez,gridu,gridv)
            ijs = jj*sp_a%js + sp_a%ioffset
            tmpafft(:)=sp_b%afft(:)
            if(j == sp_a%jb)then
-             call spsynth(sp_b%iromb,sp_b%jcap,sp_b%imax,imaxp2,kw,kwtop,1, &
-              sp_a%clat(j),tmppln,tmpplntop,mp,w(1,1),wtop(1,1),f)
-             call spffte(sp_b%imax,imaxp2/2,sp_b%imax,2,f,g,1,tmpafft)
+              call spsynth(sp_b%iromb,sp_b%jcap,sp_b%imax,imaxp2,kw,kwtop,1, &
+               sp_a%clat(j),tmppln,tmpplntop,mp,w(1,1),wtop(1,1),f)
+              call spffte(sp_b%imax,imaxp2/2,sp_b%imax,2,f,g,1,tmpafft)
 
-!            call sptranf1(sp_b%iromb,sp_b%jcap,sp_b%idrt,sp_b%imax,sp_a%jmax,j,j, &
-!                sp_b%eps,sp_b%epstop,sp_b%enn1,sp_b%elonn1,sp_b%eon,sp_b%eontop, &
-!                tmpafft,sp_a%clat(j),sp_a%slat(j),sp_a%wlat(j), &
-!                tmppln,tmpplntop,mp, &
-!                w(1,1),wtop(1,1),g,1)
-             do i=1,sp_a%imax
-                ii   = ifact*(i-1)+1
-                gridu(ijn+i)=g(ii,1)
-                gridu(ijs+i)=g(ii,2)
-             enddo
+!             call sptranf1(sp_b%iromb,sp_b%jcap,sp_b%idrt,sp_b%imax,sp_a%jmax,j,j, &
+!                 sp_b%eps,sp_b%epstop,sp_b%enn1,sp_b%elonn1,sp_b%eon,sp_b%eontop, &
+!                 tmpafft,sp_a%clat(j),sp_a%slat(j),sp_a%wlat(j), &
+!                 tmppln,tmpplntop,mp, &
+!                 w(1,1),wtop(1,1),g,1)
+              do i=1,sp_a%imax
+                 ii   = ifact*(i-1)+1
+                 gridu(ijn+i)=g(ii,1)
+                 gridu(ijs+i)=g(ii,2)
+              enddo
            end if
            call spsynth(sp_b%iromb,sp_b%jcap,sp_b%imax,imaxp2,kw,kwtop,1, &
             sp_a%clat(j),tmppln,tmpplntop,mp,w(1,2),wtop(1,2),f)
@@ -1500,7 +1500,7 @@ subroutine general_sptez_v_b(sp_a,sp_b,waved,wavez,gridu,gridv,idir,iuvflag)
   else
      if(idir < 0)then
         write(6,*)'GENERAL_SPTRANF_V_B  ***ERROR*** grid --> spectral transform NOT SAFE'
-       call stop2(330)
+        call stop2(330)
      end if
   end if
 

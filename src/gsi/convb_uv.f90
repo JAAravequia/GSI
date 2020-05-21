@@ -83,7 +83,7 @@ contains
      integer(i_kind):: ier
 
      allocate(btabl_uv(ld,33,8),isuble_buv(ld,7))
-        allocate(bptabl_uv(34))
+     allocate(bptabl_uv(34))
 
      btabl_uv=1.e9_r_kind
       

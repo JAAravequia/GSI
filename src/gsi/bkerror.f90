@@ -80,14 +80,14 @@ subroutine bkerror(gradx,grady)
   integer(i_kind) ipnts(4),istatus
 ! integer(i_kind) nval_lenz,ndim2d
   real(r_kind),dimension(nlat*nlon*s2g_cv%nlevs_alloc)::workcv
-  real(r_kind),pointer,dimension(:,:,:):: p_t  =>NULL()
-  real(r_kind),pointer,dimension(:,:,:):: p_st =>NULL()
-  real(r_kind),pointer,dimension(:,:,:):: p_vp =>NULL()
-  real(r_kind),pointer,dimension(:,:)  :: p_ps =>NULL()
-  real(r_kind),pointer::rank2a(:,:)  =>NULL()
-  real(r_kind),pointer::rank2b(:,:)  =>NULL()
-  real(r_kind),pointer::rank3a(:,:,:)=>NULL()
-  real(r_kind),pointer::rank3b(:,:,:)=>NULL()
+  real(r_kind),pointer,dimension(:,:,:):: p_t  =>null()
+  real(r_kind),pointer,dimension(:,:,:):: p_st =>null()
+  real(r_kind),pointer,dimension(:,:,:):: p_vp =>null()
+  real(r_kind),pointer,dimension(:,:)  :: p_ps =>null()
+  real(r_kind),pointer::rank2a(:,:)  =>null()
+  real(r_kind),pointer::rank2b(:,:)  =>null()
+  real(r_kind),pointer::rank3a(:,:,:)=>null()
+  real(r_kind),pointer::rank3b(:,:,:)=>null()
   logical dobal
 ! real(r_kind),allocatable,dimension(:):: gradz
   type(gsi_bundle) :: mbundle
@@ -114,8 +114,8 @@ subroutine bkerror(gradx,grady)
 ! Put things in grady first since operations change input variables
   grady=gradx
 
-!  if ensemble run, multiply by sqrt_beta_s
-   if(l_hyb_ens) call sqrt_beta_s_mult(grady)
+! if ensemble run, multiply by sqrt_beta_s
+  if(l_hyb_ens) call sqrt_beta_s_mult(grady)
 
 ! Only need to get pointer for ii=1 - all other are the same
   call gsi_bundlegetpointer ( grady%step(1), (/'t ','sf','vp','ps'/), &
@@ -199,8 +199,8 @@ subroutine bkerror(gradx,grady)
      end do
   end if
 
-!  if ensemble run, multiply by sqrt_beta_s
-   if(l_hyb_ens) call sqrt_beta_s_mult(grady)
+! if ensemble run, multiply by sqrt_beta_s
+  if(l_hyb_ens) call sqrt_beta_s_mult(grady)
 
 ! Finalize timer
   call timer_fnl('bkerror')

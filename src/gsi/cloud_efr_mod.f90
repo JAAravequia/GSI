@@ -55,19 +55,19 @@ module cloud_efr_mod
 
 ! - Begin specification of microphysics parameters for Ferrier scheme
 !     Mean ice diameters
-  real(r_kind), parameter :: DMImin=.05e-3_r_kind, DMImax=1.e-3_r_kind,      &
-                             XMImin=1.e6_r_kind*DMImin, XMImax=1.e6_r_kind*DMImax
-  integer(i_kind), parameter :: MDImin=XMImin, MDImax=XMImax
+  real(r_kind), parameter :: dmimin=.05e-3_r_kind, dmimax=1.e-3_r_kind,      &
+                             xmimin=1.e6_r_kind*dmimin, xmimax=1.e6_r_kind*dmimax
+  integer(i_kind), parameter :: mdimin=xmimin, mdimax=xmimax
 !     Mean rain drop diameters vary from 50 microns to 450 microns
-  real(r_kind), parameter :: DMRmin=.05E-3_r_kind, DMRmax=.45E-3_r_kind,   &
-                             XMRmin=1.E6_r_kind*DMRmin, XMRmax=1.E6_r_kind*DMRmax,              &
-                             N0r0=8.E6_r_kind, N0rmin=1.e4_r_kind
-  integer(i_kind), parameter :: MDRmin=XMRmin, MDRmax=XMRmax
+  real(r_kind), parameter :: dmrmin=.05e-3_r_kind, dmrmax=.45e-3_r_kind,   &
+                             xmrmin=1.e6_r_kind*dmrmin, xmrmax=1.e6_r_kind*dmrmax,              &
+                             n0r0=8.e6_r_kind, n0rmin=1.e4_r_kind
+  integer(i_kind), parameter :: mdrmin=xmrmin, mdrmax=xmrmax
 !     Mean mass of precpitation ice particles as functions of their mean
 !     size (in microns)
-  real(r_kind) :: MASSI(MDImin:MDImax)
+  real(r_kind) :: massi(mdimin:mdimax)
 !      Lookup tables for rain  
-  real(r_kind) :: MASSR(MDRmin:MDRmax)
+  real(r_kind) :: massr(mdrmin:mdrmax)
 !
   logical,save :: use_lookup_table=.false.
 ! - End specification of Ferrier microphysics related variables  
@@ -116,16 +116,16 @@ logical pcexist
     inquire(file='eta_micro_lookup.dat',exist=pcexist)
     if (pcexist) then
        print *,'cloud init: Reading eta_micro_lookup.dat'
-       OPEN (UNIT=1,FILE="eta_micro_lookup.dat",FORM="UNFORMATTED")
-       DO I=1,3
-          READ(1)
-       ENDDO
-       READ(1) MASSR
-       DO I=1,5
-          READ(1)
-       ENDDO
-       READ(1) MASSI
-       CLOSE(1)
+       open (unit=1,file="eta_micro_lookup.dat",form="unformatted")
+       do i=1,3
+          read(1)
+       enddo
+       read(1) massr
+       do i=1,5
+          read(1)
+       enddo
+       read(1) massi
+       close(1)
        use_lookup_table=.true.
     else
        use_lookup_table=.false.
@@ -147,6 +147,7 @@ subroutine cloud_final
 ! program history log:
 !   2013-09-30 Todling
 
+  implicit none
   if(.not.cloud_initialized_) return
   deallocate(efr_ql,efr_qi,efr_qr,efr_qs,efr_qg,efr_qh)
   cloud_initialized_=.false.
@@ -366,250 +367,250 @@ subroutine set_cloud_lower_bound(g_cwmr)
   return
 end subroutine set_cloud_lower_bound 
 
-      SUBROUTINE EFFRDS(P1D,T1D,Q1D,QW1,QI1,QR1,FS1D, &
-                        EFR_QL,EFR_QI,EFR_QR,EFR_QS,EFR_QG,EFR_QH)
-!$$$  SUBPROGRAM DOCUMENTATION BLOCK
+subroutine effrds(p1d,t1d,q1d,qw1,qi1,qr1,fs1d, &
+                  efr_ql,efr_qi,efr_qr,efr_qs,efr_qg,efr_qh)
+!$$$  subprogram documentation block
 !                .      .    .     
-! SUBPROGRAM:    EFFRDS      COMPUTES EFFECTIVE RADIUS
-!   PRGRMMR: JIN         ORG: W/NP2      DATE: 01-08-14       
+! subprogam:    effrds      computes effective radius
+!   prgrmmr: jin         org: w/np2      date: 01-08-14       
 !     
-! ABSTRACT:  
-!     THIS ROUTINE COMPUTES EFFECTIVE RADIUS. 
-!     THE CODE IS BASED ON SUBROUTINE CALMICT.
+! abstract:  
+!     This routine computes effective radius. 
+!     The code is based on subroutine calmict.
 !     
-! PROGRAM HISTORY LOG:
-!   01-08-14  YI JIN 
+! program history log:
+!   01-08-14  Yi Jin 
 !   02-02-11  Brad Ferrier - Minor changes for consistency w/ NMM model
 !   04-11-10  Brad Ferrier - Removed cloud fraction algorithm
-!   04-11-17  H CHUANG - WRF VERSION     
-!   11-06-20  Yanqiu Zhu - made changes on CALMICT to be called in GSI
+!   04-11-17  H Chuang - WRF version     
+!   11-06-20  Yanqiu Zhu - made changes on calmict to be called in GSI
 !   14-06-02  Jacob Carley - Move lookup table inquire/read to cloud_init
 !
-! USAGE:    CALL effrds(T1D,Q1D,QW1,QI1,QR1,FS1D,NLICE1)
-!   INPUT ARGUMENT LIST:
-!     P1D     - PRESSURE (PA)
-!     T1D     - TEMPERATURE (K)
-!     Q1D     - SPECIFIC HUMIDITY (KG/KG)
-!     QW1   - CLOUD WATER MIXING RATIO (KG/KG)
-!     QI1   - TOTAL CLOUD ICE (cloud ice & snow) MIXING RATIO (KG/KG)
-!     QR1   - RAIN MIXING RATIO (KG/KG)
-!     FS1D  - F_RimeF ("Rime Factor", ratio of total ice growth
+! usage:    call effrds(t1d,q1d,qw1,qi1,qr1,fs1d,nlice1)
+!   input argument list:
+!     p1d     - pressure (pa)
+!     t1d     - temperature (K)
+!     q1d     - specific humidity (kg/kg)
+!     qw1   - cloud water mixing ratio (kg/kg)
+!     qi1   - total cloud ice (cloud ice & snow) mixing ratio (kg/kg)
+!     qr1   - rain mixing ratio (kg/kg)
+!     fs1d  - f_rimef ("Rime Factor", ratio of total ice growth
 !                       to deposition growth)
 !
-!   OUTPUT ARGUMENT LIST:
-!     NLICE1
+!   output argument list:
+!     nlice1
 !
-!   OUTPUT FILES:
-!     NONE
+!   output files:
+!     none
 !     
-!   SUBPROGRAMS CALLED:
-!        FPVSX
-!     UTILITIES:
-!     LIBRARY:
-!       NONE
+!   subprograms called:
+!        fpvsx
+!     utilities:
+!     library:
+!       none
 !     
 !$$$  
 !
-      implicit none
+  implicit none
  
-      INTEGER(i_kind) INDEXS, INDEXR
+  integer(i_kind) indexs, indexr
 
-      real(r_kind),parameter:: d608=0.608_r_kind
-      real(r_kind),parameter:: fmw=18.015_r_kind
-      real(r_kind),parameter:: fmd=28.964_r_kind
-      real(r_kind),parameter:: eps=fmw/fmd
-      real(r_kind),parameter:: rd=287.04_r_kind
-      real(r_kind),parameter:: oneps=1.0_r_kind-eps
-      real(r_kind),parameter:: NLImin=1.0e3_r_kind
-      real(r_kind),parameter:: NLImax=5.0e3_r_kind
-      real(r_kind),parameter:: RHOL=1000.0_r_kind
+  real(r_kind),parameter:: d608=0.608_r_kind
+  real(r_kind),parameter:: fmw=18.015_r_kind
+  real(r_kind),parameter:: fmd=28.964_r_kind
+  real(r_kind),parameter:: eps=fmw/fmd
+  real(r_kind),parameter:: rd=287.04_r_kind
+  real(r_kind),parameter:: oneps=1.0_r_kind-eps
+  real(r_kind),parameter:: nlimin=1.0e3_r_kind
+  real(r_kind),parameter:: nlimax=5.0e3_r_kind
+  real(r_kind),parameter:: rhol=1000.0_r_kind
 
 
-      real(r_kind),intent(in) :: P1D,T1D,Q1D
-      real(r_kind),intent(in) :: QW1,QI1,QR1,FS1D
+  real(r_kind),intent(in) :: p1d,t1d,q1d
+  real(r_kind),intent(in) :: qw1,qi1,qr1,fs1d
+  real(r_kind),intent(out) :: efr_ql,efr_qi,efr_qr,efr_qs,efr_qg,efr_qh
       
-!     local variables
-      real(r_kind) tem4,indexw,indexi
-      real(r_kind) N0r,RHgrd,C_N0r0
-      real(r_kind) TC,Flimass,Flarge,     &
-           Fsmall,RimeF,Xsimass,Qice,Qsat,ESAT,WV,RHO,RRHO,RQR,          &
-           Qsigrd,WVQW,Dum,XLi,Qlice,DLI,xlimass,NLICE1
+! local variables
+  real(r_kind) tem4,indexw,indexi
+  real(r_kind) n0r,rhgrd,c_n0r0
+  real(r_kind) tc,flimass,flarge,     &
+       fsmall,rimef,xsimass,qice,qsat,esat,wv,rho,rrho,rqr,          &
+       qsigrd,wvqw,dum,xli,qlice,dli,xlimass,nlice1
 
-!     Various rain lookup tables
-      REAL(R_KIND) RQR_DRmin,RQR_DRmax,CN0r0,CN0r_DMRmin,CN0r_DMRmax
+! Various rain lookup tables
+  real(r_kind) rqr_drmin,rqr_drmax,cn0r0,cn0r_dmrmin,cn0r_dmrmax
 
-      real(r_kind) rhox  ! assumed density of the large ice in kg m^-3
-      real(r_kind) efr_ql,efr_qi,efr_qr,efr_qs,efr_qg,efr_qh
+  real(r_kind) rhox  ! assumed density of the large ice in kg m^-3
 
 !************************************************************************
-!     liquid water cloud drop size
-      tem4=max(zero,(t0c-T1D)*r0_05)
-      indexw=five + five * min(one, tem4)
+! liquid water cloud drop size
+  tem4=max(zero,(t0c-t1d)*r0_05)
+  indexw=five + five * min(one, tem4)
 
-!     cloud ice drop size
-      indexi=50.0_r_kind  ! microns
+! cloud ice drop size
+  indexi=50.0_r_kind  ! microns
 
-!     effective radius for liquid water cloud and cloud ice
-      efr_ql=1.5_r_kind*indexw
-      efr_qi=1.5_r_kind*indexi
+! effective radius for liquid water cloud and cloud ice
+  efr_ql=1.5_r_kind*indexw
+  efr_qi=1.5_r_kind*indexi
 
-!     Initialize variables
-      efr_qr=zero
-      efr_qs=zero
-      efr_qg=zero
-      efr_qh=zero
+! Initialize variables
+  efr_qr=zero
+  efr_qs=zero
+  efr_qg=zero
+  efr_qh=zero
 
-!     Saturation vapor pressure w/r/t water ( >=0C ) or ice ( <0C )
-      TC=T1D-t0c
-      WV=Q1D/(one-Q1D)
-      ESAT=1000._r_kind*FPVSX(T1D)
-      QSAT=EPS*ESAT/(P1D-ESAT)
-      RHO=P1D/(RD*T1D*(one+D608*Q1D))  ! air density in kg m^-3
-      RRHO=one/RHO
+! Saturation vapor pressure w/r/t water ( >=0C ) or ice ( <0C )
+  tc=t1d-t0c
+  wv=q1d/(one-q1d)
+  esat=1000._r_kind*fpvsx(t1d)
+  qsat=eps*esat/(p1d-esat)
+  rho=p1d/(rd*t1d*(one+d608*q1d))  ! air density in kg m^-3
+  rrho=one/rho
 
-      if (use_lookup_table) then
-         ! MASSR and MASSI are read and initialized in cloud_init
-         RQR_DRmin=N0r0*MASSR(MDRmin)    ! Rain content for mean drop diameter of .05 mm
-         RQR_DRmax=N0r0*MASSR(MDRmax)    ! Rain content for mean drop diameter of .45 mm
-         C_N0r0=PI*RHOL*N0r0
-         CN0r0=1.E6_r_kind/C_N0r0**.25_r_kind
-         CN0r_DMRmin=1.0_r_kind/(PI*RHOL*DMRmin**4)
-         CN0r_DMRmax=1.0_r_kind/(PI*RHOL*DMRmax**4)
-!         print *,'MICROINIT: MDRmin, MASSR(MDRmin)=',MDRmin,MASSR(MDRmin)
-!         print *,'MICROINIT: MDRmax, MASSR(MDRmax)=',MDRmax,MASSR(MDRmax)
-!        print *,  'ETA2P:MASSI(50)= ', MASSI(50)
-!        print *,  'ETA2P:MASSI(450)= ', MASSI(450)
-!        print *,  'ETA2P:MASSI(1000)= ', MASSI(1000)
+  if (use_lookup_table) then
+     ! massr and massi are read and initialized in cloud_init
+     rqr_drmin=n0r0*massr(mdrmin)    ! Rain content for mean drop diameter of .05 mm
+     rqr_drmax=n0r0*massr(mdrmax)    ! Rain content for mean drop diameter of .45 mm
+     c_n0r0=pi*rhol*n0r0
+     cn0r0=1.e6_r_kind/c_n0r0**.25_r_kind
+     cn0r_dmrmin=1.0_r_kind/(pi*rhol*dmrmin**4)
+     cn0r_dmrmax=1.0_r_kind/(pi*rhol*dmrmax**4)
+!     print *,'MICROINIT: MDRmin, MASSR(MDRmin)=',mdrmin,massr(mdrmin)
+!     print *,'MICROINIT: MDRmax, MASSR(MDRmax)=',mdrmax,massr(mdrmax)
+!    print *,  'ETA2P:MASSI(50)= ', massi(50)
+!    print *,  'ETA2P:MASSI(450)= ', massi(450)
+!    print *,  'ETA2P:MASSI(1000)= ', massi(1000)
 
-!        Based on code from GSMCOLUMN in model to determine reflectivity from rain
-!        INDEXR is the mean drop size in microns
-         IF (QR1 > qcmin) THEN
-           RQR=RHO*QR1
-           IF (RQR <= RQR_DRmin) THEN
-             N0r=MAX(N0rmin, CN0r_DMRmin*RQR)
-             INDEXR=MDRmin
-           ELSE IF (RQR >= RQR_DRmax) THEN
-             N0r=CN0r_DMRmax*RQR
-             INDEXR=MDRmax
-           ELSE
-             N0r=N0r0
-             INDEXR=MAX( XMRmin, MIN(CN0r0*RQR**.25_r_kind, XMRmax) )
-           ENDIF
-           efr_qr=1.5_r_kind*INDEXR
-         ENDIF        !--- End IF (QR1 > qcmin) block
-
-
-!        Based on code from GSMCOLUMN in model to determine partition of 
-!        total ice into cloud ice & snow (precipitation ice)
-         IF (QI1 > qcmin) THEN
-!          Initialize RHgrd, grid-scale RH for onset of condensation
-           RHgrd=ONE
-
-           QICE=QI1
-           RHO=P1D/(RD*T1D*(ONE+ONEPS*Q1D))
-           RRHO=ONE/RHO
-           QSIgrd=RHgrd*QSAT
-           WVQW=WV+QW1
-
-!          * FLARGE  - ratio of number of large ice to total (large & small) ice
-!          * FSMALL  - ratio of number of small ice crystals to large ice particles
-!           ->  Small ice particles are assumed to have a mean diameter of 50 microns.
-!           * XSIMASS - used for calculating small ice mixing ratio
-!           * XLIMASS - used for calculating large ice mixing ratio
-!           * INDEXS  - mean size of snow to the nearest micron (units of microns)
-!           * RimeF   - Rime Factor, which is the mass ratio of total (unrimed &
-!                       rimed) ice mass to the unrimed ice mass (>=1)
-!           * FLIMASS - mass fraction of large ice
-!           * QTICE   - time-averaged mixing ratio of total ice
-!           * QLICE   - time-averaged mixing ratio of large ice
-!           * NLICE1   - time-averaged number concentration of large ice
-
-           IF (TC>=ZERO .OR. WVQW<QSIgrd) THEN
-             FLARGE=ONE
-           ELSE
-             FLARGE=.03_r_kind   !- was .2, Brad modified this to get better RH score
-             IF (TC>=-8.0_r_kind .AND. TC<=-3.0_r_kind) FLARGE=.5_r_kind*FLARGE
-           ENDIF
-           FSMALL=(ONE-FLARGE)/FLARGE
-           XSIMASS=RRHO*MASSI(MDImin)*FSMALL
-           DUM=XMImax*EXP(.0536_r_kind*TC)
-           INDEXS=MIN(MDImax, MAX(MDImin, INT(DUM) ) )
-           RimeF=MAX(one, FS1D )
-           XLIMASS=RRHO*RimeF*MASSI(INDEXS)
-           FLIMASS=XLIMASS/(XLIMASS+XSIMASS)
-           QLICE=FLIMASS*QICE
-           NLICE1=QLICE/XLIMASS
-           IF (NLICE1<NLImin .OR. NLICE1>NLImax) THEN
-
-!            Force NLICE1 to be between NLImin and NLImax
-             DUM=MAX(NLImin, MIN(NLImax, NLICE1) )
-             XLI=RHO*(QICE/DUM-XSIMASS)/RimeF
-             IF (XLI<=MASSI(MDImin) ) THEN
-               INDEXS=MDImin
-             ELSE IF (XLI<=MASSI(450) ) THEN
-               DLI=9.5885E5_r_kind*XLI**.42066_r_kind         ! DLI in microns
-               INDEXS=MIN(MDImax, MAX(MDImin, INT(DLI) ) )
-             ELSE IF (XLI<=MASSI(MDImax) ) THEN
-               DLI=3.9751E6_r_kind*XLI**.49870_r_kind         ! DLI in microns
-               INDEXS=MIN(MDImax, MAX(MDImin, INT(DLI) ) )
-             ELSE 
-               INDEXS=MDImax
-!              8/22/01: Increase density of large ice if maximum limits
-!              are reached for number concentration (NLImax) and mean size
-!              (MDImax).  Done to increase fall out of ice.
-               IF (DUM>=NLImax)                              &
-                 RimeF=RHO*(QICE/NLImax-XSIMASS)/MASSI(INDEXS)
-             ENDIF             ! End IF (XLI<=MASSI(MDImin) )
-             XLIMASS=RRHO*RimeF*MASSI(INDEXS)
-             FLIMASS=XLIMASS/(XLIMASS+XSIMASS)
-             QLICE=FLIMASS*QICE
-             NLICE1=QLICE/XLIMASS
-           ENDIF               ! End IF (NLICE<NLImin ...
-         ENDIF                 ! End IF (QI1>0.) THEN
-
-      else ! "eta_micro_lookup.dat" not exist
-         IF (QR1>qcmin) efr_qr=1.5_r_kind*300_r_kind
-         NLICE1=20.0e3_r_kind
-         QLICE=0.95_r_kind*QI1
-      end if ! pcexist   
+!    Based on code from gsmcolumn in model to determine reflectivity from rain
+!    indexr is the mean drop size in microns
+     if (qr1 > qcmin) then
+       rqr=rho*qr1
+       if (rqr <= rqr_drmin) then
+         n0r=max(n0rmin, cn0r_dmrmin*rqr)
+         indexr=mdrmin
+       else if (rqr >= rqr_drmax) then
+         n0r=cn0r_dmrmax*rqr
+         indexr=mdrmax
+       else
+         n0r=n0r0
+         indexr=max( xmrmin, min(cn0r0*rqr**.25_r_kind, xmrmax) )
+       endif
+       efr_qr=1.5_r_kind*indexr
+     endif        !--- End if (qr1 > qcmin) block
 
 
-!     Calculate effective radius
-      IF (QI1>qcmin) THEN
-        if (fs1d<=5.0_r_kind) then 
-           rhox=100.0_r_kind
-           efr_qs=1.5_r_kind*(RHO*QLICE/(PI*RHOX*NLICE1))**(one/three)*1.0e6_r_kind
-        end if
-        if ((fs1d>5.0_r_kind) .and. (fs1d<=20.0_r_kind)) then 
-           rhox=400.0_r_kind
-           efr_qg=1.5_r_kind*(RHO*QLICE/(PI*RHOX*NLICE1))**(one/three)*1.0e6_r_kind
-        end if
-        if (fs1d>20_r_kind) then 
-           rhox=900.0_r_kind
-           efr_qh=1.5_r_kind*(RHO*QLICE/(PI*RHOX*NLICE1))**(one/three)*1.0e6_r_kind
-        end if
-      END IF
+!    Based on code from gsmcolumn in model to determine partition of 
+!    total ice into cloud ice & snow (precipitation ice)
+     if (qi1 > qcmin) then
+!      Initialize rhgrd, grid-scale rh for onset of condensation
+       rhgrd=one
 
-      RETURN
-      END SUBROUTINE EFFRDS
+       qice=qi1
+       rho=p1d/(rd*t1d*(one+oneps*q1d))
+       rrho=one/rho
+       qsigrd=rhgrd*qsat
+       wvqw=wv+qw1
+
+!      * flarge  - ratio of number of large ice to total (large & small) ice
+!      * fsmall  - ratio of number of small ice crystals to large ice particles
+!       ->  Small ice particles are assumed to have a mean diameter of 50 microns.
+!       * xsimass - used for calculating small ice mixing ratio
+!       * xlimass - used for calculating large ice mixing ratio
+!       * indexs  - mean size of snow to the nearest micron (units of microns)
+!       * rimef   - Rime Factor, which is the mass ratio of total (unrimed &
+!                   rimed) ice mass to the unrimed ice mass (>=1)
+!       * flimass - mass fraction of large ice
+!       * qtice   - time-averaged mixing ratio of total ice
+!       * qlice   - time-averaged mixing ratio of large ice
+!       * nlice1   - time-averaged number concentration of large ice
+
+       if (tc>=zero .or. wvqw<qsigrd) then
+         flarge=one
+       else
+         flarge=.03_r_kind   !- was .2, Brad modified this to get better rh score
+         if (tc>=-8.0_r_kind .and. tc<=-3.0_r_kind) flarge=.5_r_kind*flarge
+       endif
+       fsmall=(one-flarge)/flarge
+       xsimass=rrho*massi(mdimin)*fsmall
+       dum=xmimax*exp(.0536_r_kind*tc)
+       indexs=min(mdimax, max(mdimin, int(dum) ) )
+       rimef=max(one, fs1d )
+       xlimass=rrho*rimef*massi(indexs)
+       flimass=xlimass/(xlimass+xsimass)
+       qlice=flimass*qice
+       nlice1=qlice/xlimass
+       if (nlice1<nlimin .or. nlice1>nlimax) then
+
+!        Force nlice1 to be between nlimin and nlimax
+         dum=max(nlimin, min(nlimax, nlice1) )
+         xli=rho*(qice/dum-xsimass)/rimef
+         if (xli<=massi(mdimin) ) then
+           indexs=mdimin
+         else if (xli<=massi(450) ) then
+           dli=9.5885e5_r_kind*xli**.42066_r_kind         ! dli in microns
+           indexs=min(mdimax, max(mdimin, int(dli) ) )
+         else if (xli<=massi(mdimax) ) then
+           dli=3.9751e6_r_kind*xli**.49870_r_kind         ! dli in microns
+           indexs=min(mdimax, max(mdimin, int(dli) ) )
+         else 
+           indexs=mdimax
+!          8/22/01: Increase density of large ice if maximum limits
+!          are reached for number concentration (nlimax) and mean size
+!          (mdimax).  Done to increase fall out of ice.
+           if (dum>=nlimax)                              &
+             rimef=rho*(qice/nlimax-xsimass)/massi(indexs)
+         endif             ! End if (xli<=massi(mdimin) )
+         xlimass=rrho*rimef*massi(indexs)
+         flimass=xlimass/(xlimass+xsimass)
+         qlice=flimass*qice
+         nlice1=qlice/xlimass
+       endif               ! End if (nlice<nlimin ...
+     endif                 ! End if (qi1>0._r_kind) then
+
+  else ! "eta_micro_lookup.dat" not exist
+     if (qr1>qcmin) efr_qr=1.5_r_kind*300_r_kind
+     nlice1=20.0e3_r_kind
+     qlice=0.95_r_kind*qi1
+  end if ! pcexist   
 
 
-      real(r_kind) function fpvsx(t)
-      use constants, only: tmix, xai, xbi, xa, xb, ttp, psatk
-      implicit none
+! Calculate effective radius
+  if (qi1>qcmin) then
+    if (fs1d<=5.0_r_kind) then 
+       rhox=100.0_r_kind
+       efr_qs=1.5_r_kind*(rho*qlice/(pi*rhox*nlice1))**(one/three)*1.0e6_r_kind
+    end if
+    if ((fs1d>5.0_r_kind) .and. (fs1d<=20.0_r_kind)) then 
+       rhox=400.0_r_kind
+       efr_qg=1.5_r_kind*(rho*qlice/(pi*rhox*nlice1))**(one/three)*1.0e6_r_kind
+    end if
+    if (fs1d>20_r_kind) then 
+       rhox=900.0_r_kind
+       efr_qh=1.5_r_kind*(rho*qlice/(pi*rhox*nlice1))**(one/three)*1.0e6_r_kind
+    end if
+  end if
 
-      real(r_kind) :: t
-      real(r_kind) :: tr
+  return
+end subroutine effrds
 
-      tr=ttp/t
+
+real(r_kind) function fpvsx(t)
+  use constants, only: tmix, xai, xbi, xa, xb, ttp, psatk
+  implicit none
+
+  real(r_kind),intent(in) :: t
+  real(r_kind) :: tr
+
+  tr=ttp/t
  
-      if(t>=ttp)then
-        fpvsx=psatk*(tr**xa)*exp(xb*(one-tr))
-      else
-        fpvsx=psatk*(tr**xai)*exp(xbi*(one-tr))
-      endif
+  if(t>=ttp)then
+    fpvsx=psatk*(tr**xa)*exp(xb*(one-tr))
+  else
+    fpvsx=psatk*(tr**xai)*exp(xbi*(one-tr))
+  endif
 
-      return
-      end function fpvsx
+  return
+end function fpvsx
 
 end module cloud_efr_mod

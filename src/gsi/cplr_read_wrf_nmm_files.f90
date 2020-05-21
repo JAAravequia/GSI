@@ -1,10 +1,11 @@
 module read_wrf_nmm_files_mod
-use abstract_read_wrf_nmm_files_mod
-  type, extends(abstract_read_wrf_nmm_files_class) :: read_wrf_nmm_files_class 
-  contains
-    procedure, pass(this) :: read_wrf_nmm_files => read_wrf_nmm_files_wrf
-    procedure, pass(this) :: read_nems_nmmb_files => read_nems_nmmb_files_wrf
-  end type read_wrf_nmm_files_class 
+use abstract_read_wrf_nmm_files_mod, only: abstract_read_wrf_nmm_files_class
+implicit none
+type, extends(abstract_read_wrf_nmm_files_class) :: read_wrf_nmm_files_class 
+contains
+  procedure, pass(this) :: read_wrf_nmm_files => read_wrf_nmm_files_wrf
+  procedure, pass(this) :: read_nems_nmmb_files => read_nems_nmmb_files_wrf
+end type read_wrf_nmm_files_class 
 contains
   subroutine read_wrf_nmm_files_wrf(this,mype)
   !$$$  subprogram documentation block

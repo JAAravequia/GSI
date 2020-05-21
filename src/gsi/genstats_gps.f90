@@ -35,7 +35,7 @@ module m_gpsStats
 
 ! module interface:
 
-  use m_gpsNode, only: gps_ob_type => gpsNode
+  use m_gpsnode, only: gps_ob_type => gpsnode
   use kinds , only: r_kind,i_kind
   implicit none
   private	! except
@@ -43,33 +43,33 @@ module m_gpsStats
         ! Data Structure:
   !public:: gps_all_ob_type      ! currently not required to be public
 
-    type gps_all_ob_type
-      type(gps_all_ob_type),pointer :: llpoint => NULL()
-      type(gps_ob_type),pointer :: mmpoint => NULL()
-      real(r_kind)    :: ratio_err                        
-      real(r_kind)    :: obserr                        
-      real(r_kind)    :: dataerr                       
-      real(r_kind)    :: pg                       
-      real(r_kind)    :: b                      
-      real(r_kind)    :: loc                    
-      real(r_kind)    :: type               
+  type gps_all_ob_type
+     type(gps_all_ob_type),pointer :: llpoint => null()
+     type(gps_ob_type),pointer :: mmpoint => null()
+     real(r_kind)    :: ratio_err                        
+     real(r_kind)    :: obserr                        
+     real(r_kind)    :: dataerr                       
+     real(r_kind)    :: pg                       
+     real(r_kind)    :: b                      
+     real(r_kind)    :: loc                    
+     real(r_kind)    :: type               
 
-      real(r_kind),dimension(:),pointer :: rdiag => NULL()
-      integer(i_kind) :: kprof
-      logical         :: luse          !  flag indicating if ob is used in pen.
+     real(r_kind),dimension(:),pointer :: rdiag => null()
+     integer(i_kind) :: kprof
+     logical         :: luse          !  flag indicating if ob is used in pen.
 
-      logical         :: muse          !  flag indicating if ob is used in pen.
-      character(8)    :: cdiag
+     logical         :: muse          !  flag indicating if ob is used in pen.
+     character(8)    :: cdiag
 
-      integer(i_kind) :: idv,iob	      ! device id and obs index for sorting
-      real   (r_kind) :: elat, elon      ! earth lat-lon for redistribution
-      !real   (r_kind) :: dlat, dlon      ! earth lat-lon for redistribution
-    end type gps_all_ob_type
+     integer(i_kind) :: idv,iob	      ! device id and obs index for sorting
+     real   (r_kind) :: elat, elon      ! earth lat-lon for redistribution
+     !real   (r_kind) :: dlat, dlon      ! earth lat-lon for redistribution
+  end type gps_all_ob_type
 
-    type gps_all_ob_head
-      integer(i_kind):: n_alloc=0
-      type(gps_all_ob_type),pointer :: head => NULL()
-    end type gps_all_ob_head
+  type gps_all_ob_head
+     integer(i_kind):: n_alloc=0
+     type(gps_all_ob_type),pointer :: head => null()
+  end type gps_all_ob_head
 
         ! Data objects:
 
@@ -81,12 +81,12 @@ module m_gpsStats
   public:: gpsStats_create
   public:: gpsStats_destroy
 
-        interface gpsStats_create ; module procedure create_; end interface
-        interface gpsStats_destroy; module procedure destroy_genstats_gps; end interface
+  interface gpsStats_create ; module procedure create_; end interface
+  interface gpsStats_destroy; module procedure destroy_genstats_gps; end interface
 
   public:: gpsStats_genStats
 
-        interface gpsStats_genStats; module procedure genstats_gps; end interface
+  interface gpsStats_genStats; module procedure genstats_gps; end interface
 
         ! Synopsis:
         !       - []_create: allocated in gsimod::gsimain_initialize().  It was
@@ -133,8 +133,8 @@ contains
     use gsi_4dvar, only: nobs_bins
     implicit none
 
-    ALLOCATE(gps_allhead(nobs_bins))
-    ALLOCATE(gps_alltail(nobs_bins))
+    allocate(gps_allhead(nobs_bins))
+    allocate(gps_alltail(nobs_bins))
   end subroutine create_
 
   subroutine destroy_genstats_gps()
@@ -244,8 +244,8 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
 !
 !$$$
   use kinds, only: r_kind,i_kind,r_single
-  use m_obsdiagNode, only: obs_diag
-  use m_obsdiagNode, only: obsdiagNode_set
+  use m_obsdiagnode, only: obs_diag
+  use m_obsdiagnode, only: obsdiagnode_set
   use obsmod, only: nprof_gps,lobsdiag_forenkf
   use obsmod, only: lobsdiagsave,luse_obsdiag
   use obsmod, only: binary_diag,netcdf_diag,dirname,ianldate
@@ -293,7 +293,7 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
 
   real(r_single), dimension(nsdim) :: dhx_dx_array
   
-  type(obs_diag), pointer :: obsptr => NULL()
+  type(obs_diag), pointer :: obsptr => null()
 
   integer(i_kind) :: nnz, nind
   type(gps_ob_type), pointer:: gpsptr
@@ -319,7 +319,7 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
 
 ! Get height of maximum bending angle
   dobs_height_sub = zero
-  DO ii=1,nobs_bins
+  do ii=1,nobs_bins
      gps_allptr => gps_allhead(ii)%head
      do while (associated(gps_allptr))
 
@@ -338,7 +338,7 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
      end do
 
 ! End of loop over time bins
-  END DO
+  end do
 
 ! Reduce sub-domain specific QC'd profile height to maximum global value for each profile
   dobs_height=zero
@@ -363,34 +363,34 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
 !       Accumulate superobs factors and get highest good gps obs within a profile
 
         if (dtype == zero) then ! refractivity
-          rhgt         = gps_allptr%loc
-          if (rhgt >toss_gps(kprof)) then
-             if(ratio_errors*data_ier>tiny_r_kind) then
-                elev         = gps_allptr%rdiag(7)
-                high_gps_sub(kprof)=max(high_gps_sub(kprof),elev)
-                if(luse) then
-                   khgt         = gps_allptr%loc
-                   k=min(max(1,khgt),nsig)
-                   super_gps_sub(k,kprof)=super_gps_sub(k,kprof)+one
-                endif
-             endif
-          endif
+           rhgt         = gps_allptr%loc
+           if (rhgt >toss_gps(kprof)) then
+              if(ratio_errors*data_ier>tiny_r_kind) then
+                 elev         = gps_allptr%rdiag(7)
+                 high_gps_sub(kprof)=max(high_gps_sub(kprof),elev)
+                 if(luse) then
+                    khgt         = gps_allptr%loc
+                    k=min(max(1,khgt),nsig)
+                    super_gps_sub(k,kprof)=super_gps_sub(k,kprof)+one
+                 endif
+              endif
+           endif
 
         else ! bending angle
-            dobs         = gps_allptr%rdiag(17)
-            if(toss_gps(kprof) == zero .or. (toss_gps(kprof) > zero .and. dobs < toss_gps(kprof))) then ! will not fail SR from obs qc
+           dobs         = gps_allptr%rdiag(17)
+           if(toss_gps(kprof) == zero .or. (toss_gps(kprof) > zero .and. dobs < toss_gps(kprof))) then ! will not fail SR from obs qc
               elev         = gps_allptr%rdiag(7)
               if(elev > dobs_height(kprof)) then
-                if(ratio_errors*data_ier>tiny_r_kind) then
-                   high_gps_sub(kprof)=max(high_gps_sub(kprof),elev)
-                   if(luse) then
-                      khgt         = gps_allptr%loc
-                      k=min(max(1,khgt),nsig)
-                      super_gps_sub(k,kprof)=super_gps_sub(k,kprof)+one
-                   endif
-                endif
+                 if(ratio_errors*data_ier>tiny_r_kind) then
+                    high_gps_sub(kprof)=max(high_gps_sub(kprof),elev)
+                    if(luse) then
+                       khgt         = gps_allptr%loc
+                       k=min(max(1,khgt),nsig)
+                       super_gps_sub(k,kprof)=super_gps_sub(k,kprof)+one
+                    endif
+                 endif
               endif
-            endif
+           endif
         endif
 
 
@@ -400,7 +400,7 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
      end do
 
 ! End of loop over time bins     
-  END DO
+  end do
 
   super_gps = zero
   high_gps = zero
@@ -421,22 +421,22 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
   ioff =nreal
   if (conv_diagsave) then
      icnt = zero
-     DO ii=1,nobs_bins
+     do ii=1,nobs_bins
         gps_allptr => gps_allhead(ii)%head
         do while (associated(gps_allptr))
            luse         = gps_allptr%luse
            if(luse)icnt=icnt+1
            gps_allptr => gps_allptr%llpoint
         end do
-     END DO
+     end do
      if(icnt > 0)then
         nreal =22
         ioff  =nreal
         if (lobsdiagsave) nreal=nreal+4*miter+1
         if (save_jacobian) then
-          nnz   = 3*nsig
-          nind  = 3
-          nreal = nreal + 2*nind + nnz + 2
+           nnz   = 3*nsig
+           nind  = 3
+           nreal = nreal + 2*nind + nnz + 2
         endif
         allocate(cdiag(icnt),sdiag(nreal,icnt))
      end if
@@ -447,7 +447,7 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
 ! Loop over data to apply final qc, superobs factors, accumulate
 ! statistics and (optionally) load diagnostic output arrays
   icnt=0
-  DO ii=1,nobs_bins
+  do ii=1,nobs_bins
      gps_allptr => gps_allhead(ii)%head
      do while (associated(gps_allptr))
 
@@ -491,7 +491,7 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
               gpsptr%raterr2 = ratio_errors **2
               if(associated(obsptr) .and. luse_obsdiag)then
                  !-- obsptr%wgtjo=(ratio_errors*data_ier)**2
-                 call obsdiagNode_set(obsptr,wgtjo=(ratio_errors*data_ier)**2)
+                 call obsdiagnode_set(obsptr,wgtjo=(ratio_errors*data_ier)**2)
               end if
            endif
         endif
@@ -504,54 +504,22 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
         rhgt = gps_allptr%loc
         mreal = 22
         if(dtype == zero) then !refractivity
-          if (rhgt<=toss_gps(kprof)) then
-             if(ratio_errors*data_ier > tiny_r_kind) then ! obs was good
-                if (luse) then
-                   if(conv_diagsave) then
-                      gps_allptr%rdiag(10) = four
-                      gps_allptr%rdiag(12) = -one
-                      gps_allptr%rdiag(16) = zero
-                      if(lobsdiagsave) gps_allptr%rdiag(mreal+jiter) = -one
-                   endif
-                   elat         = gps_allptr%rdiag(3)
-                   if(elat > r20) then
-                      awork(22) = awork(22)+one
-                   else if(elat< -r20)then
-                      awork(23) = awork(23)+one
-                   else
-                      awork(24) = awork(24)+one
-                   end if
-                endif
-             endif
-             ratio_errors = zero
-             if (associated(gpsptr)) then
-                gpsptr%raterr2 = ratio_errors **2
-                if(associated(obsptr) .and. luse_obsdiag)then
-                   !-- obsptr%wgtjo=zero
-                   !-- obsptr%muse(jiter)=.false.
-                   call obsdiagNode_set(obsptr,wgtjo=zero,jiter=jiter,muse=.false.)
-                end if
-             endif
-          endif
-        else
-          elev         = gps_allptr%rdiag(7)
-          dobs         = gps_allptr%rdiag(17)
-          if  (toss_gps(kprof) > zero .and. (dobs == toss_gps(kprof) .or. elev < dobs_height(kprof))) then ! SR from obs
+           if (rhgt<=toss_gps(kprof)) then
               if(ratio_errors*data_ier > tiny_r_kind) then ! obs was good
                  if (luse) then
                     if(conv_diagsave) then
-                      gps_allptr%rdiag(10) = four
-                      gps_allptr%rdiag(12) = -one
-                      gps_allptr%rdiag(16) = zero
-                      if(lobsdiagsave) gps_allptr%rdiag(mreal+jiter) = -one
+                       gps_allptr%rdiag(10) = four
+                       gps_allptr%rdiag(12) = -one
+                       gps_allptr%rdiag(16) = zero
+                       if(lobsdiagsave) gps_allptr%rdiag(mreal+jiter) = -one
                     endif
                     elat         = gps_allptr%rdiag(3)
                     if(elat > r20) then
-                      awork(22) = awork(22)+one
+                       awork(22) = awork(22)+one
                     else if(elat< -r20)then
-                      awork(23) = awork(23)+one
+                       awork(23) = awork(23)+one
                     else
-                      awork(24) = awork(24)+one
+                       awork(24) = awork(24)+one
                     end if
                  endif
               endif
@@ -561,10 +529,42 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
                  if(associated(obsptr) .and. luse_obsdiag)then
                     !-- obsptr%wgtjo=zero
                     !-- obsptr%muse(jiter)=.false.
-                    call obsdiagNode_set(obsptr,wgtjo=zero,jiter=jiter,muse=.false.)
+                    call obsdiagnode_set(obsptr,wgtjo=zero,jiter=jiter,muse=.false.)
                  end if
               endif
-          endif
+           endif
+        else
+           elev         = gps_allptr%rdiag(7)
+           dobs         = gps_allptr%rdiag(17)
+           if  (toss_gps(kprof) > zero .and. (dobs == toss_gps(kprof) .or. elev < dobs_height(kprof))) then ! SR from obs
+              if(ratio_errors*data_ier > tiny_r_kind) then ! obs was good
+                 if (luse) then
+                    if(conv_diagsave) then
+                       gps_allptr%rdiag(10) = four
+                       gps_allptr%rdiag(12) = -one
+                       gps_allptr%rdiag(16) = zero
+                       if(lobsdiagsave) gps_allptr%rdiag(mreal+jiter) = -one
+                    endif
+                    elat         = gps_allptr%rdiag(3)
+                    if(elat > r20) then
+                       awork(22) = awork(22)+one
+                    else if(elat< -r20)then
+                       awork(23) = awork(23)+one
+                    else
+                       awork(24) = awork(24)+one
+                    end if
+                 endif
+              endif
+              ratio_errors = zero
+              if (associated(gpsptr)) then
+                 gpsptr%raterr2 = ratio_errors **2
+                 if(associated(obsptr) .and. luse_obsdiag)then
+                    !-- obsptr%wgtjo=zero
+                    !-- obsptr%muse(jiter)=.false.
+                    call obsdiagnode_set(obsptr,wgtjo=zero,jiter=jiter,muse=.false.)
+                 end if
+              endif
+           endif
         endif
 
 
@@ -574,16 +574,16 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
         if(regional) then
            toss=.false.
            if(ratio_errors*data_ier > tiny_r_kind) then
-             if(dtype==zero) then !refractivity
-                satid        = gps_allptr%rdiag(1)
-                if((satid==41).or.(satid==722).or.(satid==723).or.(satid==4).or.(satid==786).or.(satid==3)) then
-                   if ((high_gps(kprof)) < ten)  toss=.true.
-                else ! OL
-                   if ((high_gps(kprof)) < five) toss=.true.
-                endif
-             else !bending angle
-                if ((high_gps(kprof)) <= six)  toss=.true.
-             endif
+              if(dtype==zero) then !refractivity
+                 satid        = gps_allptr%rdiag(1)
+                 if((satid==41).or.(satid==722).or.(satid==723).or.(satid==4).or.(satid==786).or.(satid==3)) then
+                    if ((high_gps(kprof)) < ten)  toss=.true.
+                 else ! OL
+                    if ((high_gps(kprof)) < five) toss=.true.
+                 endif
+              else !bending angle
+                 if ((high_gps(kprof)) <= six)  toss=.true.
+              endif
            endif
            if (toss) then
               if (luse) then
@@ -608,7 +608,7 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
                  if(associated(obsptr) .and. luse_obsdiag)then
                     !-- obsptr%wgtjo=zero
                     !-- obsptr%muse(jiter)=.false.
-                    call obsdiagNode_set(obsptr,wgtjo=zero,jiter=jiter,muse=.false.)
+                    call obsdiagnode_set(obsptr,wgtjo=zero,jiter=jiter,muse=.false.)
                  end if
               endif
            endif
@@ -693,17 +693,17 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
      end do
 
 ! End of loop over time bins
-  END DO
+  end do
 
 ! If requested, write information to diagnostic file
   if(conv_diagsave) then
-    if (netcdf_diag) call nc_diag_write
-    if (binary_diag .and. icnt > 0)then
+     if (netcdf_diag) call nc_diag_write
+     if (binary_diag .and. icnt > 0)then
         nchar = 1
         write(7)'gps',nchar,nreal,icnt,mype,ioff
         write(7)cdiag,sdiag
         deallocate(cdiag,sdiag)
-    endif
+     endif
   endif
 
 
@@ -712,6 +712,7 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
 contains
 
 subroutine init_netcdf_diag_
+  implicit none
   integer(i_kind) ncd_fileid, ncd_nobs
   character(len=80) string
   character(len=128) diag_conv_file
@@ -746,10 +747,12 @@ subroutine init_netcdf_diag_
 end subroutine init_netcdf_diag_
 
 subroutine contents_binary_diag_
+  implicit none
 end subroutine contents_binary_diag_
 
 subroutine contents_netcdf_diag_
   use sparsearr, only: sparr2, readarray, fullarray
+  implicit none
   integer(i_kind),dimension(miter) :: obsdiag_iuse
   integer(i_kind)                  :: obstype, obssubtype
   type(sparr2) :: dhx_dx
@@ -757,59 +760,59 @@ subroutine contents_netcdf_diag_
 ! Observation class
   character(7),parameter     :: obsclass = '    gps'
 
-           call nc_diag_metadata("Station_ID",                            gps_allptr%cdiag             )
-           call nc_diag_metadata("Observation_Class",                     obsclass                     )
-           obstype    = gps_allptr%rdiag(1) 
-           obssubtype = gps_allptr%rdiag(2)
-           call nc_diag_metadata("Observation_Type",                      obstype                      )
-           call nc_diag_metadata("Observation_Subtype",                   obssubtype                   )
-           call nc_diag_metadata("Latitude",                              sngl(gps_allptr%rdiag(3))    )
-           call nc_diag_metadata("Longitude",                             sngl(gps_allptr%rdiag(4))    )
-           call nc_diag_metadata("Incremental_Bending_Angle",             sngl(gps_allptr%rdiag(5))    )
-           call nc_diag_metadata("Pressure",                              sngl(gps_allptr%rdiag(6))    )
-           call nc_diag_metadata("Height",                                sngl(gps_allptr%rdiag(7))    )
-           call nc_diag_metadata("Time",                                  sngl(gps_allptr%rdiag(8))    )
-           call nc_diag_metadata("Model_Elevation",                       sngl(gps_allptr%rdiag(9))    )
-           call nc_diag_metadata("Setup_QC_Mark",                         sngl(gps_allptr%rdiag(10))   )
-           call nc_diag_metadata("Prep_Use_Flag",                         sngl(gps_allptr%rdiag(11))   )
-           call nc_diag_metadata("Analysis_Use_Flag",                     sngl(gps_allptr%rdiag(12))   )
+     call nc_diag_metadata("Station_ID",                            gps_allptr%cdiag             )
+     call nc_diag_metadata("Observation_Class",                     obsclass                     )
+     obstype    = gps_allptr%rdiag(1) 
+     obssubtype = gps_allptr%rdiag(2)
+     call nc_diag_metadata("Observation_Type",                      obstype                      )
+     call nc_diag_metadata("Observation_Subtype",                   obssubtype                   )
+     call nc_diag_metadata("Latitude",                              sngl(gps_allptr%rdiag(3))    )
+     call nc_diag_metadata("Longitude",                             sngl(gps_allptr%rdiag(4))    )
+     call nc_diag_metadata("Incremental_Bending_Angle",             sngl(gps_allptr%rdiag(5))    )
+     call nc_diag_metadata("Pressure",                              sngl(gps_allptr%rdiag(6))    )
+     call nc_diag_metadata("Height",                                sngl(gps_allptr%rdiag(7))    )
+     call nc_diag_metadata("Time",                                  sngl(gps_allptr%rdiag(8))    )
+     call nc_diag_metadata("Model_Elevation",                       sngl(gps_allptr%rdiag(9))    )
+     call nc_diag_metadata("Setup_QC_Mark",                         sngl(gps_allptr%rdiag(10))   )
+     call nc_diag_metadata("Prep_Use_Flag",                         sngl(gps_allptr%rdiag(11))   )
+     call nc_diag_metadata("Analysis_Use_Flag",                     sngl(gps_allptr%rdiag(12))   )
 
-           call nc_diag_metadata("Nonlinear_QC_Rel_Wgt",                  sngl(gps_allptr%rdiag(13))   )
-           call nc_diag_metadata("Errinv_Input",                          sngl(gps_allptr%rdiag(14))   )
-           call nc_diag_metadata("Errinv_Adjust",                         sngl(gps_allptr%rdiag(15))   )
-           call nc_diag_metadata("Errinv_Final",                          sngl(gps_allptr%rdiag(16))   )
-           call nc_diag_metadata("Observation",                           sngl(gps_allptr%rdiag(17))   )
-           call nc_diag_metadata("Obs_Minus_Forecast_adjusted",           sngl(gps_allptr%rdiag(17))*sngl(gps_allptr%rdiag(5)) )
-           call nc_diag_metadata("Obs_Minus_Forecast_unadjusted",         sngl(gps_allptr%rdiag(17))*sngl(gps_allptr%rdiag(5)) )
-           call nc_diag_metadata("GPS_Type",                              sngl(gps_allptr%rdiag(20))   )
-           call nc_diag_metadata("Temperature_at_Obs_Location",           sngl(gps_allptr%rdiag(18))   )
-           call nc_diag_metadata("Specific_Humidity_at_Obs_Location",     sngl(gps_allptr%rdiag(21))   )
+     call nc_diag_metadata("Nonlinear_QC_Rel_Wgt",                  sngl(gps_allptr%rdiag(13))   )
+     call nc_diag_metadata("Errinv_Input",                          sngl(gps_allptr%rdiag(14))   )
+     call nc_diag_metadata("Errinv_Adjust",                         sngl(gps_allptr%rdiag(15))   )
+     call nc_diag_metadata("Errinv_Final",                          sngl(gps_allptr%rdiag(16))   )
+     call nc_diag_metadata("Observation",                           sngl(gps_allptr%rdiag(17))   )
+     call nc_diag_metadata("Obs_Minus_Forecast_adjusted",           sngl(gps_allptr%rdiag(17))*sngl(gps_allptr%rdiag(5)) )
+     call nc_diag_metadata("Obs_Minus_Forecast_unadjusted",         sngl(gps_allptr%rdiag(17))*sngl(gps_allptr%rdiag(5)) )
+     call nc_diag_metadata("GPS_Type",                              sngl(gps_allptr%rdiag(20))   )
+     call nc_diag_metadata("Temperature_at_Obs_Location",           sngl(gps_allptr%rdiag(18))   )
+     call nc_diag_metadata("Specific_Humidity_at_Obs_Location",     sngl(gps_allptr%rdiag(21))   )
 
-           if (save_jacobian) then
-              call readarray(dhx_dx, gps_allptr%rdiag(ioff+1:nreal))
-              call fullarray(dhx_dx, dhx_dx_array)
-              call nc_diag_data2d("Observation_Operator_Jacobian", dhx_dx_array)
-           endif
+     if (save_jacobian) then
+        call readarray(dhx_dx, gps_allptr%rdiag(ioff+1:nreal))
+        call fullarray(dhx_dx, dhx_dx_array)
+        call nc_diag_data2d("Observation_Operator_Jacobian", dhx_dx_array)
+     endif
 
 
 
-!           call nc_diag_data2d("T_Jacobian",                              gps_allptr%mmpoint%jac_t             )
-           if (lobsdiagsave) then
-              print *,'ERROR: OBSDIAGSAVE SKIPPED IN NCDIAG DEVELOPMENT.  STOPPING.'
-              call stop2(55)
-!              do jj=1,miter
-!                 if (gps_allptr%diags%muse(jj)) then
-!                    obsdiag_iuse(jj) =  one
-!                 else
-!                    obsdiag_iuse(jj) = -one
-!                 endif
-!              enddo
+!     call nc_diag_data2d("T_Jacobian",                              gps_allptr%mmpoint%jac_t             )
+     if (lobsdiagsave) then
+        print *,'ERROR: OBSDIAGSAVE SKIPPED IN NCDIAG DEVELOPMENT.  STOPPING.'
+        call stop2(55)
+!        do jj=1,miter
+!           if (gps_allptr%diags%muse(jj)) then
+!              obsdiag_iuse(jj) =  one
+!           else
+!              obsdiag_iuse(jj) = -one
+!           endif
+!        enddo
 !
-!              call nc_diag_data2d("ObsDiagSave_iuse",     obsdiag_iuse                             )
-!              call nc_diag_data2d("ObsDiagSave_nldepart", gps_allptr%diags%nldepart )
-!              call nc_diag_data2d("ObsDiagSave_tldepart", gps_allptr%diags%tldepart )
-!              call nc_diag_data2d("ObsDiagSave_obssen",   gps_allptr%diags%obssen   )
-           endif
+!        call nc_diag_data2d("ObsDiagSave_iuse",     obsdiag_iuse                             )
+!        call nc_diag_data2d("ObsDiagSave_nldepart", gps_allptr%diags%nldepart )
+!        call nc_diag_data2d("ObsDiagSave_tldepart", gps_allptr%diags%tldepart )
+!        call nc_diag_data2d("ObsDiagSave_obssen",   gps_allptr%diags%obssen   )
+     endif
 end subroutine contents_netcdf_diag_
 end subroutine genstats_gps
 

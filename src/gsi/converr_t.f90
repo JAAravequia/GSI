@@ -132,8 +132,8 @@ contains
            enddo
            ptabl_t(34)=etabl_t(itypex,33,1)
         else
-            write(6,*)'ERROR IN CONVERR_T: NO OBSERVATION TYPE READ IN'
-            return
+           write(6,*)'ERROR IN CONVERR_T: NO OBSERVATION TYPE READ IN'
+           return
         endif
      endif
 

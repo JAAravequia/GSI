@@ -100,296 +100,296 @@ subroutine deter_sfc(alat,alon,dlat_earth,dlon_earth,obstime,isflg, &
 !
 !$$$
 
-     implicit none
+  implicit none
 
-     real(r_kind)               ,intent(in   ) :: dlat_earth,dlon_earth,obstime,alat,alon
-     integer(i_kind)            ,intent(  out) :: isflg,idomsfc
-     real(r_kind),dimension(0:3),intent(  out) :: sfcpct
-     real(r_kind),dimension(0:3),intent(  out) :: ts
-     real(r_kind)               ,intent(  out) :: tsavg,sfcr
-     real(r_kind)               ,intent(  out) :: vty,vfr,sty,stp,sm,sn,zz,ff10
+  real(r_kind)               ,intent(in   ) :: dlat_earth,dlon_earth,obstime,alat,alon
+  integer(i_kind)            ,intent(  out) :: isflg,idomsfc
+  real(r_kind),dimension(0:3),intent(  out) :: sfcpct
+  real(r_kind),dimension(0:3),intent(  out) :: ts
+  real(r_kind)               ,intent(  out) :: tsavg,sfcr
+  real(r_kind)               ,intent(  out) :: vty,vfr,sty,stp,sm,sn,zz,ff10
 
-     real(r_kind),parameter:: minsnow=one_tenth
+  real(r_kind),parameter:: minsnow=one_tenth
 
-     integer(i_kind) istyp00,istyp01,istyp10,istyp11
-     integer(i_kind):: itsfc,itsfcp
-     integer(i_kind):: ix,iy,ixp,iyp,j
-     real(r_kind):: dx,dy,dx1,dy1,w00,w10,w01,w11,dtsfc,dtsfcp,wgtmin
-     real(r_kind):: sno00,sno01,sno10,sno11,dlat,dlon
-     real(r_kind):: sst00,sst01,sst10,sst11
-     real(r_kind),dimension(0:3)::wgtavg
+  integer(i_kind) istyp00,istyp01,istyp10,istyp11
+  integer(i_kind):: itsfc,itsfcp
+  integer(i_kind):: ix,iy,ixp,iyp,j
+  real(r_kind):: dx,dy,dx1,dy1,w00,w10,w01,w11,dtsfc,dtsfcp,wgtmin
+  real(r_kind):: sno00,sno01,sno10,sno11,dlat,dlon
+  real(r_kind):: sst00,sst01,sst10,sst11
+  real(r_kind),dimension(0:3)::wgtavg
 
-!  First do surface field since it is on model grid
-     iy=int(alon); ix=int(alat)
-     dy  =alon-iy; dx  =alat-ix
-     dx1 =one-dx;    dy1 =one-dy
-     w00=dx1*dy1; w10=dx*dy1; w01=dx1*dy; w11=dx*dy
+! First do surface field since it is on model grid
+  iy=int(alon); ix=int(alat)
+  dy  =alon-iy; dx  =alat-ix
+  dx1 =one-dx;    dy1 =one-dy
+  w00=dx1*dy1; w10=dx*dy1; w01=dx1*dy; w11=dx*dy
 
-     ix=min(max(1,ix),nlat); iy=min(max(0,iy),nlon)
-     ixp=min(nlat,ix+1); iyp=iy+1
-     if(iy==0) iy=nlon
-     if(iyp==nlon+1) iyp=1
+  ix=min(max(1,ix),nlat); iy=min(max(0,iy),nlon)
+  ixp=min(nlat,ix+1); iyp=iy+1
+  if(iy==0) iy=nlon
+  if(iyp==nlon+1) iyp=1
 
-!    Interpolate fields which only vary in space (no time component)
-!       zz   = surface height
-     zz   = zs_full(ix,iy) *w00 + zs_full(ixp,iy) *w10 + &
-            zs_full(ix,iyp)*w01 + zs_full(ixp,iyp)*w11
+! Interpolate fields which only vary in space (no time component)
+!    zz   = surface height
+  zz   = zs_full(ix,iy) *w00 + zs_full(ixp,iy) *w10 + &
+         zs_full(ix,iyp)*w01 + zs_full(ixp,iyp)*w11
 
-     if(regional)then
-!       call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
-        dlat=alat
-        dlon=alon
-     else
-        dlat=dlat_earth
-        dlon=dlon_earth
-        call grdcrd1(dlat,rlats_sfc,nlat_sfc,1)
-        call grdcrd1(dlon,rlons_sfc,nlon_sfc,1)
-     end if
-     iy=int(dlon); ix=int(dlat)
-     dy  =dlon-iy; dx  =dlat-ix
-     dx1 =one-dx;    dy1 =one-dy
-     w00=dx1*dy1; w10=dx*dy1; w01=dx1*dy; w11=one-w00-w10-w01
+  if(regional)then
+!    call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
+     dlat=alat
+     dlon=alon
+  else
+     dlat=dlat_earth
+     dlon=dlon_earth
+     call grdcrd1(dlat,rlats_sfc,nlat_sfc,1)
+     call grdcrd1(dlon,rlons_sfc,nlon_sfc,1)
+  end if
+  iy=int(dlon); ix=int(dlat)
+  dy  =dlon-iy; dx  =dlat-ix
+  dx1 =one-dx;    dy1 =one-dy
+  w00=dx1*dy1; w10=dx*dy1; w01=dx1*dy; w11=one-w00-w10-w01
 
-     ix=min(max(1,ix),nlat_sfc); iy=min(max(0,iy),nlon_sfc)
-     ixp=min(nlat_sfc,ix+1); iyp=iy+1
-     if(iy==0) iy=nlon_sfc
-     if(iyp==nlon_sfc+1) iyp=1
+  ix=min(max(1,ix),nlat_sfc); iy=min(max(0,iy),nlon_sfc)
+  ixp=min(nlat_sfc,ix+1); iyp=iy+1
+  if(iy==0) iy=nlon_sfc
+  if(iyp==nlon_sfc+1) iyp=1
 
-!    Get time interpolation factors for surface files
-     if(obstime > hrdifsfc(1) .and. obstime <= hrdifsfc(nfldsfc))then
-        do j=1,nfldsfc-1
-           if(obstime > hrdifsfc(j) .and. obstime <= hrdifsfc(j+1))then
-              itsfc=j
-              itsfcp=j+1
-              dtsfc=(hrdifsfc(j+1)-obstime)/(hrdifsfc(j+1)-hrdifsfc(j))
-           end if
-        end do
-     else if(obstime <=hrdifsfc(1))then
-        itsfc=1
-        itsfcp=1
-        dtsfc=one
-     else
-        itsfc=nfldsfc
-        itsfcp=nfldsfc
-        dtsfc=one
-     end if
-     dtsfcp=one-dtsfc
+! Get time interpolation factors for surface files
+  if(obstime > hrdifsfc(1) .and. obstime <= hrdifsfc(nfldsfc))then
+     do j=1,nfldsfc-1
+        if(obstime > hrdifsfc(j) .and. obstime <= hrdifsfc(j+1))then
+           itsfc=j
+           itsfcp=j+1
+           dtsfc=(hrdifsfc(j+1)-obstime)/(hrdifsfc(j+1)-hrdifsfc(j))
+        end if
+     end do
+  else if(obstime <=hrdifsfc(1))then
+     itsfc=1
+     itsfcp=1
+     dtsfc=one
+  else
+     itsfc=nfldsfc
+     itsfcp=nfldsfc
+     dtsfc=one
+  end if
+  dtsfcp=one-dtsfc
 
-!    Set surface type flag.  Begin by assuming obs over ice-free water
+! Set surface type flag.  Begin by assuming obs over ice-free water
 
-     istyp00 = isli_full(ix ,iy )
-     istyp10 = isli_full(ixp,iy )
-     istyp01 = isli_full(ix ,iyp)
-     istyp11 = isli_full(ixp,iyp)
+  istyp00 = isli_full(ix ,iy )
+  istyp10 = isli_full(ixp,iy )
+  istyp01 = isli_full(ix ,iyp)
+  istyp11 = isli_full(ixp,iyp)
 
-     sno00= sno_full(ix ,iy ,itsfc)*dtsfc+sno_full(ix ,iy ,itsfcp)*dtsfcp
-     sno01= sno_full(ix ,iyp,itsfc)*dtsfc+sno_full(ix ,iyp,itsfcp)*dtsfcp
-     sno10= sno_full(ixp,iy ,itsfc)*dtsfc+sno_full(ixp,iy ,itsfcp)*dtsfcp
-     sno11= sno_full(ixp,iyp,itsfc)*dtsfc+sno_full(ixp,iyp,itsfcp)*dtsfcp
+  sno00= sno_full(ix ,iy ,itsfc)*dtsfc+sno_full(ix ,iy ,itsfcp)*dtsfcp
+  sno01= sno_full(ix ,iyp,itsfc)*dtsfc+sno_full(ix ,iyp,itsfcp)*dtsfcp
+  sno10= sno_full(ixp,iy ,itsfc)*dtsfc+sno_full(ixp,iy ,itsfcp)*dtsfcp
+  sno11= sno_full(ixp,iyp,itsfc)*dtsfc+sno_full(ixp,iyp,itsfcp)*dtsfcp
 
-     sst00= sst_full(ix ,iy ,itsfc)*dtsfc+sst_full(ix ,iy ,itsfcp)*dtsfcp
-     sst01= sst_full(ix ,iyp,itsfc)*dtsfc+sst_full(ix ,iyp,itsfcp)*dtsfcp
-     sst10= sst_full(ixp,iy ,itsfc)*dtsfc+sst_full(ixp,iy ,itsfcp)*dtsfcp
-     sst11= sst_full(ixp,iyp,itsfc)*dtsfc+sst_full(ixp,iyp,itsfcp)*dtsfcp
+  sst00= sst_full(ix ,iy ,itsfc)*dtsfc+sst_full(ix ,iy ,itsfcp)*dtsfcp
+  sst01= sst_full(ix ,iyp,itsfc)*dtsfc+sst_full(ix ,iyp,itsfcp)*dtsfcp
+  sst10= sst_full(ixp,iy ,itsfc)*dtsfc+sst_full(ixp,iy ,itsfcp)*dtsfcp
+  sst11= sst_full(ixp,iyp,itsfc)*dtsfc+sst_full(ixp,iyp,itsfcp)*dtsfcp
 
-!    Interpolate sst to obs location
+! Interpolate sst to obs location
 
-     tsavg=sst00*w00+sst10*w10+sst01*w01+sst11*w11
+  tsavg=sst00*w00+sst10*w10+sst01*w01+sst11*w11
 
-     if(istyp00 >=1 .and. sno00 > minsnow)istyp00 = 3
-     if(istyp01 >=1 .and. sno01 > minsnow)istyp01 = 3
-     if(istyp10 >=1 .and. sno10 > minsnow)istyp10 = 3
-     if(istyp11 >=1 .and. sno11 > minsnow)istyp11 = 3
+  if(istyp00 >=1 .and. sno00 > minsnow)istyp00 = 3
+  if(istyp01 >=1 .and. sno01 > minsnow)istyp01 = 3
+  if(istyp10 >=1 .and. sno10 > minsnow)istyp10 = 3
+  if(istyp11 >=1 .and. sno11 > minsnow)istyp11 = 3
 
-     sfcpct = zero
-     sfcpct(istyp00)=sfcpct(istyp00)+w00
-     sfcpct(istyp01)=sfcpct(istyp01)+w01
-     sfcpct(istyp10)=sfcpct(istyp10)+w10
-     sfcpct(istyp11)=sfcpct(istyp11)+w11
+  sfcpct = zero
+  sfcpct(istyp00)=sfcpct(istyp00)+w00
+  sfcpct(istyp01)=sfcpct(istyp01)+w01
+  sfcpct(istyp10)=sfcpct(istyp10)+w10
+  sfcpct(istyp11)=sfcpct(istyp11)+w11
 
+  isflg = 0
+  if(sfcpct(0) > 0.99_r_kind)then
      isflg = 0
-     if(sfcpct(0) > 0.99_r_kind)then
-        isflg = 0
-     else if(sfcpct(1) > 0.99_r_kind)then
-        isflg = 1
-     else if(sfcpct(2) > 0.99_r_kind)then
-        isflg = 2
-     else if(sfcpct(3) > 0.99_r_kind)then
-        isflg = 3
-     else
-        isflg = 4
-     end if
+  else if(sfcpct(1) > 0.99_r_kind)then
+     isflg = 1
+  else if(sfcpct(2) > 0.99_r_kind)then
+     isflg = 2
+  else if(sfcpct(3) > 0.99_r_kind)then
+     isflg = 3
+  else
+     isflg = 4
+  end if
 
-!       vty  = vegetation type
-!       sty  = soil type
+!    vty  = vegetation type
+!    sty  = soil type
 
-     ts(0:3)=zero
-     wgtavg(0:3)=zero
-     vfr=zero
-     stp=zero
-     sty=zero
-     vty=zero
-     sm=zero
-     sn=zero
-     idomsfc=isli_full(ix ,iy )
-     wgtmin = w00
-     if(istyp00 == 1)then
-        vty  = veg_type_full(ix ,iy)
-        sty  = soil_type_full(ix ,iy)
-        wgtavg(1) = wgtavg(1) + w00
-        ts(1)=ts(1)+w00*sst00
-        vfr  =vfr  +w00*(veg_frac_full(ix ,iy ,itsfc ) *dtsfc+   &
-                         veg_frac_full(ix ,iy ,itsfcp) *dtsfcp)
-        stp  =stp  +w00*(soil_temp_full(ix ,iy ,itsfc )*dtsfc+   &
-                         soil_temp_full(ix ,iy ,itsfcp)*dtsfcp)
-        sm   =sm   +w00*(soil_moi_full(ix ,iy ,itsfc ) *dtsfc+   &
-                         soil_moi_full(ix ,iy ,itsfcp) *dtsfcp)
-     else if(istyp00 == 2)then
-        wgtavg(2) = wgtavg(2) + w00
-        ts(2)=ts(2)+w00*sst00
-     else if(istyp00 == 3)then
-        wgtavg(3) = wgtavg(3) + w00
-        ts(3)=ts(3)+w00*sst00
-        sn = sn + w00*sno00
-     else
-        wgtavg(0) = wgtavg(0) + w00
-        ts(0)=ts(0)+w00*sst00
+  ts(0:3)=zero
+  wgtavg(0:3)=zero
+  vfr=zero
+  stp=zero
+  sty=zero
+  vty=zero
+  sm=zero
+  sn=zero
+  idomsfc=isli_full(ix ,iy )
+  wgtmin = w00
+  if(istyp00 == 1)then
+     vty  = veg_type_full(ix ,iy)
+     sty  = soil_type_full(ix ,iy)
+     wgtavg(1) = wgtavg(1) + w00
+     ts(1)=ts(1)+w00*sst00
+     vfr  =vfr  +w00*(veg_frac_full(ix ,iy ,itsfc ) *dtsfc+   &
+                      veg_frac_full(ix ,iy ,itsfcp) *dtsfcp)
+     stp  =stp  +w00*(soil_temp_full(ix ,iy ,itsfc )*dtsfc+   &
+                      soil_temp_full(ix ,iy ,itsfcp)*dtsfcp)
+     sm   =sm   +w00*(soil_moi_full(ix ,iy ,itsfc ) *dtsfc+   &
+                      soil_moi_full(ix ,iy ,itsfcp) *dtsfcp)
+  else if(istyp00 == 2)then
+     wgtavg(2) = wgtavg(2) + w00
+     ts(2)=ts(2)+w00*sst00
+  else if(istyp00 == 3)then
+     wgtavg(3) = wgtavg(3) + w00
+     ts(3)=ts(3)+w00*sst00
+     sn = sn + w00*sno00
+  else
+     wgtavg(0) = wgtavg(0) + w00
+     ts(0)=ts(0)+w00*sst00
+  end if
+  if(istyp01 == 1)then
+     if(wgtmin < w01 .or. (vty == zero .and. sty == zero))then
+        vty  = veg_type_full(ix ,iyp)
+        sty  = soil_type_full(ix ,iyp)
      end if
-     if(istyp01 == 1)then
-        if(wgtmin < w01 .or. (vty == zero .and. sty == zero))then
-           vty  = veg_type_full(ix ,iyp)
-           sty  = soil_type_full(ix ,iyp)
-        end if
-        wgtavg(1) = wgtavg(1) + w01
-        ts(1)=ts(1)+w01*sst01
-        vfr  =vfr  +w01*(veg_frac_full(ix ,iyp,itsfc ) *dtsfc+   &
-                         veg_frac_full(ix ,iyp,itsfcp) *dtsfcp)
-        stp  =stp  +w01*(soil_temp_full(ix ,iyp,itsfc )*dtsfc+   &
-                         soil_temp_full(ix ,iyp,itsfcp)*dtsfcp)
-        sm   =sm   +w01*(soil_moi_full(ix ,iyp,itsfc ) *dtsfc+   &
-                         soil_moi_full(ix ,iyp,itsfcp) *dtsfcp)
-     else if(istyp01 == 2)then
-        wgtavg(2) = wgtavg(2) + w01
-        ts(2)=ts(2)+w01*sst01
-     else if(istyp01 == 3)then
-        wgtavg(3) = wgtavg(3) + w01
-        ts(3)=ts(3)+w01*sst01
-        sn = sn + w01*sno01
-     else
-        wgtavg(0) = wgtavg(0) + w01
-        ts(0)=ts(0)+w01*sst01
+     wgtavg(1) = wgtavg(1) + w01
+     ts(1)=ts(1)+w01*sst01
+     vfr  =vfr  +w01*(veg_frac_full(ix ,iyp,itsfc ) *dtsfc+   &
+                      veg_frac_full(ix ,iyp,itsfcp) *dtsfcp)
+     stp  =stp  +w01*(soil_temp_full(ix ,iyp,itsfc )*dtsfc+   &
+                      soil_temp_full(ix ,iyp,itsfcp)*dtsfcp)
+     sm   =sm   +w01*(soil_moi_full(ix ,iyp,itsfc ) *dtsfc+   &
+                      soil_moi_full(ix ,iyp,itsfcp) *dtsfcp)
+  else if(istyp01 == 2)then
+     wgtavg(2) = wgtavg(2) + w01
+     ts(2)=ts(2)+w01*sst01
+  else if(istyp01 == 3)then
+     wgtavg(3) = wgtavg(3) + w01
+     ts(3)=ts(3)+w01*sst01
+     sn = sn + w01*sno01
+  else
+     wgtavg(0) = wgtavg(0) + w01
+     ts(0)=ts(0)+w01*sst01
+  end if
+  if(wgtmin < w01)then
+     idomsfc=isli_full(ix ,iyp)
+     wgtmin = w01
+  end if
+  if(istyp10 == 1)then
+     if(wgtmin < w10 .or. (vty == zero .and. sty == zero))then
+        vty  = veg_type_full(ixp,iy)
+        sty  = soil_type_full(ixp,iy)
      end if
-     if(wgtmin < w01)then
-        idomsfc=isli_full(ix ,iyp)
-        wgtmin = w01
-     end if
-     if(istyp10 == 1)then
-        if(wgtmin < w10 .or. (vty == zero .and. sty == zero))then
-           vty  = veg_type_full(ixp,iy)
-           sty  = soil_type_full(ixp,iy)
-        end if
-        wgtavg(1) = wgtavg(1) + w10
-        ts(1)=ts(1)+w10*sst10
-        vfr  =vfr  +w10*(veg_frac_full(ixp,iy ,itsfc ) *dtsfc+   &
-                         veg_frac_full(ixp,iy ,itsfcp) *dtsfcp)
-        stp  =stp  +w10*(soil_temp_full(ixp,iy ,itsfc )*dtsfc+   &
-                         soil_temp_full(ixp,iy ,itsfcp)*dtsfcp)
-        sm   =sm   +w10*(soil_moi_full(ixp,iy ,itsfc ) *dtsfc+   &
-                         soil_moi_full(ixp,iy ,itsfcp) *dtsfcp)
-     else if(istyp10 == 2)then
-        wgtavg(2) = wgtavg(2) + w10
-        ts(2)=ts(2)+w10*sst10
-     else if(istyp10 == 3)then
-        wgtavg(3) = wgtavg(3) + w10
-        ts(3)=ts(3)+w10*sst10
-        sn = sn + w10*sno10
-     else
-        wgtavg(0) = wgtavg(0) + w10
-        ts(0)=ts(0)+w10*sst10
-     end if
-     if(wgtmin < w10)then
-        idomsfc=isli_full(ixp,iy )
-        wgtmin = w10
-     end if
-     if(istyp11 == 1)then
-        if(wgtmin < w11 .or. (vty == zero .and. sty == zero))then
-           vty  = veg_type_full(ixp,iyp)
-           sty  = soil_type_full(ixp,iyp)
-        endif
-        wgtavg(1) = wgtavg(1) + w11
-        ts(1)=ts(1)+w11*sst11
-        vfr  =vfr  +w11*(veg_frac_full(ixp,iyp,itsfc ) *dtsfc+   &
-                         veg_frac_full(ixp,iyp,itsfcp) *dtsfcp)
-        stp  =stp  +w11*(soil_temp_full(ixp,iyp,itsfc )*dtsfc+   &
-                         soil_temp_full(ixp,iyp,itsfcp)*dtsfcp)
-        sm   =sm   +w11*(soil_moi_full(ixp,iyp,itsfc ) *dtsfc+   &
-                         soil_moi_full(ixp,iyp,itsfcp) *dtsfcp)
-     else if(istyp11 == 2)then
-        wgtavg(2) = wgtavg(2) + w11
-        ts(2)=ts(2)+w11*sst11
-     else if(istyp11 == 3)then
-        wgtavg(3) = wgtavg(3) + w11
-        ts(3)=ts(3)+w11*sst11
-        sn = sn + w11*sno11
-     else
-        wgtavg(0) = wgtavg(0) + w11
-        ts(0)=ts(0)+w11*sst11
-     end if
-     if(wgtmin < w11)then
-        idomsfc=isli_full(ixp,iyp)
-        wgtmin = w11
-     end if
+     wgtavg(1) = wgtavg(1) + w10
+     ts(1)=ts(1)+w10*sst10
+     vfr  =vfr  +w10*(veg_frac_full(ixp,iy ,itsfc ) *dtsfc+   &
+                      veg_frac_full(ixp,iy ,itsfcp) *dtsfcp)
+     stp  =stp  +w10*(soil_temp_full(ixp,iy ,itsfc )*dtsfc+   &
+                      soil_temp_full(ixp,iy ,itsfcp)*dtsfcp)
+     sm   =sm   +w10*(soil_moi_full(ixp,iy ,itsfc ) *dtsfc+   &
+                      soil_moi_full(ixp,iy ,itsfcp) *dtsfcp)
+  else if(istyp10 == 2)then
+     wgtavg(2) = wgtavg(2) + w10
+     ts(2)=ts(2)+w10*sst10
+  else if(istyp10 == 3)then
+     wgtavg(3) = wgtavg(3) + w10
+     ts(3)=ts(3)+w10*sst10
+     sn = sn + w10*sno10
+  else
+     wgtavg(0) = wgtavg(0) + w10
+     ts(0)=ts(0)+w10*sst10
+  end if
+  if(wgtmin < w10)then
+     idomsfc=isli_full(ixp,iy )
+     wgtmin = w10
+  end if
+  if(istyp11 == 1)then
+     if(wgtmin < w11 .or. (vty == zero .and. sty == zero))then
+        vty  = veg_type_full(ixp,iyp)
+        sty  = soil_type_full(ixp,iyp)
+     endif
+     wgtavg(1) = wgtavg(1) + w11
+     ts(1)=ts(1)+w11*sst11
+     vfr  =vfr  +w11*(veg_frac_full(ixp,iyp,itsfc ) *dtsfc+   &
+                      veg_frac_full(ixp,iyp,itsfcp) *dtsfcp)
+     stp  =stp  +w11*(soil_temp_full(ixp,iyp,itsfc )*dtsfc+   &
+                      soil_temp_full(ixp,iyp,itsfcp)*dtsfcp)
+     sm   =sm   +w11*(soil_moi_full(ixp,iyp,itsfc ) *dtsfc+   &
+                      soil_moi_full(ixp,iyp,itsfcp) *dtsfcp)
+  else if(istyp11 == 2)then
+     wgtavg(2) = wgtavg(2) + w11
+     ts(2)=ts(2)+w11*sst11
+  else if(istyp11 == 3)then
+     wgtavg(3) = wgtavg(3) + w11
+     ts(3)=ts(3)+w11*sst11
+     sn = sn + w11*sno11
+  else
+     wgtavg(0) = wgtavg(0) + w11
+     ts(0)=ts(0)+w11*sst11
+  end if
+  if(wgtmin < w11)then
+     idomsfc=isli_full(ixp,iyp)
+     wgtmin = w11
+  end if
 
-     if(wgtavg(0) > zero)then
-        ts(0) = ts(0)/wgtavg(0)
-     else
-        ts(0) = tsavg
-     end if
-     if(wgtavg(1) > zero)then
-        ts(1) = ts(1)/wgtavg(1)
-        sm = sm/wgtavg(1)
-        vfr = vfr/wgtavg(1)
-        stp = stp/wgtavg(1)
-     else
-        ts(1) = tsavg
-        sm=one
-     end if
-     if(wgtavg(2) > zero)then
-        ts(2) = ts(2)/wgtavg(2)
-     else
-        ts(2) = tsavg
-     end if
-     if(wgtavg(3) > zero)then
-        ts(3) = ts(3)/wgtavg(3)
-        sn = sn/wgtavg(3)
-     else
-        ts(3) = tsavg
-     end if
-!    ts(0)=max(ts(0),270._r_kind)
-!    ts(2)=min(ts(2),280._r_kind)
-!    ts(3)=min(ts(3),280._r_kind)
+  if(wgtavg(0) > zero)then
+     ts(0) = ts(0)/wgtavg(0)
+  else
+     ts(0) = tsavg
+  end if
+  if(wgtavg(1) > zero)then
+     ts(1) = ts(1)/wgtavg(1)
+     sm = sm/wgtavg(1)
+     vfr = vfr/wgtavg(1)
+     stp = stp/wgtavg(1)
+  else
+     ts(1) = tsavg
+     sm=one
+  end if
+  if(wgtavg(2) > zero)then
+     ts(2) = ts(2)/wgtavg(2)
+  else
+     ts(2) = tsavg
+  end if
+  if(wgtavg(3) > zero)then
+     ts(3) = ts(3)/wgtavg(3)
+     sn = sn/wgtavg(3)
+  else
+     ts(3) = tsavg
+  end if
+! ts(0)=max(ts(0),270._r_kind)
+! ts(2)=min(ts(2),280._r_kind)
+! ts(3)=min(ts(3),280._r_kind)
 
-!    Space-time interpolation of fields from surface wind speed
+! Space-time interpolation of fields from surface wind speed
 
-     ff10=(fact10_full(ix ,iy ,itsfc )*w00+ &
-           fact10_full(ixp,iy ,itsfc )*w10+ &
-           fact10_full(ix ,iyp,itsfc )*w01+ &
-           fact10_full(ixp,iyp,itsfc )*w11)*dtsfc + &
-          (fact10_full(ix ,iy ,itsfcp)*w00+ &
-           fact10_full(ixp,iy ,itsfcp)*w10+ &
-           fact10_full(ix ,iyp,itsfcp)*w01+ &
-           fact10_full(ixp,iyp,itsfcp)*w11)*dtsfcp
+  ff10=(fact10_full(ix ,iy ,itsfc )*w00+ &
+        fact10_full(ixp,iy ,itsfc )*w10+ &
+        fact10_full(ix ,iyp,itsfc )*w01+ &
+        fact10_full(ixp,iyp,itsfc )*w11)*dtsfc + &
+       (fact10_full(ix ,iy ,itsfcp)*w00+ &
+        fact10_full(ixp,iy ,itsfcp)*w10+ &
+        fact10_full(ix ,iyp,itsfcp)*w01+ &
+        fact10_full(ixp,iyp,itsfcp)*w11)*dtsfcp
 
-     sfcr=(sfc_rough_full(ix ,iy ,itsfc )*w00+ &
-           sfc_rough_full(ixp,iy ,itsfc )*w10+ &
-           sfc_rough_full(ix ,iyp,itsfc )*w01+ &
-           sfc_rough_full(ixp,iyp,itsfc )*w11)*dtsfc + &
-          (sfc_rough_full(ix ,iy ,itsfcp)*w00+ &
-           sfc_rough_full(ixp,iy ,itsfcp)*w10+ &
-           sfc_rough_full(ix ,iyp,itsfcp)*w01+ &
-           sfc_rough_full(ixp,iyp,itsfcp)*w11)*dtsfcp
+  sfcr=(sfc_rough_full(ix ,iy ,itsfc )*w00+ &
+        sfc_rough_full(ixp,iy ,itsfc )*w10+ &
+        sfc_rough_full(ix ,iyp,itsfc )*w01+ &
+        sfc_rough_full(ixp,iyp,itsfc )*w11)*dtsfc + &
+       (sfc_rough_full(ix ,iy ,itsfcp)*w00+ &
+        sfc_rough_full(ixp,iy ,itsfcp)*w10+ &
+        sfc_rough_full(ix ,iyp,itsfcp)*w01+ &
+        sfc_rough_full(ixp,iyp,itsfcp)*w11)*dtsfcp
 
-     return
+  return
 end subroutine deter_sfc
 
 subroutine deter_sfc_type(dlat_earth,dlon_earth,obstime,isflg,tsavg)
@@ -426,110 +426,110 @@ subroutine deter_sfc_type(dlat_earth,dlon_earth,obstime,isflg,tsavg)
 !
 !$$$
 
-     implicit none
+  implicit none
 
-     real(r_kind)   ,intent(in   ) :: dlat_earth,dlon_earth,obstime
+  real(r_kind)   ,intent(in   ) :: dlat_earth,dlon_earth,obstime
 
-     integer(i_kind),intent(  out) :: isflg
-     real(r_kind)   ,intent(  out) :: tsavg
+  integer(i_kind),intent(  out) :: isflg
+  real(r_kind)   ,intent(  out) :: tsavg
 
-     logical outside
-     integer(i_kind) istyp00,istyp01,istyp10,istyp11
-     integer(i_kind):: ix,iy,ixp,iyp,j,itsfc,itsfcp
-     real(r_kind):: dx,dy,dx1,dy1,w00,w10,w01,w11,dtsfc
-     real(r_kind):: dtsfcp,dlat,dlon
-     real(r_kind):: sst00,sst01,sst10,sst11
-     real(r_kind):: sno00,sno01,sno10,sno11
+  logical outside
+  integer(i_kind) istyp00,istyp01,istyp10,istyp11
+  integer(i_kind):: ix,iy,ixp,iyp,j,itsfc,itsfcp
+  real(r_kind):: dx,dy,dx1,dy1,w00,w10,w01,w11,dtsfc
+  real(r_kind):: dtsfcp,dlat,dlon
+  real(r_kind):: sst00,sst01,sst10,sst11
+  real(r_kind):: sno00,sno01,sno10,sno11
 
-     real(r_kind),parameter:: minsnow=one_tenth
+  real(r_kind),parameter:: minsnow=one_tenth
 
-     real(r_kind),dimension(0:3):: sfcpct
+  real(r_kind),dimension(0:3):: sfcpct
 
-     if(regional)then
-        call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
-     else
-        dlat=dlat_earth
-        dlon=dlon_earth
-        call grdcrd1(dlat,rlats_sfc,nlat_sfc,1)
-        call grdcrd1(dlon,rlons_sfc,nlon_sfc,1)
-     end if
+  if(regional)then
+     call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
+  else
+     dlat=dlat_earth
+     dlon=dlon_earth
+     call grdcrd1(dlat,rlats_sfc,nlat_sfc,1)
+     call grdcrd1(dlon,rlons_sfc,nlon_sfc,1)
+  end if
 
-     iy=int(dlon); ix=int(dlat)
-     dy  =dlon-iy; dx  =dlat-ix
-     dx1 =one-dx;    dy1 =one-dy
-     w00=dx1*dy1; w10=dx*dy1; w01=dx1*dy; w11=one-w00-w10-w01
+  iy=int(dlon); ix=int(dlat)
+  dy  =dlon-iy; dx  =dlat-ix
+  dx1 =one-dx;    dy1 =one-dy
+  w00=dx1*dy1; w10=dx*dy1; w01=dx1*dy; w11=one-w00-w10-w01
 
-     ix=min(max(1,ix),nlat_sfc); iy=min(max(0,iy),nlon_sfc)
-     ixp=min(nlat_sfc,ix+1); iyp=iy+1
-     if(iy==0) iy=nlon_sfc
-     if(iyp==nlon_sfc+1) iyp=1
+  ix=min(max(1,ix),nlat_sfc); iy=min(max(0,iy),nlon_sfc)
+  ixp=min(nlat_sfc,ix+1); iyp=iy+1
+  if(iy==0) iy=nlon_sfc
+  if(iyp==nlon_sfc+1) iyp=1
 
-!    Get time interpolation factors for surface files
-     if(obstime > hrdifsfc(1) .and. obstime <= hrdifsfc(nfldsfc))then
-        do j=1,nfldsfc-1
-           if(obstime > hrdifsfc(j) .and. obstime <= hrdifsfc(j+1))then
-              itsfc=j
-              itsfcp=j+1
-              dtsfc=(hrdifsfc(j+1)-obstime)/(hrdifsfc(j+1)-hrdifsfc(j))
-           end if
-        end do
-     else if(obstime <=hrdifsfc(1))then
-        itsfc=1
-        itsfcp=1
-        dtsfc=one
-     else
-        itsfc=nfldsfc
-        itsfcp=nfldsfc
-        dtsfc=one
-     end if
-     dtsfcp=one-dtsfc
+! Get time interpolation factors for surface files
+  if(obstime > hrdifsfc(1) .and. obstime <= hrdifsfc(nfldsfc))then
+     do j=1,nfldsfc-1
+        if(obstime > hrdifsfc(j) .and. obstime <= hrdifsfc(j+1))then
+           itsfc=j
+           itsfcp=j+1
+           dtsfc=(hrdifsfc(j+1)-obstime)/(hrdifsfc(j+1)-hrdifsfc(j))
+        end if
+     end do
+  else if(obstime <=hrdifsfc(1))then
+     itsfc=1
+     itsfcp=1
+     dtsfc=one
+  else
+     itsfc=nfldsfc
+     itsfcp=nfldsfc
+     dtsfc=one
+  end if
+  dtsfcp=one-dtsfc
 
-!    Set surface type flag.  Begin by assuming obs over ice-free water
+! Set surface type flag.  Begin by assuming obs over ice-free water
 
-     istyp00 = isli_full(ix ,iy )
-     istyp10 = isli_full(ixp,iy )
-     istyp01 = isli_full(ix ,iyp)
-     istyp11 = isli_full(ixp,iyp)
+  istyp00 = isli_full(ix ,iy )
+  istyp10 = isli_full(ixp,iy )
+  istyp01 = isli_full(ix ,iyp)
+  istyp11 = isli_full(ixp,iyp)
 
-     sno00= sno_full(ix ,iy ,itsfc)*dtsfc+sno_full(ix ,iy ,itsfcp)*dtsfcp
-     sno01= sno_full(ix ,iyp,itsfc)*dtsfc+sno_full(ix ,iyp,itsfcp)*dtsfcp
-     sno10= sno_full(ixp,iy ,itsfc)*dtsfc+sno_full(ixp,iy ,itsfcp)*dtsfcp
-     sno11= sno_full(ixp,iyp,itsfc)*dtsfc+sno_full(ixp,iyp,itsfcp)*dtsfcp
+  sno00= sno_full(ix ,iy ,itsfc)*dtsfc+sno_full(ix ,iy ,itsfcp)*dtsfcp
+  sno01= sno_full(ix ,iyp,itsfc)*dtsfc+sno_full(ix ,iyp,itsfcp)*dtsfcp
+  sno10= sno_full(ixp,iy ,itsfc)*dtsfc+sno_full(ixp,iy ,itsfcp)*dtsfcp
+  sno11= sno_full(ixp,iyp,itsfc)*dtsfc+sno_full(ixp,iyp,itsfcp)*dtsfcp
 
 
-     sst00= sst_full(ix ,iy ,itsfc)*dtsfc+sst_full(ix ,iy ,itsfcp)*dtsfcp
-     sst01= sst_full(ix ,iyp,itsfc)*dtsfc+sst_full(ix ,iyp,itsfcp)*dtsfcp
-     sst10= sst_full(ixp,iy ,itsfc)*dtsfc+sst_full(ixp,iy ,itsfcp)*dtsfcp
-     sst11= sst_full(ixp,iyp,itsfc)*dtsfc+sst_full(ixp,iyp,itsfcp)*dtsfcp
+  sst00= sst_full(ix ,iy ,itsfc)*dtsfc+sst_full(ix ,iy ,itsfcp)*dtsfcp
+  sst01= sst_full(ix ,iyp,itsfc)*dtsfc+sst_full(ix ,iyp,itsfcp)*dtsfcp
+  sst10= sst_full(ixp,iy ,itsfc)*dtsfc+sst_full(ixp,iy ,itsfcp)*dtsfcp
+  sst11= sst_full(ixp,iyp,itsfc)*dtsfc+sst_full(ixp,iyp,itsfcp)*dtsfcp
 
-!    Interpolate sst to obs location
+! Interpolate sst to obs location
 
-     tsavg=sst00*w00+sst10*w10+sst01*w01+sst11*w11
+  tsavg=sst00*w00+sst10*w10+sst01*w01+sst11*w11
 
-     if(istyp00 >=1 .and. sno00 > minsnow)istyp00 = 3
-     if(istyp01 >=1 .and. sno01 > minsnow)istyp01 = 3
-     if(istyp10 >=1 .and. sno10 > minsnow)istyp10 = 3
-     if(istyp11 >=1 .and. sno11 > minsnow)istyp11 = 3
+  if(istyp00 >=1 .and. sno00 > minsnow)istyp00 = 3
+  if(istyp01 >=1 .and. sno01 > minsnow)istyp01 = 3
+  if(istyp10 >=1 .and. sno10 > minsnow)istyp10 = 3
+  if(istyp11 >=1 .and. sno11 > minsnow)istyp11 = 3
 
-     sfcpct = zero
-     sfcpct(istyp00)=sfcpct(istyp00)+w00
-     sfcpct(istyp01)=sfcpct(istyp01)+w01
-     sfcpct(istyp10)=sfcpct(istyp10)+w10
-     sfcpct(istyp11)=sfcpct(istyp11)+w11
+  sfcpct = zero
+  sfcpct(istyp00)=sfcpct(istyp00)+w00
+  sfcpct(istyp01)=sfcpct(istyp01)+w01
+  sfcpct(istyp10)=sfcpct(istyp10)+w10
+  sfcpct(istyp11)=sfcpct(istyp11)+w11
 
+  isflg = 0
+  if(sfcpct(0) > 0.99_r_kind)then
      isflg = 0
-     if(sfcpct(0) > 0.99_r_kind)then
-        isflg = 0
-     else if(sfcpct(1) > 0.99_r_kind)then
-        isflg = 1
-     else if(sfcpct(2) > 0.99_r_kind)then
-        isflg = 2
-     else if(sfcpct(3) > 0.99_r_kind)then
-        isflg = 3
-     else
-        isflg = 4
-     end if
-     return
+  else if(sfcpct(1) > 0.99_r_kind)then
+     isflg = 1
+  else if(sfcpct(2) > 0.99_r_kind)then
+     isflg = 2
+  else if(sfcpct(3) > 0.99_r_kind)then
+     isflg = 3
+  else
+     isflg = 4
+  end if
+  return
 end subroutine deter_sfc_type
 
 subroutine deter_sfc2(dlat_earth,dlon_earth,obstime,idomsfc,tsavg,ff10,sfcr,zz)
@@ -566,28 +566,119 @@ subroutine deter_sfc2(dlat_earth,dlon_earth,obstime,idomsfc,tsavg,ff10,sfcr,zz)
 !
 !$$$
 
-     implicit none
+  implicit none
 
-     real(r_kind)   ,intent(in   ) :: dlat_earth,dlon_earth,obstime
+  real(r_kind)   ,intent(in   ) :: dlat_earth,dlon_earth,obstime
 
-     integer(i_kind),intent(  out) :: idomsfc
-     real(r_kind)   ,intent(  out) :: tsavg,sfcr
-     real(r_kind)   ,intent(  out) :: ff10
-     real(r_kind),optional,intent(  out) :: zz
+  integer(i_kind),intent(  out) :: idomsfc
+  real(r_kind)   ,intent(  out) :: tsavg,sfcr
+  real(r_kind)   ,intent(  out) :: ff10
+  real(r_kind),optional,intent(  out) :: zz
 
-     integer(i_kind):: itsfc,itsfcp
-     integer(i_kind):: ix,iy,ixp,iyp,j
-     real(r_kind):: dx,dy,dx1,dy1,w00,w10,w01,w11,dtsfc,dtsfcp,wgtmin
-     real(r_kind):: sst00,sst01,sst10,sst11,dlat,dlon
-     logical outside
+  integer(i_kind):: itsfc,itsfcp
+  integer(i_kind):: ix,iy,ixp,iyp,j
+  real(r_kind):: dx,dy,dx1,dy1,w00,w10,w01,w11,dtsfc,dtsfcp,wgtmin
+  real(r_kind):: sst00,sst01,sst10,sst11,dlat,dlon
+  logical outside
 
+  if(regional)then
+     call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
+  else
+     dlat=dlat_earth
+     dlon=dlon_earth
+     call grdcrd1(dlat,rlats_sfc,nlat_sfc,1)
+     call grdcrd1(dlon,rlons_sfc,nlon_sfc,1)
+  end if
+
+  iy=int(dlon); ix=int(dlat)
+  dy  =dlon-iy; dx  =dlat-ix
+  dx1 =one-dx;    dy1 =one-dy
+  w00=dx1*dy1; w10=dx*dy1; w01=dx1*dy; w11=dx*dy
+
+  ix=min(max(1,ix),nlat_sfc); iy=min(max(0,iy),nlon_sfc)
+  ixp=min(nlat_sfc,ix+1); iyp=iy+1
+  if(iy==0) iy=nlon_sfc
+  if(iyp==nlon_sfc+1) iyp=1
+
+
+! Get time interpolation factors for surface files
+  if(obstime > hrdifsfc(1) .and. obstime <= hrdifsfc(nfldsfc))then
+     do j=1,nfldsfc-1
+        if(obstime > hrdifsfc(j) .and. obstime <= hrdifsfc(j+1))then
+           itsfc=j
+           itsfcp=j+1
+           dtsfc=(hrdifsfc(j+1)-obstime)/(hrdifsfc(j+1)-hrdifsfc(j))
+        end if
+     end do
+  else if(obstime <=hrdifsfc(1))then
+     itsfc=1
+     itsfcp=1
+     dtsfc=one
+  else
+     itsfc=nfldsfc
+     itsfcp=nfldsfc
+     dtsfc=one
+  end if
+  dtsfcp=one-dtsfc
+
+  sst00= sst_full(ix ,iy ,itsfc)*dtsfc+sst_full(ix ,iy ,itsfcp)*dtsfcp
+  sst01= sst_full(ix ,iyp,itsfc)*dtsfc+sst_full(ix ,iyp,itsfcp)*dtsfcp
+  sst10= sst_full(ixp,iy ,itsfc)*dtsfc+sst_full(ixp,iy ,itsfcp)*dtsfcp
+  sst11= sst_full(ixp,iyp,itsfc)*dtsfc+sst_full(ixp,iyp,itsfcp)*dtsfcp
+
+! Interpolate sst to obs location
+
+  tsavg=sst00*w00+sst10*w10+sst01*w01+sst11*w11
+
+  idomsfc=isli_full(ix ,iy )
+  wgtmin = w00
+  if(wgtmin < w01 )then
+     idomsfc=isli_full(ix ,iyp)
+     wgtmin = w01
+  end if
+  if(wgtmin < w10)then
+     idomsfc=isli_full(ixp,iy )
+     wgtmin = w10
+  end if
+  if(wgtmin < w11)then
+     idomsfc=isli_full(ixp,iyp)
+     wgtmin = w11
+  end if
+  if((isli_full(ix ,iy ) /= isli_full(ix ,iyp)) .or. &
+     (isli_full(ix ,iy ) /= isli_full(ixp,iy )) .or. &
+     (isli_full(ix ,iy ) /= isli_full(ixp,iyp)) .or. &
+     (isli_full(ixp,iy ) /= isli_full(ix ,iyp)) .or. &
+     (isli_full(ixp,iy ) /= isli_full(ixp,iyp)) .or. &
+     (isli_full(ix ,iyp) /= isli_full(ixp,iyp)) ) idomsfc = idomsfc+3
+
+! Space-time interpolation of fields from surface wind speed
+
+  ff10=(fact10_full(ix ,iy ,itsfc )*w00+ &
+        fact10_full(ixp,iy ,itsfc )*w10+ &
+        fact10_full(ix ,iyp,itsfc )*w01+ &
+        fact10_full(ixp,iyp,itsfc )*w11)*dtsfc + &
+       (fact10_full(ix ,iy ,itsfcp)*w00+ &
+        fact10_full(ixp,iy ,itsfcp)*w10+ &
+        fact10_full(ix ,iyp,itsfcp)*w01+ &
+        fact10_full(ixp,iyp,itsfcp)*w11)*dtsfcp
+
+  sfcr=(sfc_rough_full(ix ,iy ,itsfc )*w00+ &
+        sfc_rough_full(ixp,iy ,itsfc )*w10+ &
+        sfc_rough_full(ix ,iyp,itsfc )*w01+ &
+        sfc_rough_full(ixp,iyp,itsfc )*w11)*dtsfc + &
+       (sfc_rough_full(ix ,iy ,itsfcp)*w00+ &
+        sfc_rough_full(ixp,iy ,itsfcp)*w10+ &
+        sfc_rough_full(ix ,iyp,itsfcp)*w01+ &
+        sfc_rough_full(ixp,iyp,itsfcp)*w11)*dtsfcp
+
+  if(present(zz)) then
      if(regional)then
         call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
      else
         dlat=dlat_earth
         dlon=dlon_earth
-        call grdcrd1(dlat,rlats_sfc,nlat_sfc,1)
-        call grdcrd1(dlon,rlons_sfc,nlon_sfc,1)
+        call grdcrd1(dlat,rlats,nlat,1)
+        call grdcrd1(dlon,rlons,nlon,1)
      end if
 
      iy=int(dlon); ix=int(dlat)
@@ -595,107 +686,16 @@ subroutine deter_sfc2(dlat_earth,dlon_earth,obstime,idomsfc,tsavg,ff10,sfcr,zz)
      dx1 =one-dx;    dy1 =one-dy
      w00=dx1*dy1; w10=dx*dy1; w01=dx1*dy; w11=dx*dy
 
-     ix=min(max(1,ix),nlat_sfc); iy=min(max(0,iy),nlon_sfc)
-     ixp=min(nlat_sfc,ix+1); iyp=iy+1
-     if(iy==0) iy=nlon_sfc
-     if(iyp==nlon_sfc+1) iyp=1
+     ix=min(max(1,ix),nlat); iy=min(max(0,iy),nlon)
+     ixp=min(nlat,ix+1); iyp=iy+1
+     if(iy==0) iy=nlon
+     if(iyp==nlon+1) iyp=1
 
+     zz   = zs_full(ix,iy) *w00 + zs_full(ixp,iy) *w10 + &
+            zs_full(ix,iyp)*w01 + zs_full(ixp,iyp)*w11
+  endif
 
-!    Get time interpolation factors for surface files
-     if(obstime > hrdifsfc(1) .and. obstime <= hrdifsfc(nfldsfc))then
-        do j=1,nfldsfc-1
-           if(obstime > hrdifsfc(j) .and. obstime <= hrdifsfc(j+1))then
-              itsfc=j
-              itsfcp=j+1
-              dtsfc=(hrdifsfc(j+1)-obstime)/(hrdifsfc(j+1)-hrdifsfc(j))
-           end if
-        end do
-     else if(obstime <=hrdifsfc(1))then
-        itsfc=1
-        itsfcp=1
-        dtsfc=one
-     else
-        itsfc=nfldsfc
-        itsfcp=nfldsfc
-        dtsfc=one
-     end if
-     dtsfcp=one-dtsfc
-
-     sst00= sst_full(ix ,iy ,itsfc)*dtsfc+sst_full(ix ,iy ,itsfcp)*dtsfcp
-     sst01= sst_full(ix ,iyp,itsfc)*dtsfc+sst_full(ix ,iyp,itsfcp)*dtsfcp
-     sst10= sst_full(ixp,iy ,itsfc)*dtsfc+sst_full(ixp,iy ,itsfcp)*dtsfcp
-     sst11= sst_full(ixp,iyp,itsfc)*dtsfc+sst_full(ixp,iyp,itsfcp)*dtsfcp
-
-!    Interpolate sst to obs location
-
-     tsavg=sst00*w00+sst10*w10+sst01*w01+sst11*w11
-
-     idomsfc=isli_full(ix ,iy )
-     wgtmin = w00
-     if(wgtmin < w01 )then
-        idomsfc=isli_full(ix ,iyp)
-        wgtmin = w01
-     end if
-     if(wgtmin < w10)then
-        idomsfc=isli_full(ixp,iy )
-        wgtmin = w10
-     end if
-     if(wgtmin < w11)then
-        idomsfc=isli_full(ixp,iyp)
-        wgtmin = w11
-     end if
-     if((isli_full(ix ,iy ) /= isli_full(ix ,iyp)) .or. &
-        (isli_full(ix ,iy ) /= isli_full(ixp,iy )) .or. &
-        (isli_full(ix ,iy ) /= isli_full(ixp,iyp)) .or. &
-        (isli_full(ixp,iy ) /= isli_full(ix ,iyp)) .or. &
-        (isli_full(ixp,iy ) /= isli_full(ixp,iyp)) .or. &
-        (isli_full(ix ,iyp) /= isli_full(ixp,iyp)) ) idomsfc = idomsfc+3
-
-!    Space-time interpolation of fields from surface wind speed
-
-     ff10=(fact10_full(ix ,iy ,itsfc )*w00+ &
-           fact10_full(ixp,iy ,itsfc )*w10+ &
-           fact10_full(ix ,iyp,itsfc )*w01+ &
-           fact10_full(ixp,iyp,itsfc )*w11)*dtsfc + &
-          (fact10_full(ix ,iy ,itsfcp)*w00+ &
-           fact10_full(ixp,iy ,itsfcp)*w10+ &
-           fact10_full(ix ,iyp,itsfcp)*w01+ &
-           fact10_full(ixp,iyp,itsfcp)*w11)*dtsfcp
-
-     sfcr=(sfc_rough_full(ix ,iy ,itsfc )*w00+ &
-           sfc_rough_full(ixp,iy ,itsfc )*w10+ &
-           sfc_rough_full(ix ,iyp,itsfc )*w01+ &
-           sfc_rough_full(ixp,iyp,itsfc )*w11)*dtsfc + &
-          (sfc_rough_full(ix ,iy ,itsfcp)*w00+ &
-           sfc_rough_full(ixp,iy ,itsfcp)*w10+ &
-           sfc_rough_full(ix ,iyp,itsfcp)*w01+ &
-           sfc_rough_full(ixp,iyp,itsfcp)*w11)*dtsfcp
-
-     if(present(zz)) then
-        if(regional)then
-           call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
-        else
-           dlat=dlat_earth
-           dlon=dlon_earth
-           call grdcrd1(dlat,rlats,nlat,1)
-           call grdcrd1(dlon,rlons,nlon,1)
-        end if
-
-        iy=int(dlon); ix=int(dlat)
-        dy  =dlon-iy; dx  =dlat-ix
-        dx1 =one-dx;    dy1 =one-dy
-        w00=dx1*dy1; w10=dx*dy1; w01=dx1*dy; w11=dx*dy
-
-        ix=min(max(1,ix),nlat); iy=min(max(0,iy),nlon)
-        ixp=min(nlat,ix+1); iyp=iy+1
-        if(iy==0) iy=nlon
-        if(iyp==nlon+1) iyp=1
-
-        zz   = zs_full(ix,iy) *w00 + zs_full(ixp,iy) *w10 + &
-               zs_full(ix,iyp)*w01 + zs_full(ixp,iyp)*w11
-     endif
-
-     return
+  return
 end subroutine deter_sfc2
 
 subroutine deter_sfc_fov(fov_flag,ifov,instr,ichan,sat_aziang,dlat_earth_deg,&
@@ -1050,21 +1050,21 @@ subroutine deter_sfc_fov(fov_flag,ifov,instr,ichan,sat_aziang,dlat_earth_deg,&
         exit loop1
      endif
 
-     mid = (float(subgrid_lengths_y)-one)/two + one
-     del = one/ float(subgrid_lengths_y)
+     mid = (real(subgrid_lengths_y,r_kind)-one)/two + one
+     del = one/ real(subgrid_lengths_y,r_kind)
 
      allocate (y_off(subgrid_lengths_y))
 
      do i= 1, subgrid_lengths_y
-        y_off(i) = (float(i)-mid)*del
+        y_off(i) = (real(i,r_kind)-mid)*del
      enddo
 
-     mid = (float(subgrid_lengths_x)-one)/two + one
-     del = one / float(subgrid_lengths_x)
+     mid = (real(subgrid_lengths_x,r_kind)-one)/two + one
+     del = one / real(subgrid_lengths_x,r_kind)
 
      allocate (x_off(subgrid_lengths_x))
      do i= 1, subgrid_lengths_x
-        x_off(i) = (float(i)-mid)*del
+        x_off(i) = (real(i,r_kind)-mid)*del
      enddo
 
 !    Determine the surface characteristics by integrating over the
@@ -1077,9 +1077,9 @@ subroutine deter_sfc_fov(fov_flag,ifov,instr,ichan,sat_aziang,dlat_earth_deg,&
            do i = min_i(j), max_i(j)
               call time_int_sfc(i,j,itsfc,itsfcp,dtsfc,dtsfcp,sfc_mdl)
               do jjj = 1, subgrid_lengths_y
-                 y = float(j) + y_off(jjj)
+                 y = real(j,r_kind) + y_off(jjj)
                  do iii = 1, subgrid_lengths_x
-                    x = float(i) + x_off(iii)
+                    x = real(i,r_kind) + x_off(iii)
                     call txy2ll(x,y,lon_rad,lat_rad)
                     lat_mdl = lat_rad*rad2deg
                     lon_mdl = lon_rad*rad2deg
@@ -1122,7 +1122,7 @@ subroutine deter_sfc_fov(fov_flag,ifov,instr,ichan,sat_aziang,dlat_earth_deg,&
 !              ok here when calculating longitude even if the value is
 !              greater than 360. the ellipse code works from longitude relative
 !              to the center of the fov.
-                    lon_mdl = (float(i)+x_off(iii) - one) * dx_gfs(jj)
+                    lon_mdl = (real(i,r_kind)+x_off(iii) - one) * dx_gfs(jj)
                     if (fov_flag=="crosstrk")then
                        call inside_fov_crosstrk(instr,ifov,sat_aziang, &
                                                dlat_earth_deg,dlon_earth_deg, &
@@ -1203,18 +1203,18 @@ subroutine deter_sfc_amsre_low(dlat_earth,dlon_earth,isflg,sfcpct)
 !
 !$$$
 
-   implicit none
+  implicit none
 
-   real(r_kind)               ,intent(in   ) :: dlat_earth,dlon_earth
-   integer(i_kind)            ,intent(  out) :: isflg
-   real(r_kind),dimension(0:3),intent(  out) :: sfcpct
+  real(r_kind)               ,intent(in   ) :: dlat_earth,dlon_earth
+  integer(i_kind)            ,intent(  out) :: isflg
+  real(r_kind),dimension(0:3),intent(  out) :: sfcpct
 
-   integer(i_kind) jsli,it
-   integer(i_kind):: klat1,klon1,klatp1,klonp1
-   real(r_kind):: dx,dy,dx1,dy1,w00,w10,w01,w11
-   real(r_kind) :: dlat,dlon
-   logical :: outside
-   integer(i_kind):: klat2,klon2,klatp2,klonp2
+  integer(i_kind) jsli,it
+  integer(i_kind):: klat1,klon1,klatp1,klonp1
+  real(r_kind):: dx,dy,dx1,dy1,w00,w10,w01,w11
+  real(r_kind) :: dlat,dlon
+  logical :: outside
+  integer(i_kind):: klat2,klon2,klatp2,klonp2
 
 !
 !  For interpolation, we usually use o points (4points for land sea decision)
@@ -1232,106 +1232,106 @@ subroutine deter_sfc_amsre_low(dlat_earth,dlon_earth,isflg,sfcpct)
 !
 !  In total, 12 points are used to make mean sst and sfc percentage.
 !
-     it=ntguessfc
+  it=ntguessfc
 
-     if(regional)then
-        call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
-     else
-        dlat=dlat_earth
-        dlon=dlon_earth
-        call grdcrd1(dlat,rlats_sfc,nlat_sfc,1)
-        call grdcrd1(dlon,rlons_sfc,nlon_sfc,1)
-     end if
+  if(regional)then
+     call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
+  else
+     dlat=dlat_earth
+     dlon=dlon_earth
+     call grdcrd1(dlat,rlats_sfc,nlat_sfc,1)
+     call grdcrd1(dlon,rlons_sfc,nlon_sfc,1)
+  end if
 
-     klon1=int(dlon); klat1=int(dlat)
-     dx  =dlon-klon1; dy  =dlat-klat1
-     dx1 =one-dx;    dy1 =one-dy
-     w00=dx1*dy1; w10=dx1*dy; w01=dx*dy1; w11=dx*dy
+  klon1=int(dlon); klat1=int(dlat)
+  dx  =dlon-klon1; dy  =dlat-klat1
+  dx1 =one-dx;    dy1 =one-dy
+  w00=dx1*dy1; w10=dx1*dy; w01=dx*dy1; w11=dx*dy
 
-     klat1=min(max(1,klat1),nlat_sfc); klon1=min(max(0,klon1),nlon_sfc)
-     if(klon1==0) klon1=nlon_sfc
-     klatp1=min(nlat_sfc,klat1+1); klonp1=klon1+1
-     if(klonp1==nlon_sfc+1) klonp1=1
-     klonp2 = klonp1+1
-     if(klonp2==nlon_sfc+1) klonp2=1
-     klon2=klon1-1
-     if(klon2==0)klon2=nlon_sfc
-     klat2=max(1,klat1-1)
-     klatp2=min(nlat_sfc,klatp1+1)
+  klat1=min(max(1,klat1),nlat_sfc); klon1=min(max(0,klon1),nlon_sfc)
+  if(klon1==0) klon1=nlon_sfc
+  klatp1=min(nlat_sfc,klat1+1); klonp1=klon1+1
+  if(klonp1==nlon_sfc+1) klonp1=1
+  klonp2 = klonp1+1
+  if(klonp2==nlon_sfc+1) klonp2=1
+  klon2=klon1-1
+  if(klon2==0)klon2=nlon_sfc
+  klat2=max(1,klat1-1)
+  klatp2=min(nlat_sfc,klatp1+1)
 
-!    Set surface type flag.  Begin by assuming obs over ice-free water
+! Set surface type flag.  Begin by assuming obs over ice-free water
 
-     sfcpct = zero
+  sfcpct = zero
 
-     jsli = isli_full(klat1 ,klon1 )
-     if(sno_full(klat1 ,klon1 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klat1 ,klon1 )
+  if(sno_full(klat1 ,klon1 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klatp1,klon1 )
-     if(sno_full(klatp1 ,klon1 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klatp1,klon1 )
+  if(sno_full(klatp1 ,klon1 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klat1 ,klonp1)
-     if(sno_full(klat1 ,klonp1 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klat1 ,klonp1)
+  if(sno_full(klat1 ,klonp1 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klatp1,klonp1)
-     if(sno_full(klatp1 ,klonp1 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klatp1,klonp1)
+  if(sno_full(klatp1 ,klonp1 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klatp2,klon1)
-     if(sno_full(klatp2 ,klon1 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klatp2,klon1)
+  if(sno_full(klatp2 ,klon1 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klatp2,klonp1)
-     if(sno_full(klatp2 ,klonp1 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klatp2,klonp1)
+  if(sno_full(klatp2 ,klonp1 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klatp1,klon2)
-     if(sno_full(klatp1 ,klon2 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klatp1,klon2)
+  if(sno_full(klatp1 ,klon2 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klatp1,klonp2)
-     if(sno_full(klatp1 ,klonp2 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klatp1,klonp2)
+  if(sno_full(klatp1 ,klonp2 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klat1,klon2)
-     if(sno_full(klat1 ,klon2 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klat1,klon2)
+  if(sno_full(klat1 ,klon2 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klat1,klonp2)
-     if(sno_full(klat1 ,klonp2 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klat1,klonp2)
+  if(sno_full(klat1 ,klonp2 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klat2,klon1)
-     if(sno_full(klat2 ,klon1 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klat2,klon1)
+  if(sno_full(klat2 ,klon1 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klat2,klonp1)
-     if(sno_full(klat2 ,klonp1 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klat2,klonp1)
+  if(sno_full(klat2 ,klonp1 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     sfcpct=sfcpct/12.0_r_kind
+  sfcpct=sfcpct/12.0_r_kind
 
-!     sfcpct(3)=min(sfcpct(3),sfcpct(1))
-!     sfcpct(1)=max(zero,sfcpct(1)-sfcpct(3))
+!  sfcpct(3)=min(sfcpct(3),sfcpct(1))
+!  sfcpct(1)=max(zero,sfcpct(1)-sfcpct(3))
 
+  isflg = 0
+  if(sfcpct(0) > 0.99_r_kind)then
      isflg = 0
-     if(sfcpct(0) > 0.99_r_kind)then
-        isflg = 0
-     else if(sfcpct(1) > 0.99_r_kind)then
-        isflg = 1
-     else if(sfcpct(2) > 0.99_r_kind)then
-        isflg = 2
-     else if(sfcpct(3) > 0.99_r_kind)then
-        isflg = 3
-     else
-        isflg = 4
-     end if
+  else if(sfcpct(1) > 0.99_r_kind)then
+  isflg = 1
+  else if(sfcpct(2) > 0.99_r_kind)then
+     isflg = 2
+  else if(sfcpct(3) > 0.99_r_kind)then
+     isflg = 3
+  else
+     isflg = 4
+  end if
 
-     return
+  return
 
-   end subroutine deter_sfc_amsre_low
+end subroutine deter_sfc_amsre_low
 
 
 subroutine deter_sfc_gmi(dlat_earth,dlon_earth,isflg,sfcpct)
@@ -1369,18 +1369,18 @@ subroutine deter_sfc_gmi(dlat_earth,dlon_earth,isflg,sfcpct)
 !
 !$$$
 
-   implicit none
+  implicit none
 
-   real(r_kind)               ,intent(in   ) :: dlat_earth,dlon_earth
-   integer(i_kind)            ,intent(  out) :: isflg
-   real(r_kind),dimension(0:3),intent(  out) :: sfcpct
+  real(r_kind)               ,intent(in   ) :: dlat_earth,dlon_earth
+  integer(i_kind)            ,intent(  out) :: isflg
+  real(r_kind),dimension(0:3),intent(  out) :: sfcpct
 
-   integer(i_kind) jsli,it
-   integer(i_kind):: klat1,klon1,klatp1,klonp1
-   real(r_kind):: dx,dy,dx1,dy1,w00,w10,w01,w11
-   real(r_kind) :: dlat,dlon
-   logical :: outside
-   integer(i_kind):: klat2,klon2,klatp2,klonp2
+  integer(i_kind) jsli,it
+  integer(i_kind):: klat1,klon1,klatp1,klonp1
+  real(r_kind):: dx,dy,dx1,dy1,w00,w10,w01,w11
+  real(r_kind) :: dlat,dlon
+  logical :: outside
+  integer(i_kind):: klat2,klon2,klatp2,klonp2
 
 !
 !  For interpolation, we usually use o points (4points for land sea decision)
@@ -1398,106 +1398,106 @@ subroutine deter_sfc_gmi(dlat_earth,dlon_earth,isflg,sfcpct)
 !
 !  In total, 12 points are used to make mean sst and sfc percentage.
 !
-     it=ntguessfc
+  it=ntguessfc
 
-     if(regional)then
-        call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
-     else
-        dlat=dlat_earth
-        dlon=dlon_earth
-        call grdcrd1(dlat,rlats_sfc,nlat_sfc,1)
-        call grdcrd1(dlon,rlons_sfc,nlon_sfc,1)
-     end if
+  if(regional)then
+     call tll2xy(dlon_earth,dlat_earth,dlon,dlat,outside)
+  else
+     dlat=dlat_earth
+     dlon=dlon_earth
+     call grdcrd1(dlat,rlats_sfc,nlat_sfc,1)
+     call grdcrd1(dlon,rlons_sfc,nlon_sfc,1)
+  end if
 
-     klon1=int(dlon); klat1=int(dlat)
-     dx  =dlon-klon1; dy  =dlat-klat1
-     dx1 =one-dx;    dy1 =one-dy
-     w00=dx1*dy1; w10=dx1*dy; w01=dx*dy1; w11=dx*dy
+  klon1=int(dlon); klat1=int(dlat)
+  dx  =dlon-klon1; dy  =dlat-klat1
+  dx1 =one-dx;    dy1 =one-dy
+  w00=dx1*dy1; w10=dx1*dy; w01=dx*dy1; w11=dx*dy
 
-     klat1=min(max(1,klat1),nlat_sfc); klon1=min(max(0,klon1),nlon_sfc)
-     if(klon1==0) klon1=nlon_sfc
-     klatp1=min(nlat_sfc,klat1+1); klonp1=klon1+1
-     if(klonp1==nlon_sfc+1) klonp1=1
-     klonp2 = klonp1+1
-     if(klonp2==nlon_sfc+1) klonp2=1
-     klon2=klon1-1
-     if(klon2==0)klon2=nlon_sfc
-     klat2=max(1,klat1-1)
-     klatp2=min(nlat_sfc,klatp1+1)
+  klat1=min(max(1,klat1),nlat_sfc); klon1=min(max(0,klon1),nlon_sfc)
+  if(klon1==0) klon1=nlon_sfc
+  klatp1=min(nlat_sfc,klat1+1); klonp1=klon1+1
+  if(klonp1==nlon_sfc+1) klonp1=1
+  klonp2 = klonp1+1
+  if(klonp2==nlon_sfc+1) klonp2=1
+  klon2=klon1-1
+  if(klon2==0)klon2=nlon_sfc
+  klat2=max(1,klat1-1)
+  klatp2=min(nlat_sfc,klatp1+1)
 
-!    Set surface type flag.  Begin by assuming obs over ice-free water
+! Set surface type flag.  Begin by assuming obs over ice-free water
 
-     sfcpct = zero
+  sfcpct = zero
 
-     jsli = isli_full(klat1 ,klon1 )
-     if(sno_full(klat1 ,klon1 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klat1 ,klon1 )
+  if(sno_full(klat1 ,klon1 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klatp1,klon1 )
-     if(sno_full(klatp1 ,klon1 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klatp1,klon1 )
+  if(sno_full(klatp1 ,klon1 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klat1 ,klonp1)
-     if(sno_full(klat1 ,klonp1 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klat1 ,klonp1)
+  if(sno_full(klat1 ,klonp1 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klatp1,klonp1)
-     if(sno_full(klatp1 ,klonp1 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klatp1,klonp1)
+  if(sno_full(klatp1 ,klonp1 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klatp2,klon1)
-     if(sno_full(klatp2 ,klon1 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klatp2,klon1)
+  if(sno_full(klatp2 ,klon1 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klatp2,klonp1)
-     if(sno_full(klatp2 ,klonp1 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klatp2,klonp1)
+  if(sno_full(klatp2 ,klonp1 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klatp1,klon2)
-     if(sno_full(klatp1 ,klon2 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klatp1,klon2)
+  if(sno_full(klatp1 ,klon2 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klatp1,klonp2)
-     if(sno_full(klatp1 ,klonp2 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klatp1,klonp2)
+  if(sno_full(klatp1 ,klonp2 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klat1,klon2)
-     if(sno_full(klat1 ,klon2 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klat1,klon2)
+  if(sno_full(klat1 ,klon2 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klat1,klonp2)
-     if(sno_full(klat1 ,klonp2 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klat1,klonp2)
+  if(sno_full(klat1 ,klonp2 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klat2,klon1)
-     if(sno_full(klat2 ,klon1 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klat2,klon1)
+  if(sno_full(klat2 ,klon1 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     jsli = isli_full(klat2,klonp1)
-     if(sno_full(klat2 ,klonp1 ,it) > one .and. jsli == 1)jsli=3
-     sfcpct(jsli)=sfcpct(jsli)+one
+  jsli = isli_full(klat2,klonp1)
+  if(sno_full(klat2 ,klonp1 ,it) > one .and. jsli == 1)jsli=3
+  sfcpct(jsli)=sfcpct(jsli)+one
 
-     sfcpct=sfcpct/12.0_r_kind
+  sfcpct=sfcpct/12.0_r_kind
 
-!     sfcpct(3)=min(sfcpct(3),sfcpct(1))
-!     sfcpct(1)=max(zero,sfcpct(1)-sfcpct(3))
+!  sfcpct(3)=min(sfcpct(3),sfcpct(1))
+!  sfcpct(1)=max(zero,sfcpct(1)-sfcpct(3))
 
+  isflg = 0
+  if(sfcpct(0) > 0.99_r_kind)then
      isflg = 0
-     if(sfcpct(0) > 0.99_r_kind)then
-        isflg = 0
-     else if(sfcpct(1) > 0.99_r_kind)then
-        isflg = 1
-     else if(sfcpct(2) > 0.99_r_kind)then
-        isflg = 2
-     else if(sfcpct(3) > 0.99_r_kind)then
-        isflg = 3
-     else
-        isflg = 4
-     end if
+  else if(sfcpct(1) > 0.99_r_kind)then
+     isflg = 1
+  else if(sfcpct(2) > 0.99_r_kind)then
+     isflg = 2
+  else if(sfcpct(3) > 0.99_r_kind)then
+     isflg = 3
+  else
+     isflg = 4
+  end if
 
-     return
+  return
 
-   end subroutine deter_sfc_gmi
+end subroutine deter_sfc_gmi
 
 
 subroutine deter_zsfc_model(dlat,dlon,zsfc)
@@ -1588,7 +1588,7 @@ subroutine reduce2full(ireduce, j, ifull)
   if (j > nlat_sfc/2) jj = nlat_sfc - j + 1
   m2 = lpl_gfs(jj)
   m1 = nlon_sfc
-  r=real(m1)/real(m2)
+  r=real(m1,r_kind)/real(m2,r_kind)
   ii = ireduce
   if (ii <= 0) ii = ii + lpl_gfs(jj)
   if (ii > lpl_gfs(jj)) ii = ii - lpl_gfs(jj)
@@ -1920,7 +1920,7 @@ subroutine calc_sfc(sfc_sum,isflg,idomsfc,sfcpct,vfr,sty,vty,sm, &
      vty=zero
   else
      itmp=lbound(sfc_sum%count_vty)-1+maxloc(sfc_sum%count_vty)
-     vty=float(itmp(1))
+     vty=real(itmp(1),r_kind)
   endif
 
 ! soil type is predominate type
@@ -1929,7 +1929,7 @@ subroutine calc_sfc(sfc_sum,isflg,idomsfc,sfcpct,vfr,sty,vty,sm, &
      sty=zero
   else
      itmp=lbound(sfc_sum%count_sty)-1+maxloc(sfc_sum%count_sty)
-     sty=float(itmp(1))
+     sty=real(itmp(1),r_kind)
   endif
 
 ! fields for bare (non-snow covered) land
@@ -2000,6 +2000,6 @@ subroutine calc_sfc(sfc_sum,isflg,idomsfc,sfcpct,vfr,sty,vty,sm, &
   end if
 
   return
- end subroutine calc_sfc
+end subroutine calc_sfc
 
 end module deter_sfc_mod

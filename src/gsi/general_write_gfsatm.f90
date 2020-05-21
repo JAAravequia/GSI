@@ -107,11 +107,11 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
     call gsi_bundlegetpointer(gfs_bundle,'cw', sub_cwmr,iret); istatus=istatus+iret
     if ( istatus /= 0 ) then
        if ( mype == 0 ) then
-         write(6,*) 'general_write_gfsatm: ERROR'
-         write(6,*) 'Missing some of the required fields'
-         write(6,*) 'Aborting ... '
-      endif
-      call stop2(999)
+          write(6,*) 'general_write_gfsatm: ERROR'
+          write(6,*) 'Missing some of the required fields'
+          write(6,*) 'Aborting ... '
+       endif
+       call stop2(999)
     endif
 
     ! Set guess file name
@@ -120,55 +120,55 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
 
     ! Have all files open ges and read header for now with RanRead
     if ( mype < itotflds .or. mype == mype_out ) then
-        call sigio_rropen(lunges,fname_ges,iret)
-        if ( inithead ) call sigio_rrhead(lunges,sighead,iret)
+       call sigio_rropen(lunges,fname_ges,iret)
+       if ( inithead ) call sigio_rrhead(lunges,sighead,iret)
 
-        ! All tasks should also open output file for random write
-        call sigio_rwopen(lunanl,filename,iret_write)
-        if ( iret_write /= 0 ) then
-           write(6,*)'GENERAL_WRITE_GFSATM:  ***ERROR*** writing ',&
-               trim(filename),' mype,iret_write=',mype,iret_write
-           return
-        end if
+       ! All tasks should also open output file for random write
+       call sigio_rwopen(lunanl,filename,iret_write)
+       if ( iret_write /= 0 ) then
+          write(6,*)'GENERAL_WRITE_GFSATM:  ***ERROR*** writing ',&
+              trim(filename),' mype,iret_write=',mype,iret_write
+          return
+       end if
     endif
 
     ! Load date and write header
     if ( mype == mype_out ) then
 
-        if ( lwrite4danl ) then
-            ! increment mydate
-            mydate=ibdate
-            fha(:)=zero ; ida=0; jda=0
-            fha(2)=real(nhr_obsbin*(ibin-1))  ! relative time interval in hours
-            ida(1)=mydate(1) ! year
-            ida(2)=mydate(2) ! month
-            ida(3)=mydate(3) ! day
-            ida(4)=0         ! time zone
-            ida(5)=mydate(4) ! hour
+       if ( lwrite4danl ) then
+          ! increment mydate
+          mydate=ibdate
+          fha(:)=zero ; ida=0; jda=0
+          fha(2)=real(nhr_obsbin*(ibin-1))  ! relative time interval in hours
+          ida(1)=mydate(1) ! year
+          ida(2)=mydate(2) ! month
+          ida(3)=mydate(3) ! day
+          ida(4)=0         ! time zone
+          ida(5)=mydate(4) ! hour
 
-            ! Move date-time forward by nhr_assimilation hours
-            call w3movdat(fha,ida,jda)
-            mydate(1)=jda(1)
-            mydate(2)=jda(2)
-            mydate(3)=jda(3)
-            mydate(4)=jda(5)
-        else
-            mydate=iadate
-        endif
+          ! Move date-time forward by nhr_assimilation hours
+          call w3movdat(fha,ida,jda)
+          mydate(1)=jda(1)
+          mydate(2)=jda(2)
+          mydate(3)=jda(3)
+          mydate(4)=jda(5)
+       else
+          mydate=iadate
+       endif
 
-        ! Replace header record date with analysis time
-        sighead%fhour    = zero_single
-        sighead%idate(1) = mydate(4) !hour
-        sighead%idate(2) = mydate(2) !month
-        sighead%idate(3) = mydate(3) !day
-        sighead%idate(4) = mydate(1) !year
+       ! Replace header record date with analysis time
+       sighead%fhour    = zero_single
+       sighead%idate(1) = mydate(4) !hour
+       sighead%idate(2) = mydate(2) !month
+       sighead%idate(3) = mydate(3) !day
+       sighead%idate(4) = mydate(1) !year
 
-        ! Load grid dimension and other variables used below
-        ! into local header structure
+       ! Load grid dimension and other variables used below
+       ! into local header structure
 
-        ! Write header to analysis file
-        call sigio_rwhead(lunanl,sighead,iret)
-        iret_write=iret_write+iret
+       ! Write header to analysis file
+       call sigio_rwhead(lunanl,sighead,iret)
+       iret_write=iret_write+iret
 
     endif
 
@@ -180,13 +180,13 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
     work_ps=sub_ps
     ! If output ln(ps), take log of ps in cb
     if ( idpsfc5 /= 2 ) then
-        do j=1,grd%lon2
-            do i=1,grd%lat2
-                if ( work_ps(i,j) <= zero ) &
-                    work_ps(i,j)=one
-                work_ps(i,j)=log(work_ps(i,j))
-            enddo
-        enddo
+       do j=1,grd%lon2
+          do i=1,grd%lat2
+             if ( work_ps(i,j) <= zero ) &
+                  work_ps(i,j)=one
+             work_ps(i,j)=log(work_ps(i,j))
+          enddo
+       enddo
     endif
 
     ! Thermodynamic variable
@@ -199,19 +199,19 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
 
     work_tv=sub_tv
     if ( idthrm5 == 2 .or. idthrm5 == 3 ) then
-        ! Convert virtual temperature to dry temperature
-        do k=1,grd%nsig
-            do j=1,grd%lon2
-               do i=1,grd%lat2
-                  work_tv(i,j,k)=work_tv(i,j,k)/(one+fv*sub_q(i,j,k))
-               enddo
-            enddo
-        enddo
+       ! Convert virtual temperature to dry temperature
+       do k=1,grd%nsig
+          do j=1,grd%lon2
+             do i=1,grd%lat2
+                work_tv(i,j,k)=work_tv(i,j,k)/(one+fv*sub_q(i,j,k))
+             enddo
+          enddo
+       enddo
 
-        ! If output is enthalpy, convert dry temperature to CpT
-        if ( idthrm5 == 3 ) call sigio_cnvtdv8(grd%lat2*grd%lon2,&
-            grd%lat2*grd%lon2,grd%nsig,idvc5,idvm5,ntracer,&
-            iret,work_tv,sub_q,cp5,-1)
+       ! If output is enthalpy, convert dry temperature to cpt
+       if ( idthrm5 == 3 ) call sigio_cnvtdv8(grd%lat2*grd%lon2,&
+           grd%lat2*grd%lon2,grd%nsig,idvc5,idvm5,ntracer,&
+           iret,work_tv,sub_q,cp5,-1)
     endif
 
     ! Do loop until total fields have been processed.  Stop condition on itotflds
@@ -219,121 +219,121 @@ subroutine general_write_gfsatm(grd,sp_a,sp_b,filename,mype_out,&
     icount=0
     gfsfields: do while (lloop)
 
-        ! First, perform sub2grid for up to npe
-        call general_gather(grd,work_ps,work_tv,sub_vor,sub_div,sub_q,sub_oz,&
-             sub_cwmr,icount,ivar,ilev,work)
+       ! First, perform sub2grid for up to npe
+       call general_gather(grd,work_ps,work_tv,sub_vor,sub_div,sub_q,sub_oz,&
+            sub_cwmr,icount,ivar,ilev,work)
 
-        pe_loop: do k=1,npe  ! loop over pe distributed data
+       pe_loop: do k=1,npe  ! loop over pe distributed data
 
-            kvar=ivar(k)
+          kvar=ivar(k)
 
-            if ( mype == k-1 .and. kvar > 0 ) then
+          if ( mype == k-1 .and. kvar > 0 ) then
 
-                klev=ilev(k)
-                if ( kvar == 1 ) then      ! hs
-                   sigdati%i = 1
-                else if ( kvar == 2 ) then ! ps
-                   sigdati%i = 2
-                else if ( kvar == 3 ) then ! temperature
-                   sigdati%i = 2+klev
-                else if ( kvar == 4 ) then ! vorticity
-                   sigdati%i = sighead%levs + 2 + (klev-1) * 2 + 2
-                else if ( kvar == 5 ) then ! divergence
-                   sigdati%i = sighead%levs + 2 + (klev-1) * 2 + 1
-                else if ( kvar == 6 ) then ! q
-                   sigdati%i = sighead%levs * (2+1) + 2 + klev
-                else if ( kvar == 7 ) then ! oz
-                   sigdati%i = sighead%levs * (2+2) + 2 + klev
-                else if ( kvar == 8 ) then ! cw, 3rd tracer
-                   sigdati%i = sighead%levs * (2+3) + 2 + klev
-                endif
+             klev=ilev(k)
+             if ( kvar == 1 ) then      ! hs
+                sigdati%i = 1
+             else if ( kvar == 2 ) then ! ps
+                sigdati%i = 2
+             else if ( kvar == 3 ) then ! temperature
+                sigdati%i = 2+klev
+             else if ( kvar == 4 ) then ! vorticity
+                sigdati%i = sighead%levs + 2 + (klev-1) * 2 + 2
+             else if ( kvar == 5 ) then ! divergence
+                sigdati%i = sighead%levs + 2 + (klev-1) * 2 + 1
+             else if ( kvar == 6 ) then ! q
+                sigdati%i = sighead%levs * (2+1) + 2 + klev
+             else if ( kvar == 7 ) then ! oz
+                sigdati%i = sighead%levs * (2+2) + 2 + klev
+             else if ( kvar == 8 ) then ! cw, 3rd tracer
+                sigdati%i = sighead%levs * (2+3) + 2 + klev
+             endif
 
-                if ( klev > 0 ) then
+             if ( klev > 0 ) then
 
-                    sigdati%f => specges_4
-                    ! Read in full resolution guess spectral coefficients
-                    call sigio_rrdbti(lunges,sighead,sigdati,iret)
-                    do i=1,sp_b%nc
-                        spec_work(i) = specges_4(i)
-                    enddo
-                    ! Ensure coefficients that must be zero are zero
-                    do i=1,sp_b%nc
-                        if ( sp_b%factsml(i) ) spec_work(i) = zero
-                    enddo
+                sigdati%f => specges_4
+                ! Read in full resolution guess spectral coefficients
+                call sigio_rrdbti(lunges,sighead,sigdati,iret)
+                do i=1,sp_b%nc
+                   spec_work(i) = specges_4(i)
+                enddo
+                ! Ensure coefficients that must be zero are zero
+                do i=1,sp_b%nc
+                   if ( sp_b%factsml(i) ) spec_work(i) = zero
+                enddo
 
-                    if ( kvar /= 1 ) then ! if sfc elevation field just write out
+                if ( kvar /= 1 ) then ! if sfc elevation field just write out
 
-                        ! Put current analysis on 2d (full level) grid
-                        call load_grid(work,grid)
-                        ! Convert full resolution guess to analysis grid
-                        call general_sptez_s_b(sp_a,sp_b,spec_work,grid2,1)
-                        ! Calculation grid increment on analysis grid
-                        if ( kvar == 8 ) then
-                            do i=1,sp_a%imax
-                                do j=1,sp_a%jmax
-                                    grid(i,j) = grid(i,j) - max(grid2(i,j),qcmin)
-                                enddo
-                            enddo
-                        else
-                            grid = grid - grid2
-                        endif
-                        ! Convert grid increment to spectral space
-                        call general_sptez_s(sp_a,spec_work_sm,grid,-1)
-                        ! Add increment in spectral space (possibly lower resolution)
-                        ! to guess (taken from sppad)
-                        do l=0,min(sp_b%jcap,sp_a%jcap)
-                            do n=l,min(sp_b%jcap,sp_a%jcap)
-                                ks2=l*(2*sp_b%jcap+1-l)+2*n
-                                ks1=l*(2*sp_a%jcap+1-l)+2*n
-                                specges_4(ks2+1)=specges_4(ks2+1)+spec_work_sm(ks1+1)
-                                specges_4(ks2+2)=specges_4(ks2+2)+spec_work_sm(ks1+2)
-                            enddo
-                        enddo
-                        if ( kvar /= 4 .and. kvar /= 5 ) then
-                            do i=1,sp_b%nc
-                               if ( sp_b%factsml(i) ) specges_4(i) = zero_single
-                            enddo
-                        else
-                            do i=1,sp_b%nc
-                               if ( sp_b%factvml(i) ) specges_4(i) = zero_single
-                            enddo
-                        endif
+                   ! Put current analysis on 2d (full level) grid
+                   call load_grid(work,grid)
+                   ! Convert full resolution guess to analysis grid
+                   call general_sptez_s_b(sp_a,sp_b,spec_work,grid2,1)
+                   ! Calculation grid increment on analysis grid
+                   if ( kvar == 8 ) then
+                      do i=1,sp_a%imax
+                         do j=1,sp_a%jmax
+                            grid(i,j) = grid(i,j) - max(grid2(i,j),qcmin)
+                         enddo
+                      enddo
+                   else
+                      grid = grid - grid2
+                   endif
+                   ! Convert grid increment to spectral space
+                   call general_sptez_s(sp_a,spec_work_sm,grid,-1)
+                   ! Add increment in spectral space (possibly lower resolution)
+                   ! to guess (taken from sppad)
+                   do l=0,min(sp_b%jcap,sp_a%jcap)
+                      do n=l,min(sp_b%jcap,sp_a%jcap)
+                         ks2=l*(2*sp_b%jcap+1-l)+2*n
+                         ks1=l*(2*sp_a%jcap+1-l)+2*n
+                         specges_4(ks2+1)=specges_4(ks2+1)+spec_work_sm(ks1+1)
+                         specges_4(ks2+2)=specges_4(ks2+2)+spec_work_sm(ks1+2)
+                      enddo
+                   enddo
+                   if ( kvar /= 4 .and. kvar /= 5 ) then
+                      do i=1,sp_b%nc
+                         if ( sp_b%factsml(i) ) specges_4(i) = zero_single
+                      enddo
+                   else
+                      do i=1,sp_b%nc
+                         if ( sp_b%factvml(i) ) specges_4(i) = zero_single
+                      enddo
+                   endif
 
-                    endif ! if ( kvar /= 1 )
+                endif ! if ( kvar /= 1 )
 
-                    ! Write out using RanWrite
-                    call sigio_rwdbti(lunanl,sighead,sigdati,iret)
-                    iret_write=iret_write+iret
+                ! Write out using RanWrite
+                call sigio_rwdbti(lunanl,sighead,sigdati,iret)
+                iret_write=iret_write+iret
 
-                endif ! if ( klev > 0 )
+             endif ! if ( klev > 0 )
 
-            endif ! if ( mype == k-1 .and. kvar > 0 )
+          endif ! if ( mype == k-1 .and. kvar > 0 )
 
-        enddo pe_loop
+       enddo pe_loop
 
-        if ( icount > itotflds ) then
-            lloop=.false.
-            exit gfsfields
-        endif
+       if ( icount > itotflds ) then
+          lloop=.false.
+          exit gfsfields
+       endif
 
     enddo gfsfields
 
     ! Print date/time stamp
     if ( mype == mype_out ) then
-        write(6,700) sighead%jcap,grd%nlon,nlatm2,sighead%levs,&
-                     sighead%fhour,sighead%idate
-700     format('GENERAL_WRITE_GFSATM:  anl write, jcap,lonb,latb,levs=',&
-               4i6,', hour=',f10.1,', idate=',4i5)
+       write(6,700) sighead%jcap,grd%nlon,nlatm2,sighead%levs,&
+                    sighead%fhour,sighead%idate
+700    format('GENERAL_WRITE_GFSATM:  anl write, jcap,lonb,latb,levs=',&
+              4i6,', hour=',f10.1,', idate=',4i5)
     endif
 
     if ( mype < itotflds .or. mype == mype_out ) then
-        call sigio_rclose(lunges,iret)
-        call sigio_rclose(lunanl,iret)
-        iret_write=iret_write+iret
-        if ( iret_write /= 0 ) then
-           write(6,*)'GENERAL_WRITE_GFSATM:  ***ERROR*** writing ',&
-               trim(filename),' mype,iret_write=',mype,iret_write
-        end if
+       call sigio_rclose(lunges,iret)
+       call sigio_rclose(lunanl,iret)
+       iret_write=iret_write+iret
+       if ( iret_write /= 0 ) then
+          write(6,*)'GENERAL_WRITE_GFSATM:  ***ERROR*** writing ',&
+              trim(filename),' mype,iret_write=',mype,iret_write
+       end if
     endif
     return
 
@@ -416,24 +416,24 @@ subroutine general_gather(grd,g_ps,g_tv,g_vor,g_div,g_q,g_oz,g_cwmr, &
         ilev(k)=klev
         call strip(g_div(:,:,klev) ,sub(:,k))
 
-    else if( icount>=3*(grd%nsig)+3 .and. icount<=4*(grd%nsig)+2 )then
-        ivar(k)=6
-        klev=icount-2-3*(grd%nsig)
-        ilev(k)=klev
-        call strip(g_q(:,:,klev) ,sub(:,k))
+     else if( icount>=3*(grd%nsig)+3 .and. icount<=4*(grd%nsig)+2 )then
+         ivar(k)=6
+         klev=icount-2-3*(grd%nsig)
+         ilev(k)=klev
+         call strip(g_q(:,:,klev) ,sub(:,k))
 
-    else if( icount>=4*(grd%nsig)+3 .and. icount<=5*(grd%nsig)+2 )then
-        ivar(k)=7
-        klev=icount-2-4*(grd%nsig)
-        ilev(k)=klev
-        call strip(g_oz(:,:,klev) ,sub(:,k))
+     else if( icount>=4*(grd%nsig)+3 .and. icount<=5*(grd%nsig)+2 )then
+         ivar(k)=7
+         klev=icount-2-4*(grd%nsig)
+         ilev(k)=klev
+         call strip(g_oz(:,:,klev) ,sub(:,k))
 
-    else if( icount>=5*(grd%nsig)+3 .and. icount<=6*(grd%nsig)+2 )then
-        ivar(k)=8
-        klev=icount-2-5*(grd%nsig)
-        ilev(k)=klev
-        call strip(g_cwmr(:,:,klev) ,sub(:,k))
-    else
+     else if( icount>=5*(grd%nsig)+3 .and. icount<=6*(grd%nsig)+2 )then
+         ivar(k)=8
+         klev=icount-2-5*(grd%nsig)
+         ilev(k)=klev
+         call strip(g_cwmr(:,:,klev) ,sub(:,k))
+     else
 ! NULL, No work to be done for this pe
         ivar(k)=-1
         ilev(k)=-1

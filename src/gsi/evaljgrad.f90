@@ -204,7 +204,7 @@ call intjo(rval,qpred,sval,sbias)
 call mpl_allreduce(nrclen,qpvals=qpred)
 
 do i=1,nsclen
-  rbias%predr(i)=rbias%predr(i)+qpred(i)
+   rbias%predr(i)=rbias%predr(i)+qpred(i)
 end do
 do i=1,npclen
    rbias%predp(i)=rbias%predp(i)+qpred(nsclen+i)
@@ -250,24 +250,24 @@ if (l_do_adjoint) then
       call model_ad(mval,rval,llprt)
 
       if(l_do_adjoint.and.pertmod_adtest) then
-        call adtest_show_(adtest_mval,adtest_sval,adtest_rval,mval)
-        call adtest_dstr_(adtest_mval)
-        call adtest_dstr_(adtest_sval)
-        call adtest_dstr_(adtest_rval)
+         call adtest_show_(adtest_mval,adtest_sval,adtest_rval,mval)
+         call adtest_dstr_(adtest_mval)
+         call adtest_dstr_(adtest_sval)
+         call adtest_dstr_(adtest_rval)
       endif
 
       if (l_hyb_ens) then
-          eval(1)=mval(1)
-          call ensctl2model_ad(eval,mval(1),gradx)
+         eval(1)=mval(1)
+         call ensctl2model_ad(eval,mval(1),gradx)
       end if
 
    else
 
       if (l_hyb_ens) then
-          do ii=1,nobs_bins
-              eval(ii)=rval(ii)
-          enddo
-          call ensctl2model_ad(eval,mval(1),gradx)
+         do ii=1,nobs_bins
+            eval(ii)=rval(ii)
+         enddo
+         call ensctl2model_ad(eval,mval(1),gradx)
       else
          mval(1)=rval(1)
          do ii=2,nobs_bins
@@ -354,23 +354,23 @@ subroutine adtest_copy_(vi,vo)
   character(len=*),parameter:: myname_=myname//".adtest_copy_"
 
   if( size(vi)/=size(vo) ) then
-    call perr(myname_,'size(vi)/=size(vo)')
-    call perr(myname_,'size(vo) =',size(vo))
-    call perr(myname_,'size(vi) =',size(vi))
-    do iv=1,size(vi)
-     call perr(myname_,'name(vi) = "'//trim(vi(iv)%name)//'", iv =',iv)
-    enddo
-    call die(myname_)
+     call perr(myname_,'size(vi)/=size(vo)')
+     call perr(myname_,'size(vo) =',size(vo))
+     call perr(myname_,'size(vi) =',size(vi))
+     do iv=1,size(vi)
+        call perr(myname_,'name(vi) = "'//trim(vi(iv)%name)//'", iv =',iv)
+     enddo
+     call die(myname_)
   endif
   
   do iv=1,size(vi)
-    call gsi_bundleCreate(vo(iv),vi(iv),"adtest_"//trim(vi(iv)%name),istatus=ierr)
-    if(ierr/=0) then
-       call perr(myname_,'gsi_bundleCreate("adtest_'//trim(vi(iv)%name)//'"), istatus =',ierr)
-       call perr(myname_,'                ("adtest_'//trim(vi(iv)%name)//'"),      iv =',iv  )
-       call die(myname_)
-    endif
-    vo(iv)=vi(iv)
+     call gsi_bundleCreate(vo(iv),vi(iv),"adtest_"//trim(vi(iv)%name),istatus=ierr)
+     if(ierr/=0) then
+        call perr(myname_,'gsi_bundleCreate("adtest_'//trim(vi(iv)%name)//'"), istatus =',ierr)
+        call perr(myname_,'                ("adtest_'//trim(vi(iv)%name)//'"),      iv =',iv  )
+        call die(myname_)
+     endif
+     vo(iv)=vi(iv)
   enddo
 end subroutine adtest_copy_
 
@@ -386,7 +386,7 @@ subroutine adtest_dstr_(v)
   character(len=*),parameter:: myname_=myname//".adtest_dstr_"
 
   do iv=1,size(v)
-    call gsi_bundleDestroy(v(iv),istatus=ierr)
+     call gsi_bundleDestroy(v(iv),istatus=ierr)
      if(ierr/=0) then
         call perr(myname_,'gsi_bundleDestroy("adtest_'//trim(v(iv)%name)//'"), istatus =',ierr)
         call perr(myname_,'                 ("adtest_'//trim(v(iv)%name)//'"),      iv =',iv  )
@@ -409,38 +409,38 @@ subroutine adtest_show_(x,p,q,y)
   real(r_quad):: dpp,dqq,dpq,cpq,rpq
   real(r_quad):: dxx,dyy,dxy,adjcrit
   integer(i_kind):: ipq
-  logical:: IamRoot_
+  logical:: iamroot_
   integer(i_kind):: iv
 
-  IamRoot_ = mype==0
+  iamroot_ = mype==0
   adjcrit=1.e-10_r_quad
 
-  if(IamROOT_)then
-    if( size(x)/=size(y) .or. &
-        size(p)/=size(q) ) then
-      call perr(myname_,'mismatched vector counts')
-      if(size(x)/=size(y)) then
-        call perr(myname_,'size(x)/=size(y)')
-        call perr(myname_,'size(x) =',size(x))
-        call perr(myname_,'size(y) =',size(y))
-      endif
-      if(size(p)/=size(q)) then
-        call perr(myname_,'size(p)/=size(q)')
-        call perr(myname_,'size(p) =',size(p))
-        call perr(myname_,'size(q) =',size(q))
-      endif
-      call die(myname_)
-    endif
+  if(iamroot_)then
+     if( size(x)/=size(y) .or. &
+         size(p)/=size(q) ) then
+        call perr(myname_,'mismatched vector counts')
+        if(size(x)/=size(y)) then
+           call perr(myname_,'size(x)/=size(y)')
+           call perr(myname_,'size(x) =',size(x))
+           call perr(myname_,'size(y) =',size(y))
+        endif
+        if(size(p)/=size(q)) then
+           call perr(myname_,'size(p)/=size(q)')
+           call perr(myname_,'size(p) =',size(p))
+           call perr(myname_,'size(q) =',size(q))
+        endif
+        call die(myname_)
+     endif
   endif
 
   dpq=0._r_quad
   do iv=1,size(p)
-    dpq=dpq+dot_product(p(iv),q(iv))          ! (p,q)
+     dpq=dpq+dot_product(p(iv),q(iv))          ! (p,q)
   enddo
   
   dxy=0._r_quad
   do iv=1,size(x)
-    dxy=dxy+dot_product(x(iv),y(iv))       ! (x,y)
+     dxy=dxy+dot_product(x(iv),y(iv))       ! (x,y)
   enddo
 
   cpq=1._r_quad
@@ -449,34 +449,34 @@ subroutine adtest_show_(x,p,q,y)
   ipq=int(-log(abs(rpq)+tiny(rpq))/log(10._r_quad))
 
   if(abs(rpq) > adjcrit)then
-    dpp=0._r_quad
-    dqq=0._r_quad
-    do iv=1,size(p)
-      dpp=dpp+dot_product(p(iv),p(iv))       ! (p,p)
-      dqq=dqq+dot_product(q(iv),q(iv))       ! (q,q)
-    enddo
+     dpp=0._r_quad
+     dqq=0._r_quad
+     do iv=1,size(p)
+        dpp=dpp+dot_product(p(iv),p(iv))       ! (p,p)
+        dqq=dqq+dot_product(q(iv),q(iv))       ! (q,q)
+     enddo
 
-    dyy=0._r_quad
-    dxx=0._r_quad
-    do iv=1,size(x)
-      dyy=dyy+dot_product(y(iv),y(iv))          ! (y,y)
-      dxx=dxx+dot_product(x(iv),x(iv))          ! (x,x)
-    enddo
+     dyy=0._r_quad
+     dxx=0._r_quad
+     do iv=1,size(x)
+        dyy=dyy+dot_product(y(iv),y(iv))          ! (y,y)
+        dxx=dxx+dot_product(x(iv),x(iv))          ! (x,x)
+     enddo
 
-    if(IamROOT_) then
+     if(iamroot_) then
 
-      write(stdout,'(1x,2a,i2,1x,1p,3e12.5)') trim(myname_), &
-            " -- n,   (    q,p=Mx), qq, pp =" ,size(p),dpq,dqq,dpp
-      write(stdout,'(1x,2a,i2,1x,1p,3e12.5)') trim(myname_), &
-            " -- m,   (y=M'q,   x), yy, xx =",size(x),dxy,dyy,dxx
-      write(stdout,'(1x,2a,2x,1x,1p,3e12.5,2x,i4)') trim(myname_), &
-            "() -- pq-xy, pq/xy,pq/xy-1,#d =",dpq-dxy,cpq,rpq,ipq," adtest failed"
-    end if
+        write(stdout,'(1x,2a,i2,1x,1p,3e12.5)') trim(myname_), &
+              " -- n,   (    q,p=Mx), qq, pp =" ,size(p),dpq,dqq,dpp
+        write(stdout,'(1x,2a,i2,1x,1p,3e12.5)') trim(myname_), &
+              " -- m,   (y=M'q,   x), yy, xx =",size(x),dxy,dyy,dxx
+        write(stdout,'(1x,2a,2x,1x,1p,3e12.5,2x,i4)') trim(myname_), &
+              "() -- pq-xy, pq/xy,pq/xy-1,#d =",dpq-dxy,cpq,rpq,ipq," adtest failed"
+     end if
   else
-    if(IamROOT_)then
-      write(stdout,'(1x,2a,2x,1x,1p,3e12.5,2x,i4,a)') trim(myname_), &
-            "() -- pq-xy, pq/xy,pq/xy-1,#d =",dpq-dxy,cpq,rpq,ipq," adtest success"
-    end if
+     if(iamroot_)then
+        write(stdout,'(1x,2a,2x,1x,1p,3e12.5,2x,i4,a)') trim(myname_), &
+              "() -- pq-xy, pq/xy,pq/xy-1,#d =",dpq-dxy,cpq,rpq,ipq," adtest success"
+     end if
   end if
   return
 end subroutine adtest_show_

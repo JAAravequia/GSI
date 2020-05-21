@@ -89,17 +89,17 @@ subroutine calctends_no_tl(st,vp,t,p,mype,u_t,v_t,t_t,p_t,uvflag)
   real(r_kind) tmp,tmp2,tmp3,sumk,sumvk,sum2k,sum2vk,uduvdv
   integer(i_kind) i,j,k,ix,it,kk,ier,istatus
 
-  real(r_kind),pointer,dimension(:,:,:) :: ges_u=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_v=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_tv=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_u=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_v=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_tv=>null()
 
-  real(r_kind),pointer,dimension(:,:,:) :: ges_u_lon=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_v_lon=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_tv_lon=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_u_lon=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_v_lon=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_tv_lon=>null()
 
-  real(r_kind),pointer,dimension(:,:,:) :: ges_u_lat=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_v_lat=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_tv_lat=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_u_lat=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_v_lat=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_tv_lat=>null()
 
 ! linearized about guess solution, so set it flag accordingly
   it=ntguessig
@@ -206,7 +206,7 @@ subroutine calctends_no_tl(st,vp,t,p,mype,u_t,v_t,t_t,p_t,uvflag)
 !   calculate vertical velocity term:  z(dp/dz) (zero at top/bottom interfaces)
 !   if running global, and there is a c(k) coefficient, we call the vvel subroutine
 
-    if ( (.not.regional) .AND. (idvc5==3)) then
+    if ( (.not.regional) .and. (idvc5==3)) then
 
 !     Get horizontal part of temperature tendency for vertical velocity term
 

@@ -87,11 +87,11 @@ subroutine anbkerror(gradx,grady)
 
 ! Since each internal vector [step(jj)] of grad has the same structure, pointers
 ! are the same independent of the subwindow jj
-call gsi_bundlegetpointer (grady%step(1),myvnames,ipnts,istatus)
+  call gsi_bundlegetpointer (grady%step(1),myvnames,ipnts,istatus)
 
 ! Define what to do depending on what's in CV and SV
-do_balance=ipnts(1)>0.and.ipnts(2)>0.and.ipnts(3)>0.and.ipnts(4)>0
-do_balancewter=ipnts(5)>0.and.ipnts(6)>0
+  do_balance=ipnts(1)>0.and.ipnts(2)>0.and.ipnts(3)>0.and.ipnts(4)>0
+  do_balancewter=ipnts(5)>0.and.ipnts(6)>0
 
 ! Loop on control steps
   do ii=1,nsubwin

@@ -200,7 +200,7 @@ subroutine buddy_check_t(is,data,luse,mype,nele,nobs,muse,buddyuse)
   end if
 
 
-  rsig=float(nsig)
+  rsig=real(nsig,r_kind)
   mm1=mype+1
 
   !initialize buddyuse to 1, start by assuming all obs are good!
@@ -326,7 +326,7 @@ subroutine buddy_check_t(is,data,luse,mype,nele,nobs,muse,buddyuse)
 ! 8/31/2015: adjust the difmax value based on case: 2/29/2015 03Z. 
 !  difmax= 7.0_r_kind      ! the final codeMax difference allowed relative to buddies
 !for being consistent, difmax=8, but late will be changed.
-   difmax= 8.0_r_kind      ! Max difference allowed relative to buddies
+  difmax= 8.0_r_kind      ! Max difference allowed relative to buddies
 
  
   call execute_buddy_check(mype,is,nobs,vals,range,difmax,buddyuse)
@@ -335,6 +335,7 @@ subroutine buddy_check_t(is,data,luse,mype,nele,nobs,muse,buddyuse)
   contains
 
   subroutine check_vars_ (proceed)
+  implicit none
   logical,intent(inout) :: proceed
   integer(i_kind) ivar, istatus
 ! Check to see if required guess fields are available
@@ -352,8 +353,9 @@ subroutine buddy_check_t(is,data,luse,mype,nele,nobs,muse,buddyuse)
 
   subroutine init_vars_
 
-  real(r_kind),dimension(:,:  ),pointer:: rank2=>NULL()
-  real(r_kind),dimension(:,:,:),pointer:: rank3=>NULL()
+  implicit none
+  real(r_kind),dimension(:,:  ),pointer:: rank2=>null()
+  real(r_kind),dimension(:,:,:),pointer:: rank3=>null()
   character(len=5) :: varname
   integer(i_kind) ifld, istatus
 
@@ -457,6 +459,7 @@ subroutine buddy_check_t(is,data,luse,mype,nele,nobs,muse,buddyuse)
   end subroutine init_vars_
 
   subroutine final_vars_
+    implicit none
     if(allocated(ges_q )) deallocate(ges_q )
     if(allocated(ges_tv)) deallocate(ges_tv)
     if(allocated(ges_v )) deallocate(ges_v )
@@ -762,8 +765,8 @@ subroutine execute_buddy_check(mype,is,numobs,pevals,range,difmax,pebuddyuse)
        cycle main       
     end if
  ! If the buddy number is ONLY 2, increase the tolerance value:
-    fact=1.0
-    if (buddy_num_final == 2) fact=1.2
+    fact=1.0_r_kind
+    if (buddy_num_final == 2) fact=1.2_r_kind
 
  ! Now do the final buddy check
      if (abs(err) > fact*difmax) then

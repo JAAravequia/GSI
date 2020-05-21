@@ -1,13 +1,14 @@
 module get_pseudo_ensperts_mod
 use abstract_get_pseudo_ensperts_mod
-  type, extends(abstract_get_pseudo_ensperts_class) :: get_pseudo_ensperts_class
-  contains
-    procedure, pass(this) :: get_pseudo_ensperts => get_pseudo_ensperts_wrf
-    procedure, nopass :: read_wrf_nmm_tclib
-    procedure, nopass :: get_bgtc_center
-    procedure, nopass :: create_pseudo_enpert_blend
-    procedure, nopass :: pseudo_ens_e2a
-  end type get_pseudo_ensperts_class
+implicit none
+type, extends(abstract_get_pseudo_ensperts_class) :: get_pseudo_ensperts_class
+contains
+  procedure, pass(this) :: get_pseudo_ensperts => get_pseudo_ensperts_wrf
+  procedure, nopass :: read_wrf_nmm_tclib
+  procedure, nopass :: get_bgtc_center
+  procedure, nopass :: create_pseudo_enpert_blend
+  procedure, nopass :: pseudo_ens_e2a
+end type get_pseudo_ensperts_class
 
 contains
   subroutine get_pseudo_ensperts_wrf(this,en_perts,nelen)
@@ -117,8 +118,8 @@ contains
        call stop2(999)
     endif
     do n=1,n_ens
-        call gsi_bundlecreate(lib_perts(n),grid_ens,'library perts',istatus, &
-                              names2d=cvars2d,names3d=cvars3d,bundle_kind=r_single)
+       call gsi_bundlecreate(lib_perts(n),grid_ens,'library perts',istatus, &
+                             names2d=cvars2d,names3d=cvars3d,bundle_kind=r_single)
        if(istatus/=0) then
           write(6,*)'get_pseudo_enperts: trouble creating lib_perts bundle'
           call stop2(999)
@@ -151,7 +152,7 @@ contains
   40  nn_ens1=n-1
   
     do n=1,200
-    read(200,'(a120)',err=20,end=50)infofile
+       read(200,'(a120)',err=20,end=50)infofile
     enddo
   50  nn_ens2=n-1
   
@@ -222,9 +223,9 @@ contains
           do i=1,grd_ens%nlat
              outwork(j,i)=blend(i,j)
           end do
-      end do
-      call outgrads1(outwork,grd_ens%nlon,grd_ens%nlat,'blend')
-      deallocate(outwork)
+       end do
+       call outgrads1(outwork,grd_ens%nlon,grd_ens%nlat,'blend')
+       deallocate(outwork)
     end if
   
   ! Reorganize for eventual distribution to local domains
@@ -279,19 +280,19 @@ contains
   
   !     if(mype == 0)print *,'n,lc_lon,lc_lat=', n,lc_lon, lc_lat
   
-       lc_lonm=lc_lon-(bc_lon-NINT(bc_lon))*dlmd_ens/dlmd_lib
-       lc_latm=lc_lat-(bc_lat-NINT(bc_lat))*dphd_ens/dphd_lib
+       lc_lonm=lc_lon-(bc_lon-nint(bc_lon))*dlmd_ens/dlmd_lib
+       lc_latm=lc_lat-(bc_lat-nint(bc_lat))*dphd_ens/dphd_lib
   
   !     if(mype == 0)print *,'n,lc_lonm,lc_latm=', n,lc_lonm, lc_latm
   
-       lon_bc=NINT(bc_lon) 
-       lat_bc=NINT(bc_lat)
+       lon_bc=nint(bc_lon) 
+       lat_bc=nint(bc_lat)
   
-       lon_lc=NINT(lc_lonm)
-       lat_lc=NINT(lc_latm)
+       lon_lc=nint(lc_lonm)
+       lat_lc=nint(lc_latm)
   
-       ratio_lon=INT(dlmd_ens/dlmd_lib)
-       ratio_lat=INT(dphd_ens/dphd_lib)
+       ratio_lon=int(dlmd_ens/dlmd_lib)
+       ratio_lat=int(dphd_ens/dphd_lib)
   
   ! test
   !     ratio_lon=1 
@@ -487,7 +488,7 @@ contains
     deallocate(blend)
    
   ! Convert to mean
-    bar_norm = one/float(n_ens)
+    bar_norm = one/real(n_ens,r_kind)
     en_bar%values=en_bar%values*bar_norm
   
     if(write_ens_sprd)then
@@ -508,13 +509,13 @@ contains
   
        call gsi_bundlegetpointer(en_bar,cvars3d,ipc3d,istatus)
        if(istatus/=0) then
-         write(6,*) 'mtong: cannot find 3d pointers'
-         call stop2(999)
+          write(6,*) 'mtong: cannot find 3d pointers'
+          call stop2(999)
        endif
        call gsi_bundlegetpointer(en_bar,cvars2d,ipc2d,istatus)
        if(istatus/=0) then
-         write(6,*) 'mtong: cannot find 2d pointers'
-         call stop2(999)
+          write(6,*) 'mtong: cannot find 2d pointers'
+          call stop2(999)
        endif
    
        do ic3=1,nc3d
@@ -669,13 +670,13 @@ contains
   
           call gsi_bundlegetpointer(en_perts(n,1),cvars3d,ipc3d,istatus)
           if(istatus/=0) then
-            write(6,*) 'mtong: cannot find 3d pointers'
-            call stop2(999)
+             write(6,*) 'mtong: cannot find 3d pointers'
+             call stop2(999)
           endif
           call gsi_bundlegetpointer(en_perts(n,1),cvars2d,ipc2d,istatus)
           if(istatus/=0) then
-            write(6,*) 'mtong: cannot find 2d pointers'
-            call stop2(999)
+             write(6,*) 'mtong: cannot find 2d pointers'
+             call stop2(999)
           endif
   
           do ic3=1,nc3d
@@ -1064,15 +1065,15 @@ contains
     close(32)
   
     if(sn == 'S')then
-      clat=- one * float(iclat)/10.0_r_kind
+      clat=- one * real(iclat,r_kind)/10.0_r_kind
     else
-      clat=float(iclat)/10.0_r_kind
+      clat=real(iclat,r_kind)/10.0_r_kind
     endif
   
     if(ew == 'W')then
-       clon=360._r_kind - float(iclon)/10.0_r_kind
+       clon=360._r_kind - real(iclon,r_kind)/10.0_r_kind
     else
-       clon=float(iclon)/10.0_r_kind
+       clon=real(iclon,r_kind)/10.0_r_kind
     endif
   
   
@@ -1124,7 +1125,7 @@ contains
     implicit none
   
     real(r_kind)                          ,intent(in   ) :: bc_lon,bc_lat 
-    real(r_kind  )                        ,intent(in   ) :: dlmd,dphd
+    real(r_kind)                          ,intent(in   ) :: dlmd,dphd
     integer(i_kind)                       ,intent(in   ) :: nord_blend
     real(r_kind)                          ,intent(  out) :: blndmsk(grd_ens%nlat,grd_ens%nlon)
   
@@ -1141,10 +1142,10 @@ contains
     dx=r111*dlmd
     dy=r111*dphd
   
-    imin=max(1,INT(bc_lat-r300/dy))
-    jmin=max(1,INT(bc_lon-r300/dx))
-    imax=min(grd_ens%nlat,NINT(bc_lat+r300/dy))
-    jmax=min(grd_ens%nlon,NINT(bc_lon+r300/dx)) 
+    imin=max(1,int(bc_lat-r300/dy))
+    jmin=max(1,int(bc_lon-r300/dx))
+    imax=min(grd_ens%nlat,nint(bc_lat+r300/dy))
+    jmax=min(grd_ens%nlon,nint(bc_lon+r300/dx)) 
   
   ! set up blend function
     mm=nord_blend

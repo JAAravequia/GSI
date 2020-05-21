@@ -1,4 +1,5 @@
 module abstract_get_wrf_binary_interface_mod
+  implicit none
   type, abstract :: abstract_get_wrf_binary_interface_class
   contains
     procedure(convert_binary_mass), deferred, pass(this) :: convert_binary_mass

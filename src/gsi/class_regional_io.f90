@@ -1,6 +1,8 @@
 module abstract_regional_io_mod 
+  use kinds, only: i_kind
+  implicit none
   type, abstract :: abstract_regional_io_class
-    integer, allocatable :: dummy(:)
+    integer(i_kind), allocatable :: dummy(:)
     contains
       procedure(init_regional_io), deferred, pass(this) :: init_regional_io
       procedure(write_regional_analysis), deferred, pass(this) :: write_regional_analysis

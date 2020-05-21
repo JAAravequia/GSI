@@ -241,7 +241,7 @@ subroutine get_user_ens_gfs_fastread_(ntindex,en_loc3,m_cvars2d,m_cvars3d, &
     jpe=jps+grd_ens%lon1-1
 
 
-!!!!!!!!!!!!NOTE--FOLLOWING HAS MANY VARS TO BE DEFINED--NLAT,NLON ARE ENSEMBLE DOMAIN DIMS
+!!!!!!!!!!!!Note--following has many vars to be defined--nlat,nlon are ensemble domain dims
 !!!!!!!!for example,  n2d = nc3d*nsig + nc2d
 
     n2d=nc3d*grd_ens%nsig+nc2d
@@ -824,7 +824,7 @@ subroutine parallel_read_nemsio_state_(en_full,m_cvars2d,m_cvars3d,nlon,nlat,nsi
       slons(j)=sin(rlons(j))
    enddo
 
-   fhour = float(nfhour) + float(nfminute)/r60 + float(nfsecondn)/float(nfsecondd)/r3600
+   fhour = real(nfhour,r_kind) + real(nfminute,r_kind)/r60 + real(nfsecondn,r_kind)/real(nfsecondd,r_kind)/r3600
    odate(1) = idate(4)  !hour
    odate(2) = idate(2)  !month
    odate(3) = idate(3)  !day
@@ -1009,7 +1009,7 @@ subroutine fillpoles_s_(temp,nlon,nlat)
       sumn=sumn+temp(nlatm1,i)
       sums=sums+temp(2,i)
    end do
-   rnlon=one/float(nlon)
+   rnlon=one/real(nlon,r_kind)
    sumn=sumn*rnlon
    sums=sums*rnlon
 
@@ -1071,10 +1071,10 @@ subroutine fillpoles_v_(tempu,tempv,nlon,nlat,clons,slons)
       polsu=polsu+tempu(2,i     )*clons(i)+tempv(2,i     )*slons(i)
       polsv=polsv+tempu(2,i     )*slons(i)-tempv(2,i     )*clons(i)
    end do
-   polnu=polnu/float(nlon)
-   polnv=polnv/float(nlon)
-   polsu=polsu/float(nlon)
-   polsv=polsv/float(nlon)
+   polnu=polnu/real(nlon,r_kind)
+   polnv=polnv/real(nlon,r_kind)
+   polsu=polsu/real(nlon,r_kind)
+   polsv=polsv/real(nlon,r_kind)
    do i=1,nlon
       tempu(nlat,i)= polnu*clons(i)+polnv*slons(i)
       tempv(nlat,i)=-polnu*slons(i)+polnv*clons(i)
@@ -1132,7 +1132,7 @@ subroutine move1_(work,temp,nlon,nlat)
 
 end subroutine move1_
 
- subroutine get_gfs_ens(this,grd,member,ntindex,atm_bundle,iret)
+subroutine get_gfs_ens(this,grd,member,ntindex,atm_bundle,iret)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    get_gfs_ens

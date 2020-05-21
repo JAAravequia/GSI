@@ -6,7 +6,7 @@ subroutine convert_fv3_regional
 !
 ! abstract: using routines from gsi_rfv3io_mod.f90 module to setup for
 !           reading tile of forecast fields from an fv3 forecast.
-!         NOTE: run on single processor, with information stored on unit lendian_out
+!         Note: run on single processor, with information stored on unit lendian_out
 !
 !#################################################################################
 !#################################################################################

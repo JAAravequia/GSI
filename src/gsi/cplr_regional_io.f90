@@ -29,13 +29,13 @@
 !
 !$$$ end documentation block
 module regional_io_mod
-use abstract_regional_io_mod
-  type, extends(abstract_regional_io_class) :: regional_io_class
-  contains
-      procedure, pass(this) :: init_regional_io => init_regional_io_wrf
-      procedure, pass(this) :: write_regional_analysis => write_regional_analysis_wrf 
-      procedure, pass(this) :: convert_regional_guess => convert_regional_guess_wrf
-  end type regional_io_class
+use abstract_regional_io_mod, only: abstract_regional_io_class
+type, extends(abstract_regional_io_class) :: regional_io_class
+contains
+    procedure, pass(this) :: init_regional_io => init_regional_io_wrf
+    procedure, pass(this) :: write_regional_analysis => write_regional_analysis_wrf 
+    procedure, pass(this) :: convert_regional_guess => convert_regional_guess_wrf
+end type regional_io_class
 
 contains
 

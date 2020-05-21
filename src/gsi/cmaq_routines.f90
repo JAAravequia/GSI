@@ -252,7 +252,7 @@ subroutine read_cmaq_guess(mype)
   real(r_single) tempa(itotsub)
   real(r_single),allocatable::temp1(:,:)
   real(r_single),allocatable::all_loc(:,:,:)
-  real(r_kind),pointer,dimension(:,:,:)::ptr3d=>NULL()
+  real(r_kind),pointer,dimension(:,:,:)::ptr3d=>null()
   character(6) filename 
   integer(i_kind) irc_s_reg(npe),ird_s_reg(npe)
   integer(i_kind) ifld,im,jm,lm,num_cmaq_fields
@@ -264,12 +264,12 @@ subroutine read_cmaq_guess(mype)
   
   integer(i_kind) :: nskip
   
-  real(r_kind),dimension(:,:  ),pointer::ges_ps_it=>NULL()
-  real(r_kind),dimension(:,:  ),pointer::ges_z_it =>NULL()
-  real(r_kind),dimension(:,:,:),pointer::ges_u_it =>NULL()
-  real(r_kind),dimension(:,:,:),pointer::ges_v_it =>NULL()
-  real(r_kind),dimension(:,:,:),pointer::ges_tv_it=>NULL()
-  real(r_kind),dimension(:,:,:),pointer::ges_q_it =>NULL()
+  real(r_kind),dimension(:,:  ),pointer::ges_ps_it=>null()
+  real(r_kind),dimension(:,:  ),pointer::ges_z_it =>null()
+  real(r_kind),dimension(:,:,:),pointer::ges_u_it =>null()
+  real(r_kind),dimension(:,:,:),pointer::ges_v_it =>null()
+  real(r_kind),dimension(:,:,:),pointer::ges_tv_it=>null()
+  real(r_kind),dimension(:,:,:),pointer::ges_q_it =>null()
 
   if(mype==0) write(6,*)' at 0 in read_cmaq_guess'
   
@@ -581,7 +581,7 @@ subroutine write_cmaq(mype)
   real(r_single),allocatable::all_loc(:,:,:),ratio(:,:,:)
   real(r_single),allocatable::incr(:,:,:)
   real(r_single),allocatable::strp(:)
-  real(r_kind),pointer,dimension(:,:,:)::ptr3d=>NULL()
+  real(r_kind),pointer,dimension(:,:,:)::ptr3d=>null()
   character(6) filename
   integer(i_kind) :: i,j,k,it
   integer(i_kind) :: ncmaqin,nskip

@@ -1,23 +1,24 @@
 module get_wrf_binary_interface_mod
-use abstract_get_wrf_binary_interface_mod
-  type, extends(abstract_get_wrf_binary_interface_class) :: get_wrf_binary_interface_class
-  contains
-    procedure, pass(this) :: convert_binary_mass => convert_binary_mass_wrf
-    procedure, pass(this) :: convert_binary_nmm => convert_binary_nmm_wrf
-    procedure, pass(this) :: convert_nems_nmmb => convert_nems_nmmb_wrf
-    procedure, nopass :: latlon2radians
-    procedure, pass(this) :: count_recs_wrf_binary_file
-    procedure, pass(this) :: inventory_wrf_binary_file
-    procedure, pass(this) :: initialize_byte_swap_wrf_binary_file
-    procedure, pass(this) :: int_get_ti_header_char
-    procedure, pass(this) :: int_get_write_field_header 
-    procedure, nopass :: retrieve_index
-    procedure, nopass :: retrieve_field_i1
-    procedure, nopass :: retrieve_field_r1
-    procedure, nopass :: retrieve_field_rn1
-    procedure, nopass :: retrieve_field_rn1n2
-    procedure, nopass :: next_buf 
-  end type get_wrf_binary_interface_class
+use abstract_get_wrf_binary_interface_mod, only: &
+    abstract_get_wrf_binary_interface_class
+type, extends(abstract_get_wrf_binary_interface_class) :: get_wrf_binary_interface_class
+contains
+  procedure, pass(this) :: convert_binary_mass => convert_binary_mass_wrf
+  procedure, pass(this) :: convert_binary_nmm => convert_binary_nmm_wrf
+  procedure, pass(this) :: convert_nems_nmmb => convert_nems_nmmb_wrf
+  procedure, nopass :: latlon2radians
+  procedure, pass(this) :: count_recs_wrf_binary_file
+  procedure, pass(this) :: inventory_wrf_binary_file
+  procedure, pass(this) :: initialize_byte_swap_wrf_binary_file
+  procedure, pass(this) :: int_get_ti_header_char
+  procedure, pass(this) :: int_get_write_field_header 
+  procedure, nopass :: retrieve_index
+  procedure, nopass :: retrieve_field_i1
+  procedure, nopass :: retrieve_field_r1
+  procedure, nopass :: retrieve_field_rn1
+  procedure, nopass :: retrieve_field_rn1n2
+  procedure, nopass :: next_buf 
+end type get_wrf_binary_interface_class
 contains
   subroutine convert_binary_mass_wrf(this)
   !$$$  subprogram documentation block
@@ -75,7 +76,7 @@ contains
   !
   !$$$
   
-  ! COMMENTS ON MPI I-O AS USED TO READ AND WRITE FROM WRF BINARY FORMAT FILES:
+  ! Comments on MPI I-O as used to read and write from WRF binary format files:
   
   !   The wrf binary format model files are sequential unformatted files.  There is a sequence
   !   of 2048 byte informational records, which are sometimes followed by a record with a 
@@ -122,7 +123,7 @@ contains
     use kinds, only: r_single,i_llong,i_kind
     use gsi_4dvar, only: nhr_assimilation
     use gsi_io, only: lendian_out, verbose
-    use rapidrefresh_cldsurf_mod, only: l_hydrometeor_bkio,l_gsd_soilTQ_nudge
+    use rapidrefresh_cldsurf_mod, only: l_hydrometeor_bkio,l_gsd_soiltq_nudge
     use gsi_metguess_mod, only: gsi_metguess_get
     use gridmod, only: wrf_mass_hybridcord
     implicit none
@@ -303,7 +304,7 @@ contains
                 write(6,*)' convert_binary_mass: k,c4h(k)=',k,field1a(k)
              end do
           end if
-          write(lendian_out)field1,field1a             !  C3H, C4H
+          write(lendian_out)field1,field1a             !  c3h, c4h
    
 !                    c3f
           call retrieve_index(index,'C3F',varname_all,nrecs)
@@ -341,7 +342,7 @@ contains
              end do
           end if
           field1a=0.0_r_single
-          write(lendian_out)field1,field1a             !  ZNU
+          write(lendian_out)field1,field1a             !  znu
      
   !                  znw
           call this%retrieve_index(index,'ZNW',varname_all,nrecs)
@@ -355,7 +356,7 @@ contains
              end do
           end if
           field1pa=0.0_r_single
-          write(lendian_out)field1p,field1pa            !  ZNW
+          write(lendian_out)field1p,field1pa            !  znw
        endif   ! no hybrid vertical coordinate
    
        deallocate(field1,field1p)
@@ -401,10 +402,10 @@ contains
           write(6,*)' convert_binary_mass: mapfac_m(1,nlat),mapfac_m(nlon,nlat)=', &
             field2(1,nlat_regional),field2(nlon_regional,nlat_regional)
        end if
-       field2b=one_single/(field2*rdx)  !DX_MC
-       field2c=one_single/(field2*rdy)  !DY_MC
+       field2b=one_single/(field2*rdx)  !dx_mc
+       field2c=one_single/(field2*rdy)  !dy_mc
      
-  !                  XLAT
+  !                  xlat
        rad2deg_single=r45/atan(one_single)
        call this%retrieve_index(index,'XLAT',varname_all,nrecs)
        if(index<0) stop
@@ -424,9 +425,9 @@ contains
             field2(1,nlat_regional),field2(nlon_regional,nlat_regional)
        end if
        field2=field2/rad2deg_single
-       write(lendian_out)field2,field2b,n_position     !  XLAT,DX_MC
+       write(lendian_out)field2,field2b,n_position     !  xlat,dx_mc
      
-  !                  XLONG
+  !                  xlong
        call this%retrieve_index(index,'XLONG',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
@@ -446,17 +447,17 @@ contains
        end if
        field2=field2/rad2deg_single
      
-       write(lendian_out)field2,field2c,n_position     !  XLONG,DY_MC
+       write(lendian_out)field2,field2c,n_position     !  xlong,dy_mc
      
        write(lendian_out) wrfges
      
-  !      index for START_DATE record
+  !      index for start_date record
        call this%retrieve_index(index,'START_DATE',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index)
-       write(lendian_out)n_position    ! offset for START_DATE record
+       write(lendian_out)n_position    ! offset for start_date record
      
-  !                  MUB
+  !                  mub
        call this%retrieve_index(index,'MUB',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
@@ -465,7 +466,7 @@ contains
   
        write(lendian_out)n_position    ! offset for mub
   
-  !                  MU
+  !                  mu
        call this%retrieve_index(index,'MU',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
@@ -474,127 +475,127 @@ contains
   
        write(lendian_out)n_position    ! offset for mu
     
-  !                   PHB                  
+  !                   phb                  
        k=nsig_regional
        call this%retrieve_index(index,'PHB',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset, memoryorder for PHB(',k+1,') = ',n_position,memoryorder_all(index)
-       write(lendian_out)n_position,memoryorder_all(index)    ! offset for PHB 
+       write(lendian_out)n_position,memoryorder_all(index)    ! offset for phb 
                                                            !     (zsfc*g is 1st level of this 3d field)
                                  !  but more efficient to read in whole 3-d field because of ikj order
   
-  !                   T                  
+  !                   t                  
        call this%retrieve_index(index,'T',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset, memoryorder for T(',k,') = ',n_position,memoryorder_all(index)
-       write(lendian_out)n_position,memoryorder_all(index)  ! offset for T(k)    ! POT TEMP (sensible)
+       write(lendian_out)n_position,memoryorder_all(index)  ! offset for t(k)    ! pot temp (sensible)
   
   
-  !                   QVAPOR
+  !                   qvapor
        call this%retrieve_index(index,'QVAPOR',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset, memoryorder for QVAPOR(',k,' = ',n_position,memoryorder_all(index)
-       write(lendian_out)n_position,memoryorder_all(index)    ! offset for QVAPOR(k)
+       write(lendian_out)n_position,memoryorder_all(index)    ! offset for qvapor(k)
        
-  !                   U                  
+  !                   u                  
        call this%retrieve_index(index,'U',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset, memoryorder for U(',k,' = ',n_position,memoryorder_all(index)
-       write(lendian_out)n_position,memoryorder_all(index)    ! offset for U(k)
+       write(lendian_out)n_position,memoryorder_all(index)    ! offset for u(k)
   
-  !                   V                  
+  !                   v                  
        call this%retrieve_index(index,'V',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset, memoryorder for V(',k,' = ',n_position,memoryorder_all(index)
-       write(lendian_out)n_position,memoryorder_all(index)    ! offset for V(k)
+       write(lendian_out)n_position,memoryorder_all(index)    ! offset for v(k)
   
-  !                   LANDMASK          
+  !                   landmask          
        call this%retrieve_index(index,'LANDMASK',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
   
        if(print_verbose)write(6,*)'  byte offset for LANDMASK = ',n_position
   
-       write(lendian_out)n_position     !  LANDMASK  (1=land, 0=water)
+       write(lendian_out)n_position     !  landmask  (1=land, 0=water)
   
-  !                   XICE                
+  !                   xice                
        call this%retrieve_index(index,'SEAICE',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
      
        if(print_verbose)write(6,*)'  byte offset for XICE = ',n_position
   
-       write(lendian_out)n_position     !  XICE
+       write(lendian_out)n_position     !  xice
   
-  !                   SST                
+  !                   sst                
        call this%retrieve_index(index,'SST',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
   
        if(print_verbose)write(6,*)'  byte offset for SST = ',n_position
   
-       write(lendian_out)n_position     !  SST
+       write(lendian_out)n_position     !  sst
   
-  !                   IVGTYP                
+  !                   ivgtyp                
        call this%retrieve_index(index,'IVGTYP',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
   
        if(print_verbose)write(6,*)'  byte offset for IVGTYP = ',n_position
   
-       write(lendian_out)n_position     !  IVGTYP
+       write(lendian_out)n_position     !  ivgtyp
   
-  !                   ISLTYP                
+  !                   isltyp                
        call this%retrieve_index(index,'ISLTYP',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
      
        if(print_verbose)write(6,*)'  byte offset for ISLTYP = ',n_position
   
-       write(lendian_out)n_position     !  ISLTYP
+       write(lendian_out)n_position     !  isltyp
     
-  !                   VEGFRA                
+  !                   vegfra                
        call this%retrieve_index(index,'VEGFRA',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
   
        if(print_verbose)write(6,*)'  byte offset for VEGFRA = ',n_position
   
-       write(lendian_out)n_position     !  VEGFRA
+       write(lendian_out)n_position     !  vegfra
   
-  !                   SNOW
+  !                   snow
        call this%retrieve_index(index,'SNOW',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
   
        if(print_verbose)write(6,*)'  byte offset for SNOW = ',n_position
   
-       write(lendian_out)n_position     !  SNOW
+       write(lendian_out)n_position     !  snow
   
-  !                   U10                
+  !                   u10                
        call this%retrieve_index(index,'U10',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
   
        if(print_verbose)write(6,*)'  byte offset for U10 = ',n_position
   
-       write(lendian_out)n_position     !  U10
+       write(lendian_out)n_position     !  u10
     
-  !                   V10                
+  !                   v10                
        call this%retrieve_index(index,'V10',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
      
        if(print_verbose)write(6,*)'  byte offset for V10 = ',n_position
   
-       write(lendian_out)n_position     !  V10
+       write(lendian_out)n_position     !  v10
   
-  !                   SMOIS              
+  !                   smois              
        call this%retrieve_index(index,'SMOIS',varname_all,nrecs)
        if(index<0) stop
        if(trim(memoryorder_all(index))=='XZY') then
@@ -606,9 +607,9 @@ contains
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset, ksize, memoryorder for SMOIS(',ksize,') = ', &
                                              n_position,ksize,memoryorder_all(index)
-       write(lendian_out)n_position,ksize,memoryorder_all(index)     !  SMOIS
+       write(lendian_out)n_position,ksize,memoryorder_all(index)     !  smois
   
-  !                   TSLB               
+  !                   tslb               
        call this%retrieve_index(index,'TSLB',varname_all,nrecs)
        if(index<0) stop
        if(trim(memoryorder_all(index))=='XZY') then
@@ -620,103 +621,103 @@ contains
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset, ksize, memoryorder for TSLB(',ksize,') = ', &
                                                 n_position,ksize,memoryorder_all(index)
-       write(lendian_out)n_position,ksize,memoryorder_all(index)     !  TSLB
+       write(lendian_out)n_position,ksize,memoryorder_all(index)     !  tslb
   
-  !                   TSK                
+  !                   tsk                
        call this%retrieve_index(index,'TSK',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
   
        if(print_verbose)write(6,*)'  byte offset for TSK = ',n_position
   
-       write(lendian_out)n_position     !  TSK
+       write(lendian_out)n_position     !  tsk
   
-  !                   Q2                
+  !                   q2                
        call this%retrieve_index(index,'Q2',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset for Q2 = ',n_position
-       write(lendian_out)n_position     !  Q2
+       write(lendian_out)n_position     !  q2
   
   
-       if(l_gsd_soilTQ_nudge) then
-  !                      SOIL1              
+       if(l_gsd_soiltq_nudge) then
+  !                      soilt1              
           call this%retrieve_index(index,'SOILT1',varname_all,nrecs)
           if(index<0) stop
           n_position=file_offset(index+1)
           if(print_verbose)write(6,*)'  byte offset for SOILT1= ',n_position
-          write(lendian_out)n_position     ! SOILT1 
-  !                   TH2                
+          write(lendian_out)n_position     ! soilt1 
+  !                   th2                
           call this%retrieve_index(index,'TH2',varname_all,nrecs)
           if(index<0) stop
           n_position=file_offset(index+1)
           if(print_verbose)write(6,*)'  byte offset for TH2 = ',n_position
-          write(lendian_out)n_position     !  TH2
+          write(lendian_out)n_position     !  th2
        endif
   
        if(l_hydrometeor_bkio .and. n_actual_clouds>0) then
-  !      QCLOUD
+  !      qcloud
           call this%retrieve_index(index,'QCLOUD',varname_all,nrecs)
           if(index<0) stop
           n_position=file_offset(index+1)
           if(print_verbose)write(6,*)'  byte offset, memoryorder for QCLOUD(',k,' = ',n_position,memoryorder_all(index)
-          write(lendian_out)n_position,memoryorder_all(index)    ! offset for QCLOUD(k)
+          write(lendian_out)n_position,memoryorder_all(index)    ! offset for qcloud(k)
   
-  !      QRAIN
+  !      qrain
           call this%retrieve_index(index,'QRAIN',varname_all,nrecs)
           if(index<0) stop
           n_position=file_offset(index+1)
           if(print_verbose)write(6,*)'  byte offset, memoryorder for QRAIN(',k,' = ',n_position,memoryorder_all(index)
-          write(lendian_out)n_position,memoryorder_all(index)    ! offset for QRAIN(k)
+          write(lendian_out)n_position,memoryorder_all(index)    ! offset for qrain(k)
   
-  !      QICE
+  !      qice
           call this%retrieve_index(index,'QICE',varname_all,nrecs)
           if(index<0) stop
           n_position=file_offset(index+1)
           if(print_verbose)write(6,*)'  byte offset, memoryorder for QICE(',k,' = ',n_position,memoryorder_all(index)
-          write(lendian_out)n_position,memoryorder_all(index)    ! offset for QICE(k)
+          write(lendian_out)n_position,memoryorder_all(index)    ! offset for qice(k)
   
-  !      QSNOW
+  !      qsnow
           call this%retrieve_index(index,'QSNOW',varname_all,nrecs)
           if(index<0) stop
           n_position=file_offset(index+1)
           if(print_verbose)write(6,*)'  byte offset, memoryorder for QSNOW(',k,' = ',n_position,memoryorder_all(index)
-          write(lendian_out)n_position,memoryorder_all(index)    ! offset for QSNOW(k)
+          write(lendian_out)n_position,memoryorder_all(index)    ! offset for qsnow(k)
   
-  !      QGRAUP
+  !      qgraup
           call this%retrieve_index(index,'QGRAUP',varname_all,nrecs)
           if(index<0) stop
           n_position=file_offset(index+1)
           if(print_verbose)write(6,*)'  byte offset, memoryorder for QGRAUP(',k,' = ',n_position,memoryorder_all(index)
-          write(lendian_out)n_position,memoryorder_all(index)    ! offset for QGRAUP(k)
+          write(lendian_out)n_position,memoryorder_all(index)    ! offset for qgraup(k)
   
-  !      QNRAIN
+  !      qnrain
           call this%retrieve_index(index,'QNRAIN',varname_all,nrecs)
           if(index<0) stop
           n_position=file_offset(index+1)
           if(print_verbose)write(6,*)'  byte offset, memoryorder for QNRAIN(',k,' = ',n_position,memoryorder_all(index)
-          write(lendian_out)n_position,memoryorder_all(index)    ! offset for QNRAIN(k)
+          write(lendian_out)n_position,memoryorder_all(index)    ! offset for qnrain(k)
   
-  !      QNRIC
+  !      qnice
           call this%retrieve_index(index,'QNICE',varname_all,nrecs)
           if(index<0) stop
           n_position=file_offset(index+1)
           if(print_verbose)write(6,*)'  byte offset, memoryorder for QNICE(',k,' = ',n_position,memoryorder_all(index)
-          write(lendian_out)n_position,memoryorder_all(index)    ! offset for QNICE(k)
+          write(lendian_out)n_position,memoryorder_all(index)    ! offset for qnice(k)
   
-  !      QNCLOUD
+  !      qncloud
           call this%retrieve_index(index,'QNCLOUD',varname_all,nrecs)
           if(index<0) stop
           n_position=file_offset(index+1)
           if(print_verbose)write(6,*)'  byte offset, memoryorder for QNCLOUD(',k,' = ',n_position,memoryorder_all(index)
-          write(lendian_out)n_position,memoryorder_all(index)    ! offset for QNCLOUD(k)
+          write(lendian_out)n_position,memoryorder_all(index)    ! offset for qncloud(k)
   
-  !      RAD_TTEN_DFI
+  !      rad_tten_dfi
           call this%retrieve_index(index,'RAD_TTEN_DFI',varname_all,nrecs)
           if(index<0) stop
           n_position=file_offset(index+1)
           if(print_verbose)write(6,*)'  byte offset, memoryorder for RAD_TTEN_DFI(',k,' = ',n_position,memoryorder_all(index)
-          write(lendian_out)n_position,memoryorder_all(index)    ! offset for RAD_TTEN_DFI(k)
+          write(lendian_out)n_position,memoryorder_all(index)    ! offset for rad_tten_dfi(k)
   
        endif     ! l_hydrometeor_bkio
   
@@ -727,42 +728,42 @@ contains
                                     start_byte(index+1),end_byte(index+1))
        if(print_verbose)write(6,*)' convert_binary_mass: max,min Z0=', &
             maxval(field2),minval(field2)
-       write(lendian_out)field2        !  Z0
+       write(lendian_out)field2        !  z0
        call this%retrieve_index(index,'SST',varname_all,nrecs)
        call this%retrieve_field_rn1n2(in_unit,wrfges,field2,nlon_regional,nlat_regional, &
                                     start_block(index+1),end_block(index+1), &
                                     start_byte(index+1),end_byte(index+1))
        if(print_verbose)write(6,*)' convert_binary_mass: max,min SST=', &
             maxval(field2),minval(field2)
-       write(lendian_out)field2        !  SST
+       write(lendian_out)field2        !  sst
        call this%retrieve_index(index,'TSK',varname_all,nrecs)
        call this%retrieve_field_rn1n2(in_unit,wrfges,field2,nlon_regional,nlat_regional, &
                                     start_block(index+1),end_block(index+1), &
                                     start_byte(index+1),end_byte(index+1))
        if(print_verbose)write(6,*)' convert_binary_mass: max,min TSK=', &
             maxval(field2),minval(field2)
-       write(lendian_out)field2        !  TSK
+       write(lendian_out)field2        !  tsk
        call this%retrieve_index(index,'LANDMASK',varname_all,nrecs)
        call this%retrieve_field_rn1n2(in_unit,wrfges,field2,nlon_regional,nlat_regional, &
                                     start_block(index+1),end_block(index+1), &
                                     start_byte(index+1),end_byte(index+1))
        if(print_verbose)write(6,*)' convert_binary_mass: max,min LANDMASK=', &
             maxval(field2),minval(field2)
-       write(lendian_out)field2        !  LANDMASK
+       write(lendian_out)field2        !  landmask
        call this%retrieve_index(index,'SEAICE',varname_all,nrecs)
        call this%retrieve_field_rn1n2(in_unit,wrfges,field2,nlon_regional,nlat_regional, &
                                     start_block(index+1),end_block(index+1), &
                                     start_byte(index+1),end_byte(index+1))
        if(print_verbose)write(6,*)' convert_binary_mass: max,min XICE=', &
             maxval(field2),minval(field2)
-       write(lendian_out)field2        !  XICE
+       write(lendian_out)field2        !  xice
        call this%retrieve_index(index,'SNOW',varname_all,nrecs)
        call this%retrieve_field_rn1n2(in_unit,wrfges,field2,nlon_regional,nlat_regional, &
                                     start_block(index+1),end_block(index+1), &
                                     start_byte(index+1),end_byte(index+1))
        if(print_verbose)write(6,*)' convert_binary_mass: max,min SNOW=', &
             maxval(field2),minval(field2)
-       write(lendian_out)field2        !  SNOW
+       write(lendian_out)field2        !  snow
      
        deallocate(field2,field2b,field2c)
        deallocate(datestr_all,varname_all,domainend_all,memoryorder_all)
@@ -966,7 +967,7 @@ contains
             nlon_regional,nlat_regional,nsig_regional
        end if
   
-  !                  NSTART_HOUR
+  !                  nstart_hour
        call this%retrieve_index(index,'NSTART_HOUR',varname_all,nrecs)
        if(index<0)then
           write(6,*)' ***WARNING*** NSTART_HOUR is not found, only need to be updated for WRF restart file'
@@ -1025,7 +1026,7 @@ contains
           deta1(k)=field1(k)   
        end do
   
-  !    write(lendian_out)field1             !  DETA1 
+  !    write(lendian_out)field1             !  deta1 
   
   !                  aeta1
        call this%retrieve_index(index,'AETA1',varname_all,nrecs)
@@ -1038,7 +1039,7 @@ contains
           aeta1(k)=field1(k) 
        end do
   
-  !    write(lendian_out)field1             !  AETA1 
+  !    write(lendian_out)field1             !  aeta1 
     
   !                  eta1
        call this%retrieve_index(index,'ETA1',varname_all,nrecs)
@@ -1051,7 +1052,7 @@ contains
           eta1(k)=field1p(k)   
        end do
   
-  !    write(lendian_out)field1p            !  ETA1 
+  !    write(lendian_out)field1p            !  eta1 
   
   !                  deta2
        call this%retrieve_index(index,'DETA2',varname_all,nrecs)
@@ -1064,7 +1065,7 @@ contains
           deta2(k)=field1(k)     
        end do
   
-  !    write(lendian_out)field1             !  DETA2 
+  !    write(lendian_out)field1             !  deta2 
   
   !                  aeta2
        call this%retrieve_index(index,'AETA2',varname_all,nrecs)
@@ -1078,7 +1079,7 @@ contains
           aeta2(k)=field1(k)    
        end do
   
-  !    write(lendian_out)field1             !  AETA2 
+  !    write(lendian_out)field1             !  aeta2 
   
   !                  eta2
        call this%retrieve_index(index,'ETA2',varname_all,nrecs)
@@ -1091,7 +1092,7 @@ contains
           if(print_verbose)write(6,*)' convert_binary_nmm: k,eta2(k)=',k,field1p(k)
           eta2(k)=field1p(k)    
        end do
-  !    write(lendian_out)field1p            !  ETA2
+  !    write(lendian_out)field1p            !  eta2
   
        deallocate(field1,field1p)
   
@@ -1133,18 +1134,18 @@ contains
        write(lendian_out) iyear,imonth,iday,ihour,iminute,isecond, &
             nlon_regional,nlat_regional,nsig_regional, &
             dlmd_regional,dphd_regional,pt_regional,pdtop_regional
-       write(lendian_out)deta1(1:nsig_regional)    ! DETA1
-       write(lendian_out)aeta1(1:nsig_regional)    ! AETA1
-       write(lendian_out) eta1(1:nsig_regional+1)  !  ETA1
-       write(lendian_out)deta2(1:nsig_regional)    ! DETA2
-       write(lendian_out)aeta2(1:nsig_regional)    ! AETA2
-       write(lendian_out) eta2(1:nsig_regional+1)  !  ETA2
+       write(lendian_out)deta1(1:nsig_regional)    ! deta1
+       write(lendian_out)aeta1(1:nsig_regional)    ! aeta1
+       write(lendian_out) eta1(1:nsig_regional+1)  !  eta1
+       write(lendian_out)deta2(1:nsig_regional)    ! deta2
+       write(lendian_out)aeta2(1:nsig_regional)    ! aeta2
+       write(lendian_out) eta2(1:nsig_regional+1)  !  eta2
        deallocate(deta1,aeta1,eta1,deta2,aeta2,eta2)
   
        allocate(field2(nlon_regional,nlat_regional))
        allocate(field2b(nlon_regional,nlat_regional))
   
-  !                  GLAT
+  !                  glat
        call this%retrieve_index(index,'GLAT',varname_all,nrecs)
        if(index<0) stop
        call this%retrieve_field_rn1n2(in_unit,wrfges,field2,nlon_regional,nlat_regional, &
@@ -1164,7 +1165,7 @@ contains
        ctph0=cos(field2(1+(nlon_regional-1)/2,1+(nlat_regional-1)/2))
        stph0=sin(field2(1+(nlon_regional-1)/2,1+(nlat_regional-1)/2))
   
-  !                  DX_NMM
+  !                  dx_nmm
        call this%retrieve_index(index,'DX_NMM',varname_all,nrecs)
        if(index<0) stop
        call this%retrieve_field_rn1n2(in_unit,wrfges,field2b,nlon_regional,nlat_regional, &
@@ -1180,9 +1181,9 @@ contains
             field2b(1,nlat_regional),field2b(nlon_regional,nlat_regional)
        end if
   
-       write(lendian_out)field2,field2b     !  GLAT,DX_NMM
+       write(lendian_out)field2,field2b     !  glat,dx_nmm
   
-  !                  GLON
+  !                  glon
        call this%retrieve_index(index,'GLON',varname_all,nrecs)
        if(index<0) stop
        call this%retrieve_field_rn1n2(in_unit,wrfges,field2,nlon_regional,nlat_regional, &
@@ -1203,7 +1204,7 @@ contains
        tlm0=half*(field2(1+(nlon_regional-1)/2,1+(nlat_regional-1)/2)+ &
                 field2(2+(nlon_regional-1)/2,1+(nlat_regional-1)/2))
   
-  !                  DY_NMM
+  !                  dy_nmm
        call this%retrieve_index(index,'DY_NMM',varname_all,nrecs)
        if(index<0) stop
        call this%retrieve_field_r1(in_unit,wrfges,dy_nmm,start_block(index+1),end_block(index+1), &
@@ -1211,143 +1212,143 @@ contains
        if(print_verbose)write(6,*)' convert_binary_nmm: DY_NMM=',dy_nmm
        field2b=dy_nmm
   
-       write(lendian_out)field2,field2b     !  GLON,DY_NMM
+       write(lendian_out)field2,field2b     !  glon,dy_nmm
   
        write(lendian_out) wrfges
   
-  !      index for START_DATE record
+  !      index for start_date record
        call this%retrieve_index(index,'START_DATE',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index)
-       write(lendian_out)n_position    ! offset for START_DATE record
+       write(lendian_out)n_position    ! offset for start_date record
   
-  !      index for NSTART_HOUR record 
+  !      index for nstart_hour record 
        call this%retrieve_index(index,'NSTART_HOUR',varname_all,nrecs)
        if(index<0)then
           n_position=-99
        else
           n_position=file_offset(index+1)
        end if
-       write(lendian_out)n_position    ! offset for NSTART_HOUR record
+       write(lendian_out)n_position    ! offset for nstart_hour record
   
-  !                  PD
+  !                  pd
        call this%retrieve_index(index,'PD',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
   
-       write(lendian_out)n_position   !  offset for PD
+       write(lendian_out)n_position   !  offset for pd
   
-  !                   FIS                  
+  !                   fis                  
        call this%retrieve_index(index,'FIS',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
   
        if(print_verbose)write(6,*)'  byte offset for FIS = ',n_position
   
-       write(lendian_out)n_position  !  offset for FIS
+       write(lendian_out)n_position  !  offset for fis
   
-  !                   PINT               
+  !                   pint               
        call this%retrieve_index(index,'PINT',varname_all,nrecs)
        update_pint=.false.
        if(index>0) then
           update_pint=.true.
           n_position=file_offset(index+1)
           if(print_verbose)write(6,*)'  byte offset, memoryorder for PINT = ',n_position,memoryorder_all(index)
-          write(lendian_out)n_position,memoryorder_all(index)    ! offset for PINT !
+          write(lendian_out)n_position,memoryorder_all(index)    ! offset for pint !
        end if
   
-  !                   T                  
+  !                   t                  
        call this%retrieve_index(index,'T',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset, memoryorder for T = ',n_position,memoryorder_all(index)
-       write(lendian_out)n_position,memoryorder_all(index)    ! offset for T    !
+       write(lendian_out)n_position,memoryorder_all(index)    ! offset for t    !
     
-  !                   Q                  
+  !                   q                  
        call this%retrieve_index(index,'Q',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset, memoryorder for Q = ',n_position,memoryorder_all(index)
-       write(lendian_out)n_position,memoryorder_all(index)    ! offset for Q    !
+       write(lendian_out)n_position,memoryorder_all(index)    ! offset for q    !
   
-  !                   U                  
+  !                   u                  
        call this%retrieve_index(index,'U',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset, memoryorder for U = ',n_position,memoryorder_all(index)
-       write(lendian_out)n_position,memoryorder_all(index)    ! offset for U    !
+       write(lendian_out)n_position,memoryorder_all(index)    ! offset for u    !
   
-  !                   V                  
+  !                   v                  
        call this%retrieve_index(index,'V',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset, memoryorder for V = ',n_position,memoryorder_all(index)
-       write(lendian_out)n_position,memoryorder_all(index)    ! offset for V    !
+       write(lendian_out)n_position,memoryorder_all(index)    ! offset for v    !
   
-  !                   SM                
+  !                   sm                
        call this%retrieve_index(index,'SM',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset for SM = ',n_position
-       write(lendian_out)n_position    ! offset for SM    !
+       write(lendian_out)n_position    ! offset for sm    !
   
-  !                   SICE                
+  !                   sice                
        call this%retrieve_index(index,'SICE',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset for SICE = ',n_position
-       write(lendian_out)n_position    ! offset for SICE  !
+       write(lendian_out)n_position    ! offset for sice  !
   
-  !                   SST                
+  !                   sst                
        call this%retrieve_index(index,'SST',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset for SST = ',n_position
-       write(lendian_out)n_position    ! offset for SST   !
+       write(lendian_out)n_position    ! offset for sst   !
   
-  !                   IVGTYP                
+  !                   ivgtyp                
        call this%retrieve_index(index,'IVGTYP',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset for IVGTYP = ',n_position
-       write(lendian_out)n_position    ! offset for IVGTYP    !
+       write(lendian_out)n_position    ! offset for ivgtyp    !
   
-  !                   ISLTYP                
+  !                   isltyp                
        call this%retrieve_index(index,'ISLTYP',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset for ISLTYP = ',n_position
-       write(lendian_out)n_position    ! offset for ISLTYP    !
+       write(lendian_out)n_position    ! offset for isltyp    !
   
-  !                   VEGFRC                
+  !                   vegfrc                
        call this%retrieve_index(index,'VEGFRC',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset for VEGFRC = ',n_position
-       write(lendian_out)n_position    ! offset for VEGFRC    !
+       write(lendian_out)n_position    ! offset for vegfrc    !
   
-  !                   SNO                
+  !                   sno                
        call this%retrieve_index(index,'SNO',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset for SNO = ',n_position
-       write(lendian_out)n_position    ! offset for SNO   !
+       write(lendian_out)n_position    ! offset for sno   !
   
-  !                   U10                
+  !                   u10                
        call this%retrieve_index(index,'U10',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset for U10 = ',n_position
-       write(lendian_out)n_position    ! offset for U10   !
+       write(lendian_out)n_position    ! offset for u10   !
   
-  !                   V10                
+  !                   v10                
        call this%retrieve_index(index,'V10',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset for V10 = ',n_position
-       write(lendian_out)n_position    ! offset for V10   !
+       write(lendian_out)n_position    ! offset for v10   !
   
-  !                   SMC                
+  !                   smc                
        call this%retrieve_index(index,'SMC',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
@@ -1358,9 +1359,9 @@ contains
           ksize=domainend_all(3,index)
        end if
        if(print_verbose)write(6,*)'  byte offset, ksize, memoryorder for SMC = ',n_position,ksize,memoryorder_all(index)
-       write(lendian_out)n_position,ksize,memoryorder_all(index)    ! offset for SMC   !
+       write(lendian_out)n_position,ksize,memoryorder_all(index)    ! offset for smc   !
   
-  !                   STC                
+  !                   stc                
        call this%retrieve_index(index,'STC',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
@@ -1371,43 +1372,43 @@ contains
           ksize=domainend_all(3,index)
        end if
        if(print_verbose)write(6,*)'  byte offset, ksize, memoryorder for STC = ',n_position,ksize,memoryorder_all(index)
-       write(lendian_out)n_position,ksize,memoryorder_all(index)    ! offset for STC   !
+       write(lendian_out)n_position,ksize,memoryorder_all(index)    ! offset for stc   !
     
-  !                   TSK                
+  !                   tsk                
        call this%retrieve_index(index,'TSK',varname_all,nrecs)
        if(index<0) stop
        n_position=file_offset(index+1)
        if(print_verbose)write(6,*)'  byte offset for TSK = ',n_position
-       write(lendian_out)n_position    ! offset for TSK   !
+       write(lendian_out)n_position    ! offset for tsk   !
   
        if (n_actual_clouds>0) then
-  !                   CWM
+  !                   cwm
           call this%retrieve_index(index,'CWM',varname_all,nrecs)
           if(index<0) stop
           n_position=file_offset(index+1)
           if(print_verbose)write(6,*)'  byte offset, memoryorder for CWM = ',n_position,memoryorder_all(index)
-          write(lendian_out)n_position,memoryorder_all(index)    ! offset for CWM    !
+          write(lendian_out)n_position,memoryorder_all(index)    ! offset for cwm    !
   
-  !                   F_ICE
+  !                   f_ice
           call this%retrieve_index(index,'F_ICE',varname_all,nrecs)
           if(index<0) stop
           n_position=file_offset(index+1)
           if(print_verbose)write(6,*)'  byte offset, memoryorder for F_ICE = ',n_position,memoryorder_all(index)
-          write(lendian_out)n_position,memoryorder_all(index)    ! offset for F_ICE    !
+          write(lendian_out)n_position,memoryorder_all(index)    ! offset for f_ice    !
   
-  !                   F_RAIN
+  !                   f_rain
           call this%retrieve_index(index,'F_RAIN',varname_all,nrecs)
           if(index<0) stop
           n_position=file_offset(index+1)
           if(print_verbose)write(6,*)'  byte offset, memoryorder for F_RAIN = ',n_position,memoryorder_all(index)
-          write(lendian_out)n_position,memoryorder_all(index)    ! offset for F_RAIN    !
+          write(lendian_out)n_position,memoryorder_all(index)    ! offset for f_rain    !
   
-  !                   F_RIMEF
+  !                   f_rimef
           call this%retrieve_index(index,'F_RIMEF',varname_all,nrecs)
           if(index<0) stop
           n_position=file_offset(index+1)
           if(print_verbose)write(6,*)'  byte offset, memoryorder for F_RIMEF = ',n_position,memoryorder_all(index)
-          write(lendian_out)n_position,memoryorder_all(index)    ! offset for F_RIMEF    !
+          write(lendian_out)n_position,memoryorder_all(index)    ! offset for f_rimef    !
        end if  ! end of n_actual_clouds>0
   
   !????????????????????????????????????????????????????????????????read z0 here to see what it looks like
@@ -1417,7 +1418,7 @@ contains
                                     start_byte(index+1),end_byte(index+1))
        if(print_verbose)write(6,*)' convert_binary_nmm: max,min Z0=', &
             maxval(field2b),minval(field2b)
-       write(lendian_out)field2b     !  Z0
+       write(lendian_out)field2b     !  z0
   !?????????????????????????????????????????????????????????????????
        call this%retrieve_index(index,'SST',varname_all,nrecs)
        call this%retrieve_field_rn1n2(in_unit,wrfges,field2b,nlon_regional,nlat_regional, &
@@ -1425,35 +1426,35 @@ contains
                                     start_byte(index+1),end_byte(index+1))
        if(print_verbose)write(6,*)' convert_binary_nmm: max,min SST=', &
             maxval(field2b),minval(field2b)
-       write(lendian_out)field2b     !  SST
+       write(lendian_out)field2b     !  sst
        call this%retrieve_index(index,'TSK',varname_all,nrecs)
        call this%retrieve_field_rn1n2(in_unit,wrfges,field2b,nlon_regional,nlat_regional, &
                                     start_block(index+1),end_block(index+1), &
                                     start_byte(index+1),end_byte(index+1))
        if(print_verbose)write(6,*)' convert_binary_nmm: max,min TSK=', &
             maxval(field2b),minval(field2b)
-       write(lendian_out)field2b     !  TSK
+       write(lendian_out)field2b     !  tsk
        call this%retrieve_index(index,'SM',varname_all,nrecs)
        call this%retrieve_field_rn1n2(in_unit,wrfges,field2b,nlon_regional,nlat_regional, &
                                     start_block(index+1),end_block(index+1), &
                                     start_byte(index+1),end_byte(index+1))
        if(print_verbose)write(6,*)' convert_binary_nmm: max,min SM=', &
             maxval(field2b),minval(field2b)
-       write(lendian_out)field2b     !  SM
+       write(lendian_out)field2b     !  sm
        call this%retrieve_index(index,'SICE',varname_all,nrecs)
        call this%retrieve_field_rn1n2(in_unit,wrfges,field2b,nlon_regional,nlat_regional, &
                                     start_block(index+1),end_block(index+1), &
                                     start_byte(index+1),end_byte(index+1))
        if(print_verbose)write(6,*)' convert_binary_nmm: max,min SICE=', &
             maxval(field2b),minval(field2b)
-       write(lendian_out)field2b     !  SICE
+       write(lendian_out)field2b     !  sice
        call this%retrieve_index(index,'SNO',varname_all,nrecs)
        call this%retrieve_field_rn1n2(in_unit,wrfges,field2b,nlon_regional,nlat_regional, &
                                     start_block(index+1),end_block(index+1), &
                                     start_byte(index+1),end_byte(index+1))
        if(print_verbose)write(6,*)' convert_binary_nmm: max,min SNO=', &
             maxval(field2b),minval(field2b)
-       write(lendian_out)field2b     !  SNO
+       write(lendian_out)field2b     !  sno
        deallocate(field2,field2b)
        deallocate(datestr_all,varname_all,domainend_all,memoryorder_all)
        deallocate(start_block,end_block,start_byte,end_byte,file_offset)
@@ -1570,7 +1571,7 @@ contains
     
     n_loop: do n=1,9
   
-          write(wrfges,'("wrf_inout",i2.2)')n
+       write(wrfges,'("wrf_inout",i2.2)')n
        call nemsio_open(gfile,wrfges,'READ',iret=iret)
        write(6,*)' convert_nems_nmmb: nemsio_open, file name, iret=',trim(wrfges),iret
        if(n==nhr_assimilation) then
@@ -1751,18 +1752,18 @@ contains
        end if
   
   !----------------------------------------detect if new nmmb coordinate:
-         nmmb_verttype='OLD'
-         if(aeta1(1)<.6_r_single) then
-            write(6,*)' in convert_nems_nmmb, detect new nmmb vert coordinate'
-            do k=1,nsig_regional
-               deta1(k)=deta1(k)+deta2(k)      !  even though deta1 not used, probably needed to do this--will see
-               aeta1(k)=aeta1(k)+aeta2(k)
-            end do
-            do k=1,nsig_regional+1
-               eta1(k)=eta1(k)+eta2(k)
-            end do
-            nmmb_verttype='NEW'
-         end if
+       nmmb_verttype='OLD'
+       if(aeta1(1)<.6_r_single) then
+          write(6,*)' in convert_nems_nmmb, detect new nmmb vert coordinate'
+          do k=1,nsig_regional
+             deta1(k)=deta1(k)+deta2(k)      !  even though deta1 not used, probably needed to do this--will see
+             aeta1(k)=aeta1(k)+aeta2(k)
+          end do
+          do k=1,nsig_regional+1
+             eta1(k)=eta1(k)+eta2(k)
+          end do
+          nmmb_verttype='NEW'
+       end if
   
   !  check to see if merging with gfs stratosphere
        if(use_gfs_stratosphere) then
@@ -1801,12 +1802,12 @@ contains
        write(lendian_out)iyear,imonth,iday,ihour,iminute,isecond,fhour,fminute, &
             nlon_regional,nlat_regional,nsig_regional, &
             dlmd_regional,dphd_regional,pt_regional,pdtop_regional,nmmb_verttype
-       write(lendian_out)deta1              !  DETA1
-       write(lendian_out)aeta1              !  AETA1
-       write(lendian_out)eta1               !  ETA1
-       write(lendian_out)deta2              !  DETA2
-       write(lendian_out)aeta2              !  AETA2
-       write(lendian_out)eta2               !  ETA2
+       write(lendian_out)deta1              !  deta1
+       write(lendian_out)aeta1              !  aeta1
+       write(lendian_out)eta1               !  eta1
+       write(lendian_out)deta2              !  deta2
+       write(lendian_out)aeta2              !  aeta2
+       write(lendian_out)eta2               !  eta2
        deallocate(deta1,aeta1,eta1,deta2,aeta2,eta2)
   
        deallocate(sg1,sg2,sgml1,sgml2,dsg1,dsg2)
@@ -1837,7 +1838,7 @@ contains
   
        call this%latlon2radians(glat,glon,dx,dy,nlon_regional,nlat_regional)
   
-  !                  GLAT
+  !                  glat
   
        if(print_verbose)then
           write(6,*)' convert_nems_nmmb: max,min GLAT=', &
@@ -1852,7 +1853,7 @@ contains
        ctph0=cos(glat(1+(nlon_regional-1)/2,1+(nlat_regional-1)/2))
        stph0=sin(glat(1+(nlon_regional-1)/2,1+(nlat_regional-1)/2))
   
-  !                  DX_NMM
+  !                  dx_nmm
   
        if(print_verbose)then
           write(6,*)' convert_nems_nmmb: max,min DX_NMM=', &
@@ -1863,10 +1864,10 @@ contains
             dx(1,nlat_regional),     dx(nlon_regional,nlat_regional)
        end if
   
-       write(lendian_out)glat,dx            !  GLAT,DX_NMM  !?????????????check to see if dx, dy backwards
+       write(lendian_out)glat,dx            !  glat,dx_nmm  !?????????????check to see if dx, dy backwards
                                                             !?????????????? in existing wrf nmm ????????
   
-  !                  GLON
+  !                  glon
   
        if(print_verbose)then
           write(6,*)' convert_nems_nmmb: max,min GLON=',rad2deg*maxval(  glon),rad2deg*minval(  glon)
@@ -1880,7 +1881,7 @@ contains
        tlm0=half*(  glon(1+(nlon_regional-1)/2,1+(nlat_regional-1)/2)+ &
                     glon(2+(nlon_regional-1)/2,1+(nlat_regional-1)/2))
   
-  !                  DY_NMM
+  !                  dy_nmm
   
        if(print_verbose)then
           write(6,*)' convert_nems_nmmb: max,min DY_NMM=', &
@@ -1891,11 +1892,11 @@ contains
             dy(1,nlat_regional),     dy(nlon_regional,nlat_regional)
        end if
   
-       write(lendian_out)glon,dy            !  GLON,DY_NMM
+       write(lendian_out)glon,dy            !  glon,dy_nmm
   
        write(lendian_out) wrfges
   
-  !                   PINT               
+  !                   pint               
   
        call nemsio_readrecv(gfile,'pres','layer',1,field2(:),iret=iret)
        update_pint=.false.
@@ -1906,12 +1907,12 @@ contains
        call nemsio_readrecv(gfile,'zorl','sfc',1,field2b(:),iret=iret)
        if(print_verbose)write(6,*)' convert_nems_nmmb: iret,max,min Z0=',iret, &
             maxval(field2b),minval(field2b)
-       write(lendian_out)field2b     !  Z0 (?)  ask if zorl is same as z0
+       write(lendian_out)field2b     !  z0 (?)  ask if zorl is same as z0
   !?????????????????????????????????????????????????????????????????
        call nemsio_readrecv(gfile,'tsea','sfc',1,field2b(:),iret=iret)
        if(print_verbose)write(6,*)' convert_nems_nmmb: iret,max,min SST=',iret, &
             maxval(field2b),minval(field2b)
-       write(lendian_out)field2b     !  SST
+       write(lendian_out)field2b     !  sst
   !????????????????????????????????????????????
        call nemsio_readrecv(gfile,'tg','sfc',1,field2b(:),iret=iret)
        if(print_verbose)write(6,*)' convert_nems_nmmb: iret,max,min TG=',iret, &
@@ -1943,20 +1944,20 @@ contains
                maxval(field2c),minval(field2c)
        end if
   
-       write(lendian_out)field2c     !  TSK   (ths converted to ts)
+       write(lendian_out)field2c     !  tsk   (ths converted to ts)
   !????????????????????????????????????????sm
        call nemsio_readrecv(gfile,'sm','sfc',1,field2b(:),iret=iret)
        write(6,*)' convert_nems_nmmb: iret,max,min SM=',iret, &
             maxval(field2b),minval(field2b)
-       write(lendian_out)field2b     !  SM
+       write(lendian_out)field2b     !  sm
        call nemsio_readrecv(gfile,'sice','sfc',1,field2b(:),iret=iret)
        write(6,*)' convert_nems_nmmb: iret,max,min SICE=',iret, &
             maxval(field2b),minval(field2b)
-       write(lendian_out)field2b     !  SICE
+       write(lendian_out)field2b     !  sice
        call nemsio_readrecv(gfile,'sno','sfc',1,field2b(:),iret=iret)
        write(6,*)' convert_nems_nmmb: iret,max,min SNO=',iret, &
             maxval(field2b),minval(field2b)
-       write(lendian_out)field2b     !  SNO
+       write(lendian_out)field2b     !  sno
        deallocate(field2,field2b,field2c,recname,reclevtyp,reclev,glat,glon,dx,dy)
        deallocate(glata,glona,dxa,dya)
     
@@ -3100,7 +3101,7 @@ contains
   end subroutine retrieve_field_rn1n2
 
   subroutine int_get_ti_header_char(this, hdrbuf, hdrbufsize, itypesize, &
-                                DataHandle, Element, VarName, Data, code )
+                                datahandle, element, varname, data, code )
   !$$$  subprogram documentation block
   !                .      .    .                                       .
   ! subprogram:    int_get_ti_header_char
@@ -3116,17 +3117,17 @@ contains
   !   input argument list:
   !     hdrbuf     - 
   !     itypesize  - 
-  !     Element    - 
-  !     Data       - 
-  !     VarName    - 
+  !     element    - 
+  !     data       - 
+  !     varname    - 
   !
   !   output argument list:
   !     hdrbuf     - 
   !     hdrbufsize - 
-  !     Element    - 
-  !     Data       - 
-  !     VarName    - 
-  !     DataHandle - 
+  !     element    - 
+  !     data       - 
+  !     varname    - 
+  !     datahandle - 
   !     code       - 
   !
   ! attributes:
@@ -3136,40 +3137,40 @@ contains
   !$$$
     use kinds, only: i_kind
     use gsi_io, only: verbose
-    IMPLICIT NONE
+    implicit none
   
-  ! INCLUDE 'intio_tags.h'
+  ! include 'intio_tags.h'
     class(get_wrf_binary_interface_class), intent(inout) :: this
-    INTEGER(i_kind), INTENT(INOUT) ::  hdrbuf(*)
-    INTEGER(i_kind), INTENT(  OUT) ::  hdrbufsize
-    INTEGER(i_kind), INTENT(IN   ) ::  itypesize
-    CHARACTER*(*)  , INTENT(INOUT) ::  Element, Data, VarName
-    INTEGER(i_kind), INTENT(  OUT) ::  DataHandle, code
+    integer(i_kind), intent(inout) ::  hdrbuf(*)
+    integer(i_kind), intent(  out) ::  hdrbufsize
+    integer(i_kind), intent(in   ) ::  itypesize
+    character*(*)  , intent(inout) ::  element, data, varname
+    integer(i_kind), intent(  out) ::  datahandle, code
   !Local
-    INTEGER(i_kind) i, n, DummyCount, typesize
-    CHARACTER * 132  dummyData
+    integer(i_kind) i, n, dummycount, typesize
+    character * 132  dummydata
   !  logical, external :: debug_foo
   !
     associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
     end associate
     call int_get_ti_header_c ( hdrbuf, hdrbufsize, n, itypesize, typesize, &
-                             DataHandle, dummyData, DummyCount, code )
+                             datahandle, dummydata, dummycount, code )
     i = n/itypesize+1 ;
-    call int_unpack_string ( Element, hdrbuf( i ), n ) ; i = i + n
-    call int_unpack_string ( Data   , hdrbuf( i ), n ) ; i = i + n
-    call int_unpack_string ( VarName  , hdrbuf( i ), n ) ; i = i + n
+    call int_unpack_string ( element, hdrbuf( i ), n ) ; i = i + n
+    call int_unpack_string ( data   , hdrbuf( i ), n ) ; i = i + n
+    call int_unpack_string ( varname  , hdrbuf( i ), n ) ; i = i + n
     hdrbufsize = hdrbuf(1)
     if(verbose)write(6,*)' in int_get_ti_header_char, hdrbufsize,itypesize,typesize=',&
                   hdrbufsize,itypesize,typesize
   
-    RETURN
-  END SUBROUTINE int_get_ti_header_char
+    return
+  end subroutine int_get_ti_header_char
 
-  SUBROUTINE int_get_write_field_header ( this, hdrbuf, hdrbufsize, ftypesize, &
-                                          DataHandle , DateStr , VarName , FieldType ,                 &
-                                          DomainDesc , MemoryOrder , Stagger , DimNames ,              &
-                                          DomainStart , DomainEnd ,                                    &
-                                          PatchStart , PatchEnd )
+  subroutine int_get_write_field_header ( this, hdrbuf, hdrbufsize, ftypesize, &
+                                          datahandle , datestr , varname , fieldtype ,                 &
+                                          domaindesc , memoryorder , stagger , dimnames ,              &
+                                          domainstart , domainend ,                                    &
+                                          patchstart , patchend )
   !$$$  subprogram documentation block
   !                .      .    .                                       .
   ! subprogram:    int_get_write_field_header
@@ -3184,26 +3185,26 @@ contains
   !   input argument list:
   !     hdrbuf     - 
   !     ftypesize  - 
-  !     DateStr    -
-  !     VarName    - 
-  !     MemoryOrder
-  !     Stagger
-  !     DimNames
+  !     datestr    -
+  !     varname    - 
+  !     memoryorder
+  !     stagger
+  !     dimnames
   !
   !   output argument list:
   !     hdrbuf     - 
   !     hdrbufsize - 
   !     ftypesize  - 
-  !     DataHandle - 
-  !     DateStr    -
-  !     VarName    - 
-  !     FieldType
-  !     DomainDesc
-  !     MemoryOrder
-  !     Stagger
-  !     DimNames
-  !     DomainStart,DomainEnd
-  !     PatchStart,PatchEnd
+  !     datahandle - 
+  !     datestr    -
+  !     varname    - 
+  !     fieldtype
+  !     domaindesc
+  !     memoryorder
+  !     stagger
+  !     dimnames
+  !     domainstart,domainend
+  !     patchstart,patchend
   !
   ! attributes:
   !   language: f90
@@ -3211,65 +3212,65 @@ contains
   !
   !$$$
     use kinds, only: i_kind
-    IMPLICIT NONE
+    implicit none
   
-  ! INCLUDE 'intio_tags.h'
+  ! include 'intio_tags.h'
     class(get_wrf_binary_interface_class), intent(inout) :: this
-    INTEGER(i_kind)              , INTENT(INOUT) ::  hdrbuf(*)
-    INTEGER(i_kind)              , INTENT(  OUT) ::  hdrbufsize
-    INTEGER(i_kind)              , INTENT(INOUT) ::  ftypesize
-    INTEGER(i_kind)              , INTENT(  OUT) :: DataHandle
-    CHARACTER*(*)                , INTENT(INOUT) :: DateStr
-    CHARACTER*(*)                , INTENT(INOUT) :: VarName
-    INTEGER(i_kind)              , INTENT(  OUT) :: FieldType
-    INTEGER(i_kind)              , INTENT(  OUT) :: DomainDesc
-    CHARACTER*(*)                , INTENT(INOUT) :: MemoryOrder
-    CHARACTER*(*)                , INTENT(INOUT) :: Stagger
-    CHARACTER*(*)   ,dimension(*), INTENT(INOUT) :: DimNames
-    INTEGER(i_kind) ,dimension(*), INTENT(  OUT) :: DomainStart, DomainEnd
-    INTEGER(i_kind) ,dimension(*), INTENT(  OUT) :: PatchStart,  PatchEnd
+    integer(i_kind)              , intent(inout) ::  hdrbuf(*)
+    integer(i_kind)              , intent(  out) ::  hdrbufsize
+    integer(i_kind)              , intent(inout) ::  ftypesize
+    integer(i_kind)              , intent(  out) :: datahandle
+    character*(*)                , intent(inout) :: datestr
+    character*(*)                , intent(inout) :: varname
+    integer(i_kind)              , intent(  out) :: fieldtype
+    integer(i_kind)              , intent(  out) :: domaindesc
+    character*(*)                , intent(inout) :: memoryorder
+    character*(*)                , intent(inout) :: stagger
+    character*(*)   ,dimension(*), intent(inout) :: dimnames
+    integer(i_kind) ,dimension(*), intent(  out) :: domainstart, domainend
+    integer(i_kind) ,dimension(*), intent(  out) :: Patchstart,  Patchend
   !Local
     integer(i_kind),parameter:: int_field       =       530
-    CHARACTER*132 mess
-    INTEGER(i_kind) i, n
+    character*132 mess
+    integer(i_kind) i, n
   
     associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
     end associate
     hdrbufsize = hdrbuf(1)
-    IF ( hdrbuf(2) /= int_field ) THEN
+    if ( hdrbuf(2) /= int_field ) then
        write(mess,*)'int_get_write_field_header: hdrbuf(2) ne int_field ',hdrbuf(2),int_field
-       CALL wrf_error_fatal3 ( "module_internal_header_util.b" , 220 ,  mess )
-    ENDIF
+       call wrf_error_fatal3 ( "module_internal_header_util.b" , 220 ,  mess )
+    endif
     ftypesize = hdrbuf(3)
   
     i = 4
-    DataHandle = hdrbuf(i)     ; i = i+1
-    call int_unpack_string( DateStr, hdrbuf(i), n )     ; i = i+n
-    call int_unpack_string( VarName, hdrbuf(i), n )     ; i = i+n
-    FieldType = hdrbuf(i)      ; i = i+1
-    call int_unpack_string( MemoryOrder, hdrbuf(i), n ) ; i = i+n
-    call int_unpack_string( Stagger, hdrbuf(i), n )     ; i = i+n
-    call int_unpack_string( DimNames(1), hdrbuf(i), n ) ; i = i+n
-    call int_unpack_string( DimNames(2), hdrbuf(i), n ) ; i = i+n
-    call int_unpack_string( DimNames(3), hdrbuf(i), n ) ; i = i+n
-    DomainStart(1) = hdrbuf(i)    ; i = i+1
-    DomainStart(2) = hdrbuf(i)    ; i = i+1
-    DomainStart(3) = hdrbuf(i)    ; i = i+1
-    DomainEnd(1) = hdrbuf(i)       ; i = i+1
-    DomainEnd(2) = hdrbuf(i)       ; i = i+1
-    DomainEnd(3) = hdrbuf(i)       ; i = i+1
-    PatchStart(1) = hdrbuf(i)     ; i = i+1
-    PatchStart(2) = hdrbuf(i)     ; i = i+1
-    PatchStart(3) = hdrbuf(i)     ; i = i+1
-    PatchEnd(1) = hdrbuf(i)       ; i = i+1
-    PatchEnd(2) = hdrbuf(i)       ; i = i+1
-    PatchEnd(3) = hdrbuf(i)       ; i = i+1
-    DomainDesc = hdrbuf(i)       ; i = i+1
+    datahandle = hdrbuf(i)     ; i = i+1
+    call int_unpack_string( datestr, hdrbuf(i), n )     ; i = i+n
+    call int_unpack_string( varname, hdrbuf(i), n )     ; i = i+n
+    fieldtype = hdrbuf(i)      ; i = i+1
+    call int_unpack_string( memoryorder, hdrbuf(i), n ) ; i = i+n
+    call int_unpack_string( stagger, hdrbuf(i), n )     ; i = i+n
+    call int_unpack_string( dimnames(1), hdrbuf(i), n ) ; i = i+n
+    call int_unpack_string( dimnames(2), hdrbuf(i), n ) ; i = i+n
+    call int_unpack_string( dimnames(3), hdrbuf(i), n ) ; i = i+n
+    domainstart(1) = hdrbuf(i)    ; i = i+1
+    domainstart(2) = hdrbuf(i)    ; i = i+1
+    domainstart(3) = hdrbuf(i)    ; i = i+1
+    domainend(1) = hdrbuf(i)       ; i = i+1
+    domainend(2) = hdrbuf(i)       ; i = i+1
+    domainend(3) = hdrbuf(i)       ; i = i+1
+    patchstart(1) = hdrbuf(i)     ; i = i+1
+    patchstart(2) = hdrbuf(i)     ; i = i+1
+    patchstart(3) = hdrbuf(i)     ; i = i+1
+    patchend(1) = hdrbuf(i)       ; i = i+1
+    patchend(2) = hdrbuf(i)       ; i = i+1
+    patchend(3) = hdrbuf(i)       ; i = i+1
+    domaindesc = hdrbuf(i)       ; i = i+1
   
-    RETURN
-  END SUBROUTINE int_get_write_field_header
+    return
+  end subroutine int_get_write_field_header
 
-  SUBROUTINE int_unpack_string ( str, buf, n )
+  subroutine int_unpack_string ( str, buf, n )
   !$$$  subprogram documentation block
   !                .      .    .                                       .
   ! subprogram:    int_unpack_string
@@ -3296,26 +3297,26 @@ contains
   !$$$
   
     use kinds, only: i_kind
-    IMPLICIT NONE
+    implicit none
   
-    CHARACTER*(*)                , INTENT(  OUT) :: str
-    INTEGER(i_kind)              , INTENT(  OUT) :: n       ! on return, N is the number of ints copied from buf
-    INTEGER(i_kind), DIMENSION(*), INTENT(IN   ) :: buf
+    character*(*)                , intent(  out) :: str
+    integer(i_kind)              , intent(  out) :: n       ! on return, N is the number of ints copied from buf
+    integer(i_kind), dimension(*), intent(in   ) :: buf
   !Local
-    INTEGER(i_kind) i
-    INTEGER(i_kind) strlen
+    integer(i_kind) i
+    integer(i_kind) strlen
   
     strlen = buf(1)
     str = ""
-    DO i = 1, strlen
+    do i = 1, strlen
        str(i:i) = char(buf(i+1))
-    ENDDO
+    enddo
     n = strlen + 1
-  END SUBROUTINE int_unpack_string
+  end subroutine int_unpack_string
 end module get_wrf_binary_interface_mod
-  !WRF:DRIVER_LAYER:UTIL
+  !WRF:driver_layer:util
   !
-  MODULE module_wrf_error
+  module module_wrf_error
   !$$$   module documentation block
   !
   ! module:  module_wrf_error
@@ -3347,11 +3348,11 @@ end module get_wrf_binary_interface_mod
   ! set passed variables to public
     public :: wrf_debug_level
   
-    INTEGER(i_kind) :: wrf_debug_level = 0
+    integer(i_kind) :: wrf_debug_level = 0
   
-  CONTAINS
+  contains
   
-    LOGICAL FUNCTION wrf_at_debug_level ( level )
+    logical function wrf_at_debug_level ( level )
   !$$$   subprogram documentation block
   !
   ! subprogram:  wrf_at_debug_level
@@ -3372,15 +3373,15 @@ end module get_wrf_binary_interface_mod
   !
   !$$$ end documentation block
       use kinds, only: i_kind
-      IMPLICIT NONE
+      implicit none
   
-      INTEGER(i_kind) , INTENT(IN   ) :: level
+      integer(i_kind) , intent(in   ) :: level
   
       wrf_at_debug_level = ( level <= wrf_debug_level )
-      RETURN
-    END FUNCTION wrf_at_debug_level
+      return
+    end function wrf_at_debug_level
   
-    SUBROUTINE init_module_wrf_error
+    subroutine init_module_wrf_error
   !$$$   subprogram documentation block
   !
   ! subprogram:  init_module_wrf_error
@@ -3399,12 +3400,12 @@ end module get_wrf_binary_interface_mod
   !   machine:  ibm RS/6000 SP
   !
   !$$$ end documentation block
-      IMPLICIT NONE
-    END SUBROUTINE init_module_wrf_error
+      implicit none
+    end subroutine init_module_wrf_error
   
-  END MODULE module_wrf_error
+  end module module_wrf_error
   
-    SUBROUTINE set_wrf_debug_level ( level )
+    subroutine set_wrf_debug_level ( level )
   !$$$   subprogram documentation block
   !
   ! subprogram:  set_wrf_debug_level
@@ -3424,17 +3425,17 @@ end module get_wrf_binary_interface_mod
   !   machine:  ibm RS/6000 SP
   !
   !$$$ end documentation block
-      USE module_wrf_error
+      use module_wrf_error, only: wrf_debug_level
       use kinds, only: i_kind
-      IMPLICIT NONE
+      implicit none
   
-      INTEGER(i_kind) , INTENT(IN   ) :: level
+      integer(i_kind) , intent(in   ) :: level
   
       wrf_debug_level = level
-      RETURN
-    END SUBROUTINE set_wrf_debug_level
+      return
+    end subroutine set_wrf_debug_level
   
-    SUBROUTINE get_wrf_debug_level ( level )
+    subroutine get_wrf_debug_level ( level )
   !$$$   subprogram documentation block
   !
   ! subprogram:  get_wrf_debug_level
@@ -3454,18 +3455,18 @@ end module get_wrf_binary_interface_mod
   !   machine:  ibm RS/6000 SP
   !
   !$$$ end documentation block
-      USE module_wrf_error
+      use module_wrf_error, only: wrf_debug_level
       use kinds, only: i_kind
-      IMPLICIT NONE
+      implicit none
   
-      INTEGER(i_kind) , INTENT(  OUT) :: level
+      integer(i_kind) , intent(  out) :: level
   
       level = wrf_debug_level
-      RETURN
-    END SUBROUTINE get_wrf_debug_level
+      return
+    end subroutine get_wrf_debug_level
   
   
-  SUBROUTINE wrf_debug( level , str )
+  subroutine wrf_debug( level , str )
   !$$$   subprogram documentation block
   !
   ! subprogram:  wrf_debug
@@ -3485,23 +3486,22 @@ end module get_wrf_binary_interface_mod
   !   machine:  ibm RS/6000 SP
   !
   !$$$ end documentation block
-    USE module_wrf_error
     use kinds, only: i_kind
-    IMPLICIT NONE
+    implicit none
   
-    CHARACTER*(*) str
-    INTEGER(i_kind) , INTENT (IN   ) :: level
-    INTEGER(i_kind)                  :: debug_level
+    character*(*)   , intent (in   ) :: str
+    integer(i_kind) , intent (in   ) :: level
+    integer(i_kind)                  :: debug_level
   
-    CALL get_wrf_debug_level( debug_level )
-    IF ( level <= debug_level ) THEN
+    call get_wrf_debug_level( debug_level )
+    if ( level <= debug_level ) then
       ! old behavior
-       CALL wrf_message( str )
-    ENDIF
-    RETURN
-  END SUBROUTINE wrf_debug
+       call wrf_message( str )
+    endif
+    return
+  end subroutine wrf_debug
   
-  SUBROUTINE wrf_message( str )
+  subroutine wrf_message( str )
   !$$$   subprogram documentation block
   !
   ! subprogram:  wrf_message
@@ -3521,13 +3521,12 @@ end module get_wrf_binary_interface_mod
   !   machine:  ibm RS/6000 SP
   !
   !$$$ end documentation block
-    USE module_wrf_error
-    IMPLICIT NONE
+    implicit none
   
-    CHARACTER*(*), intent(in   ) :: str
+    character*(*), intent(in   ) :: str
   
-    write(6,*) TRIM(str)
-    print*, TRIM(str)
+    write(6,*) trim(str)
+    print*, trim(str)
   !TBH:  Calls to logwrite cut off str in ESMF 2.2.0.
   !TBH:  Restore this call once this ESMF bug is fixed.
   !TBH#ifdef USE_LOGERR
@@ -3535,10 +3534,10 @@ end module get_wrf_binary_interface_mod
   !TBH    CALL WRFU_LogWrite( TRIM(str), WRFU_LOG_INFO )
   !TBH  ENDIF
   !TBH#endif
-  END SUBROUTINE wrf_message
+  end subroutine wrf_message
   
   ! intentionally write to stderr only
-  SUBROUTINE wrf_message2( str )
+  subroutine wrf_message2( str )
   !$$$   subprogram documentation block
   !
   ! subprogram:  wrf_message2
@@ -3558,10 +3557,9 @@ end module get_wrf_binary_interface_mod
   !   machine:  ibm RS/6000 SP
   !
   !$$$ end documentation block
-    USE module_wrf_error
-    IMPLICIT NONE
+    implicit none
   
-    CHARACTER*(*), intent(in   ) :: str
+    character*(*), intent(in   ) :: str
   
     write(6,*) str
   !TBH:  Calls to logwrite cut off str in ESMF 2.2.0.
@@ -3571,9 +3569,9 @@ end module get_wrf_binary_interface_mod
   !TBH    CALL WRFU_LogWrite( str, WRFU_LOG_INFO )
   !TBH  ENDIF
   !TBH#endif
-  END SUBROUTINE wrf_message2
+  end subroutine wrf_message2
   
-  SUBROUTINE wrf_error_fatal3( file_str, line, str )
+  subroutine wrf_error_fatal3( file_str, line, str )
   !$$$   subprogram documentation block
   !
   ! subprogram:  wrf_error_fatal3
@@ -3595,26 +3593,25 @@ end module get_wrf_binary_interface_mod
   !   machine:  ibm RS/6000 SP
   !
   !$$$ end documentation block
-    USE module_wrf_error
     use kinds, only: i_kind
-    IMPLICIT NONE
+    implicit none
   
-    CHARACTER*(*)   , intent (in   ) :: file_str
-    INTEGER(i_kind) , INTENT (IN   ) :: line  ! only print file and line if line > 0
-    CHARACTER*(*)   , intent (in   ) :: str
-    CHARACTER*256 :: line_str
+    character*(*)   , intent (in   ) :: file_str
+    integer(i_kind) , intent (in   ) :: line  ! only print file and line if line > 0
+    character*(*)   , intent (in   ) :: str
+    character*256 :: line_str
   
     write(line_str,'(i6)') line
-    CALL wrf_message( '-------------- FATAL CALLED ---------------' )
+    call wrf_message( '-------------- FATAL CALLED ---------------' )
     ! only print file and line if line is positive
-    IF ( line > 0 ) THEN
-       CALL wrf_message( 'FATAL CALLED FROM FILE:  '//file_str//'  LINE:  '//TRIM(line_str) )
-    ENDIF
-    CALL wrf_message( str )
-    CALL wrf_message( '-------------------------------------------' )
-  ! CALL wrf_abort
+    if ( line > 0 ) then
+       call wrf_message( 'FATAL CALLED FROM FILE:  '//file_str//'  LINE:  '//trim(line_str) )
+    endif
+    call wrf_message( str )
+    call wrf_message( '-------------------------------------------' )
+  ! call wrf_abort
     call stop2(199)
-  END SUBROUTINE wrf_error_fatal3
+  end subroutine wrf_error_fatal3
   
   SUBROUTINE wrf_error_fatal( str )
   !$$$   subprogram documentation block
@@ -3636,15 +3633,14 @@ end module get_wrf_binary_interface_mod
   !   machine:  ibm RS/6000 SP
   !
   !$$$ end documentation block
-    USE module_wrf_error
-    IMPLICIT NONE
+    implicit none
   
-    CHARACTER*(*),intent(in   ) :: str
+    character*(*),intent(in   ) :: str
   
-    CALL wrf_error_fatal3 ( ' ', 0, str )
-  END SUBROUTINE wrf_error_fatal
+    call wrf_error_fatal3 ( ' ', 0, str )
+  end subroutine wrf_error_fatal
   
-  SUBROUTINE wrf_check_error( expected, actual, str, file_str, line )
+  subroutine wrf_check_error( expected, actual, str, file_str, line )
   !$$$   subprogram documentation block
   !
   ! subprogram:  wrf_check_error
@@ -3669,21 +3665,20 @@ end module get_wrf_binary_interface_mod
   !   machine:  ibm RS/6000 SP
   !
   !$$$ end documentation block
-    USE module_wrf_error
     use kinds, only: i_kind
-    IMPLICIT NONE
+    implicit none
   
-    INTEGER(i_kind) , INTENT (IN   ) :: expected
-    INTEGER(i_kind) , INTENT (IN   ) :: actual
-    CHARACTER*(*)   , intent (in   ) :: str
-    CHARACTER*(*)   , intent (in   ) :: file_str
-    INTEGER(i_kind) , INTENT (IN   ) :: line
-    CHARACTER (LEN=512)   :: rc_str
-    CHARACTER (LEN=512)   :: str_with_rc
+    integer(i_kind) , intent (in   ) :: expected
+    integer(i_kind) , intent (in   ) :: actual
+    character*(*)   , intent (in   ) :: str
+    character*(*)   , intent (in   ) :: file_str
+    integer(i_kind) , intent (in   ) :: line
+    character (len=512)   :: rc_str
+    character (len=512)   :: str_with_rc
   
-    IF ( expected /= actual ) THEN
-       WRITE (rc_str,*) '  Routine returned error code = ',actual
-       str_with_rc = TRIM(str // rc_str)
-       CALL wrf_error_fatal3 ( file_str, line, str_with_rc )
-    ENDIF
-  END SUBROUTINE wrf_check_error
+    if ( expected /= actual ) then
+       write (rc_str,*) '  Routine returned error code = ',actual
+       str_with_rc = trim(str // rc_str)
+       call wrf_error_fatal3 ( file_str, line, str_with_rc )
+    endif
+  end subroutine wrf_check_error

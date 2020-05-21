@@ -85,17 +85,17 @@ character(len=4), parameter :: mysvars(nsvars) = (/  &
 character(len=max_varname_length),allocatable,dimension(:) :: cvars2dpm  ! names of 2d fields including
                                                                          !  motley vars (if any)
 
-real(r_kind),pointer,dimension(:,:)   :: rv_ps=>NULL()
-real(r_kind),pointer,dimension(:,:)   :: rv_sst=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: rv_u=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: rv_v=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: rv_prse=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: rv_q=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: rv_tsen=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: rv_tv=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: rv_oz=>NULL()
-real(r_kind),pointer,dimension(:,:,:) :: rv_rank3=>NULL()
-real(r_kind),pointer,dimension(:,:)   :: rv_rank2=>NULL()
+real(r_kind),pointer,dimension(:,:)   :: rv_ps=>null()
+real(r_kind),pointer,dimension(:,:)   :: rv_sst=>null()
+real(r_kind),pointer,dimension(:,:,:) :: rv_u=>null()
+real(r_kind),pointer,dimension(:,:,:) :: rv_v=>null()
+real(r_kind),pointer,dimension(:,:,:) :: rv_prse=>null()
+real(r_kind),pointer,dimension(:,:,:) :: rv_q=>null()
+real(r_kind),pointer,dimension(:,:,:) :: rv_tsen=>null()
+real(r_kind),pointer,dimension(:,:,:) :: rv_tv=>null()
+real(r_kind),pointer,dimension(:,:,:) :: rv_oz=>null()
+real(r_kind),pointer,dimension(:,:,:) :: rv_rank3=>null()
+real(r_kind),pointer,dimension(:,:)   :: rv_rank2=>null()
 
 logical :: do_getuv,do_tv_to_tsen_ad,do_normal_rh_to_q_ad,do_getprs_ad,do_tbalance,cw_to_hydro_ad
 

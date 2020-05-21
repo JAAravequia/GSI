@@ -94,8 +94,8 @@ logical :: wdw_exist
 ! Inquire about chemistry
 call gsi_metguess_get('clouds::3d',nclouds,istatus)
 if (nclouds>0) then
-    allocate(clouds(nclouds))
-    call gsi_metguess_get('clouds::3d',clouds,istatus)
+   allocate(clouds(nclouds))
+   call gsi_metguess_get('clouds::3d',clouds,istatus)
 endif
 
 ! Since each internal vector of grad has the same structure, pointers are
@@ -122,7 +122,7 @@ do_normal_rh_to_q_ad=(.not.q_hyb_ens).and.&
                      lc_t .and.lc_rh.and.ls_prse.and.ls_q
 do_q_copy=.false.
 if(.not. do_normal_rh_to_q_ad) then
-  do_q_copy = lc_rh.and.lc_t .and.ls_prse.and.ls_q.and.q_hyb_ens
+   do_q_copy = lc_rh.and.lc_t .and.ls_prse.and.ls_q.and.q_hyb_ens
 end if
 do_getprs_ad        =lc_t .and.lc_ps.and.ls_prse
 
@@ -200,12 +200,12 @@ do jj=1,ntlevs_ens
    call gsi_bundleputvar ( wbundle_c, 'oz',  rv_oz,  istatus )
    call gsi_bundleputvar ( wbundle_c, 'sst', rv_sst, istatus )
    if(wdw_exist)then
-     call gsi_bundlegetpointer (eval(jj),'w' ,rv_w, istatus)
-     call gsi_bundleputvar ( wbundle_c, 'w', rv_w, istatus )
-     if(nems_nmmb_regional)then
-       call gsi_bundlegetpointer (eval(jj),'dw' ,rv_dw, istatus)
-       call gsi_bundleputvar ( wbundle_c, 'dw', rv_dw, istatus )
-     end if
+      call gsi_bundlegetpointer (eval(jj),'w' ,rv_w, istatus)
+      call gsi_bundleputvar ( wbundle_c, 'w', rv_w, istatus )
+      if(nems_nmmb_regional)then
+         call gsi_bundlegetpointer (eval(jj),'dw' ,rv_dw, istatus)
+         call gsi_bundleputvar ( wbundle_c, 'dw', rv_dw, istatus )
+      end if
    end if
 
 !$omp section

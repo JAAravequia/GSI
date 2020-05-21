@@ -87,28 +87,28 @@ module general_specmod
      integer(i_kind) jb
      integer(i_kind) je
      integer(i_kind) ioffset
-     logical,       pointer :: factsml(:)   => NULL()
-     logical,       pointer :: factvml(:)   => NULL()
-     real(r_kind),  pointer :: eps(:)       => NULL()
-     real(r_kind),  pointer :: epstop(:)    => NULL()
-     real(r_kind),  pointer :: enn1(:)      => NULL()
-     real(r_kind),  pointer :: elonn1(:)    => NULL()
-     real(r_kind),  pointer :: eon(:)       => NULL()
-     real(r_kind),  pointer :: eontop(:)    => NULL()
-     real(r_kind),  pointer :: clat(:)      => NULL()
-     real(r_kind),  pointer :: slat(:)      => NULL()
-     real(r_kind),  pointer :: wlat(:)      => NULL()
-     real(r_kind),  pointer :: pln(:,:)     => NULL()
-     real(r_kind),  pointer :: plntop(:,:)  => NULL()
-     real(r_kind),  pointer :: test_mask(:) => NULL()
-     real(r_kind),  pointer :: rlats(:)     => NULL()
-     real(r_kind),  pointer :: slats(:)     => NULL()
-     real(r_kind),  pointer :: clats(:)     => NULL()
-     real(r_kind),  pointer :: rlons(:)     => NULL()
-     real(r_kind),  pointer :: slons(:)     => NULL()
-     real(r_kind),  pointer :: clons(:)     => NULL()
-     real(r_kind),  pointer :: alp0(:)     => NULL()
-     real(r_double),pointer :: afft(:)      => NULL()
+     logical,       pointer :: factsml(:)   => null()
+     logical,       pointer :: factvml(:)   => null()
+     real(r_kind),  pointer :: eps(:)       => null()
+     real(r_kind),  pointer :: epstop(:)    => null()
+     real(r_kind),  pointer :: enn1(:)      => null()
+     real(r_kind),  pointer :: elonn1(:)    => null()
+     real(r_kind),  pointer :: eon(:)       => null()
+     real(r_kind),  pointer :: eontop(:)    => null()
+     real(r_kind),  pointer :: clat(:)      => null()
+     real(r_kind),  pointer :: slat(:)      => null()
+     real(r_kind),  pointer :: wlat(:)      => null()
+     real(r_kind),  pointer :: pln(:,:)     => null()
+     real(r_kind),  pointer :: plntop(:,:)  => null()
+     real(r_kind),  pointer :: test_mask(:) => null()
+     real(r_kind),  pointer :: rlats(:)     => null()
+     real(r_kind),  pointer :: slats(:)     => null()
+     real(r_kind),  pointer :: clats(:)     => null()
+     real(r_kind),  pointer :: rlons(:)     => null()
+     real(r_kind),  pointer :: slons(:)     => null()
+     real(r_kind),  pointer :: clons(:)     => null()
+     real(r_kind),  pointer :: alp0(:)     => null()
+     real(r_double),pointer :: afft(:)      => null()
      logical:: lallocated = .false.
      logical:: precalc_pln = .true.
 
@@ -208,10 +208,10 @@ contains
        do m=0,sp%jcap-l
           ii1=ii1+2
           if(l == 0)then
-            sp%factsml(ii1)=.true.
-            sp%factvml(ii1)=.true.
+             sp%factsml(ii1)=.true.
+             sp%factvml(ii1)=.true.
           end if
-          if(l+m.gt.jcap_test) then
+          if(l+m>jcap_test) then
              sp%test_mask(ii1-1)=zero
              sp%test_mask(ii1)=zero
           end if
@@ -238,22 +238,22 @@ contains
     jhe=(sp%jmax+1)/2
     if(jhe > sp%jmax/2)wlatx(jhe)=wlatx(jhe)/2
     do j=sp%jb,sp%je
-      sp%clat(j)=sqrt(1.-slatx(j)**2)
-      sp%slat(j)=slatx(j)
-      sp%wlat(j)=wlatx(j)
+       sp%clat(j)=sqrt(one-slatx(j)**2)
+       sp%slat(j)=slatx(j)
+       sp%wlat(j)=wlatx(j)
     end do
     if(sp%jcap < spec_cut)then
-      sp%precalc_pln=.true.
-      allocate( sp%pln(sp%ncd2,sp%jb:sp%je) )
-      allocate( sp%plntop(sp%jcap+1,sp%jb:sp%je) )
-      do j=sp%jb,sp%je
-        call splegend(sp%iromb,sp%jcap,sp%slat(j),sp%clat(j),sp%eps, &
-          sp%epstop,sp%pln(1,j),sp%plntop(1,j))
-      end do
+       sp%precalc_pln=.true.
+       allocate( sp%pln(sp%ncd2,sp%jb:sp%je) )
+       allocate( sp%plntop(sp%jcap+1,sp%jb:sp%je) )
+       do j=sp%jb,sp%je
+          call splegend(sp%iromb,sp%jcap,sp%slat(j),sp%clat(j),sp%eps, &
+            sp%epstop,sp%pln(1,j),sp%plntop(1,j))
+       end do
     else
-      sp%precalc_pln=.false.
-      allocate( sp%pln(sp%ncd2,1) )
-      allocate( sp%plntop(sp%jcap+1,1) )
+       sp%precalc_pln=.false.
+       allocate( sp%pln(sp%ncd2,1) )
+       allocate( sp%plntop(sp%jcap+1,1) )
     end if
       
 !     obtain rlats and rlons

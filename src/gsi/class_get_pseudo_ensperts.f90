@@ -1,6 +1,8 @@
 module abstract_get_pseudo_ensperts_mod
+  use kinds, only: i_kind
+  implicit none
   type, abstract :: abstract_get_pseudo_ensperts_class
-  integer, allocatable :: dummy(:)
+  integer(i_kind), allocatable :: dummy(:)
   contains
     procedure(get_pseudo_ensperts), deferred, pass(this) :: get_pseudo_ensperts
   end type abstract_get_pseudo_ensperts_class

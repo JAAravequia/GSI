@@ -1,4 +1,5 @@
 module abstract_convert_netcdf_mod 
+  implicit none
   type, abstract :: abstract_convert_netcdf_class
     contains
       procedure(convert_netcdf_mass), deferred, pass(this) :: convert_netcdf_mass 

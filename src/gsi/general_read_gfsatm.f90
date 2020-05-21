@@ -425,17 +425,17 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
    ! Surface pressure:  same procedure as terrain
    if (mype==mype_use(icount)) then
       ! read ps
-       sigdati%i = 2 ! ps
-       sigdati%f => specwrk_4
-       call sigio_rrdbti(lunges,sighead,sigdati,iret)
-       do i=1,sp_b%nc
-          spec_work(i)=sp_b%test_mask(i)*specwrk_4(i)
-       enddo
-       do i=1,sp_b%nc
-          if ( sp_b%factsml(i) ) spec_work(i)=zero
-       enddo
-       call general_sptez_s_b(sp_a,sp_b,spec_work,grid,1)
-       call general_fill_ns(grd,grid,work)
+      sigdati%i = 2 ! ps
+      sigdati%f => specwrk_4
+      call sigio_rrdbti(lunges,sighead,sigdati,iret)
+      do i=1,sp_b%nc
+         spec_work(i)=sp_b%test_mask(i)*specwrk_4(i)
+      enddo
+      do i=1,sp_b%nc
+         if ( sp_b%factsml(i) ) spec_work(i)=zero
+      enddo
+      call general_sptez_s_b(sp_a,sp_b,spec_work,grid,1)
+      call general_fill_ns(grd,grid,work)
    endif
    if ( icount == icm ) then
       call general_reload(grd,g_z,g_ps,g_tv,g_vor,g_div,g_u,g_v,g_q,g_oz,g_cwmr, &
@@ -454,8 +454,8 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
       ilev(icount)=k
 
       if (mype==mype_use(icount)) then
-         ! read T/Tv/etc.
-         sigdati%i = 2+k ! T
+         ! read t/tv/etc.
+         sigdati%i = 2+k ! t
          sigdati%f => specwrk_4
          call sigio_rrdbti(lunges,sighead,sigdati,iret)
          do i=1,sp_b%nc
@@ -480,8 +480,8 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
          ilev(icount)=k
 
          if (mype==mype_use(icount)) then
-            ! Vorticity
-            sigdati%i = nlevs + 2 + (k-1) * 2 + 2     ! Vorticity
+            ! vorticity
+            sigdati%i = nlevs + 2 + (k-1) * 2 + 2     ! vorticity
             sigdati%f => specwrk_4
             call sigio_rrdbti(lunges,sighead,sigdati,iret)
             ! Convert spectral coefficients of vor to grid space
@@ -505,8 +505,8 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
          ilev(icount)=k
 
          if (mype==mype_use(icount)) then
-            ! Divergence
-            sigdati%i = nlevs + 2 + (k-1) * 2 + 1     ! Divergence
+            ! divergence
+            sigdati%i = nlevs + 2 + (k-1) * 2 + 1     ! divergence
             sigdati%f => specwrk_4
             call sigio_rrdbti(lunges,sighead,sigdati,iret)
             ! Convert spectral coefficients of div to grid space
@@ -534,13 +534,13 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
          ilev(icount)=k
 
          if (mype==mype_use(icount)) then
-            ! U  Compute u and v from div and vor
-            ! Divergence
-            sigdati%i = nlevs + 2 + (k-1) * 2 + 1     ! Divergence
+            ! u  Compute u and v from div and vor
+            ! divergence
+            sigdati%i = nlevs + 2 + (k-1) * 2 + 1     ! divergence
             sigdati%f => specdiv_4
             call sigio_rrdbti(lunges,sighead,sigdati,iret)
-            ! Vorticity
-            sigdati%i = nlevs + 2 + (k-1) * 2 + 2     ! Vorticity
+            ! vorticity
+            sigdati%i = nlevs + 2 + (k-1) * 2 + 2     ! vorticity
             sigdati%f => specwrk_4
             call sigio_rrdbti(lunges,sighead,sigdati,iret)
             allocate(spec_div(sp_b%nc),grid_v(grd%nlon,grd%nlat-2))
@@ -568,13 +568,13 @@ subroutine general_read_gfsatm(grd,sp_a,sp_b,filename,uvflag,vordivflag,zflag, &
          ilev(icount)=k
 
          if (mype==mype_use(icount)) then
-            ! V Compute u and v from div and vor
-            ! Divergence
-            sigdati%i = nlevs + 2 + (k-1) * 2 + 1     ! Divergence
+            ! v Compute u and v from div and vor
+            ! divergence
+            sigdati%i = nlevs + 2 + (k-1) * 2 + 1     ! divergence
             sigdati%f => specdiv_4
             call sigio_rrdbti(lunges,sighead,sigdati,iret)
-            ! Vorticity
-            sigdati%i = nlevs + 2 + (k-1) * 2 + 2     ! Vorticity
+            ! vorticity
+            sigdati%i = nlevs + 2 + (k-1) * 2 + 2     ! vorticity
             sigdati%f => specwrk_4
             call sigio_rrdbti(lunges,sighead,sigdati,iret)
             allocate(spec_div(sp_b%nc),grid_v(grd%nlon,grd%nlat-2))
@@ -922,11 +922,11 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
       call nemsio_getfilehead(gfile,recname=recname,iret=iret)  
       has_cf = .false.
       do jrec=1,nrec
-        if (recname(jrec)=='cld_amt') has_cf=.true. 
+         if (recname(jrec)=='cld_amt') has_cf=.true. 
       enddo
       if (mype==0) write(6,*) trim(my_name), ' has_cf = ', has_cf 
 
-      fhour = float(nfhour) + float(nfminute)/r60 + float(nfsecondn)/float(nfsecondd)/r3600
+      fhour = real(nfhour,r_kind) + real(nfminute,r_kind)/r60 + real(nfsecondn,r_kind)/real(nfsecondd,r_kind)/r3600
       odate(1) = idate(4)  !hour
       odate(2) = idate(2)  !month
       odate(3) = idate(3)  !day
@@ -1139,7 +1139,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
       ilev(icount)=k
 
       if (mype==mype_use(icount)) then
-         ! read T/Tv/etc.
+         ! read t/tv/etc.
          call nemsio_readrecv(gfile,'tmp','mid layer',k,rwork1d0,iret=iret)
          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'tmp','read',istop+7,iret)
          call nemsio_readrecv(gfile,'spfh','mid layer',k,rwork1d1,iret=iret)
@@ -1177,7 +1177,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
          ilev(icount)=k
 
          if (mype==mype_use(icount)) then
-            ! Vorticity
+            ! vorticity
             ! Convert grid u,v to div and vor
             call nemsio_readrecv(gfile,'ugrd','mid layer',k,rwork1d0,iret=iret)
             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ugrd','read',istop+4,iret)
@@ -1237,7 +1237,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
          ilev(icount)=k
 
          if (mype==mype_use(icount)) then
-            ! Divergence
+            ! divergence
             ! Convert grid u,v to div and vor
             call nemsio_readrecv(gfile,'ugrd','mid layer',k,rwork1d0,iret=iret)
             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ugrd','read',istop+4,iret)
@@ -1302,7 +1302,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
 
          if (mype==mype_use(icount)) then
 
-            ! U
+            ! u
             call nemsio_readrecv(gfile,'ugrd','mid layer',k,rwork1d0,iret=iret)
             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ugrd','read',istop+4,iret)
             call nemsio_readrecv(gfile,'vgrd','mid layer',k,rwork1d1,iret=iret)
@@ -1339,7 +1339,7 @@ subroutine general_read_gfsatm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
          ilev(icount)=k
 
          if (mype==mype_use(icount)) then
-            ! V
+            ! v
             call nemsio_readrecv(gfile,'ugrd','mid layer',k,rwork1d0,iret=iret)
             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ugrd','read',istop+4,iret)
             call nemsio_readrecv(gfile,'vgrd','mid layer',k,rwork1d1,iret=iret)
@@ -1649,7 +1649,7 @@ subroutine general_fill_ns(grd,grid_in,grid_out)
       sumn=sumn+grid_in(i,1)
       sums=sums+grid_in(i,nlatm2)
    enddo
-   rnlon=one/float(grd%nlon)
+   rnlon=one/real(grd%nlon,r_kind)
    sumn=sumn*rnlon
    sums=sums*rnlon
 
@@ -1657,12 +1657,12 @@ subroutine general_fill_ns(grd,grid_in,grid_out)
    do k=1,grd%itotsub
       j=grd%nlat-grd%ltosi_s(k)
       if ( j == grd%nlat-1) then
-        grid_out(k)=sums
+         grid_out(k)=sums
       elseif ( j == 0) then
-        grid_out(k) = sumn
+         grid_out(k) = sumn
       else
-        i=grd%ltosj_s(k)
-        grid_out(k)=grid_in(i,j)
+         i=grd%ltosj_s(k)
+         grid_out(k)=grid_in(i,j)
       endif
    enddo
 
@@ -1744,24 +1744,24 @@ subroutine general_filluv_ns(grd,slons,clons,gridu_in,gridv_in,gridu_out,gridv_o
       polsu=polsu+gridu_in(i,nlatm2)*clons(i)+gridv_in(i,nlatm2)*slons(i)
       polsv=polsv+gridu_in(i,nlatm2)*slons(i)-gridv_in(i,nlatm2)*clons(i)
    enddo
-   polnu=polnu/float(grd%nlon)
-   polnv=polnv/float(grd%nlon)
-   polsu=polsu/float(grd%nlon)
-   polsv=polsv/float(grd%nlon)
+   polnu=polnu/real(grd%nlon,r_kind)
+   polnv=polnv/real(grd%nlon,r_kind)
+   polsu=polsu/real(grd%nlon,r_kind)
+   polsv=polsv/real(grd%nlon,r_kind)
 
    ! Transfer local work array to output grid
    do k=1,grd%itotsub
       j=grd%nlat-grd%ltosi_s(k)
       i=grd%ltosj_s(k)
       if ( j == grd%nlat-1 ) then
-        gridu_out(k) = polsu*clons(i)+polsv*slons(i)
-        gridv_out(k) = polsu*slons(i)-polsv*clons(i)
+         gridu_out(k) = polsu*clons(i)+polsv*slons(i)
+         gridv_out(k) = polsu*slons(i)-polsv*clons(i)
       elseif ( j == 0) then
-        gridu_out(k) = polnu*clons(i)+polnv*slons(i)
-        gridv_out(k) = -polnu*slons(i)+polnv*clons(i)
+         gridu_out(k) = polnu*clons(i)+polnv*slons(i)
+         gridv_out(k) = -polnu*slons(i)+polnv*clons(i)
       else
-        gridu_out(k)=gridu_in(i,j)
-        gridv_out(k)=gridv_in(i,j)
+         gridu_out(k)=gridu_in(i,j)
+         gridv_out(k)=gridv_in(i,j)
       endif
    enddo
 
@@ -1844,21 +1844,21 @@ subroutine general_fillu_ns(grd,sp,gridu_in,gridv_in,gridu_out)
       polsu=polsu+gridu_in(i,nlatm2)*sp%clons(i)+gridv_in(i,nlatm2)*sp%slons(i)
       polsv=polsv+gridu_in(i,nlatm2)*sp%slons(i)-gridv_in(i,nlatm2)*sp%clons(i)
    enddo
-   polnu=polnu/float(grd%nlon)
-   polnv=polnv/float(grd%nlon)
-   polsu=polsu/float(grd%nlon)
-   polsv=polsv/float(grd%nlon)
+   polnu=polnu/real(grd%nlon,r_kind)
+   polnv=polnv/real(grd%nlon,r_kind)
+   polsu=polsu/real(grd%nlon,r_kind)
+   polsv=polsv/real(grd%nlon,r_kind)
 
    ! Transfer local work array to output grid
    do k=1,grd%itotsub
       j=grd%nlat-grd%ltosi_s(k)
       i=grd%ltosj_s(k)
       if ( j == grd%nlat-1 ) then
-        gridu_out(k) = polsu*sp%clons(i)+polsv*sp%slons(i)
+         gridu_out(k) = polsu*sp%clons(i)+polsv*sp%slons(i)
       elseif ( j == 0) then
-        gridu_out(k) = polnu*sp%clons(i)+polnv*sp%slons(i)
+         gridu_out(k) = polnu*sp%clons(i)+polnv*sp%slons(i)
       else
-        gridu_out(k)=gridu_in(i,j)
+         gridu_out(k)=gridu_in(i,j)
       endif
    enddo
 
@@ -1942,21 +1942,21 @@ subroutine general_fillv_ns(grd,sp,gridu_in,gridv_in,gridv_out)
       polsu=polsu+gridu_in(i,nlatm2)*sp%clons(i)+gridv_in(i,nlatm2)*sp%slons(i)
       polsv=polsv+gridu_in(i,nlatm2)*sp%slons(i)-gridv_in(i,nlatm2)*sp%clons(i)
    enddo
-   polnu=polnu/float(grd%nlon)
-   polnv=polnv/float(grd%nlon)
-   polsu=polsu/float(grd%nlon)
-   polsv=polsv/float(grd%nlon)
+   polnu=polnu/real(grd%nlon,r_kind)
+   polnv=polnv/real(grd%nlon,r_kind)
+   polsu=polsu/real(grd%nlon,r_kind)
+   polsv=polsv/real(grd%nlon,r_kind)
 
    ! Transfer local work array to output grid
    do k=1,grd%itotsub
       j=grd%nlat-grd%ltosi_s(k)
       i=grd%ltosj_s(k)
       if ( j == grd%nlat-1 ) then
-        gridv_out(k) = polsu*sp%slons(i)-polsv*sp%clons(i)
+         gridv_out(k) = polsu*sp%slons(i)-polsv*sp%clons(i)
       elseif ( j == 0) then
-        gridv_out(k) = -polnu*sp%slons(i)+polnv*sp%clons(i)
+         gridv_out(k) = -polnu*sp%slons(i)+polnv*sp%clons(i)
       else
-        gridv_out(k)=gridv_in(i,j)
+         gridv_out(k)=gridv_in(i,j)
       endif
    enddo
 

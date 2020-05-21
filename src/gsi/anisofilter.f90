@@ -814,24 +814,24 @@ subroutine get_aspect_reg_2d
            no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='lcbas' .or. nrf_var(ivar)=='LCBAS')
            no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='cldch' .or. nrf_var(ivar)=='CLDCH')
 !          if (nrf2_wspd10m>0 .and. nrf2_wspd10mwter>0) then
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='wspd10m' .or. nrf_var(ivar)=='WSPD10M')
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='wspd10mwter' .or. nrf_var(ivar)=='WSPD10MWTER')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='wspd10m' .or. nrf_var(ivar)=='WSPD10M')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='wspd10mwter' .or. nrf_var(ivar)=='WSPD10MWTER')
 !          endif
 !          if (nrf2_uwnd10m>0 .and. nrf2_uwnd10mwter>0 .and. nrf2_vwnd10m>0 .and. nrf2_vwnd10mwter>0) then
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='uwnd10m' .or. nrf_var(ivar)=='UWND10M')
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='uwnd10mwter' .or. nrf_var(ivar)=='UWND10MWTER')
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vwnd10m' .or. nrf_var(ivar)=='VWND10M')
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vwnd10mwter' .or. nrf_var(ivar)=='VWND10MWTER')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='uwnd10m' .or. nrf_var(ivar)=='UWND10M')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='uwnd10mwter' .or. nrf_var(ivar)=='UWND10MWTER')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vwnd10m' .or. nrf_var(ivar)=='VWND10M')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vwnd10mwter' .or. nrf_var(ivar)=='VWND10MWTER')
 !          endif
 !          if (nrf2_gust>0 .and. nrf2_gustwter>0) then
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='gust' .or. nrf_var(ivar)=='GUST')
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='gustwter' .or. nrf_var(ivar)=='GUSTWTER')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='gust' .or. nrf_var(ivar)=='GUST')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='gustwter' .or. nrf_var(ivar)=='GUSTWTER')
 !          endif
 !          if (nrf3_sf>0 .and. nrf3_sfwter>0 .and. nrf3_vp>0 .and. nrf3_vpwter>0) then
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='sf' .or. nrf_var(ivar)=='SF')
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='sfwter' .or. nrf_var(ivar)=='SFWTER')
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vp' .or. nrf_var(ivar)=='VP')
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vpwter' .or. nrf_var(ivar)=='VPWTER')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='sf' .or. nrf_var(ivar)=='SF')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='sfwter' .or. nrf_var(ivar)=='SFWTER')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vp' .or. nrf_var(ivar)=='VP')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vpwter' .or. nrf_var(ivar)=='VPWTER')
 !          endif
            if (no_elev_grad) then !no land/water elev gradient artifact
               fx1= dyi*real(z0f2(ip,j,k)-z0f2(im,j,k),r_kind)
@@ -1499,7 +1499,7 @@ function lstdmodel(chvarname)
      if ( trim(chvarname) =='mitmwter'    )  lstdmodel=lstdmodel_mitmwter
      if ( trim(chvarname) =='uwnd10mwter' )  lstdmodel=lstdmodel_uwnd10mwter
      if ( trim(chvarname) =='vwnd10mwter' )  lstdmodel=lstdmodel_vwnd10mwter
-    else
+  else
      lstdmodel=.false.
   endif
 
@@ -2194,7 +2194,7 @@ subroutine init_anisofilter_reg(mype)
      close(55)
   else
         print*,'init_anisofilter_reg: WARNING - MISSING BCKG ERROR MODEL NAMELIST FILE: bckg_std_errormodel_input. RUNNING WITH DEFAULT SETTINGS, &
-        &WHICH MEANS THAT THE VALLEY-MAP (AND BCKG FIELD VARIANCE)- DEPENDENT BCKG ERROR ENHANCEMENT IS TURNED OFF'
+         WHICH MEANS THAT THE VALLEY-MAP (AND BCKG FIELD VARIANCE)- DEPENDENT BCKG ERROR ENHANCEMENT IS TURNED OFF'
   endif
 
   if (mype==0) then
@@ -3218,9 +3218,9 @@ subroutine mk_gradpt_slab(nlatf,nlonf, &
               jp=min(nlonf,j+1) ; jm=max(1,j-1)
               ip=min(nlatf,i+1) ; im=max(1,i-1)
               if( ilatf(ip,j)==zero .or. &
-                & ilatf(im,j)==zero .or. &
-                & ilatf(i,jp)==zero .or. &
-                & ilatf(i,jm)==zero ) inodat=1
+                  ilatf(im,j)==zero .or. &
+                  ilatf(i,jp)==zero .or. &
+                  ilatf(i,jm)==zero ) inodat=1
            end if
         end if
 
@@ -5086,24 +5086,24 @@ subroutine get2berr_reg_subdomain_option(mype)
            no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='lcbas' .or. nrf_var(ivar)=='LCBAS')
            no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='cldch' .or. nrf_var(ivar)=='CLDCH')
 !          if (nrf2_wspd10m>0 .and. nrf2_wspd10mwter>0) then
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='wspd10m' .or.  nrf_var(ivar)=='WSPD10M')
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='wspd10mwter' .or.  nrf_var(ivar)=='WSPD10MWTER')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='wspd10m' .or.  nrf_var(ivar)=='WSPD10M')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='wspd10mwter' .or.  nrf_var(ivar)=='WSPD10MWTER')
 !          endif
 !          if (nrf2_uwnd10m>0 .and. nrf2_uwnd10mwter>0 .and. nrf2_vwnd10m>0 .and. nrf2_vwnd10mwter>0) then
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='uwnd10m' .or. nrf_var(ivar)=='UWND10M')
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='uwnd10mwter' .or. nrf_var(ivar)=='UWND10MWTER')
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vwnd10m' .or. nrf_var(ivar)=='VWND10M')
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vwnd10mwter' .or. nrf_var(ivar)=='VWND10MWTER')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='uwnd10m' .or. nrf_var(ivar)=='UWND10M')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='uwnd10mwter' .or. nrf_var(ivar)=='UWND10MWTER')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vwnd10m' .or. nrf_var(ivar)=='VWND10M')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vwnd10mwter' .or. nrf_var(ivar)=='VWND10MWTER')
 !          endif
 !          if (nrf2_gust>0 .and. nrf2_gustwter>0) then
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='gust' .or.  nrf_var(ivar)=='GUST')
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='gustwter' .or.  nrf_var(ivar)=='GUSTWTER')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='gust' .or.  nrf_var(ivar)=='GUST')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='gustwter' .or.  nrf_var(ivar)=='GUSTWTER')
 !          endif
 !          if (nrf3_sf>0 .and. nrf3_sfwter>0 .and. nrf3_vp>0 .and. nrf3_vpwter>0) then
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='sf' .or. nrf_var(ivar)=='SF')
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='sfwter' .or. nrf_var(ivar)=='SFWTER')
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vp' .or. nrf_var(ivar)=='VP')
-              no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vpwter' .or. nrf_var(ivar)=='VPWTER')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='sf' .or. nrf_var(ivar)=='SF')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='sfwter' .or. nrf_var(ivar)=='SFWTER')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vp' .or. nrf_var(ivar)=='VP')
+           no_elev_grad=no_elev_grad .or. (nrf_var(ivar)=='vpwter' .or. nrf_var(ivar)=='VPWTER')
 !          endif
            if (no_elev_grad) then !no land/water elev gradient artifact
               fx1= dyi*(z0f2(iploc,jloc,k1)-z0f2(imloc,jloc,k1))
@@ -5232,11 +5232,11 @@ subroutine get2berr_reg_subdomain_option(mype)
   end if
 
   if(mype==0 .and. print_verbose) write(6,*)'rltop_wind,rltop_temp,rltop_q,rltop_psfc,rltop_gust,rltop_vis,rltop_pblh, &
-                         &rltop_wspd10m,rltop_td2m,rltop_mxtm,rltop_mitm,rltop_pmsl,rltop_howv,rltop_tcamt,rltop_lcbas,rltop_cldch, & 
-                         &rltop_uwnd10m,rltop_vwnd10m=',&
+                         rltop_wspd10m,rltop_td2m,rltop_mxtm,rltop_mitm,rltop_pmsl,rltop_howv,rltop_tcamt,rltop_lcbas,rltop_cldch, & 
+                         rltop_uwnd10m,rltop_vwnd10m=',&
                          rltop_wind,rltop_temp,rltop_q,rltop_psfc,rltop_gust,rltop_vis,rltop_pblh, &
-                         &rltop_wspd10m,rltop_td2m,rltop_mxtm,rltop_mitm,rltop_pmsl,rltop_howv,rltop_tcamt,rltop_lcbas,rltop_cldch, &
-                         &rltop_uwnd10m,rltop_vwnd10m
+                         rltop_wspd10m,rltop_td2m,rltop_mxtm,rltop_mitm,rltop_pmsl,rltop_howv,rltop_tcamt,rltop_lcbas,rltop_cldch, &
+                         rltop_uwnd10m,rltop_vwnd10m
 
   if(lreadnorm) normal=0
 
@@ -6694,7 +6694,6 @@ subroutine sub2slab_init_raf4(aspectf,triad4,ngauss,rgauss,npass,normal,binom,if
   use raflib, only: init_raf4
   use general_sub2grid_mod, only: sub2grid_info,general_sub2grid,general_sub2grid_create_info
   use general_sub2grid_mod, only: general_sub2grid_destroy_info
-  use mpi
   implicit none
 
   integer(i_kind),intent(in):: kds,kde
@@ -6968,7 +6967,7 @@ subroutine change_a2f(sa,sf,pf2ap1,aspect,aspectf,inner_vars, &
 
     mype=sf%mype
     npe=sf%npe
-    hsmooth_lena=0.5
+    hsmooth_lena=0.5 ! Since when is 0.5 an integer?
     nlat=sa%nlat
     nlon=sa%nlon
     nlatf=sf%nlat

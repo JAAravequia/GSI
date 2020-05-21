@@ -76,15 +76,15 @@ subroutine compute_fact10(u,v,t,q,ps,prsi1,prsi2,skint,z0rl,islimsk,f10m)
   real(r_kind),parameter::  ten=10.0_r_kind
 
 
-!  INITIALIZE VARIABLES. ALL UNITS ARE SUPPOSEDLY M.K.S. UNLESS SPECIFIED
-!  PSURF IS IN PASCALS
-!  WIND IS WIND SPEED, THETA1 IS ADIABATIC SURFACE TEMP FROM LEVEL 1
-!  SURFACE ROUGHNESS LENGTH IS CONVERTED TO M FROM CM
+!  Initialize variables. All units are supposedly m.k.s. unless specified
+!  psurf is in pascals
+!  wind is wind speed, theta1 is adiabatic surface temp from level 1
+!  ssurface roughness length is converted to m from cm
 
 
    rkap = rd_over_cp
-   RKAPI  = one / RKAP
-   RKAPP1 = one + RKAP
+   rkapi  = one / rkap
+   rkapp1 = one + rkap
 
    rat=zero ; restar=zero ; ustar=zero
    del = prsi1-prsi2
@@ -107,11 +107,11 @@ subroutine compute_fact10(u,v,t,q,ps,prsi1,prsi2,skint,z0rl,islimsk,f10m)
    z1=-rd*tv1*log(ps1/psurf)/grav
 
 
-!  COMPUTE STABILITY DEPENDENT EXCHANGE COEFFICIENTS
+!  Compute stability dependent exchange coefficients
    if (islimsk == 0) then
       ustar = sqrt(grav * z0 / charnok)
    end if
-!  COMPUTE STABILITY INDICES (RB AND HLINF)
+!  Compute stability indices (rb and hlinf)
    z0max = min(z0,one*z1)
    ztmax = z0max
    if (islimsk == 0) then
@@ -136,11 +136,11 @@ subroutine compute_fact10(u,v,t,q,ps,prsi1,prsi2,skint,z0rl,islimsk,f10m)
    fm10=log((z0max+ten) / z0max)
 
 
-!  STABLE CASE
+!  Stable case
    if (dtv >= zero) then
       hl1=hlinf
    end if        
-   if ((dtv >= zero) .AND. (hlinf > quarter)) then
+   if ((dtv >= zero) .and. (hlinf > quarter)) then
       hl0inf=z0max*hlinf/z1
       hltinf=ztmax*hlinf/z1
       aa=sqrt(one + four*alpha*hlinf)
@@ -154,7 +154,7 @@ subroutine compute_fact10(u,v,t,q,ps,prsi1,prsi2,skint,z0rl,islimsk,f10m)
       hl1=fms*fms*rb/fhs
    end if
 
-!  SECOND ITERATION
+!  Second iteration
    if (dtv >= zero) then
       hl0=z0max*hl1/z1
       hlt=ztmax*hl1/z1
@@ -173,8 +173,8 @@ subroutine compute_fact10(u,v,t,q,ps,prsi1,prsi2,skint,z0rl,islimsk,f10m)
    end if
 
 
-!  UNSTABLE CASE
-!  CHECK FOR UNPHYSICAL OBUKHOV LENGTH
+!  Unstable case
+!  Check for unphysical Obukhov length
    if (dtv < zero) then
       olinf = z1/hlinf
       if ( abs(olinf) <= z0max*50.0_r_kind ) then
@@ -182,7 +182,7 @@ subroutine compute_fact10(u,v,t,q,ps,prsi1,prsi2,skint,z0rl,islimsk,f10m)
       end if
    end if
 
-!  GET PM AND PH
+!  Get pm and ph
    if (dtv < zero .AND. hlinf >= (-half)) then
       hl1=hlinf
       pm=(a0 + a1*hl1)*hl1/(one + b1*hl1 + b2*hl1*hl1)
@@ -203,7 +203,7 @@ subroutine compute_fact10(u,v,t,q,ps,prsi1,prsi2,skint,z0rl,islimsk,f10m)
    end if
 
 
-!  FINISH THE EXCHANGE COEFFICIENT COMPUTATION TO PROVIDE FM AND FH
+!  Finish the exchange coefficient computation to provide fm and fh
    fm=fm-pm
    fh=fh-ph
    fm10=fm10-pm10

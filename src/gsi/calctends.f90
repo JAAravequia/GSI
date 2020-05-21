@@ -82,36 +82,36 @@ subroutine calctends(mype,teta,pri,guess,xderivative,yderivative,tendency)
   integer(i_kind) i,j,k,ix,ixm,ixp,jx,jxm,jxp,kk,icw,iq,ioz,ip3d  
   real(r_kind) sumk,sumvk,sum2k,sum2vk,uuvv
 
-  real(r_kind),dimension(:,:  ),pointer :: z   =>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: u   =>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: v   =>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: t   =>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: q   =>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: oz  =>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: cw  =>NULL()
+  real(r_kind),dimension(:,:  ),pointer :: z   =>null()
+  real(r_kind),dimension(:,:,:),pointer :: u   =>null()
+  real(r_kind),dimension(:,:,:),pointer :: v   =>null()
+  real(r_kind),dimension(:,:,:),pointer :: t   =>null()
+  real(r_kind),dimension(:,:,:),pointer :: q   =>null()
+  real(r_kind),dimension(:,:,:),pointer :: oz  =>null()
+  real(r_kind),dimension(:,:,:),pointer :: cw  =>null()
 
-  real(r_kind),dimension(:,:  ),pointer :: ps_x=>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: u_x =>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: v_x =>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: t_x =>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: q_x =>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: oz_x=>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: cw_x=>NULL()
-  real(r_kind),dimension(:,:  ),pointer :: ps_y=>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: u_y =>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: v_y =>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: t_y =>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: q_y =>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: oz_y=>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: cw_y=>NULL()
+  real(r_kind),dimension(:,:  ),pointer :: ps_x=>null()
+  real(r_kind),dimension(:,:,:),pointer :: u_x =>null()
+  real(r_kind),dimension(:,:,:),pointer :: v_x =>null()
+  real(r_kind),dimension(:,:,:),pointer :: t_x =>null()
+  real(r_kind),dimension(:,:,:),pointer :: q_x =>null()
+  real(r_kind),dimension(:,:,:),pointer :: oz_x=>null()
+  real(r_kind),dimension(:,:,:),pointer :: cw_x=>null()
+  real(r_kind),dimension(:,:  ),pointer :: ps_y=>null()
+  real(r_kind),dimension(:,:,:),pointer :: u_y =>null()
+  real(r_kind),dimension(:,:,:),pointer :: v_y =>null()
+  real(r_kind),dimension(:,:,:),pointer :: t_y =>null()
+  real(r_kind),dimension(:,:,:),pointer :: q_y =>null()
+  real(r_kind),dimension(:,:,:),pointer :: oz_y=>null()
+  real(r_kind),dimension(:,:,:),pointer :: cw_y=>null()
 
-  real(r_kind),dimension(:,:,:),pointer :: p_t =>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: u_t =>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: v_t =>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: t_t =>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: q_t =>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: oz_t=>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: cw_t=>NULL()
+  real(r_kind),dimension(:,:,:),pointer :: p_t =>null()
+  real(r_kind),dimension(:,:,:),pointer :: u_t =>null()
+  real(r_kind),dimension(:,:,:),pointer :: v_t =>null()
+  real(r_kind),dimension(:,:,:),pointer :: t_t =>null()
+  real(r_kind),dimension(:,:,:),pointer :: q_t =>null()
+  real(r_kind),dimension(:,:,:),pointer :: oz_t=>null()
+  real(r_kind),dimension(:,:,:),pointer :: cw_t=>null()
 
 ! Get all pointers:
 
@@ -383,6 +383,7 @@ subroutine calctends(mype,teta,pri,guess,xderivative,yderivative,tendency)
   contains
   subroutine init_vars_ (thiscase,bundle)
 
+  implicit none
   type(gsi_bundle) :: bundle
   character(len=*),intent(in) :: thiscase
 

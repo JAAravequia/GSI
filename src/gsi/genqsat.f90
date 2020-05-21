@@ -81,7 +81,7 @@ subroutine genqsat(qsat,tsen,prsl,lat2,lon2,nsig,ice,iderivative)
   onep3 = 1.e3_r_kind
 
   if(iderivative > 0)then
-    if (regional) then
+     if (regional) then
         k150 = nsig
         do k=1,nsig
            if (ges_prslavg(k)<r015*ges_psfcavg) then
@@ -89,9 +89,9 @@ subroutine genqsat(qsat,tsen,prsl,lat2,lon2,nsig,ice,iderivative)
               exit
            endif
         end do
-    end if
-    if (wrf_nmm_regional.or.nems_nmmb_regional.or.cmaq_regional .or. &
-             fv3_regional) then
+     end if
+     if (wrf_nmm_regional.or.nems_nmmb_regional.or.cmaq_regional .or. &
+              fv3_regional) then
         kpres = nsig
         do k=1,nsig
            if (aeta2_ll(k)==zero) then
@@ -99,7 +99,7 @@ subroutine genqsat(qsat,tsen,prsl,lat2,lon2,nsig,ice,iderivative)
               exit
            endif
         end do
-    end if
+     end if
   end if
 !$omp parallel do  schedule(dynamic,1) private(k,j,i,tdry,tr,es,esw,esi,w) &
 !$omp private(pw,esmax,es2,idpupdate,idtupdate,desdt,dwdt,deswdt,desidt) &
@@ -163,70 +163,70 @@ subroutine genqsat(qsat,tsen,prsl,lat2,lon2,nsig,ice,iderivative)
            qsat(i,j,k) = eps * es2 / (pw - omeps * es2)
 
            if(iderivative > 0)then
-            if(es <= esmax .and. iderivative == 2)then
-              idpupdate=.true.
-              idtupdate=.true.
+              if(es <= esmax .and. iderivative == 2)then
+                 idpupdate=.true.
+                 idtupdate=.true.
 
-              if(regional)then
+                 if(regional)then
 
 !    Special block to decouple temperature and pressure from moisture
 !    above specified levels.  For mass core decouple T and p above
 !    same level (approximately 150 hPa).  For nmm core decouple T
 !    above ~150 hPa and p above level where aeta2_ll goes to zero
 
-                if(wrf_mass_regional .and. k >= k150)then
+                    if(wrf_mass_regional .and. k >= k150)then
 !       For mass core, decouple T and p above 150 hPa
-                  idpupdate=.false.
-                  idtupdate=.false.
-                end if
-                if(wrf_nmm_regional .or. nems_nmmb_regional.or.&
-                     cmaq_regional .or. fv3_regional) then
+                       idpupdate=.false.
+                       idtupdate=.false.
+                    end if
+                    if(wrf_nmm_regional .or. nems_nmmb_regional.or.&
+                         cmaq_regional .or. fv3_regional) then
 !       Decouple T and p at different levels for nmm core
-                  if(k >= kpres)idpupdate = .false.
-                  if(k >= k150 )idtupdate = .false.
-                end if
+                       if(k >= kpres)idpupdate = .false.
+                       if(k >= k150 )idtupdate = .false.
+                    end if
              
-              else
+                 else
 !                Decouple Q from T above the tropopause for global
-                if(prsl(i,j,k) < (one_tenth*tropprs(i,j)))then
-                   idpupdate=.false.  
-                   idtupdate=.false.
-                end if
-              end if
+                    if(prsl(i,j,k) < (one_tenth*tropprs(i,j)))then
+                       idpupdate=.false.  
+                       idtupdate=.false.
+                    end if
+                 end if
 
-              if(idtupdate)then
-                if (tdry >= ttp .or. .not. ice) then
-                   desdt = es * (-xa/tdry + xb*ttp/(tdry*tdry))
-                elseif (tdry < tmix) then
-                   desdt = es * (-xai/tdry + xbi*ttp/(tdry*tdry))
-                else
-                   dwdt = one/(ttp-tmix)
-                   deswdt = esw * (-xa/tdry + xb*ttp/(tdry*tdry))
-                   desidt = esi * (-xai/tdry + xbi*ttp/(tdry*tdry))
-                   desdt = dwdt*esw + w*deswdt - dwdt*esi + (one-w)*desidt
-                endif
-                if(pseudo_q2)then
-                  dqdt(i,j,k)=zero
-                else
-                  dqdt(i,j,k)=(desdt/es)*qgues(i,j,k)
-                endif
+                 if(idtupdate)then
+                    if (tdry >= ttp .or. .not. ice) then
+                       desdt = es * (-xa/tdry + xb*ttp/(tdry*tdry))
+                    elseif (tdry < tmix) then
+                       desdt = es * (-xai/tdry + xbi*ttp/(tdry*tdry))
+                    else
+                       dwdt = one/(ttp-tmix)
+                       deswdt = esw * (-xa/tdry + xb*ttp/(tdry*tdry))
+                       desidt = esi * (-xai/tdry + xbi*ttp/(tdry*tdry))
+                       desdt = dwdt*esw + w*deswdt - dwdt*esi + (one-w)*desidt
+                    endif
+                    if(pseudo_q2)then
+                       dqdt(i,j,k)=zero
+                    else
+                       dqdt(i,j,k)=(desdt/es)*qgues(i,j,k)
+                    endif
+                 else
+                    dqdt(i,j,k)=zero
+                 end if
+                 if(idpupdate)then
+                    if(pseudo_q2)then
+                       dqdp(i,j,k)=zero
+                    else
+                       dqdp(i,j,k)=half*qgues(i,j,k)/prsl(i,j,k)
+                    endif
+                 else
+                    dqdp(i,j,k)=zero
+                 end if
               else
-                dqdt(i,j,k)=zero
+                 dqdt(i,j,k)=zero
+                 dqdp(i,j,k)=zero
               end if
-              if(idpupdate)then
-                if(pseudo_q2)then
-                  dqdp(i,j,k)=zero
-                else
-                  dqdp(i,j,k)=half*qgues(i,j,k)/prsl(i,j,k)
-                endif
-              else
-                dqdp(i,j,k)=zero
-              end if
-            else
-              dqdt(i,j,k)=zero
-              dqdp(i,j,k)=zero
-            end if
-            dqdrh(i,j,k) = qsat(i,j,k)
+              dqdrh(i,j,k) = qsat(i,j,k)
            end if
 
         end do

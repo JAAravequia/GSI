@@ -130,10 +130,10 @@ contains
               ptabl_uv(k)=half*(etabl_uv(itypex,k-1,1)+etabl_uv(itypex,k,1))
            enddo
            ptabl_uv(34)=etabl_uv(itypex,33,1)
-         else
-            write(6,*)'ERROR IN CONVERR_UV: NO OBSERVATION TYPE READ IN'
-            return
-         endif
+        else
+           write(6,*)'ERROR IN CONVERR_UV: NO OBSERVATION TYPE READ IN'
+           return
+        endif
      endif
 
      close(ietabl_uv)

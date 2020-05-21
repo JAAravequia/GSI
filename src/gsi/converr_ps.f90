@@ -135,8 +135,8 @@ contains
            enddo
            ptabl_ps(34)=etabl_ps(itypex,33,1)
         else
-            write(6,*)'ERROR IN CONVERR_PS: NO OBSERVATION READ IN itypex', itypex
-            return
+           write(6,*)'ERROR IN CONVERR_PS: NO OBSERVATION READ IN itypex', itypex
+           return
         endif
      endif
 

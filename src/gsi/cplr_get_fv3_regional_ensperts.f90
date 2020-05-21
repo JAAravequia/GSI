@@ -1,12 +1,13 @@
 module get_fv3_regional_ensperts_mod
 use abstract_get_fv3_regional_ensperts_mod,only: abstract_get_fv3_regional_ensperts_class
-  use kinds, only : i_kind
-  type, extends(abstract_get_fv3_regional_ensperts_class) :: get_fv3_regional_ensperts_class
-  contains
-    procedure, pass(this) :: get_fv3_regional_ensperts => get_fv3_regional_ensperts_run
-    procedure, pass(this) :: ens_spread_dualres_regional => ens_spread_dualres_regional_fv3_regional
-    procedure, pass(this) :: general_read_fv3_regional
-  end type get_fv3_regional_ensperts_class
+use kinds, only : i_kind
+implicit none
+type, extends(abstract_get_fv3_regional_ensperts_class) :: get_fv3_regional_ensperts_class
+contains
+  procedure, pass(this) :: get_fv3_regional_ensperts => get_fv3_regional_ensperts_run
+  procedure, pass(this) :: ens_spread_dualres_regional => ens_spread_dualres_regional_fv3_regional
+  procedure, pass(this) :: general_read_fv3_regional
+end type get_fv3_regional_ensperts_class
 contains
   subroutine get_fv3_regional_ensperts_run(this,en_perts,nelen,ps_bar)
   !$$$  subprogram documentation block
@@ -77,11 +78,11 @@ contains
       ! Allocate bundle to hold mean of ensemble members
       allocate(en_bar(ntlevs_ens))
       do m=1,ntlevs_ens
-        call gsi_bundlecreate(en_bar(m),grid_ens,'ensemble',istatus,names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
-        if(istatus/=0) then
-           write(6,*)' get_fv3_regional_ensperts_netcdf: trouble creating en_bar bundle'
-           call stop2(9991)
-        endif
+         call gsi_bundlecreate(en_bar(m),grid_ens,'ensemble',istatus,names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
+         if(istatus/=0) then
+            write(6,*)' get_fv3_regional_ensperts_netcdf: trouble creating en_bar bundle'
+            call stop2(9991)
+         endif
       enddo ! for m 
   
 
@@ -103,15 +104,15 @@ contains
   !
   ! LOOP OVER ENSEMBLE MEMBERS 
          do n=1,n_ens
-          write(ensfilenam_str,22) trim(adjustl(ensemble_path)),ens_fhrlevs(m),n
+            write(ensfilenam_str,22) trim(adjustl(ensemble_path)),ens_fhrlevs(m),n
 22  format(a,'fv3SAR',i2.2,'_ens_mem',i3.3)
   ! DEFINE INPUT FILE NAME
-             fv3_filename%grid_spec=trim(ensfilenam_str)//'-fv3_grid_spec' !exmaple thinktobe
-             fv3_filename%ak_bk=trim(ensfilenam_str)//'-fv3_akbk'
-             fv3_filename%dynvars=trim(ensfilenam_str)//'-fv3_dynvars'
-             fv3_filename%tracers=trim(ensfilenam_str)//"-fv3_tracer"
-             fv3_filename%sfcdata=trim(ensfilenam_str)//"-fv3_sfcdata"
-             fv3_filename%couplerres=trim(ensfilenam_str)//"-coupler.res"
+            fv3_filename%grid_spec=trim(ensfilenam_str)//'-fv3_grid_spec' !exmaple thinktobe
+            fv3_filename%ak_bk=trim(ensfilenam_str)//'-fv3_akbk'
+            fv3_filename%dynvars=trim(ensfilenam_str)//'-fv3_dynvars'
+            fv3_filename%tracers=trim(ensfilenam_str)//"-fv3_tracer"
+            fv3_filename%sfcdata=trim(ensfilenam_str)//"-fv3_sfcdata"
+            fv3_filename%couplerres=trim(ensfilenam_str)//"-coupler.res"
   ! 
   ! READ ENEMBLE MEMBERS DATA
             if (mype == 0) write(6,'(a,a)') 'CALL READ_FV3_REGIONAL_ENSPERTS FOR ENS DATA with the filename str : ',trim(ensfilenam_str)
@@ -231,7 +232,7 @@ contains
          enddo 
   !
   ! CALCULATE ENSEMBLE MEAN
-         bar_norm = one/float(n_ens)
+         bar_norm = one/real(n_ens,r_kind)
          en_bar(m)%values=en_bar(m)%values*bar_norm
   
   ! Copy pbar to module array.  ps_bar may be needed for vertical localization
@@ -270,24 +271,24 @@ contains
             end do
          end do
 
-     enddo ! it 4d loop
+      enddo ! it 4d loop
       do m=1,ntlevs_ens
-      call gsi_bundledestroy(en_bar(m),istatus)
-      if(istatus/=0) then
-        write(6,*)' in get_fv3_regional_ensperts_netcdf: trouble destroying en_bar bundle'
-                call stop2(9997)
-      endif
-   end do
+         call gsi_bundledestroy(en_bar(m),istatus)
+         if(istatus/=0) then
+            write(6,*)' in get_fv3_regional_ensperts_netcdf: trouble destroying en_bar bundle'
+            call stop2(9997)
+         endif
+      end do
 
-        deallocate(en_bar)
+      deallocate(en_bar)
   !
   
   return
 
-30 write(6,*) 'get_fv3_regional_ensperts_netcdf: open filelist failed '
-   call stop2(555)
-20 write(6,*) 'get_fv3_regional_ensperts_netcdf: read WRF-ARW ens failed ',n
-   call stop2(555)
+!30 write(6,*) 'get_fv3_regional_ensperts_netcdf: open filelist failed '
+!   call stop2(555)
+!20 write(6,*) 'get_fv3_regional_ensperts_netcdf: read WRF-ARW ens failed ',n
+!   call stop2(555)
 
   end subroutine get_fv3_regional_ensperts_run
   
@@ -386,38 +387,38 @@ contains
 
 
     if(fv3sar_ensemble_opt == 0 ) then  
-      call gsi_fv3ncdf_readuv(dynvars,g_u,g_v)
+       call gsi_fv3ncdf_readuv(dynvars,g_u,g_v)
     else
-      call gsi_fv3ncdf_readuv_v1(dynvars,g_u,g_v)
+       call gsi_fv3ncdf_readuv_v1(dynvars,g_u,g_v)
     endif
     if(fv3sar_ensemble_opt == 0) then
-      call gsi_fv3ncdf_read(dynvars,'T','t',g_tsen,mype_t)
+       call gsi_fv3ncdf_read(dynvars,'T','t',g_tsen,mype_t)
     else
-      call gsi_fv3ncdf_read_v1(dynvars,'t','T',g_tsen,mype_t)
+       call gsi_fv3ncdf_read_v1(dynvars,'t','T',g_tsen,mype_t)
     endif
     if (fv3sar_ensemble_opt == 0) then 
-      call gsi_fv3ncdf_read(dynvars,'DELP','delp',g_prsi,mype_p)
-      g_prsi(:,:,grd_ens%nsig+1)=eta1_ll(grd_ens%nsig+1) !thinkto be done , should use eta1_ll from ensemble grid
-      do i=grd_ens%nsig,1,-1
-         g_prsi(:,:,i)=g_prsi(:,:,i)*0.001_r_kind+g_prsi(:,:,i+1)
-      enddo
-    g_ps(:,:)=g_prsi(:,:,1)
+       call gsi_fv3ncdf_read(dynvars,'DELP','delp',g_prsi,mype_p)
+       g_prsi(:,:,grd_ens%nsig+1)=eta1_ll(grd_ens%nsig+1) !thinkto be done , should use eta1_ll from ensemble grid
+       do i=grd_ens%nsig,1,-1
+          g_prsi(:,:,i)=g_prsi(:,:,i)*0.001_r_kind+g_prsi(:,:,i+1)
+       enddo
+       g_ps(:,:)=g_prsi(:,:,1)
     else  ! for the ensemble processed frm CHGRES
-      call gsi_fv3ncdf2d_read_v1(dynvars,'ps','PS',g_ps,mype_p)
-      g_ps=g_ps*0.001_r_kind
-      do k=1,grd_ens%nsig+1
-        g_prsi(:,:,k)=eta1_ll(k)+eta2_ll(k)*g_ps
-      enddo
+       call gsi_fv3ncdf2d_read_v1(dynvars,'ps','PS',g_ps,mype_p)
+       g_ps=g_ps*0.001_r_kind
+       do k=1,grd_ens%nsig+1
+          g_prsi(:,:,k)=eta1_ll(k)+eta2_ll(k)*g_ps
+       enddo
     
 
     endif
      
     if(fv3sar_ensemble_opt == 0) then
-      call gsi_fv3ncdf_read(tracers,'SPHUM','sphum',g_q,mype_q)
-      call gsi_fv3ncdf_read(tracers,'O3MR','o3mr',g_oz,mype_oz)
+       call gsi_fv3ncdf_read(tracers,'SPHUM','sphum',g_q,mype_q)
+       call gsi_fv3ncdf_read(tracers,'O3MR','o3mr',g_oz,mype_oz)
     else
-      call gsi_fv3ncdf_read_v1(tracers,'sphum','SPHUM',g_q,mype_q)
-      call gsi_fv3ncdf_read_v1(tracers,'o3mr','O3MR',g_oz,mype_oz)
+       call gsi_fv3ncdf_read_v1(tracers,'sphum','SPHUM',g_q,mype_q)
+       call gsi_fv3ncdf_read_v1(tracers,'o3mr','O3MR',g_oz,mype_oz)
     endif
 
 !!  tsen2tv  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -428,34 +429,34 @@ contains
           enddo
        enddo
     enddo
-         if (.not.q_hyb_ens) then
-           ice=.true.
-           iderivative=0
-           do k=1,grd_ens%nsig
-             kp=k+1
-             do j=1,grd_ens%lon2
-               do i=1,grd_ens%lat2
-                 g_prsl(i,j,k)=(g_prsi(i,j,k)+g_prsi(i,j,kp))*half
-                end do
+    if (.not.q_hyb_ens) then
+       ice=.true.
+       iderivative=0
+       do k=1,grd_ens%nsig
+          kp=k+1
+          do j=1,grd_ens%lon2
+             do i=1,grd_ens%lat2
+                g_prsl(i,j,k)=(g_prsi(i,j,k)+g_prsi(i,j,kp))*half
              end do
-           end do
-           call genqsat(g_rh,g_tsen(1,1,1),g_prsl(1,1,1),grd_ens%lat2,grd_ens%lon2,grd_ens%nsig,ice,iderivative)
-           do k=1,grd_ens%nsig
-             do j=1,grd_ens%lon2
-               do i=1,grd_ens%lat2
-                 g_rh(i,j,k) = g_q(i,j,k)/g_rh(i,j,k)
-               end do
+          end do
+       end do
+       call genqsat(g_rh,g_tsen(1,1,1),g_prsl(1,1,1),grd_ens%lat2,grd_ens%lon2,grd_ens%nsig,ice,iderivative)
+       do k=1,grd_ens%nsig
+          do j=1,grd_ens%lon2
+             do i=1,grd_ens%lat2
+                g_rh(i,j,k) = g_q(i,j,k)/g_rh(i,j,k)
              end do
-           end do
-         else
-             do k=1,grd_ens%nsig
-               do j=1,grd_ens%lon2
-                 do i=1,grd_ens%lat2
-                   g_rh(i,j,k) = g_q(i,j,k)
-                 end do
-                end do
-              end do
-         end if
+          end do
+       end do
+    else
+       do k=1,grd_ens%nsig
+          do j=1,grd_ens%lon2
+             do i=1,grd_ens%lat2
+                g_rh(i,j,k) = g_q(i,j,k)
+             end do
+          end do
+       end do
+    end if
 
 
 
@@ -504,7 +505,7 @@ contains
     implicit none
 
     class(get_fv3_regional_ensperts_class), intent(inout) :: this
-    type(gsi_bundle),OPTIONAL,intent(in):: en_bar
+    type(gsi_bundle),optional,intent(in):: en_bar
     integer(i_kind),intent(in):: mype
     type(gsi_bundle),allocatable, intent(in   ) :: en_perts(:,:)
     integer(i_kind), intent(in   ):: nelen
@@ -527,26 +528,26 @@ contains
     associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
     end associate
  
-  !      create simple regular grid
-          call gsi_gridcreate(grid_anl,grd_anl%lat2,grd_anl%lon2,grd_anl%nsig)
-          call gsi_gridcreate(grid_ens,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)
+  ! create simple regular grid
+    call gsi_gridcreate(grid_anl,grd_anl%lat2,grd_anl%lon2,grd_anl%nsig)
+    call gsi_gridcreate(grid_ens,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)
   
-  !      create two internal bundles, one on analysis grid and one on ensemble grid
+  ! create two internal bundles, one on analysis grid and one on ensemble grid
+ 
+    call gsi_bundlecreate (suba,grid_anl,'ensemble work',istatus, &
+                              names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
+    if(istatus/=0) then
+       write(6,*)' in ens_spread_dualres_regional: trouble creating bundle_anl bundle'
+       call stop2(9998)
+    endif
+    call gsi_bundlecreate (sube,grid_ens,'ensemble work ens',istatus, &
+                              names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
+    if(istatus/=0) then
+       write(6,*)' ens_spread_dualres_regional: trouble creating bundle_ens bundle'
+       call stop2(9999)
+    endif
   
-         call gsi_bundlecreate (suba,grid_anl,'ensemble work',istatus, &
-                                   names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
-         if(istatus/=0) then
-            write(6,*)' in ens_spread_dualres_regional: trouble creating bundle_anl bundle'
-            call stop2(9998)
-         endif
-         call gsi_bundlecreate (sube,grid_ens,'ensemble work ens',istatus, &
-                                   names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
-         if(istatus/=0) then
-            write(6,*)' ens_spread_dualres_regional: trouble creating bundle_ens bundle'
-            call stop2(9999)
-         endif
-  
-    sp_norm=(one/float(n_ens))
+    sp_norm=(one/real(n_ens,r_kind))
   
     sube%values=zero
   !
@@ -563,7 +564,7 @@ contains
        end do
   
        do i=1,nelen
-         sube%values(i) = sqrt(sp_norm*sig_norm_sq_inv*sube%values(i))
+          sube%values(i) = sqrt(sp_norm*sig_norm_sq_inv*sube%values(i))
        end do
     else
        do n=1,n_ens
@@ -574,7 +575,7 @@ contains
        end do
    
        do i=1,nelen
-         sube%values(i) = sqrt(sp_norm*sube%values(i))
+          sube%values(i) = sqrt(sp_norm*sube%values(i))
        end do
     end if
   

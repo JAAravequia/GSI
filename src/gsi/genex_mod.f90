@@ -33,7 +33,7 @@ module genex_mod
 !$$$ end documentation block
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!  BEGIN BRIEF TUTORIAL:
+!  Begin brief tutorial:
 
 !   The following illustrates a sample input domain A and output domain B on one processor
 !   for a 2-dimensional array distributed across multiple processors (with arbitrary overlap).
@@ -105,7 +105,7 @@ module genex_mod
 !   This is a pretty robust code, which can be expanded (in principle at least) to cover
 !   any number of desired dimensions.
 !
-!  END BRIEF TUTORIAL:
+!  End brief tutorial:
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    use kinds, only: i_kind
@@ -178,26 +178,26 @@ module genex_mod
       integer(i_kind) npe             ! total number of processors
       integer(i_kind) mype            ! local processor
       logical:: lallocated = .false.
-      integer(i_kind),pointer ::   lefts(:) => NULL()
-      integer(i_kind),pointer ::  rights(:) => NULL()
-      integer(i_kind),pointer ::    numl(:) => NULL()
-      integer(i_kind),pointer ::   numrc(:) => NULL()
-      integer(i_kind),pointer ::  iabs_l(:) => NULL()
-      integer(i_kind),pointer ::  iabe_l(:) => NULL()
-      integer(i_kind),pointer ::  jabs_l(:) => NULL()
-      integer(i_kind),pointer ::  jabe_l(:) => NULL()
-      integer(i_kind),pointer ::  kabs_l(:) => NULL()
-      integer(i_kind),pointer ::  kabe_l(:) => NULL()
-      integer(i_kind),pointer ::  mabs_l(:) => NULL()
-      integer(i_kind),pointer ::  mabe_l(:) => NULL()
-      integer(i_kind),pointer :: iabs_rc(:) => NULL()
-      integer(i_kind),pointer :: iabe_rc(:) => NULL()
-      integer(i_kind),pointer :: jabs_rc(:) => NULL()
-      integer(i_kind),pointer :: jabe_rc(:) => NULL()
-      integer(i_kind),pointer :: kabs_rc(:) => NULL()
-      integer(i_kind),pointer :: kabe_rc(:) => NULL()
-      integer(i_kind),pointer :: mabs_rc(:) => NULL()
-      integer(i_kind),pointer :: mabe_rc(:) => NULL()
+      integer(i_kind),pointer ::   lefts(:) => null()
+      integer(i_kind),pointer ::  rights(:) => null()
+      integer(i_kind),pointer ::    numl(:) => null()
+      integer(i_kind),pointer ::   numrc(:) => null()
+      integer(i_kind),pointer ::  iabs_l(:) => null()
+      integer(i_kind),pointer ::  iabe_l(:) => null()
+      integer(i_kind),pointer ::  jabs_l(:) => null()
+      integer(i_kind),pointer ::  jabe_l(:) => null()
+      integer(i_kind),pointer ::  kabs_l(:) => null()
+      integer(i_kind),pointer ::  kabe_l(:) => null()
+      integer(i_kind),pointer ::  mabs_l(:) => null()
+      integer(i_kind),pointer ::  mabe_l(:) => null()
+      integer(i_kind),pointer :: iabs_rc(:) => null()
+      integer(i_kind),pointer :: iabe_rc(:) => null()
+      integer(i_kind),pointer :: jabs_rc(:) => null()
+      integer(i_kind),pointer :: jabe_rc(:) => null()
+      integer(i_kind),pointer :: kabs_rc(:) => null()
+      integer(i_kind),pointer :: kabe_rc(:) => null()
+      integer(i_kind),pointer :: mabs_rc(:) => null()
+      integer(i_kind),pointer :: mabe_rc(:) => null()
 
    end type genex_info
 
@@ -776,26 +776,26 @@ subroutine genex_destroy_info(s)
    if(associated(s%mabs_rc)) deallocate(s%mabs_rc)
    if(associated(s%mabe_rc)) deallocate(s%mabe_rc)
 !   following is probably redundant
-   s%lefts => NULL()
-   s%rights => NULL()
-   s%numl => NULL()
-   s%numrc => NULL()
-   s%iabs_l => NULL()
-   s%iabe_l => NULL()
-   s%jabs_l => NULL()
-   s%jabe_l => NULL()
-   s%kabs_l => NULL()
-   s%kabe_l => NULL()
-   s%mabs_l => NULL()
-   s%mabe_l => NULL()
-   s%iabs_rc => NULL()
-   s%iabe_rc => NULL()
-   s%jabs_rc => NULL()
-   s%jabe_rc => NULL()
-   s%kabs_rc => NULL()
-   s%kabe_rc => NULL()
-   s%mabs_rc => NULL()
-   s%mabe_rc => NULL()
+   s%lefts => null()
+   s%rights => null()
+   s%numl => null()
+   s%numrc => null()
+   s%iabs_l => null()
+   s%iabe_l => null()
+   s%jabs_l => null()
+   s%jabe_l => null()
+   s%kabs_l => null()
+   s%kabe_l => null()
+   s%mabs_l => null()
+   s%mabe_l => null()
+   s%iabs_rc => null()
+   s%iabe_rc => null()
+   s%jabs_rc => null()
+   s%jabe_rc => null()
+   s%kabs_rc => null()
+   s%kabe_rc => null()
+   s%mabs_rc => null()
+   s%mabe_rc => null()
    s%lallocated=.false.
 
 end subroutine genex_destroy_info

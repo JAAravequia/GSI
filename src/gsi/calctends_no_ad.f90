@@ -97,17 +97,17 @@ subroutine calctends_no_ad(st,vp,t,p,mype,u_t,v_t,t_t,p_t,uvflag)
   real(r_kind) tmp,tmp2,tmp3,var,sumk,sumvk,sum2k,sum2vk
   integer(i_kind) i,j,k,ix,it,kk,ier,istatus
 
-  real(r_kind),pointer,dimension(:,:,:) :: ges_u=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_v=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_tv=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_u=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_v=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_tv=>null()
 
-  real(r_kind),pointer,dimension(:,:,:) :: ges_u_lon=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_v_lon=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_tv_lon=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_u_lon=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_v_lon=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_tv_lon=>null()
 
-  real(r_kind),pointer,dimension(:,:,:) :: ges_u_lat=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_v_lat=>NULL()
-  real(r_kind),pointer,dimension(:,:,:) :: ges_tv_lat=>NULL()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_u_lat=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_v_lat=>null()
+  real(r_kind),pointer,dimension(:,:,:) :: ges_tv_lat=>null()
 
   it=ntguessig
 
@@ -360,7 +360,7 @@ subroutine calctends_no_ad(st,vp,t,p,mype,u_t,v_t,t_t,p_t,uvflag)
 
 !   adjoint of calculation of vertical velocity
 
-    if ( (.not.regional) .AND. (idvc5==3)) then
+    if ( (.not.regional) .and. (idvc5==3)) then
 
 !     Basic state horizontal temperature tendency
 

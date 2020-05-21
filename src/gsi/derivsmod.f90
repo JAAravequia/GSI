@@ -39,17 +39,17 @@ use mpimod, only: mype
 use gridmod, only: lat2,lon2,nsig
 use constants, only: zero,max_varname_length
 use state_vectors, only: svars2d,svars3d
-use GSI_BundleMod, only : GSI_BundleCreate
-use GSI_BundleMod, only : GSI_Bundle
-use GSI_BundleMod, only : GSI_BundleGetPointer
-use GSI_BundleMod, only : GSI_BundleDestroy
-use GSI_BundleMod, only : GSI_BundleUnset
+use gsi_bundlemod, only : gsi_bundlecreate
+use gsi_bundlemod, only : gsi_bundle
+use gsi_bundlemod, only : gsi_bundlegetpointer
+use gsi_bundlemod, only : gsi_bundledestroy
+use gsi_bundlemod, only : gsi_bundleunset
 
-use GSI_BundleMod, only : GSI_Grid
-use GSI_BundleMod, only : GSI_GridCreate
+use gsi_bundlemod, only : gsi_grid
+use gsi_bundlemod, only : gsi_gridcreate
 
-use GSI_MetGuess_Mod, only: gsi_metguess_bundle
-use GSI_ChemGuess_Mod, only: gsi_chemguess_bundle
+use gsi_metguess_mod, only: gsi_metguess_bundle
+use gsi_chemguess_mod, only: gsi_chemguess_bundle
 
 use mpeu_util, only: getindex
 implicit none
@@ -90,7 +90,7 @@ logical,save :: drv_set_=.false.
 integer(i_kind),allocatable,dimension(:):: levels
 contains
 
-subroutine init_anadv
+  subroutine init_anadv
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:	 define derivatives
@@ -116,141 +116,141 @@ subroutine init_anadv
 !   machine:
 !
 !$$$  end subprogram documentation block
-use mpeu_util, only: gettablesize
-use mpeu_util, only: gettable
-use mpeu_util, only: getindex
-implicit none
+    use mpeu_util, only: gettablesize
+    use mpeu_util, only: gettable
+    use mpeu_util, only: getindex
+    implicit none
 
-character(len=*),parameter:: rcname='anavinfo'
+    character(len=*),parameter:: rcname='anavinfo'
 
-character(len=*),parameter::myname_=myname//'*set_'
-character(len=*),parameter:: tbname='state_derivatives::'
-integer(i_kind) luin,ii,nrows,ntot,ipnt,istatus
-integer(i_kind) i2d,i3d,n2d,n3d,irank
-integer(i_kind),allocatable,dimension(:)::nlevs
-character(len=256),allocatable,dimension(:):: utable
-character(len=max_varname_length),allocatable,dimension(:):: vars
-character(len=max_varname_length),allocatable,dimension(:):: sources
-logical matched
+    character(len=*),parameter::myname_=myname//'*set_'
+    character(len=*),parameter:: tbname='state_derivatives::'
+    integer(i_kind) luin,ii,nrows,ntot,ipnt,istatus
+    integer(i_kind) i2d,i3d,n2d,n3d,irank
+    integer(i_kind),allocatable,dimension(:)::nlevs
+    character(len=256),allocatable,dimension(:):: utable
+    character(len=max_varname_length),allocatable,dimension(:):: vars
+    character(len=max_varname_length),allocatable,dimension(:):: sources
+    logical matched
 
-if(drv_set_) return 
+    if(drv_set_) return 
 
-open(newunit=luin,file=trim(rcname),form='formatted')
+    open(newunit=luin,file=trim(rcname),form='formatted')
 
-! Scan file for desired table first
-! and get size of table
-call gettablesize(tbname,luin,ntot,nrows)
-if(nrows==0) then
-   if(luin/=5) close(luin)
-   return
-endif
+!   Scan file for desired table first
+!   and get size of table
+    call gettablesize(tbname,luin,ntot,nrows)
+    if(nrows==0) then
+       if(luin/=5) close(luin)
+       return
+    endif
 
-! Get contents of table
-allocate(utable(nrows))
-call gettable(tbname,luin,ntot,nrows,utable)
+!   Get contents of table
+    allocate(utable(nrows))
+    call gettable(tbname,luin,ntot,nrows,utable)
 
-! release file unit
-if(luin/=5) close(luin)
+!   release file unit
+    if(luin/=5) close(luin)
 
-! allocate space for entries from table
-allocate(vars(nrows),nlevs(nrows),sources(nrows))
+!   allocate space for entries from table
+    allocate(vars(nrows),nlevs(nrows),sources(nrows))
 
-! Retrieve each token of interest from table and define
-! variables participating in state vector
-n2d=0; n3d=0
-do ii=1,nrows
-   read(utable(ii),*) vars(ii),&  ! variable name
-                      nlevs(ii),& ! number of levels
-                      sources(ii) ! source
-   if (nlevs(ii)==1) then
-      n2d=n2d+1
-   else
-      n3d=n3d+1
-   endif
-enddo
-
-deallocate(utable)
-
-allocate(dvars2d(n2d),dvars3d(n3d),&
-         dsrcs2d(n2d),dsrcs3d(n3d),levels(n3d))
-
-! loop over variables and identify them by comparison
-i2d=0; i3d=0
-do ii=1,nrows
-   matched=.false.
-   if(trim(sources(ii))=='met_guess') then
-      if(associated(gsi_metguess_bundle)) then
-         call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(vars(ii)),ipnt,istatus,irank=irank);
-         if (ipnt>0) then
-            if(irank==2) then 
-               i2d=i2d+1
-               dvars2d(i2d)=trim(vars(ii))
-               dsrcs2d(i2d)=trim(sources(ii))
-               matched=.true.
-            endif
-            if(irank==3) then 
-               i3d=i3d+1
-               dvars3d(i3d)=trim(vars(ii))
-               dsrcs3d(i3d)=trim(sources(ii))
-               levels(i3d) =abs(nlevs(ii))
-               matched=.true.
-            endif
-         endif
-      endif
-   endif
-   if(trim(sources(ii))=='chem_guess') then
-      if(associated(gsi_chemguess_bundle)) then
-         call gsi_bundlegetpointer(gsi_chemguess_bundle(1),trim(vars(ii)),ipnt,istatus,irank=irank);
-         if (ipnt>0) then
-            if(irank==2) then
-               i2d=i2d+1
-               dvars2d(i2d)=trim(vars(ii))
-               dsrcs2d(i2d)=trim(sources(ii))
-               matched=.true.
-            endif
-            if(irank==3) then 
-               i3d=i3d+1
-               dvars3d(i3d)=trim(vars(ii))
-               dsrcs3d(i3d)=trim(sources(ii))
-               levels(i3d) =abs(nlevs(ii))
-               matched=.true.
-            endif
-         endif
-      endif
-   endif
-   ! now care for variables not in guess (usually, derived tendencies)
-   if (.not.matched) then
-      if(nlevs(ii)==1) then
-         i2d=i2d+1
-         dvars2d(i2d)=trim(vars(ii))
-         dsrcs2d(i2d)='derived'
-      else
-         i3d=i3d+1
-         dvars3d(i3d)=trim(vars(ii))
-         dsrcs3d(i3d)='derived'
-         levels(i3d) =abs(nlevs(ii))
-      endif
-   endif
-enddo
-
-if (mype == 0) then
-    write(6,*) myname_,':  DERIVATIVE VARIABLES: '
-    write(6,*) myname_,':  2D-DERV STATE VARIABLES: '
-    do ii=1,n2d
-       write(6,*) trim(dvars2d(ii))
+!   Retrieve each token of interest from table and define
+!   variables participating in state vector
+    n2d=0; n3d=0
+    do ii=1,nrows
+       read(utable(ii),*) vars(ii),&  ! variable name
+                          nlevs(ii),& ! number of levels
+                          sources(ii) ! source
+       if (nlevs(ii)==1) then
+          n2d=n2d+1
+       else
+          n3d=n3d+1
+       endif
     enddo
-    write(6,*) myname_,':  3D-DERV STATE VARIABLES:'
-    do ii=1,n3d
-       write(6,*) trim(dvars3d(ii))
+
+    deallocate(utable)
+
+    allocate(dvars2d(n2d),dvars3d(n3d),&
+             dsrcs2d(n2d),dsrcs3d(n3d),levels(n3d))
+
+!   loop over variables and identify them by comparison
+    i2d=0; i3d=0
+    do ii=1,nrows
+       matched=.false.
+       if(trim(sources(ii))=='met_guess') then
+          if(associated(gsi_metguess_bundle)) then
+             call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(vars(ii)),ipnt,istatus,irank=irank);
+             if (ipnt>0) then
+                if(irank==2) then 
+                   i2d=i2d+1
+                   dvars2d(i2d)=trim(vars(ii))
+                   dsrcs2d(i2d)=trim(sources(ii))
+                   matched=.true.
+                endif
+                if(irank==3) then 
+                   i3d=i3d+1
+                   dvars3d(i3d)=trim(vars(ii))
+                   dsrcs3d(i3d)=trim(sources(ii))
+                   levels(i3d) =abs(nlevs(ii))
+                   matched=.true.
+                endif
+             endif
+          endif
+       endif
+       if(trim(sources(ii))=='chem_guess') then
+          if(associated(gsi_chemguess_bundle)) then
+             call gsi_bundlegetpointer(gsi_chemguess_bundle(1),trim(vars(ii)),ipnt,istatus,irank=irank);
+             if (ipnt>0) then
+                if(irank==2) then
+                   i2d=i2d+1
+                   dvars2d(i2d)=trim(vars(ii))
+                   dsrcs2d(i2d)=trim(sources(ii))
+                   matched=.true.
+                endif
+                if(irank==3) then 
+                   i3d=i3d+1
+                   dvars3d(i3d)=trim(vars(ii))
+                   dsrcs3d(i3d)=trim(sources(ii))
+                   levels(i3d) =abs(nlevs(ii))
+                   matched=.true.
+                endif
+             endif
+          endif
+       endif
+       ! now care for variables not in guess (usually, derived tendencies)
+       if (.not.matched) then
+          if(nlevs(ii)==1) then
+             i2d=i2d+1
+             dvars2d(i2d)=trim(vars(ii))
+             dsrcs2d(i2d)='derived'
+          else
+             i3d=i3d+1
+             dvars3d(i3d)=trim(vars(ii))
+             dsrcs3d(i3d)='derived'
+             levels(i3d) =abs(nlevs(ii))
+          endif
+       endif
     enddo
-end if
 
-deallocate(vars,nlevs,sources)
-drv_set_=.true.  
+    if (mype == 0) then
+       write(6,*) myname_,':  DERIVATIVE VARIABLES: '
+       write(6,*) myname_,':  2D-DERV STATE VARIABLES: '
+       do ii=1,n2d
+          write(6,*) trim(dvars2d(ii))
+       enddo
+       write(6,*) myname_,':  3D-DERV STATE VARIABLES:'
+       do ii=1,n3d
+          write(6,*) trim(dvars3d(ii))
+       enddo
+    end if
 
- end subroutine init_anadv
+    deallocate(vars,nlevs,sources)
+    drv_set_=.true.  
 
- subroutine create_ges_derivatives(switch_on_derivatives,nfldsig)
+  end subroutine init_anadv
+
+  subroutine create_ges_derivatives(switch_on_derivatives,nfldsig)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:	 create derivatives
@@ -272,48 +272,48 @@ drv_set_=.true.
 !   machine:
 !
 !$$$  end subprogram documentation block
- implicit none
+    implicit none
 
- logical, intent(in) :: switch_on_derivatives
- integer(i_kind),intent(in) :: nfldsig
+    logical, intent(in) :: switch_on_derivatives
+    integer(i_kind),intent(in) :: nfldsig
 
- integer nt,ierror
- character(len=32) bname
- type(gsi_grid) :: grid
+    integer(i_kind) nt,ierror
+    character(len=32) bname
+    type(gsi_grid) :: grid
 
-! Extra mambo-jambo
-  call create_auxiliar_
+!   Extra mambo-jambo
+    call create_auxiliar_
 
-  if (.not.switch_on_derivatives) return
-  if (drv_initialized) return 
+    if (.not.switch_on_derivatives) return
+    if (drv_initialized) return 
 
-! create derivative grid
-  call GSI_GridCreate(grid,lat2,lon2,nsig)
+!   create derivative grid
+    call gsi_gridcreate(grid,lat2,lon2,nsig)
 
-! allocate structures
-  allocate(gsi_xderivative_bundle(nfldsig))
-  allocate(gsi_yderivative_bundle(nfldsig))
+!   allocate structures
+    allocate(gsi_xderivative_bundle(nfldsig))
+    allocate(gsi_yderivative_bundle(nfldsig))
 
-! Note: 
-!   Original code needed ps derivatives in all time slots
-!   Present code creates all derivatives in all time slots
-  do nt=1,nfldsig
+!   Note: 
+!     Original code needed ps derivatives in all time slots
+!     Present code creates all derivatives in all time slots
+    do nt=1,nfldsig
 
-!    create logitudinal derivative bundle
-     write(bname,'(a,i3.3)') 'Lon Derivative Vector-',nt
-     call GSI_BundleCreate(gsi_xderivative_bundle(nt),grid,bname,ierror, &
-                           names2d=dvars2d,names3d=dvars3d,levels=levels,bundle_kind=r_kind)
+!      create logitudinal derivative bundle
+       write(bname,'(a,i3.3)') 'Lon Derivative Vector-',nt
+       call gsi_bundlecreate(gsi_xderivative_bundle(nt),grid,bname,ierror, &
+                             names2d=dvars2d,names3d=dvars3d,levels=levels,bundle_kind=r_kind)
 
-!    create latidutinal derivative bundle
-     write(bname,'(a,i3.3)') 'Lat Derivative Vector-',nt
-     call GSI_BundleCreate(gsi_yderivative_bundle(nt),grid,bname,ierror, &
-                           names2d=dvars2d,names3d=dvars3d,levels=levels,bundle_kind=r_kind)
+!      create latidutinal derivative bundle
+       write(bname,'(a,i3.3)') 'Lat Derivative Vector-',nt
+       call gsi_bundlecreate(gsi_yderivative_bundle(nt),grid,bname,ierror, &
+                             names2d=dvars2d,names3d=dvars3d,levels=levels,bundle_kind=r_kind)
 
-  enddo
+    enddo
 
-  drv_initialized = .true.
+    drv_initialized = .true.
 
-  if(mype==0) write(6,*) 'create_ges_derivatives: successfully complete'
+    if(mype==0) write(6,*) 'create_ges_derivatives: successfully complete'
   end subroutine create_ges_derivatives
 
   subroutine destroy_ges_derivatives
@@ -338,43 +338,43 @@ drv_set_=.true.
 !   machine:
 !
 !$$$  end subprogram documentation block
-  use mpimod, only: mpi_comm_world
-  implicit none
-  integer(i_kind) nt,ierror
+    use mpimod, only: mpi_comm_world
+    implicit none
+    integer(i_kind) nt,ierror
 
-  if(.not.drv_initialized) return
+    if(.not.drv_initialized) return
 
-! destroy mambo-jambo
-  call destroy_auxiliar_
+!   destroy mambo-jambo
+    call destroy_auxiliar_
 
-! destroy each instance of derivatives
-  do nt=1,size(gsi_yderivative_bundle)
+!   destroy each instance of derivatives
+    do nt=1,size(gsi_yderivative_bundle)
 
-!    create logitudinal derivative bundle
-     call GSI_BundleDestroy(gsi_yderivative_bundle(nt),ierror)
-     if(ierror/=0) then
-        if(mype==0) write(6,*)'warning: y-derivative not properly destroyed'
-     endif
+!      create logitudinal derivative bundle
+       call gsi_bundledestroy(gsi_yderivative_bundle(nt),ierror)
+       if(ierror/=0) then
+          if(mype==0) write(6,*)'warning: y-derivative not properly destroyed'
+       endif
 
-!    create latidutinal derivative bundle
-     call GSI_BundleDestroy(gsi_xderivative_bundle(nt),ierror)
-     if(ierror/=0) then
-        if(mype==0) write(6,*)'warning: x-derivative not properly destroyed'
-     endif
+!      create latidutinal derivative bundle
+       call gsi_bundledestroy(gsi_xderivative_bundle(nt),ierror)
+       if(ierror/=0) then
+          if(mype==0) write(6,*)'warning: x-derivative not properly destroyed'
+       endif
 
-  enddo
+    enddo
 
-! deallocate structures
-  deallocate(gsi_xderivative_bundle)
-  deallocate(gsi_yderivative_bundle)
+!   deallocate structures
+    deallocate(gsi_xderivative_bundle)
+    deallocate(gsi_yderivative_bundle)
 
-! destroy derivative grid
-! call GSI_GridDestroy(grid,lat2,lon2,nsig)
+!   destroy derivative grid
+!   call gsi_griddestroy(grid,lat2,lon2,nsig)
 
-  deallocate(dvars2d,dvars3d,&
-             dsrcs2d,dsrcs3d,levels)
+    deallocate(dvars2d,dvars3d,&
+               dsrcs2d,dsrcs3d,levels)
 
-  if(mype==0) write(6,*) 'destroy_ges_derivatives: successfully complete'
+    if(mype==0) write(6,*) 'destroy_ges_derivatives: successfully complete'
   end subroutine destroy_ges_derivatives
 
   subroutine create_auxiliar_

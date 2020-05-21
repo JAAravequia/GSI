@@ -1,4 +1,5 @@
 module abstract_wrwrfnmma_mod
+  implicit none
   type, abstract :: abstract_wrwrfnmma_class
   contains
     procedure(wrwrfnmma_binary), deferred, pass(this) :: wrwrfnmma_binary  

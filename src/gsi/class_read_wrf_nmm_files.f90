@@ -1,4 +1,5 @@
 module abstract_read_wrf_nmm_files_mod
+  implicit none
   type, abstract :: abstract_read_wrf_nmm_files_class
   contains
     procedure(read_wrf_nmm_files), deferred, pass(this) :: read_wrf_nmm_files 

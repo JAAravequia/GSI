@@ -35,20 +35,19 @@ use gsi_bundlemod, only: gsi_bundlegetpointer
 use gsi_metguess_mod, only: gsi_metguess_bundle
 implicit none
 
-PRIVATE
-PUBLIC cw2hydro_tl
-PUBLIC cw2hydro_ad
-PUBLIC cw2hydro_tl_hwrf
-PUBLIC cw2hydro_ad_hwrf
+private
+public cw2hydro_tl
+public cw2hydro_ad
+public cw2hydro_tl_hwrf
+public cw2hydro_ad_hwrf
 real(r_kind),parameter :: t1=t0c-30.0_r_kind
 real(r_kind),parameter :: t2=t0c-40.0_r_kind
 real(r_kind),parameter :: coef1=0.05_r_kind
 real(r_kind),parameter :: coef2=0.10_r_kind
-real(r_kind),pointer,dimension(:,:,:):: fice=>NULL()
-real(r_kind),pointer,dimension(:,:,:):: frain=>NULL()
-real(r_kind),pointer,dimension(:,:,:):: frimef=>NULL()
+real(r_kind),pointer,dimension(:,:,:):: fice=>null()
+real(r_kind),pointer,dimension(:,:,:):: frain=>null()
+real(r_kind),pointer,dimension(:,:,:):: frimef=>null()
 integer(i_kind) :: istatus
-
 
 contains
 
@@ -112,7 +111,6 @@ end do
 
 return
 end subroutine cw2hydro
-
 
 subroutine cw2hydro_tl(sval,wbundle,clouds,nclouds)
 !$$$  subprogram documentation block
@@ -435,45 +433,45 @@ end do
 do k=1,nsig
    do j=1,lon2
       do i=1,lat2
-        if ( ges_tsen(i,j,k,ntguessig) > t0c-30.0_r_kind) then
-          dicedcw = 0.05_r_kind*fice(i,j,k)
-          dprecicedcw = 0.95_r_kind*fice(i,j,k)
-          dicedt = zero
-          dprecicedt = zero
-        else
-          coef=(ges_tsen(i,j,k,ntguessig)-t2)/(t1-t2)*coef1+ &
-               (ges_tsen(i,j,k,ntguessig)-t1)/(t1-t2)*coef2
-          dcoefdt = one/(t1-t2)*coef1+one/(t1-t2)*coef2
+         if ( ges_tsen(i,j,k,ntguessig) > t0c-30.0_r_kind) then
+            dicedcw = 0.05_r_kind*fice(i,j,k)
+            dprecicedcw = 0.95_r_kind*fice(i,j,k)
+            dicedt = zero
+            dprecicedt = zero
+         else
+            coef=(ges_tsen(i,j,k,ntguessig)-t2)/(t1-t2)*coef1+ &
+                 (ges_tsen(i,j,k,ntguessig)-t1)/(t1-t2)*coef2
+            dcoefdt = one/(t1-t2)*coef1+one/(t1-t2)*coef2
 
-          dicedcw = coef*fice(i,j,k)
-          dprecicedcw = (one-coef)*fice(i,j,k)
-          dicedt = dcoefdt*cwgues(i,j,k)*fice(i,j,k)
-          dprecicedt = -dcoefdt*cwgues(i,j,k)*fice(i,j,k)
-        endif
+            dicedcw = coef*fice(i,j,k)
+            dprecicedcw = (one-coef)*fice(i,j,k)
+            dicedt = dcoefdt*cwgues(i,j,k)*fice(i,j,k)
+            dprecicedt = -dcoefdt*cwgues(i,j,k)*fice(i,j,k)
+         endif
 
-        work=zero
-        work=work+rv_qi(i,j,k)*dicedt
-        rv_cw(i,j,k)=rv_cw(i,j,k)+rv_qi(i,j,k)*dicedcw
-        rv_qi(i,j,k)=zero
-        rv_tsen(i,j,k)=rv_tsen(i,j,k)+work
-        if (frimef(i,j,k)>=one .and. frimef(i,j,k)<=5.0_r_kind) then
-          work=work+rv_qs(i,j,k)*dprecicedt
-          rv_cw(i,j,k)=rv_cw(i,j,k)+rv_qs(i,j,k)*dprecicedcw
-          rv_qs(i,j,k)=zero
-          rv_tsen(i,j,k)=rv_tsen(i,j,k)+work
-        endif
-        if (frimef(i,j,k)>5.0_r_kind .and. frimef(i,j,k)<=20.0_r_kind) then
-          work=work+rv_qg(i,j,k)*dprecicedt
-          rv_cw(i,j,k)=rv_cw(i,j,k)+rv_qg(i,j,k)*dprecicedcw
-          rv_qg(i,j,k)=zero
-          rv_tsen(i,j,k)=rv_tsen(i,j,k)+work
-        endif
-        if (frimef(i,j,k)>20.0_r_kind) then
-          work=work+rv_qh(i,j,k)*dprecicedt
-          rv_cw(i,j,k)=rv_cw(i,j,k)+rv_qh(i,j,k)*dprecicedcw
-          rv_qh(i,j,k)=zero
-          rv_tsen(i,j,k)=rv_tsen(i,j,k)+work
-        endif
+         work=zero
+         work=work+rv_qi(i,j,k)*dicedt
+         rv_cw(i,j,k)=rv_cw(i,j,k)+rv_qi(i,j,k)*dicedcw
+         rv_qi(i,j,k)=zero
+         rv_tsen(i,j,k)=rv_tsen(i,j,k)+work
+         if (frimef(i,j,k)>=one .and. frimef(i,j,k)<=5.0_r_kind) then
+            work=work+rv_qs(i,j,k)*dprecicedt
+            rv_cw(i,j,k)=rv_cw(i,j,k)+rv_qs(i,j,k)*dprecicedcw
+            rv_qs(i,j,k)=zero
+            rv_tsen(i,j,k)=rv_tsen(i,j,k)+work
+         endif
+         if (frimef(i,j,k)>5.0_r_kind .and. frimef(i,j,k)<=20.0_r_kind) then
+            work=work+rv_qg(i,j,k)*dprecicedt
+            rv_cw(i,j,k)=rv_cw(i,j,k)+rv_qg(i,j,k)*dprecicedcw
+            rv_qg(i,j,k)=zero
+            rv_tsen(i,j,k)=rv_tsen(i,j,k)+work
+         endif
+         if (frimef(i,j,k)>20.0_r_kind) then
+            work=work+rv_qh(i,j,k)*dprecicedt
+            rv_cw(i,j,k)=rv_cw(i,j,k)+rv_qh(i,j,k)*dprecicedcw
+            rv_qh(i,j,k)=zero
+            rv_tsen(i,j,k)=rv_tsen(i,j,k)+work
+         endif
       end do
    end do
 end do

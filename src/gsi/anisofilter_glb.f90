@@ -182,10 +182,10 @@ module anisofilter_glb
 ! set passed variables to public
   public :: p2ilatf,p0ilatf,p3ilatf,p3ilatfm,p2ilatfm,rh3f,rh2f,ensamp0f,ensamp3f,ensamp2f
 
-  integer,parameter:: kthres=38           ! level threshold to apply anisotropy
-  integer,parameter:: opt_sclclb_glb=1    ! iso scale calibration option
-                                          ! 0: isoscale=isoscale *rfact0(ikind)
-                                          ! 1: isoscale=isoscale**rfact0(1)+rfact0(2)
+  integer(i_kind),parameter:: kthres=38           ! level threshold to apply anisotropy
+  integer(i_kind),parameter:: opt_sclclb_glb=1    ! iso scale calibration option
+                                                  ! 0: isoscale=isoscale *rfact0(ikind)
+                                                  ! 1: isoscale=isoscale**rfact0(1)+rfact0(2)
   real(r_kind),parameter:: rmis  =-1.e+20_r_kind
 
   real(r_single),allocatable,dimension(:,:,:,:)::aspect_p2,aspect_p3
@@ -1211,8 +1211,8 @@ subroutine get_background_glb(mype)
         if( p2ilatf(ilat,ilon)/=zero ) then
            dxpf(ilat,ilon)=rearth_equator * &
              acos( rlatsinf(ilat,ilonm)*rlatsinf(ilat,ilonp) &
-                & +rlatcosf(ilat,ilonm)*rlatcosf(ilat,ilonp) &
-                & *cos(rlonf(ilat,ilonm)-rlonf(ilat,ilonp))) * dyi
+                  +rlatcosf(ilat,ilonm)*rlatcosf(ilat,ilonp) &
+                  *cos(rlonf(ilat,ilonm)-rlonf(ilat,ilonp))) * dyi
            if( dxymin == zero .or. dxymin > dxpf(ilat,ilon) ) dxymin=dxpf(ilat,ilon)
         end if
      end do
@@ -1238,8 +1238,8 @@ subroutine get_background_glb(mype)
         if( p2ilatf(ilat,ilon)/=zero ) then
            dypf(ilat,ilon)=rearth_equator * &
              acos( rlatsinf(ilatm,ilon)*rlatsinf(ilatp,ilon) &
-                & +rlatcosf(ilatm,ilon)*rlatcosf(ilatp,ilon) &
-                & *cos(rlonf(ilatm,ilon)-rlonf(ilatp,ilon))) * dyi
+                  +rlatcosf(ilatm,ilon)*rlatcosf(ilatp,ilon) &
+                  *cos(rlonf(ilatm,ilon)-rlonf(ilatp,ilon))) * dyi
            if( dxymin == zero .or. dxymin > dypf(ilat,ilon) ) dxymin=dypf(ilat,ilon)
         end if
      end do

@@ -85,8 +85,8 @@ call timer_ini(trim(myname))
 ! Inquire about cloud-vars
 call gsi_metguess_get('clouds::3d',nclouds,istatus)
 if (nclouds>0) then
-    allocate(clouds(nclouds))
-    call gsi_metguess_get('clouds::3d',clouds,istatus)
+   allocate(clouds(nclouds))
+   call gsi_metguess_get('clouds::3d',clouds,istatus)
 endif
 
 ! Since each internal vector of xhat has the same structure, pointers are
@@ -107,7 +107,7 @@ do_getprs_tl     =lc_ps.and.lc_t .and.ls_prse
 do_normal_rh_to_q=lc_rh.and.lc_t .and.ls_prse.and.ls_q.and.(.not. q_hyb_ens)
 do_q_copy=.false.
 if(.not. do_normal_rh_to_q) then
-  do_q_copy = lc_rh.and.lc_t .and.ls_prse.and.ls_q.and.q_hyb_ens
+   do_q_copy = lc_rh.and.lc_t .and.ls_prse.and.ls_q.and.q_hyb_ens
 end if
 do_tv_to_tsen    =lc_t .and.ls_q .and.ls_tsen
 do_getuv         =lc_sf.and.lc_vp.and.ls_u.and.ls_v
@@ -202,8 +202,8 @@ do jj=1,ntlevs_ens
    do ic=1,nclouds
       id=getindex(cvars3d,clouds(ic))
       if (id>0) then
-          call gsi_bundlegetpointer (eval(jj),clouds(ic),sv_rank3,istatus)
-          call gsi_bundlegetvar     (wbundle_c, clouds(ic),sv_rank3,istatus)
+         call gsi_bundlegetpointer (eval(jj),clouds(ic),sv_rank3,istatus)
+         call gsi_bundlegetvar     (wbundle_c, clouds(ic),sv_rank3,istatus)
       endif
    enddo
 

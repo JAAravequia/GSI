@@ -1,5 +1,5 @@
 ! ------------------------------------------------------------------------------
-! SET_CVSECTION
+! set_cvsection
 ! ------------------------------------------------------------------------------
 subroutine set_cvsection(psec,ydcv,kbgn,kend)
 !$$$  subprogram documentation block
@@ -35,7 +35,7 @@ use jfunc, only: nval2d
 use control_vectors, only: control_vector
 use control_vectors, only: nc3d,nc2d,mvars
 
-IMPLICIT NONE
+implicit none
 
 integer(i_kind)     , intent(in   ) :: kbgn,kend
 real(r_kind)        , intent(in   ) :: psec(kbgn:kend)
@@ -57,7 +57,7 @@ indx=kbgn
 do while (indx<=kend)
    ival=indx/nval2d+1
    iloc=indx-nval2d*(ival-1)
-   iend=MIN(kend,ival*nval2d)
+   iend=min(kend,ival*nval2d)
    ilen=iend-iloc
    if (mype==nvar_pe(ival,1)) then
       ioff=(nvar_pe(ival,2)-1)*nval2d+iloc
@@ -72,7 +72,7 @@ return
 end subroutine set_cvsection
 
 ! ------------------------------------------------------------------------------
-! ALLGATHER_CVSECTION - Gather part of the control variable on all PEs.
+! allgather_cvsection - Gather part of the control variable on all PEs.
 ! ------------------------------------------------------------------------------
 subroutine allgather_cvsection(ydcv,psec,kbgn,kend)
 !$$$  subprogram documentation block
@@ -94,7 +94,7 @@ subroutine allgather_cvsection(ydcv,psec,kbgn,kend)
 !   output argument list:
 !    psec
 !
-! NOTE: this routine is inefficient to gather long sections
+! Note: this routine is inefficient to gather long sections
 ! or full vectors. In practice, it is only used for very short
 ! sections of the control_vector in lanczos:preppcm.
 !
@@ -111,7 +111,7 @@ use jfunc, only: nval2d
 use control_vectors, only: control_vector
 use control_vectors, only: nc3d,nc2d,mvars
 
-IMPLICIT NONE
+implicit none
 
 type(control_vector), intent(in   ) :: ydcv
 integer(i_kind)     , intent(in   ) :: kbgn,kend
@@ -134,7 +134,7 @@ indx=kbgn
 do while (indx<=kend)
    ival=indx/nval2d+1
    iloc=indx-nval2d*(ival-1)
-   iend=MIN(kend,ival*nval2d)
+   iend=min(kend,ival*nval2d)
    ilen=iend-iloc
    if (mype==nvar_pe(ival,1)) then
       ioff=(nvar_pe(ival,2)-1)*nval2d+iloc

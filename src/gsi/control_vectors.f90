@@ -83,16 +83,16 @@ use hybrid_ensemble_parameters, only: grd_ens
 use constants, only : max_varname_length
 
 use m_rerank, only : rerank
-use GSI_BundleMod, only : GSI_BundleCreate
-use GSI_BundleMod, only : GSI_BundleSet
-use GSI_BundleMod, only : GSI_Bundle
-use GSI_BundleMod, only : GSI_BundleGetPointer
-use GSI_BundleMod, only : dplevs => GSI_BundleDpLevs
-use GSI_BundleMod, only : GSI_BundleUnSet
-use GSI_BundleMod, only : GSI_BundleDestroy
+use gsi_bundlemod, only : gsi_bundlecreate
+use gsi_bundlemod, only : gsi_bundleset
+use gsi_bundlemod, only : gsi_bundle
+use gsi_bundlemod, only : gsi_bundlegetpointer
+use gsi_bundlemod, only : dplevs => gsi_bundledplevs
+use gsi_bundlemod, only : gsi_bundleunSet
+use gsi_bundlemod, only : gsi_bundledestroy
 
-use GSI_BundleMod, only : GSI_Grid
-use GSI_BundleMod, only : GSI_GridCreate
+use gsi_bundlemod, only : gsi_grid
+use gsi_bundlemod, only : gsi_gridcreate
 
 use mpeu_util, only: gettablesize
 use mpeu_util, only: gettable
@@ -133,15 +133,15 @@ public ntracer
 
 type control_vector
    integer(i_kind) :: lencv
-   real(r_kind), pointer :: values(:) => NULL()
-   type(GSI_Grid)  :: grid_step
-   type(GSI_Bundle), pointer :: step(:)
-   type(GSI_Bundle), pointer :: motley(:)
-   type(GSI_Grid)  :: grid_aens
-   type(GSI_Bundle), pointer :: aens(:,:)
-   real(r_kind), pointer :: predr(:) => NULL()
-   real(r_kind), pointer :: predp(:) => NULL()
-   real(r_kind), pointer :: predt(:) => NULL()
+   real(r_kind), pointer :: values(:) => null()
+   type(gsi_grid)  :: grid_step
+   type(gsi_bundle), pointer :: step(:)
+   type(gsi_bundle), pointer :: motley(:)
+   type(gsi_grid)  :: grid_aens
+   type(gsi_bundle), pointer :: aens(:,:)
+   real(r_kind), pointer :: predr(:) => null()
+   real(r_kind), pointer :: predp(:) => null()
+   real(r_kind), pointer :: predt(:) => null()
    logical :: lallocated = .false.
 end type control_vector
 
@@ -174,21 +174,21 @@ real(r_kind)    ,allocatable,dimension(:) :: an_amp0
 logical :: llinit = .false.
 
 ! ----------------------------------------------------------------------
-INTERFACE ASSIGNMENT (=)
-MODULE PROCEDURE assign_scalar2cv, assign_array2cv, assign_cv2array, assign_cv2cv
-END INTERFACE
+interface assignment (=)
+module procedure assign_scalar2cv, assign_array2cv, assign_cv2array, assign_cv2cv
+end interface
 
-INTERFACE DOT_PRODUCT
-MODULE PROCEDURE dot_prod_cv,qdot_prod_cv,qdot_prod_cv_eb
-END INTERFACE
+interface dot_product
+module procedure dot_prod_cv,qdot_prod_cv,qdot_prod_cv_eb
+end interface
 
-INTERFACE MAXVAL
-MODULE PROCEDURE maxval_cv
-END INTERFACE
+interface maxval
+module procedure maxval_cv
+end interface
 
-INTERFACE PRT_CONTROL_NORMS
-MODULE PROCEDURE prt_norms
-END INTERFACE
+interface prt_control_norms
+module procedure prt_norms
+end interface
 
 ! ----------------------------------------------------------------------
 contains
@@ -446,34 +446,34 @@ subroutine allocate_cv(ycv)
 
   ycv%lallocated=.true.
   ycv%lencv = nclen
-  ALLOCATE(ycv%values(ycv%lencv))
+  allocate(ycv%values(ycv%lencv))
 
 ! If so, define grid of regular control vector
   n_step=0
 ! if (beta_s0>tiny_r_kind) then
-      ALLOCATE(ycv%step(nsubwin))
-      call GSI_GridCreate(ycv%grid_step,lat2,lon2,nsig)
-         if (lsqrtb) then
-            n_step=nval_len
-         else
-            n_step=nc3d*latlon1n+nc2d*latlon11
-         endif
-      if(mvars>0) then
-         ALLOCATE(ycv%motley(nsubwin))
-         call GSI_GridCreate(grid_motley,lat2,lon2,-1) ! this is sort of wired-in
-      endif
+  allocate(ycv%step(nsubwin))
+  call gsi_gridcreate(ycv%grid_step,lat2,lon2,nsig)
+     if (lsqrtb) then
+        n_step=nval_len
+     else
+        n_step=nc3d*latlon1n+nc2d*latlon11
+     endif
+  if(mvars>0) then
+     allocate(ycv%motley(nsubwin))
+     call gsi_gridcreate(grid_motley,lat2,lon2,-1) ! this is sort of wired-in
+  endif
 ! endif
 
 ! If so, define grid of ensemble control vector
   n_aens=0
   if (l_hyb_ens) then
-      ALLOCATE(ycv%aens(nsubwin,n_ens))
-      call GSI_GridCreate(ycv%grid_aens,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)
-         if (lsqrtb) then
-            n_aens=nval_lenz_en
-         else
-            n_aens=grd_ens%latlon11*grd_ens%nsig
-         endif
+      allocate(ycv%aens(nsubwin,n_ens))
+      call gsi_gridcreate(ycv%grid_aens,grd_ens%lat2,grd_ens%lon2,grd_ens%nsig)
+      if (lsqrtb) then
+         n_aens=nval_lenz_en
+      else
+         n_aens=grd_ens%latlon11*grd_ens%nsig
+      endif
   endif
 
 ! Loop over sub-windows in time
@@ -482,28 +482,28 @@ subroutine allocate_cv(ycv)
 
 !    Set static part of control vector (non-ensemble-based)
 !    if (beta_s0>tiny_r_kind) then
-         ycv%step(jj)%values => ycv%values(ii+1:ii+n_step)
+     ycv%step(jj)%values => ycv%values(ii+1:ii+n_step)
 
-         write(bname,'(a,i3.3)') 'Static Control Bundle subwin-',jj
-         call GSI_BundleSet(ycv%step(jj),ycv%grid_step,bname,ierror,names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
-         if (ierror/=0) then
-             write(6,*)'allocate_cv: error alloc(static bundle)'
-             call stop2(109)
-         endif
-         ndim=ndim+ycv%step(jj)%ndim
+     write(bname,'(a,i3.3)') 'Static Control Bundle subwin-',jj
+     call gsi_bundleset(ycv%step(jj),ycv%grid_step,bname,ierror,names2d=cvars2d,names3d=cvars3d,bundle_kind=r_kind)
+     if (ierror/=0) then
+         write(6,*)'allocate_cv: error alloc(static bundle)'
+         call stop2(109)
+     endif
+     ndim=ndim+ycv%step(jj)%ndim
 
-         ii=ii+n_step
+     ii=ii+n_step
 
-!        If motley variables needed (these don't contribute to CV size)
-!        Presently, there are thankfully only 2d-fields in this category
-         if(mvars>0) then
-            write(bname,'(a,i3.3,a,i4.4)') 'Motley Control Bundle subwin-',jj
-            call GSI_BundleCreate(ycv%motley(jj),grid_motley,bname,ierror,names2d=cvarsmd,bundle_kind=r_kind)
-            if (ierror/=0) then
-                write(6,*)'allocate_cv: error alloc(motley bundle)'
-                call stop2(109)
-            endif
-         endif
+!    If motley variables needed (these don't contribute to CV size)
+!    Presently, there are thankfully only 2d-fields in this category
+     if(mvars>0) then
+        write(bname,'(a,i3.3,a,i4.4)') 'Motley Control Bundle subwin-',jj
+        call gsi_bundlecreate(ycv%motley(jj),grid_motley,bname,ierror,names2d=cvarsmd,bundle_kind=r_kind)
+        if (ierror/=0) then
+            write(6,*)'allocate_cv: error alloc(motley bundle)'
+            call stop2(109)
+        endif
+     endif
 !    endif ! beta_s0
 
 !    Set ensemble-based part of control vector
@@ -513,7 +513,7 @@ subroutine allocate_cv(ycv)
          do nn=1,n_ens
             ycv%aens(jj,nn)%values => ycv%values(ii+1:ii+n_aens)
             write(bname,'(a,i3.3,a,i4.4)') 'Ensemble Control Bundle subwin-',jj,' and member-',nn
-            call GSI_BundleSet(ycv%aens(jj,nn),ycv%grid_aens,bname,ierror,names3d=ltmp,bundle_kind=r_kind)
+            call gsi_bundleset(ycv%aens(jj,nn),ycv%grid_aens,bname,ierror,names3d=ltmp,bundle_kind=r_kind)
             if (ierror/=0) then
                 write(6,*)'allocate_cv: error alloc(ensemble bundle)'
                 call stop2(109)
@@ -572,7 +572,7 @@ subroutine allocate_cv(ycv)
 
   m_allocs=m_allocs+1
   m_vec_alloc=m_vec_alloc+1
-  max_vec_alloc=MAX(max_vec_alloc,m_vec_alloc)
+  max_vec_alloc=max(max_vec_alloc,m_vec_alloc)
 
   return
 end subroutine allocate_cv
@@ -614,24 +614,24 @@ subroutine deallocate_cv(ycv)
      do ii=1,nsubwin
         if (l_hyb_ens) then
            do nn=n_ens,1,-1
-              call GSI_BundleUnset(ycv%aens(ii,nn),ierror)
+              call gsi_bundleunset(ycv%aens(ii,nn),ierror)
            enddo
         endif
 !       if (beta_s0>tiny_r_kind) then
-           if(mvars>0) then
-              call GSI_BundleDestroy(ycv%motley(ii),ierror)
-           endif
-           call GSI_BundleUnset(ycv%step(ii),ierror)
+        if(mvars>0) then
+           call gsi_bundledestroy(ycv%motley(ii),ierror)
+        endif
+        call gsi_bundleunset(ycv%step(ii),ierror)
 !       endif ! beta_s0
      end do
-     NULLIFY(ycv%predr)
-     NULLIFY(ycv%predp)
-     NULLIFY(ycv%predt)
+     nullify(ycv%predr)
+     nullify(ycv%predp)
+     nullify(ycv%predt)
 
-     if(l_hyb_ens) DEALLOCATE(ycv%aens)
-     if(mvars>0) DEALLOCATE(ycv%motley)
-     DEALLOCATE(ycv%step)
-     DEALLOCATE(ycv%values)
+     if(l_hyb_ens) deallocate(ycv%aens)
+     if(mvars>0) deallocate(ycv%motley)
+     deallocate(ycv%step)
+     deallocate(ycv%values)
 
      ycv%lallocated=.false.
 
@@ -673,9 +673,9 @@ subroutine assign_scalar2cv(ycv,pval)
   real(r_kind)        , intent(in   ) :: pval
   integer(i_kind) :: ii
 
-  DO ii=1,ycv%lencv
+  do ii=1,ycv%lencv
      ycv%values(ii)=pval
-  ENDDO
+  enddo
 
   return
 end subroutine assign_scalar2cv
@@ -714,9 +714,9 @@ subroutine assign_cv2cv(ycv,xcv)
      call stop2(110)
   end if
 
-  DO ii=1,ycv%lencv
+  do ii=1,ycv%lencv
      ycv%values(ii)=xcv%values(ii)
-  ENDDO
+  enddo
 
   return
 end subroutine assign_cv2cv
@@ -756,9 +756,9 @@ subroutine assign_array2cv(ycv,parray)
   end if
 
 
-  DO ii=1,ycv%lencv
+  do ii=1,ycv%lencv
      ycv%values(ii)=parray(ii)
-  ENDDO
+  enddo
 
   return
 end subroutine assign_array2cv
@@ -796,9 +796,9 @@ subroutine assign_cv2array(parray,ycv)
      call stop2(112)
   end if
 
-  DO ii=1,ycv%lencv
+  do ii=1,ycv%lencv
      parray(ii)=ycv%values(ii)
-  ENDDO
+  enddo
 
   return
 end subroutine assign_cv2array
@@ -1215,7 +1215,7 @@ subroutine prt_norms_vars(xcv,sgrep)
 
   real   (r_kind),allocatable,dimension(:) :: vdot,vsum,vmin,vmax
   integer(i_kind),allocatable,dimension(:) :: vnum
-  integer :: jj,nsw,iv,nv
+  integer(i_kind) :: jj,nsw,iv,nv
   real(r_kind),pointer,dimension(:) :: piv
 
   nsw=size(xcv%step)
@@ -1304,9 +1304,9 @@ subroutine axpy(alpha,xcv,ycv)
      call stop2(115)
   end if
 
-  DO ii=1,ycv%lencv
+  do ii=1,ycv%lencv
      ycv%values(ii) = ycv%values(ii) + alpha * xcv%values(ii)
-  ENDDO
+  enddo
 
   return
 end subroutine axpy

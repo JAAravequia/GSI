@@ -103,6 +103,7 @@ contains
   use kinds, only: r_kind,i_kind
   use radinfo, only: ang_rad,cbias,air_rad,predx,adp_anglebc
   use constants, only: zero,one,amsua_clw_d1,amsua_clw_d2,t0c,r1000
+  implicit none
 
   integer(i_kind)                   ,intent(in   ) :: nadir,nchanl
   real(r_kind),dimension(nchanl)    ,intent(in   ) :: tb_obs,tsim
@@ -1156,10 +1157,10 @@ subroutine retrieval_saphir(tb,iang,nchanl,gwp,kraintype,ierr)
   return
 end subroutine retrieval_saphir
 
-subroutine RCWPS_Alg(theta,tbo,sst,wind,rwp,cwp,vr,vc)
+subroutine rcwps_alg(theta,tbo,sst,wind,rwp,cwp,vr,vc)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram: RCWPS_Alg   make retrieval from AMSR-E observation
+! subprogram: rcwps_alg   make retrieval from AMSR-E observation
 !
 !   prgrmmr: Banghua Yan and Fuzhong Weng   org: NESDIS              date: 2004-09-20
 !
@@ -1221,8 +1222,8 @@ subroutine RCWPS_Alg(theta,tbo,sst,wind,rwp,cwp,vr,vc)
 !   comments:
 !
 !     Called Subroutines:
-!     TBE_FROM_TBO(): scattering correction for AMSR-E measurements
-!     TBA_FROM_TBE(): RTM bias correction
+!     tbe_from_tbo(): scattering correction for AMSR-E measurements
+!     tba_from_tbe(): RTM bias correction
 !     emis_water()  : sea surface emissivity
 !
 !     Remarks:
@@ -1282,7 +1283,7 @@ subroutine RCWPS_Alg(theta,tbo,sst,wind,rwp,cwp,vr,vc)
   tl = sst-20.0_r_kind-273.15_r_kind
   if (tl > 10.0_r_kind) tl = 10.0_r_kind
 
-  call TBA_FROM_TBO(tbo,tv)
+  call tba_from_tbo(tbo,tv)
 
 
 ! Calculate KW and KL and tau_o2(taut) and emissivity
@@ -1351,12 +1352,12 @@ subroutine RCWPS_Alg(theta,tbo,sst,wind,rwp,cwp,vr,vc)
 ! if ( cwp <= 0.3_r_kind) rwp = cwp
 ! if (cwp <= 0.2_r_kind .and. wind >= five) rwp = zero
 
-end subroutine RCWPS_Alg
+end subroutine rcwps_alg
 
-subroutine TBA_FROM_TBO(tbo,tvs)
+subroutine tba_from_tbo(tbo,tvs)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram: TBE_FROM_TBO
+! subprogram: tba_from_tbo
 !
 !   prgrmmr: Banghua Yan      org: NESDIS        date:  2004-04-20
 !
@@ -1450,11 +1451,11 @@ subroutine TBA_FROM_TBO(tbo,tvs)
   tvs(5) = 3.148166e+001_r_kind + 8.714348e-001_r_kind*tbe(5)
   tvs(6) = 2.861269e+001_r_kind + 9.155271e-001_r_kind*tbe(6)
 
-end subroutine TBA_FROM_TBO
-subroutine TBE_FROM_TBO(tbo,tb)
+end subroutine tba_from_tbo
+subroutine tbe_from_tbo(tbo,tb)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram: TBE_FROM_TBO
+! subprogram: tbe_from_tbo
 !
 !   prgrmmr: Banghua Yan      org: NESDIS        date:  2004-04-20
 !
@@ -1584,12 +1585,12 @@ subroutine TBE_FROM_TBO(tbo,tb)
   return
   stop
 
-end subroutine TBE_FROM_TBO
+end subroutine tbe_from_tbo
 
-subroutine TBA_FROM_TBE(tbo,tvs)
+subroutine tba_from_tbe(tbo,tvs)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:  TBA_FROM_TBO
+! subprogram:  tba_from_tbe
 !
 !   prgmmr: Banghua Yan        org: NESDIS              date: 2004-04-20
 !
@@ -1657,7 +1658,7 @@ subroutine TBA_FROM_TBE(tbo,tvs)
 ! ths(6) = 1.919507e+001_r_kind + 9.322882e-001_r_kind*tb(11)
   tvs(6) = 2.861269e+001_r_kind + 9.155271e-001_r_kind*tb(12)
 
-end subroutine TBA_FROM_TBE
+end subroutine tba_from_tbe
 
 subroutine emis_water(angle,frequency,sst,wind,polar_status,emissivity)
 !$$$  subprogram documentation block

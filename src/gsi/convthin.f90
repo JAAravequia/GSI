@@ -398,8 +398,8 @@ contains
        else
           iuse = .false.
        end if
-  end if
-  return
+    end if
+    return
 
 
   end subroutine map3grids

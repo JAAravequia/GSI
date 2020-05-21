@@ -67,8 +67,8 @@ subroutine antest_maps0_glb(mype,theta0f,z0f,theta2f,z2f,theta3f,z3f)
   integer(i_kind) lunin,i,j,k,ivar,iglob,jglob,ivar_plot,k_plot,ielm
   integer(i_kind) it,mm1,ier,istatus
 
-  real(r_kind),dimension(:,:  ),pointer:: ges_z_it=>NULL()
-  real(r_kind),dimension(:,:,:),pointer:: ges_tv_it=>NULL()
+  real(r_kind),dimension(:,:  ),pointer:: ges_z_it=>null()
+  real(r_kind),dimension(:,:,:),pointer:: ges_tv_it=>null()
 
 !*********************************************************************
 !          variable names expected for var_plotcor are
@@ -305,7 +305,7 @@ subroutine antest_maps0_glb(mype,theta0f,z0f,theta2f,z2f,theta3f,z3f)
 
 !             output "smoothed terrain"
 
-     PRINT*,'IN ANPREWGT,KPS,KPE=',indices%KPS,indices%KPE
+     print*,'IN ANPREWGT,KPS,KPE=',indices%KPS,indices%KPE
      do k=1, 1  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!kvar_start(ivar_plot),kvar_end(ivar_plot)
         outwork=zero_single
         if(k>=indices%kps.and.k<=indices%kpe) then

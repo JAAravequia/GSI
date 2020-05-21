@@ -1,11 +1,11 @@
 module read_wrf_nmm_guess_mod
-use abstract_read_wrf_nmm_guess_mod
-  type, extends(abstract_read_wrf_nmm_guess_class) :: read_wrf_nmm_guess_class 
-  contains
-    procedure, pass(this) :: read_wrf_nmm_binary_guess => read_wrf_nmm_binary_guess_wrf 
-    procedure, pass(this) :: read_wrf_nmm_netcdf_guess => read_wrf_nmm_netcdf_guess_wrf
-    procedure, pass(this) :: read_nems_nmmb_guess => read_nems_nmmb_guess_wrf
-  end type read_wrf_nmm_guess_class 
+use abstract_read_wrf_nmm_guess_mod, only: abstract_read_wrf_nmm_guess_class
+type, extends(abstract_read_wrf_nmm_guess_class) :: read_wrf_nmm_guess_class 
+contains
+  procedure, pass(this) :: read_wrf_nmm_binary_guess => read_wrf_nmm_binary_guess_wrf 
+  procedure, pass(this) :: read_wrf_nmm_netcdf_guess => read_wrf_nmm_netcdf_guess_wrf
+  procedure, pass(this) :: read_nems_nmmb_guess => read_nems_nmmb_guess_wrf
+end type read_wrf_nmm_guess_class 
 contains
   subroutine read_wrf_nmm_binary_guess_wrf(this,mype)
   !$$$  subprogram documentation block
@@ -176,22 +176,22 @@ contains
     integer(i_kind) n_actual_clouds,istatus,ier,iret
     integer(i_kind) iqtotal,icw4crtm
     real(r_kind),dimension(lat2,lon2,nsig):: clwmr,fice,frain,frimef
-    real(r_kind),pointer,dimension(:,:  ):: ges_pd  =>NULL()
-    real(r_kind),pointer,dimension(:,:  ):: ges_ps  =>NULL()
-    real(r_kind),pointer,dimension(:,:  ):: ges_z   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_u   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_v   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_tv  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_pint=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_q   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_cwmr=>NULL()
+    real(r_kind),pointer,dimension(:,:  ):: ges_pd  =>null()
+    real(r_kind),pointer,dimension(:,:  ):: ges_ps  =>null()
+    real(r_kind),pointer,dimension(:,:  ):: ges_z   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_u   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_v   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_tv  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_pint=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_q   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_cwmr=>null()
   
-    real(r_kind),pointer,dimension(:,:,:):: ges_ql=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qi=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qr=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qs=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qg=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qh=>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_ql=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qi=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qr=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qs=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qg=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qh=>null()
   
     associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
     end associate
@@ -785,12 +785,12 @@ contains
   !    reorganize into WeiYu's format--
   
           ier=0
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ps' ,ges_ps ,istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'z' , ges_z  ,istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'u' , ges_u  ,istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'v' , ges_v  ,istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tv' ,ges_tv ,istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q'  ,ges_q  ,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'ps' ,ges_ps ,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'z' , ges_z  ,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'u' , ges_u  ,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'v' , ges_v  ,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'tv' ,ges_tv ,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'q'  ,ges_q  ,istatus );ier=ier+istatus
           if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields, ier =',ier)
   
   !       Get pointer to cloud water mixing ratio
@@ -931,13 +931,13 @@ contains
                 end do
              end do
           end do
-             do k=nsig_read+1,nsig 
-                do i=1,lon2
-                   do j=1,lat2
-                      ges_tv(j,i,k)  = zero
-                   enddo
+          do k=nsig_read+1,nsig 
+             do i=1,lon2
+                do j=1,lat2
+                   ges_tv(j,i,k)  = zero
                 enddo
-            enddo
+             enddo
+          enddo
        
   !    Transfer surface fields
           do i=1,lon2
@@ -1116,27 +1116,27 @@ contains
     integer(i_kind) n_actual_clouds,istatus,ier,iret
     integer(i_kind) iqtotal,icw4crtm
     real(r_kind),dimension(lat2,lon2,nsig):: clwmr,fice,frain,frimef
-    real(r_kind),pointer,dimension(:,:  ):: ges_pd  =>NULL()
-    real(r_kind),pointer,dimension(:,:  ):: ges_ps  =>NULL()
-    real(r_kind),pointer,dimension(:,:  ):: ges_z   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_u   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_v   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_tv  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_pint=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_q   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_oz  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_cwmr=>NULL()
+    real(r_kind),pointer,dimension(:,:  ):: ges_pd  =>null()
+    real(r_kind),pointer,dimension(:,:  ):: ges_ps  =>null()
+    real(r_kind),pointer,dimension(:,:  ):: ges_z   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_u   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_v   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_tv  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_pint=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_q   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_oz  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_cwmr=>null()
   
-    real(r_kind),pointer,dimension(:,:,:):: ges_ql=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qi=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qr=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qs=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qg=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qh=>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_ql=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qi=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qr=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qs=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qg=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qh=>null()
 
-    real(r_kind),pointer,dimension(:,:,:):: ges_fice=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_frain=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_frimef=>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_fice=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_frain=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_frimef=>null()
     logical print_verbose
   
     associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
@@ -1403,13 +1403,13 @@ contains
   
   !       Get pointers to typical met-fields
           ier=0
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ps' ,ges_ps ,istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'z' , ges_z  ,istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'u' , ges_u  ,istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'v' , ges_v  ,istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tv' ,ges_tv ,istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q'  ,ges_q  ,istatus );ier=ier+istatus
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'oz' ,ges_oz ,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'ps' ,ges_ps ,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'z' , ges_z  ,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'u' , ges_u  ,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'v' , ges_v  ,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'tv' ,ges_tv ,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'q'  ,ges_q  ,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'oz' ,ges_oz ,istatus );ier=ier+istatus
           if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields, ier =',ier)
   
   !       Get pointer to cloud water mixing ratio
@@ -1749,37 +1749,37 @@ contains
     integer(i_kind) num_doubtful_sfct,num_doubtful_sfct_all
     real(r_kind),dimension(lat2,lon2):: smthis,sicethis,u10this,v10this,sstthis,tskthis
 
-    real(r_kind)    :: Cr=3.6308e9_r_kind          ! Rain constant coef.
-    real(r_kind)    :: Cli=3.268e9_r_kind          ! Precip. ice constant coef.
+    real(r_kind)    :: cr=3.6308e9_r_kind          ! Rain constant coef.
+    real(r_kind)    :: cli=3.268e9_r_kind          ! Precip. ice constant coef.
   
   ! variables for cloud info
     logical good_fice, good_frain, good_frimef
     integer(i_kind) iqtotal,icw4crtm,ier,iret,n_actual_clouds,istatus,ierr, &
                     i_radar_qr,i_radar_qli,i_radar_qh
-    real(r_kind),dimension(lat2,lon2,nsig):: clwmr,fice,frain,frimef,ges_rho,Ze,Zer, Zeli
-    real(r_kind),pointer,dimension(:,:  ):: ges_pd  =>NULL()
-    real(r_kind),pointer,dimension(:,:  ):: ges_ps  =>NULL()
-    real(r_kind),pointer,dimension(:,:  ):: ges_z   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_u   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_v   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_w   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_tv  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_pint=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_q   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_oz  =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_cwmr=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_ref =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: dfi_tten=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_dw   =>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_dbz =>NULL()
+    real(r_kind),dimension(lat2,lon2,nsig):: clwmr,fice,frain,frimef,ges_rho,ze,zer, zeli
+    real(r_kind),pointer,dimension(:,:  ):: ges_pd  =>null()
+    real(r_kind),pointer,dimension(:,:  ):: ges_ps  =>null()
+    real(r_kind),pointer,dimension(:,:  ):: ges_z   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_u   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_v   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_w   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_tv  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_pint=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_q   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_oz  =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_cwmr=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_ref =>null()
+    real(r_kind),pointer,dimension(:,:,:):: dfi_tten=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_dw   =>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_dbz =>null()
   
-    real(r_kind),pointer,dimension(:,:,:):: ges_ql=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qi=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qr=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qs=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qg=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qh=>NULL()
-    real(r_kind),pointer,dimension(:,:,:):: ges_qli=>NULL()
+    real(r_kind),pointer,dimension(:,:,:):: ges_ql=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qi=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qr=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qs=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qg=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qh=>null()
+    real(r_kind),pointer,dimension(:,:,:):: ges_qli=>null()
   
     associate( this => this ) ! eliminates warning for unused dummy argument needed for binding
     end associate
@@ -1824,20 +1824,20 @@ contains
        num_doubtful_sfct=0
          
        ier=0
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'ps' ,ges_ps ,istatus );ier=ier+istatus
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'z' , ges_z  ,istatus );ier=ier+istatus
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'u' , ges_u  ,istatus );ier=ier+istatus
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'v' , ges_v  ,istatus );ier=ier+istatus
-       if(dbz_exist) call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'dbz' , ges_dbz  ,istatus );ier=ier+istatus
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'tv' ,ges_tv ,istatus );ier=ier+istatus
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'q'  ,ges_q  ,istatus );ier=ier+istatus
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'oz' ,ges_oz ,istatus );ier=ier+istatus
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'pd' ,ges_pd,istatus );ier=ier+istatus
-       call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'w'  ,ges_w  ,istatus)
+       call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'ps' ,ges_ps ,istatus );ier=ier+istatus
+       call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'z' , ges_z  ,istatus );ier=ier+istatus
+       call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'u' , ges_u  ,istatus );ier=ier+istatus
+       call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'v' , ges_v  ,istatus );ier=ier+istatus
+       if(dbz_exist) call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'dbz' , ges_dbz  ,istatus );ier=ier+istatus
+       call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'tv' ,ges_tv ,istatus );ier=ier+istatus
+       call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'q'  ,ges_q  ,istatus );ier=ier+istatus
+       call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'oz' ,ges_oz ,istatus );ier=ier+istatus
+       call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'pd' ,ges_pd,istatus );ier=ier+istatus
+       call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'w'  ,ges_w  ,istatus)
        if (istatus==0) then
           include_w=.true.
           if(mype==0) write(6,*)'READ_WRF_NMM_GUESS: Using vertical velocity.'
-          call GSI_BundleGetPointer ( GSI_MetGuess_Bundle(it), 'dw' , ges_dw  ,istatus );ier=ier+istatus
+          call gsi_bundlegetpointer ( gsi_metguess_bundle(it), 'dw' , ges_dw  ,istatus );ier=ier+istatus
        else
           include_w=.false.
           if(mype==0) write(6,*)'READ_WRF_NMM_GUESS: NOT using vertical velocity.'
@@ -1922,20 +1922,20 @@ contains
           if (ier/=0) call die(trim(myname),'cannot get pointers for met-fields related to hydrometeor, ier =',ier)
           
           if (ier==0) then
-              frain=zero
-              fice=zero
-              clwmr=zero
-              do kr=1,nsig
-                 k=nsig+1-kr
-                 if( dbz_exist .and. if_model_dbz ) then
-                     call gsi_nemsio_read('refl_10cm' ,'mid layer','H',kr,ges_dbz(:,:,k),mype,mype_input)
-                     where( ges_dbz(:,:,k) < 0.0_r_kind )
-                          ges_dbz(:,:,k) = 0.0_r_kind
-                     end where
-                 end if
-                 call gsi_nemsio_read_fractionnew('f_rain','f_ice','clwmr','f_rimef','mid layer',kr, &
-                      ges_qi(:,:,k),ges_qli(:,:,k),ges_qr(:,:,k),ges_ql(:,:,k), mype,mype_input)
-                 if( dbz_exist .and. (.not. if_model_dbz) )then
+             frain=zero
+             fice=zero
+             clwmr=zero
+             do kr=1,nsig
+                k=nsig+1-kr
+                if( dbz_exist .and. if_model_dbz ) then
+                   call gsi_nemsio_read('refl_10cm' ,'mid layer','H',kr,ges_dbz(:,:,k),mype,mype_input)
+                   where( ges_dbz(:,:,k) < 0.0_r_kind )
+                        ges_dbz(:,:,k) = 0.0_r_kind
+                   end where
+                end if
+                call gsi_nemsio_read_fractionnew('f_rain','f_ice','clwmr','f_rimef','mid layer',kr, &
+                     ges_qi(:,:,k),ges_qli(:,:,k),ges_qr(:,:,k),ges_ql(:,:,k), mype,mype_input)
+                if( dbz_exist .and. (.not. if_model_dbz) )then
                    do i=1,lon2
                       do j=1,lat2
                          ges_prsl(j,i,k,it)=one_tenth* &
@@ -1945,29 +1945,29 @@ contains
                          ges_rho(j,i,k)=(ges_prsl(j,i,k,it)/(ges_tv(j,i,k)*rd))*r1000
                       end do
                    end do
-                
-                    Zer(:,:,k)  = Cr * (ges_rho(:,:,k) * ges_qr(:,:,k))**(1.75_r_kind)
-                    Zeli(:,:,k) = Cli * (ges_rho(:,:,k) * ges_qli(:,:,k))**(2.0_r_kind)
-                    Ze(:,:,k)=Zer(:,:,k)+Zeli(:,:,k)
+               
+                   zer(:,:,k)  = cr * (ges_rho(:,:,k) * ges_qr(:,:,k))**(1.75_r_kind)
+                   zeli(:,:,k) = cli * (ges_rho(:,:,k) * ges_qli(:,:,k))**(2.0_r_kind)
+                   ze(:,:,k)=zer(:,:,k)+zeli(:,:,k)
 
-                    ges_dbz(:,:,k) = 0.0_r_kind
-                    
-                    where ( Ze(:,:,k) > 0.0_r_kind )
-                      ges_dbz(:,:,k) = ten * log10(Ze(:,:,k))
-                    end where
-                    where( ges_dbz(:,:,k) < 0.0_r_kind )
-                          ges_dbz(:,:,k) = 0.0_r_kind
-                    end where
-                 end if
-              end do
-              if (mype==0) then
+                   ges_dbz(:,:,k) = 0.0_r_kind
+                   
+                   where ( ze(:,:,k) > 0.0_r_kind )
+                      ges_dbz(:,:,k) = ten * log10(ze(:,:,k))
+                   end where
+                   where( ges_dbz(:,:,k) < 0.0_r_kind )
+                      ges_dbz(:,:,k) = 0.0_r_kind
+                   end where
+                end if
+             end do
+             if (mype==0) then
                 write(6,*)'QLI,max, min,',maxval(ges_qli),minval(ges_qli)
                 write(6,*)'QR,max, min,',maxval(ges_qr),minval(ges_qr)
                 write(6,*)'QL,max, min,',maxval(ges_ql),minval(ges_ql)
                 if( dbz_exist ) write(6,*)'DBZ,max, min,',maxval(ges_dbz),minval(ges_dbz)
-              end if
+             end if
           else
-              if (mype==0) write(6,*) 'ERROR GETTING POINTERS FOR HYDROMETEORS WITH RADAR DATA ASSIMILATION IN READ NMMB GUESS'
+             if (mype==0) write(6,*) 'ERROR GETTING POINTERS FOR HYDROMETEORS WITH RADAR DATA ASSIMILATION IN READ NMMB GUESS'
           end if  ! ier==0
 
        else ! i_radar_qli > 0
@@ -1994,12 +1994,12 @@ contains
                    if (good_fice .and. good_frain .and. good_frimef) cold_start=.false.
                    if (.not. cold_start) then
                       do i=1,lon2
-                        do j=1,lat2
-                           ges_prsl(j,i,k,it)=one_tenth* &
-                                       (aeta1_ll(k)*pdtop_ll + &
-                                       aeta2_ll(k)*(ten*ges_ps(j,i)-pdtop_ll-pt_ll) + &
-                                       pt_ll)
-                        end do
+                         do j=1,lat2
+                            ges_prsl(j,i,k,it)=one_tenth* &
+                                        (aeta1_ll(k)*pdtop_ll + &
+                                        aeta2_ll(k)*(ten*ges_ps(j,i)-pdtop_ll-pt_ll) + &
+                                        pt_ll)
+                         end do
                       end do
                       call cloud_calc(ges_prsl(:,:,k,it),ges_q(:,:,k),ges_tsen(:,:,k,it),clwmr(:,:,k), &
                            fice(:,:,k),frain(:,:,k),frimef(:,:,k), &
@@ -2026,13 +2026,13 @@ contains
           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qr',ges_qr,iret); ier=ier+iret
           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qs',ges_qs,iret); ier=ier+iret
           call gsi_bundlegetpointer (gsi_metguess_bundle(it),'qg',ges_qg,iret); ier=ier+iret
-          call gsi_bundlegetpointer (GSI_MetGuess_Bundle(it),'ref',ges_ref,istatus);ier=ier+istatus
-          call gsi_bundlegetpointer (GSI_MetGuess_Bundle(it),'tten',dfi_tten,istatus);ier=ier+istatus
-             do kr=1,nsig
-                k=nsig+1-kr
-                call gsi_nemsio_read_fraction('f_rain','f_ice','clwmr','tmp','mid layer',kr, &
-                         ges_qi(:,:,k),ges_qs(:,:,k),ges_qr(:,:,k),ges_ql(:,:,k), mype,mype_input) !read total condensate
-             end do
+          call gsi_bundlegetpointer (gsi_metguess_bundle(it),'ref',ges_ref,istatus);ier=ier+istatus
+          call gsi_bundlegetpointer (gsi_metguess_bundle(it),'tten',dfi_tten,istatus);ier=ier+istatus
+          do kr=1,nsig
+             k=nsig+1-kr
+             call gsi_nemsio_read_fraction('f_rain','f_ice','clwmr','tmp','mid layer',kr, &
+                      ges_qi(:,:,k),ges_qs(:,:,k),ges_qr(:,:,k),ges_ql(:,:,k), mype,mype_input) !read total condensate
+          end do
   
        end if 
   
@@ -2077,7 +2077,7 @@ contains
       !           due to interpolation
        do i=1,lon2
           do j=1,lat2
-             veg_type(j,i,it)=float(nint(veg_type(j,i,it)))
+             veg_type(j,i,it)=real(nint(veg_type(j,i,it)),r_kind)
           end do
        end do
   !                            ! veg frac
@@ -2091,7 +2091,7 @@ contains
       !           due to interpolation
        do i=1,lon2
           do j=1,lat2
-             soil_type(j,i,it)=float(nint(soil_type(j,i,it)))
+             soil_type(j,i,it)=real(nint(soil_type(j,i,it)),r_kind)
           end do
        end do
   
@@ -2102,7 +2102,7 @@ contains
       !           due to interpolation
        do i=1,lon2
           do j=1,lat2
-             smthis(j,i)=float(nint(smthis(j,i)))
+             smthis(j,i)=real(nint(smthis(j,i)),r_kind)
           end do
        end do
   
@@ -2113,7 +2113,7 @@ contains
       !           due to interpolation
        do i=1,lon2
           do j=1,lat2
-             sicethis(j,i)=float(nint(sicethis(j,i)))
+             sicethis(j,i)=real(nint(sicethis(j,i)),r_kind)
           end do
        end do
   

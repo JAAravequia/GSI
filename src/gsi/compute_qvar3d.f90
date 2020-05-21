@@ -61,14 +61,14 @@ subroutine compute_qvar3d
 
   integer(i_kind):: istatus,ier,ier6
   real(r_kind):: cwtmp
-  real(r_kind),pointer,dimension(:,:,:):: ges_var=>NULL()
-  real(r_kind),pointer,dimension(:,:,:):: ges_ql=>NULL()
-  real(r_kind),pointer,dimension(:,:,:):: ges_qi=>NULL()
-  real(r_kind),pointer,dimension(:,:,:):: ges_qr=>NULL()
-  real(r_kind),pointer,dimension(:,:,:):: ges_qs=>NULL()
-  real(r_kind),pointer,dimension(:,:,:):: ges_qg=>NULL()
-  real(r_kind),pointer,dimension(:,:,:):: ges_qh=>NULL()
-  real(r_kind),pointer,dimension(:,:,:):: ges_q =>NULL()
+  real(r_kind),pointer,dimension(:,:,:):: ges_var=>null()
+  real(r_kind),pointer,dimension(:,:,:):: ges_ql=>null()
+  real(r_kind),pointer,dimension(:,:,:):: ges_qi=>null()
+  real(r_kind),pointer,dimension(:,:,:):: ges_qr=>null()
+  real(r_kind),pointer,dimension(:,:,:):: ges_qs=>null()
+  real(r_kind),pointer,dimension(:,:,:):: ges_qg=>null()
+  real(r_kind),pointer,dimension(:,:,:):: ges_qh=>null()
+  real(r_kind),pointer,dimension(:,:,:):: ges_q =>null()
   integer(i_kind):: maxvarq1
 
 

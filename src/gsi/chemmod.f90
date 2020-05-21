@@ -157,6 +157,7 @@ contains
 !   prgmmr: pagowski                date: 2010-09-13
 
 ! assigns conversion factors between AIRNow pm units and model units
+    implicit none
 
     real(r_kind) :: obs2model_anowbufr_pm
     
@@ -176,6 +177,7 @@ contains
 
 !   prgmmr: pagowski                date: 2010-09-13
 !   allocates and assigns initial values to pm2_5_guess
+    implicit none
     integer(i_kind) :: i,j,k
 
     allocate(pm2_5_guess(lat2,lon2,nsig))
@@ -194,6 +196,7 @@ contains
 
 !   prgmmr: pagowski                date: 2010-09-13
 !   allocates and assigns initial values to aerotot_guess
+    implicit none
     integer(i_kind) :: i,j,k
 
     allocate(aerotot_guess(lat2,lon2,nsig))
@@ -216,6 +219,7 @@ contains
 !  2019-03-21 Martin  - cleaned up contribution from S-W Wei at UAlbany     
 
 !initialiazes default values to &CHEM namelist parameters
+    implicit none
     
     berror_chem=.false.
     oneobtest_chem=.false.
@@ -402,7 +406,7 @@ contains
     character(*), intent(in) :: str
     character(len(str))      :: string
 
-    integer :: ic, i
+    integer(i_kind) :: ic, i
 
     character(26), parameter :: upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     character(26), parameter :: lower = 'abcdefghijklmnopqrstuvwxyz'
@@ -423,7 +427,7 @@ contains
     character(*), intent(in) :: str
     character(len(str))      :: string
 
-    integer :: ic, i
+    integer(i_kind) :: ic, i
 
     character(26), parameter :: upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     character(26), parameter :: lower = 'abcdefghijklmnopqrstuvwxyz'

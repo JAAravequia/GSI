@@ -297,7 +297,7 @@ contains
     implicit none
 
     character(40),allocatable,dimension(:) :: csort
-    integer,allocatable,dimension(:) :: idx_csort
+    integer(i_kind),allocatable,dimension(:) :: idx_csort
 
     integer(i_kind) i,j,jj,lunout
     integer(i_kind) iyyyymm,obsolete
@@ -395,16 +395,16 @@ contains
 
       implicit none
 
-      integer      n, &              ! dimension of array to be sorted
-                   j, &              ! do loop index, sort variable
-                   i, &              ! sort variable
-                   l, &              ! variable used to decide if sort is finished
-                   ir, &             !           "                 "
-                   indx(n), &        ! pointer array
-                   indxt             ! pointer used in sort
+      integer(i_kind)      n, &              ! dimension of array to be sorted
+                           j, &              ! do loop index, sort variable
+                           i, &              ! sort variable
+                           l, &              ! variable used to decide if sort is finished
+                           ir, &             !           "                 "
+                           indx(n), &        ! pointer array
+                           indxt             ! pointer used in sort
 
-      character*40 carrin(n), &      ! input array to be sorted
-                   cc                ! character variable used in sort
+      character*40         carrin(n), &      ! input array to be sorted
+                           cc                ! character variable used in sort
 
 ! # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -415,13 +415,13 @@ contains
 ! Must be > 1 element in sort list, else return
 ! ---------------------------------------------
 
-      if(n.le.1)  return
+      if(n<=1)  return
 
       l = n/2 + 1
       ir = n
 
       do 
-         if(l.gt.1) then
+         if(l>1) then
             l = l - 1
             indxt = indx(l)
             cc = carrin(indxt)
@@ -430,7 +430,7 @@ contains
             cc = carrin(indxt)
             indx(ir) = indx(1)
             ir = ir - 1
-            if(ir.eq.1) then
+            if(ir==1) then
                indx(1) = indxt
                return
             endif
@@ -440,11 +440,11 @@ contains
          j = l * 2
 
          do 
-            if(j.le.ir)  then
-              if(j.lt.ir)  then
+            if(j<=ir)  then
+              if(j<ir)  then
                 if(carrin(indx(j)).lt.carrin(indx(j+1)))  j = j + 1
               endif
-              if(cc.lt.carrin(indx(j))) then
+              if(cc<carrin(indx(j))) then
                 indx(i) = indx(j)
                 i = j
                 j = j + i

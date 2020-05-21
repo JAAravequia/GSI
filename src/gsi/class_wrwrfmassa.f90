@@ -1,4 +1,5 @@
 module abstract_wrwrfmassa_mod
+  implicit none
   type, abstract :: abstract_wrwrfmassa_class
   contains
     procedure(wrwrfmassa_binary), deferred, pass(this) :: wrwrfmassa_binary  

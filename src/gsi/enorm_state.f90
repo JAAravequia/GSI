@@ -73,14 +73,14 @@ enddo
 
 call gsi_bundlegetpointer(gsi_metguess_bundle(ntguessig),'ps', ges_ps,ier)
 
-dsig=HUGE(dsig)
+dsig=huge(dsig)
 do jj=2,lon2-1
    do ii=2,lat2-1
       zps = Pa_per_kPa * ges_ps(ii,jj)
       do kk=1,nsig
          dsig(ii,jj,kk) = akk(kk) + (bk5(kk)-bk5(kk+1)) * zps
       enddo
-      if (ANY(dsig(ii,jj,:)<=zero)) then
+      if (any(dsig(ii,jj,:)<=zero)) then
          do kk=1,nsig
             write(6,'(A,I3,4(2X,F18.8))')'enorm ak,bk,pk,dsig=',&
                kk,r1000*ak5(kk),bk5(kk),r1000*ak5(kk)+bk5(kk)*pref,dsig(2,2,kk)
@@ -93,7 +93,7 @@ do jj=2,lon2-1
    enddo
 enddo
 
-coslat=HUGE(coslat)
+coslat=huge(coslat)
 do ii=2,lat2-1
    ilat=istart(mype+1)+ii-2
    if (ilat<1.or.ilat>nlat) then
@@ -122,7 +122,7 @@ call gsi_bundlegetpointer(yst,'tv',yst_t,ier)
 call gsi_bundlegetpointer(yst,'q', yst_q,ier)
 call gsi_bundlegetpointer(yst,'ps',yst_p,ier)
 
-! U
+! u
 do kk=1,nsig
    do jj=2,lon2-1
       do ii=2,lat2-1
@@ -131,7 +131,7 @@ do kk=1,nsig
    enddo
 enddo
 
-! V
+! v
 do kk=1,nsig
    do jj=2,lon2-1
       do ii=2,lat2-1
@@ -140,7 +140,7 @@ do kk=1,nsig
    enddo
 enddo
 
-! T
+! t
 do kk=1,nsig
    do jj=2,lon2-1
       do ii=2,lat2-1
@@ -149,7 +149,7 @@ do kk=1,nsig
    enddo
 enddo
 
-! Q
+! q
 if(eps_eer>zero) then
    do kk=1,nsig
       do jj=2,lon2-1
@@ -160,7 +160,7 @@ if(eps_eer>zero) then
    enddo
 endif
 
-! P
+! p
 do jj=2,lon2-1
    do ii=2,lat2-1
       yst_p(ii,jj)=gridfac*coslat(ii)*pfact*xst_p(ii,jj)
@@ -169,7 +169,7 @@ enddo
 
 ! ----------------------------------------------------------------------
 
-enorm=DOT_PRODUCT(yst,xst)
+enorm=dot_product(yst,xst)
 
 ! ----------------------------------------------------------------------
 
@@ -250,14 +250,14 @@ enddo
 
 call gsi_bundlegetpointer(gsi_metguess_bundle(ntguessig),'ps', ges_ps,ier)
 
-dsig=HUGE(dsig)
+dsig=huge(dsig)
 do jj=2,lon2-1
    do ii=2,lat2-1
       zps = Pa_per_kPa * ges_ps(ii,jj)
       do kk=1,nsig
          dsig(ii,jj,kk) = akk(kk) + (bk5(kk)-bk5(kk+1)) * zps
       enddo
-      if (ANY(dsig(ii,jj,:)<=zero)) then
+      if (any(dsig(ii,jj,:)<=zero)) then
          do kk=1,nsig
             write(6,'(A,I3,4(2X,F18.8))')'enorm ak,bk,pk,dsig=',&
                kk,r1000*ak5(kk),bk5(kk),r1000*ak5(kk)+bk5(kk)*pref,dsig(2,2,kk)
@@ -270,7 +270,7 @@ do jj=2,lon2-1
    enddo
 enddo
 
-coslat=HUGE(coslat)
+coslat=huge(coslat)
 do ii=2,lat2-1
    ilat=istart(mype+1)+ii-2
    if (ilat<1.or.ilat>nlat) then
@@ -299,7 +299,7 @@ call gsi_bundlegetpointer(yst,'tv',yst_t,ier)
 call gsi_bundlegetpointer(yst,'q', yst_q,ier)
 call gsi_bundlegetpointer(yst,'ps',yst_p,ier)
 
-! U
+! u
 do kk=1,nsig
    do jj=2,lon2-1
       do ii=2,lat2-1
@@ -308,7 +308,7 @@ do kk=1,nsig
    enddo
 enddo
 
-! V
+! v
 do kk=1,nsig
    do jj=2,lon2-1
       do ii=2,lat2-1
@@ -317,7 +317,7 @@ do kk=1,nsig
    enddo
 enddo
 
-! T
+! t
 do kk=1,nsig
    do jj=2,lon2-1
       do ii=2,lat2-1
@@ -326,7 +326,7 @@ do kk=1,nsig
    enddo
 enddo
 
-! Q
+! q
 if(eps_eer>zero) then
    do kk=1,nsig
       do jj=2,lon2-1
@@ -337,7 +337,7 @@ if(eps_eer>zero) then
    enddo
 endif
 
-! P
+! p
 do jj=2,lon2-1
    do ii=2,lat2-1
       yst_p(ii,jj)=gridfac*coslat(ii)*pfact*xst_p(ii,jj)
@@ -346,7 +346,7 @@ enddo
 
 ! ----------------------------------------------------------------------
 
-enorm=DOT_PRODUCT_red(yst,xst,0)
+enorm=dot_product_red(yst,xst,0)
 
 ! ----------------------------------------------------------------------
 

@@ -363,15 +363,15 @@ subroutine cal_tztr_(dt_warm,c_0,c_d,w_0,w_d,zc,zw,z,tztr)
   tztr = one
 
   if ( dt_warm > zero ) then
-    if ( z <= zc  .and. c1 /= zero ) then
-      tztr = (one-fac_dtl*w_0+fac_tsl*c_0)/c1
-    elseif ( z > zc .and. z < zw .and. c2 /= zero ) then
-      tztr = (one-fac_dtl*w_0+fac_tsl*c_0)/c2
-    endif
+     if ( z <= zc  .and. c1 /= zero ) then
+        tztr = (one-fac_dtl*w_0+fac_tsl*c_0)/c1
+     elseif ( z > zc .and. z < zw .and. c2 /= zero ) then
+        tztr = (one-fac_dtl*w_0+fac_tsl*c_0)/c2
+     endif
   elseif ( dt_warm == zero .and. c3 /= zero ) then
-    if ( z <= zc ) then
-      tztr = (one+fac_tsl*c_0)/c3
-    endif
+     if ( z <= zc ) then
+        tztr = (one+fac_tsl*c_0)/c3
+     endif
   endif
 
   if ( tztr <= -1.0_r_kind .or. tztr > 4.0_r_kind ) then
@@ -399,10 +399,10 @@ subroutine skindepth_(obstype,sd_rad)
 
   sd_rad = 0.000015_r_kind
   if ( obstype == 'amsre' .or. obstype == 'amsr2' .or. obstype == 'gmi' ) then
-      sd_rad = 0.03_r_kind
+     sd_rad = 0.03_r_kind
   elseif ( obstype == 'amsua' .or. obstype == 'amsub' .or.  obstype == 'ssmis' .or.  obstype == 'ssmi' .or. &
-      obstype == 'mhs' .or.  obstype == 'msu' .or.  obstype == 'hsb' ) then
-      sd_rad = 0.001_r_kind
+     obstype == 'mhs' .or.  obstype == 'msu' .or.  obstype == 'hsb' ) then
+     sd_rad = 0.001_r_kind
   endif
 
 end subroutine skindepth_

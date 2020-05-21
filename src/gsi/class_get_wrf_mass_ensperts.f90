@@ -1,4 +1,5 @@
 module abstract_get_wrf_mass_ensperts_mod
+  implicit none
   type, abstract :: abstract_get_wrf_mass_ensperts_class
   contains
     procedure(get_wrf_mass_ensperts), deferred, pass(this) :: get_wrf_mass_ensperts
@@ -27,7 +28,7 @@ module abstract_get_wrf_mass_ensperts_mod
     integer(i_kind),intent(in):: mype
     type(gsi_bundle),allocatable, intent(in   ) :: en_perts(:,:)
     integer(i_kind), intent(in   ):: nelen
-    type(gsi_bundle),OPTIONAL,intent(in):: en_bar
+    type(gsi_bundle),optional,intent(in):: en_bar
   end subroutine ens_spread_dualres_regional
   end interface
 

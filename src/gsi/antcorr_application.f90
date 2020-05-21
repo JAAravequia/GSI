@@ -12,44 +12,44 @@
 !   2011-04-25   A.Collard   Modified to be consistent with CRTM 2.1
 ! 
 
-MODULE AntCorr_Application
+module AntCorr_Application
 
   ! ------------------
   ! Environment set up
   ! ------------------
   ! Module use statements
-  USE Type_Kinds       , ONLY: fp
-  USE Message_Handler  , ONLY: Display_Message, FAILURE
-  USE ACCoeff_Define   , ONLY: ACCoeff_type
+  use kinds            , only: i_kind, r_kind
+  use Message_Handler  , only: Display_Message, failure
+  use ACCoeff_Define   , only: ACCoeff_type
   ! Disable all implicit typing
-  IMPLICIT NONE
+  implicit none
 
 
   ! --------------------
   ! Default visibilities
   ! --------------------
   ! Everything private by default
-  PRIVATE
+  private
   ! Inherited procedures from definition module
   ! -------------------------------------------
   ! The AntCorr structure definition
-  PUBLIC :: ACCoeff_type
-  PUBLIC :: Remove_AntCorr
+  public :: ACCoeff_type
+  public :: Remove_AntCorr
   
   ! -----------------
   ! Module parameters
   ! -----------------
   ! Invalid result
-  REAL(fp), PARAMETER :: INVALID = -1.0_fp
+  real(r_kind), parameter :: invalid = -1.0_r_kind
     
   ! Cosmic background temperature. Taken from
   ! Mather,J.C. et. al., 1999, "Calibrator Design for the COBE
   !    Far-Infrared Absolute Spectrophotometer (FIRAS)"
   !    Astrophysical Journal, vol 512, pp 511-520
-  REAL(fp), PARAMETER :: TSPACE = 2.7253_fp
+  real(r_kind), parameter :: tspace = 2.7253_r_kind
   
 
-CONTAINS
+contains
 
 
 !##################################################################################
@@ -124,34 +124,34 @@ CONTAINS
 !
 !--------------------------------------------------------------------------------
 
-  SUBROUTINE Remove_AntCorr( AC  , &  ! Input
+  subroutine Remove_AntCorr( ac  , &  ! Input
                              iFOV, &  ! Input
-                             T     )  ! In/Output
+                             t     )  ! In/Output
     implicit none
 
     ! Arguments
-    TYPE(ACCoeff_type), INTENT(IN)     :: AC
-    INTEGER           , INTENT(IN)     :: iFOV
-    REAL(fp)          , INTENT(IN OUT) :: T(:)
+    type(ACCoeff_type), intent(in)     :: ac
+    integer(i_kind)   , intent(in)     :: iFOV
+    real(r_kind)      , intent(in out) :: t(:)
     ! Local parameters
-    CHARACTER(*), PARAMETER :: ROUTINE_NAME = 'Remove_AntCorr'
+    character(*), parameter :: routine_name = 'Remove_AntCorr'
     ! Local variables
-    INTEGER :: l
+    integer(i_kind) :: l
     ! Check input
-    IF ( iFOV < 1 .OR. iFOV > AC%n_FOVS ) THEN
-      CALL Display_Message( ROUTINE_NAME, 'Input iFOV inconsistent with AC data', FAILURE )
-      T = INVALID
-      RETURN
-    END IF
-    IF ( SIZE(T) /= AC%n_Channels ) THEN
-      CALL Display_Message( ROUTINE_NAME, 'Size of T() inconsistent with AC data', FAILURE )
-      T = INVALID
-      RETURN
-    END IF
+    if ( iFOV < 1 .OR. iFOV > ac%n_FOVS ) then
+      call Display_Message( routine_name, 'Input iFOV inconsistent with AC data', failure )
+      t = invalid
+      return
+    end if
+    if ( size(t) /= ac%n_Channels ) then
+      call Display_Message( routine_name, 'Size of T() inconsistent with AC data', failure )
+      t = invalid
+      return
+    end if
     ! Compute the antenna temperature
-    DO l = 1, AC%n_Channels
-      T(l) = AC%A_earth(iFOV,l)*T(l) + AC%A_platform(iFOV,l)*T(l) + AC%A_space(iFOV,l)*TSPACE
-    END DO
-  END SUBROUTINE Remove_AntCorr
+    do l = 1, ac%n_Channels
+      t(l) = ac%A_earth(iFOV,l)*t(l) + ac%A_platform(iFOV,l)*t(l) + ac%A_space(iFOV,l)*tspace
+    end do
+  end subroutine Remove_AntCorr
   
-END MODULE AntCorr_Application
+end module AntCorr_Application

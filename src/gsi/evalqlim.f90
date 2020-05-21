@@ -44,7 +44,7 @@ subroutine evalqlim(sval,pbc,rval)
 ! Declare passed variables
   type(gsi_bundle),intent(in   ) :: sval
   type(gsi_bundle),intent(inout) :: rval
-  real(r_quad)      ,intent(inout) :: pbc
+  real(r_quad)    ,intent(inout) :: pbc
 
 ! Declare local variables
   integer(i_kind) i,j,k,ier,istatus,ii,mm1

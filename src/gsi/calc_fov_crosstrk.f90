@@ -598,7 +598,7 @@
  real(r_kind), pointer, private, dimension(:,:,:) :: mhscoeff
 
 ! coefficients for mhs.  each satellite in a separate data statement.
- real(r_kind), target, private, dimension(0:7,2,5) :: mhscoeff_18 = Reshape( (/   &
+ real(r_kind), target, private, dimension(0:7,2,5) :: mhscoeff_18 = reshape( (/   &
    3.4965403e-002_r_kind,   2.1628516e+000_r_kind,  -9.5464048e+000_r_kind,  -1.6210480e+000_r_kind,  &
   -1.4857870e+000_r_kind,   1.3150197e+000_r_kind,   5.7198799e-001_r_kind,  -2.8890452e-001_r_kind,  &
   -5.9196603e-002_r_kind,  -6.7636013e-001_r_kind,  -8.6714487e+000_r_kind,  -1.6742078e+000_r_kind,  &
@@ -621,7 +621,7 @@
    2.6349644e-003_r_kind,  -6.5305108e-001_r_kind,   1.1358295e-001_r_kind,   1.2522188e-001_r_kind/),  &
        (/ 8,2,5 /) )
 
- real(r_kind), target, private, dimension(0:7,2,5) :: mhscoeff_19 = Reshape( (/   &
+ real(r_kind), target, private, dimension(0:7,2,5) :: mhscoeff_19 = reshape( (/   &
    1.6703354e-001_r_kind,  -8.1146163e-001_r_kind,  -1.0738719e+001_r_kind,   2.2400708e+000_r_kind,  &
   -5.1594537e-001_r_kind,  -1.6325672e+000_r_kind,   4.3368569e-001_r_kind,   3.2888728e-001_r_kind,  &
   -6.6353470e-002_r_kind,  -1.1122364e+000_r_kind,  -9.9416256e+000_r_kind,   1.1250391e+000_r_kind,  &
@@ -644,7 +644,7 @@
    2.0095403e+000_r_kind,  -7.0319116e-001_r_kind,  -4.6245363e-001_r_kind,   1.1573103e-001_r_kind/),  &
        (/ 8,2,5 /) )
 
- real(r_kind), target, private, dimension(0:7,2,5) :: mhscoeff_20 = Reshape( (/   &
+ real(r_kind), target, private, dimension(0:7,2,5) :: mhscoeff_20 = reshape( (/   &
   -2.1541499e-002_r_kind,   3.0639741e-001_r_kind,  -8.4143925e+000_r_kind,  -3.7867212e+000_r_kind,  &
   -5.9394364e+000_r_kind,   4.2701573e+000_r_kind,   7.0584254e+000_r_kind,   1.9181076e+000_r_kind,  &
   -1.2439569e-001_r_kind,   2.6713184e-001_r_kind,  -8.2538710e+000_r_kind,  -6.7376202e-001_r_kind,  &
@@ -667,7 +667,7 @@
    3.8286030e+000_r_kind,  -5.2255921e-002_r_kind,  -1.6591578e+000_r_kind,  -4.7322434e-001_r_kind/),  &
        (/ 8,2,5 /) )
 
- real(r_kind), target, private, dimension(0:7,2,5) :: mhscoeff_21 = Reshape( (/   &
+ real(r_kind), target, private, dimension(0:7,2,5) :: mhscoeff_21 = reshape( (/   &
    7.6232433e-002_r_kind,   1.3942748e+000_r_kind,  -9.8446512e+000_r_kind,  -2.0756340e+000_r_kind,  &
   -1.3671181e+000_r_kind,   1.6274825e+000_r_kind,   5.9784073e-001_r_kind,  -3.4564933e-001_r_kind,  &
   -3.1608678e-002_r_kind,   2.4189080e-001_r_kind,  -9.2069426e+000_r_kind,  -2.5967264e-001_r_kind,  &
@@ -690,7 +690,7 @@
    8.2772732e-001_r_kind,   5.4999664e-003_r_kind,  -3.2910269e-002_r_kind,   3.2401454e-002_r_kind/) ,  &
        (/ 8,2,5 /) )
 
- real(r_kind), target, private, dimension(0:7,2,5) :: mhscoeff_22 = Reshape( (/   &
+ real(r_kind), target, private, dimension(0:7,2,5) :: mhscoeff_22 = reshape( (/   &
    2.5050598e-001_r_kind,  -6.2730297e-002_r_kind,  -8.8656340e+000_r_kind,  -6.3468504e-001_r_kind,  &
   -1.9718552e+000_r_kind,   4.9594674e-001_r_kind,   6.9558799e-001_r_kind,  -8.0025569e-002_r_kind,  &
   -3.3202425e-002_r_kind,  -2.3962040e-001_r_kind,  -8.4419193e+000_r_kind,   1.2665473e+000_r_kind,  &
@@ -812,7 +812,7 @@
  allocate (eccen(1:maxfov(instr)))
  
  do i = 1, npoly
-    psi(i) = two*pi*float(i-1)/float(npoly-1) ! Will connect Npoly points
+    psi(i) = two*pi*real(i-1,r_kind)/real(npoly-1,r_kind) ! Will connect Npoly points
  enddo
  
 ! Precompute angles and sizes for speed. For accurate representation of fov, 

@@ -102,7 +102,7 @@ subroutine general_read_fv3atm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
    real(r_kind),allocatable,dimension(:)   :: work, work_v
    real(r_kind),allocatable,dimension(:) :: rwork1d0, rwork1d1
    real(r_kind),allocatable,dimension(:) :: rlats,rlons,clons,slons
-   real(4),allocatable,dimension(:) :: r4lats,r4lons
+   real(r_single),allocatable,dimension(:) :: r4lats,r4lons
 
    logical :: procuse,diff_res,eqspace
    type(nemsio_gfile) :: gfile
@@ -152,7 +152,7 @@ subroutine general_read_fv3atm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
          call stop2(101)
       endif
 
-      fhour = float(nfhour) + float(nfminute)/r60 + float(nfsecondn)/float(nfsecondd)/r3600
+      fhour = real(nfhour,r_kind) + real(nfminute,r_kind)/r60 + real(nfsecondn,r_kind)/real(nfsecondd,r_kind)/r3600
       odate(1) = idate(4)  !hour
       odate(2) = idate(2)  !month
       odate(3) = idate(3)  !day
@@ -367,7 +367,7 @@ subroutine general_read_fv3atm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
       ilev(icount)=k
 
       if (mype==mype_use(icount)) then
-         ! read T/Tv/etc.
+         ! read t/tv/etc.
          call nemsio_readrecv(gfile,'tmp','mid layer',k,rwork1d0,iret=iret)
          if (iret /= 0) call error_msg(trim(my_name),trim(filename),'tmp','read',istop+7,iret)
          call nemsio_readrecv(gfile,'spfh','mid layer',k,rwork1d1,iret=iret)
@@ -515,7 +515,7 @@ subroutine general_read_fv3atm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
 
          if (mype==mype_use(icount)) then
 
-            ! U
+            ! u
             call nemsio_readrecv(gfile,'ugrd','mid layer',k,rwork1d0,iret=iret)
             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ugrd','read',istop+4,iret)
             call nemsio_readrecv(gfile,'vgrd','mid layer',k,rwork1d1,iret=iret)
@@ -547,7 +547,7 @@ subroutine general_read_fv3atm_nems(grd,sp_a,filename,uvflag,vordivflag,zflag, &
          ilev(icount)=k
 
          if (mype==mype_use(icount)) then
-            ! V
+            ! v
             call nemsio_readrecv(gfile,'ugrd','mid layer',k,rwork1d0,iret=iret)
             if (iret /= 0) call error_msg(trim(my_name),trim(filename),'ugrd','read',istop+4,iret)
             call nemsio_readrecv(gfile,'vgrd','mid layer',k,rwork1d1,iret=iret)
