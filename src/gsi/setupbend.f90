@@ -100,6 +100,7 @@ subroutine setupbend(obsLL,odiagLL, &
 !   2019-08-21  Shao    - add COSMIC-2, metop-c and Paz 
 !   2020-03-18  Shao    - update observation error for COSMIC-2
 !   2020-04-13  Shao    - update the statistis QC for COSMIC-2
+!   2020-05-21  Shao    - add comments to include commercial data ID information
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -284,6 +285,11 @@ subroutine setupbend(obsLL,odiagLL, &
 !724-729 => COSMIC-2 Polar
 !825 => KOMPSAT-5
 !5   => MetOpC
+!265 => GeoOptics CICERO OP1
+!266 => GeoOptics CICERO OP2
+!267 => PlanetiQ GNOMES-A
+!268 => PlanetiQ GNOMES-B
+!269 => Spire Lemur 3U CubeSat
 
 ! Check to see if required guess fields are available
   call check_vars_(proceed)
