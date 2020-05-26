@@ -91,7 +91,7 @@ subroutine  gsdcloudanalysis(mype)
                                       l_use_hydroretrieval_all, &
                                       i_lightpcp, l_numconc, qv_max_inc,ioption, &
                                       l_precip_clear_only,l_fog_off,cld_bld_coverage,cld_clr_coverage,&
-                                      l_T_Q_adjust,l_saturate_bkCloud,i_precip_vertical_check,l_rtma3d
+                                      i_T_Q_adjust,l_saturate_bkCloud,i_precip_vertical_check,l_rtma3d
 
   use gsi_metguess_mod, only: GSI_MetGuess_Bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
