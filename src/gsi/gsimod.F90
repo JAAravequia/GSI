@@ -142,7 +142,7 @@
                             i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off,&
                             cld_bld_coverage,cld_clr_coverage,&
                             i_cloud_q_innovation,i_ens_mean,DTsTmax,&
-                            l_T_Q_adjust,l_saturate_bkCloud,l_rtma3d,i_precip_vertical_check
+                            i_T_Q_adjust,l_saturate_bkCloud,l_rtma3d,i_precip_vertical_check
   use gsi_metguess_mod, only: gsi_metguess_init,gsi_metguess_final
   use gsi_chemguess_mod, only: gsi_chemguess_init,gsi_chemguess_final
   use tcv_mod, only: init_tcps_errvals,tcp_refps,tcp_width,tcp_ermin,tcp_ermax
@@ -1065,8 +1065,9 @@
 !                           2=ensemble members
 !      DTsTmax       - maximum allowed difference between Tskin and the first
 !                           level T. This is to safety guard soil T adjustment.
-!      l_T_Q_adjust - if .true. turn on the moisture and temperature adjustment
-!                           in cloud analysis (default:true).
+!      i_T_Q_adjust -     =0 no temperature and moisture adjustment in hydrometeor analyis
+!                         =1 (default) temperature and moisture are adjusted in hydrometeor analyis
+!                         =2 temperature and moisture only adjusted for clearing (warmer, drier)
 !      l_saturate_bkCloud - if .true. ensure saturation for all cloud 3-d points in background
 !                           where observed cloud cover is missing (default:true).
 !      l_rtma3d      - logical option for turning on configuration for RTMA3D
@@ -1101,7 +1102,7 @@
                                 i_coastline,i_gsdqc,qv_max_inc,ioption,l_precip_clear_only,l_fog_off,&
                                 cld_bld_coverage,cld_clr_coverage,&
                                 i_cloud_q_innovation,i_ens_mean,DTsTmax, &
-                                l_T_Q_adjust,l_saturate_bkCloud,l_rtma3d,i_precip_vertical_check
+                                i_T_Q_adjust,l_saturate_bkCloud,l_rtma3d,i_precip_vertical_check
 
 ! chem(options for gsi chem analysis) :
 !     berror_chem       - .true. when background  for chemical species that require

@@ -1250,35 +1250,53 @@ subroutine  gsdcloudanalysis(mype)
 ! for Rapid Refresh application, turn off the hydrometeors 
 ! (Oct. 14, 2010)
 !
-  if(l_T_Q_adjust) then
-     do k=1,nsig
-        do j=1,lat2
-           do i=1,lon2
-              if(l_conserve_thetaV) then
-                 if(.not.twodvar_regional .or. .not.tsensible) then
-                    ges_tv(j,i,k)=t_bk(i,j,k)*(p_bk(i,j,k)/h1000)**rd_over_cp * &  ! t_bk is potential T
-                        (one+fv*q_bk(i,j,k))                                      ! convert T to virtual T
-                    ges_tsen(j,i,k,itsig) = ges_tv(j,i,k)/(one+fv*q_bk(i,j,k))
-                 else
-                    ges_tsen(j,i,k,itsig)=t_bk(i,j,k)*(p_bk(i,j,k)/h1000)**rd_over_cp    ! t_bk is potential T
-                    ges_tv(j,i,k) = ges_tsen(j,i,k,itsig)*(one+fv*q_bk(i,j,k))         ! convert virtual T to T
-                 endif
-              endif   ! l_conserve_thetaV
-              ges_q(j,i,k)=q_bk(i,j,k)/(1+q_bk(i,j,k))     ! Here q is mixing ratio kg/kg, 
-                                                           ! need to convert to specific humidity
-           enddo 
-        enddo
-     enddo
-  endif
   do k=1,nsig
      do j=1,lat2
         do i=1,lon2
+           ! T/Q update
+           ! =0 no T/Q adjustment
+           if(i_T_Q_adjust==0) then
+              if(mype==0) then
+                write(6,*) 'gsdcloudanalysis: no T/Q adjustment',mype
+              endif
+           ! =1 default T/Q adjustment
+           elseif(i_T_Q_adjust==1) then
+              if(.not.twodvar_regional .or. .not.tsensible) then
+                 ! t_bk is potential T, convert to virtual T
+                 ges_tv(j,i,k)=t_bk(i,j,k)*(p_bk(i,j,k)/h1000)**rd_over_cp * (one+fv*q_bk(i,j,k))
+                 ges_tsen(j,i,k,itsig) = ges_tv(j,i,k)/(one+fv*q_bk(i,j,k))
+              else
+                 ! t_bk is potential T, convert virtual T to T
+                 ges_tsen(j,i,k,itsig)=t_bk(i,j,k)*(p_bk(i,j,k)/h1000)**rd_over_cp  
+                 ges_tv(j,i,k) = ges_tsen(j,i,k,itsig)*(one+fv*q_bk(i,j,k))  
+              endif
+              ! Here q is mixing ratio kg/kg, need to convert to specific humidity
+              ges_q(j,i,k)=q_bk(i,j,k)/(1+q_bk(i,j,k)) 
+           ! =2 T/Q adjustment only for case of clearing
+           elseif(i_T_Q_adjust==2) then
+              if(.not.twodvar_regional .or. .not.tsensible) then
+                 ! t_bk is potential T, convert to virtual T
+                 ges_tv(j,i,k)=max(ges_tv(j,i,k),t_bk(i,j,k)*(p_bk(i,j,k)/h1000)**rd_over_cp * (one+fv*q_bk(i,j,k)))
+                 ges_tsen(j,i,k,itsig) = max(ges_tsen(j,i,k,itsig),ges_tv(j,i,k)/(one+fv*q_bk(i,j,k)))
+              else
+                 ! t_bk is potential T, convert virtual T to T
+                 ges_tsen(j,i,k,itsig)= max(ges_tsen(j,i,k,itsig),t_bk(i,j,k)*(p_bk(i,j,k)/h1000)**rd_over_cp) 
+                 ges_tv(j,i,k) = max(ges_tv(j,i,k),ges_tsen(j,i,k,itsig)*(one+fv*q_bk(i,j,k)))
+              endif
+              ! Here q is mixing ratio kg/kg, need to convert to specific humidity
+              ges_q(j,i,k)=min(ges_q(j,i,k),q_bk(i,j,k)/(1+q_bk(i,j,k)))
+           else
+              write(6,*) 'gsdcloudanalysis: WARNING no T/Q adjustment, check i_T_Q_adjust value',mype
+           endif
+
+           ! hydrometeor update
            ges_qr(j,i,k)=rain_3d(i,j,k)
            ges_qs(j,i,k)=snow_3d(i,j,k)
            ges_qg(j,i,k)=graupel_3d(i,j,k)
            ges_ql(j,i,k)=cldwater_3d(i,j,k)
            ges_qi(j,i,k)=cldice_3d(i,j,k)
            ges_qnr(j,i,k)=nrain_3d(i,j,k)
+           ! cloud number concentration update
            if( l_numconc ) then
              ges_qni(j,i,k)=nice_3d(i,j,k)
              ges_qnc(j,i,k)=nwater_3d(i,j,k)

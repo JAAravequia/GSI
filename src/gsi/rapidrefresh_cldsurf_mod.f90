@@ -162,8 +162,9 @@ module rapidrefresh_cldsurf_mod
 !                           0=single model run
 !                           1=ensemble mean
 !                           2=ensemble members
-!      l_T_Q_adjust - if .true. turn on the moisture and temperature
-!                        adjustment in cloud analysis (default:true).
+!      i_T_Q_adjust -     =0 no temperature and moisture adjustment in hydrometeor analyis
+!                         =1 (default) temperature and moisture are adjusted in hydrometeor analyis
+!                         =2 temperature and moisture only adjusted for clearing (warmer, drier)
 !      l_saturate_bkCloud - if .true. ensure saturation for all cloud 3-d points
 !                        in background where observed cloud cover is missing
 !                        (default:true).
@@ -245,7 +246,7 @@ module rapidrefresh_cldsurf_mod
   public :: i_cloud_q_innovation
   public :: i_ens_mean
   public :: DTsTmax 
-  public :: l_T_Q_adjust
+  public :: i_T_Q_adjust
   public :: l_saturate_bkCloud
   public :: l_rtma3d
   public :: i_precip_vertical_check
@@ -303,7 +304,7 @@ module rapidrefresh_cldsurf_mod
   integer(i_kind)      i_cloud_q_innovation
   integer(i_kind)      i_ens_mean
   real(r_kind)         DTsTmax
-  logical              l_T_Q_adjust
+  integer(i_kind)      i_T_Q_adjust
   logical              l_saturate_bkCloud
   logical              l_rtma3d
   integer(i_kind)      i_precip_vertical_check
@@ -411,7 +412,7 @@ contains
     i_cloud_q_innovation = 0                          ! 0 = no increments from cloud obs
     i_ens_mean = 0                                    ! typical ob behavior
     DTsTmax = 20.0_r_kind                             ! maximum allowed difference between Ts and T 1st level
-    l_T_Q_adjust= .true.
+    i_T_Q_adjust= 1                                   ! temperature and moisture are adjusted
     l_saturate_bkCloud= .true.
     l_rtma3d            = .false.                     ! turn configuration for rtma3d off          
     i_precip_vertical_check = 0                       ! No check and adjustment to retrieved Qr/Qs/Qg (default)
