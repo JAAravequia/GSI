@@ -442,6 +442,14 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
             endif
             nread = nread + 1
          end do loop
+       else if(trim(filename) == 'aeolusbufr')then
+         lexist = .false.
+         aeolusloop: do while(ireadmg(lnbufr,subset,idate2) >= 0)
+            if(trim(subset) == 'FN023000') then
+               lexist = .true.
+               exit aeolusloop
+            endif
+         end do aeolusloop
        else if(trim(filename) == 'oscatbufr')then
          lexist = .false.
          oscatloop: do while(ireadmg(lnbufr,subset,idate2) >= 0)
