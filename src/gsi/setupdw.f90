@@ -1034,9 +1034,9 @@ write(6,*)'READ_LIDAR:  cdata_all read in SETUPDW : NOT EMPTY :) '
         rdiagbuf(16,ii) = errinv_final         ! final inverse observation error
 
         rdiagbuf(17,ii) = data(ilob,i)         ! observation
-        rdiagbuf(18,ii) = ddiff                ! obs-ges used in analysis 
+        rdiagbuf(18,ii) = ddif0 !ddiff         ! ILIANA:O-B w/out BC ! obs-ges used in analysis 
 !KA        rdiagbuf(19,ii) = data(ilob,i)-dwwind  ! obs-ges w/o bias correction (future slot)
-        rdiagbuf(19,ii) = ddif0
+        rdiagbuf(19,ii) = ddiff !ddif0         ! ILIANA:O-B with Hui's 2018 BC
  
         rdiagbuf(20,ii) = factw                ! 10m wind reduction factor
         rdiagbuf(21,ii) = data(ielva,i)*rad2deg! elevation angle (degrees)
@@ -1108,8 +1108,8 @@ write(6,*)'READ_LIDAR:  cdata_all read in SETUPDW : NOT EMPTY :) '
            call nc_diag_metadata("Errinv_Final",            sngl(errinv_final)     )
 
            call nc_diag_metadata("Observation",                   sngl(data(ilob,i))          )
-           call nc_diag_metadata("Obs_Minus_Forecast_adjusted",   sngl(ddiff)                 )
-           call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", sngl(data(ilob,i)-dwwind)   )
+           call nc_diag_metadata("Obs_Minus_Forecast_adjusted_HLiuBC2018",   sngl(ddiff)      )
+           call nc_diag_metadata("Obs_Minus_Forecast_unadjusted", sngl(ddif0)                 )
 
            call nc_diag_metadata("Wind_Reduction_Factor_at_10m", sngl(factw)                  )
            call nc_diag_metadata("Elevation_Angle",              sngl(data(ielva,i)*rad2deg)  )
@@ -1307,18 +1307,18 @@ subroutine read_L2B_bias_correction_
      bmieasc  = 0.0; bmiedes  = 0.0
 
    open(961, &
-file='/gpfs/dell2/emc/modeling/noscrub/Iliana.Genkova/para_fv3gfs/prAeolus/bias_correction/2018/Rayleigh_Bias_correction.asc1',form='formatted')
+file='/scratch1/NCEPDEV/da/Iliana.Genkova/prAeolus_20190501_branch/bias_correction/2018/Rayleigh_Bias_correction.asc1',form='formatted')
    open(962, &
-file='/gpfs/dell2/emc/modeling/noscrub/Iliana.Genkova/para_fv3gfs/prAeolus/bias_correction/2018/Rayleigh_Bias_correction.asc2',form='formatted')
+file='/scratch1/NCEPDEV/da/Iliana.Genkova/prAeolus_20190501_branch/bias_correction/2018/Rayleigh_Bias_correction.asc2',form='formatted')
    open(963, &
-file='/gpfs/dell2/emc/modeling/noscrub/Iliana.Genkova/para_fv3gfs/prAeolus/bias_correction/2018/Rayleigh_Bias_correction.des1',form='formatted')
+file='/scratch1/NCEPDEV/da/Iliana.Genkova/prAeolus_20190501_branch/bias_correction/2018/Rayleigh_Bias_correction.des1',form='formatted')
    open(964, &
-file='/gpfs/dell2/emc/modeling/noscrub/Iliana.Genkova/para_fv3gfs/prAeolus/bias_correction/2018/Rayleigh_Bias_correction.des2',form='formatted')
+file='/scratch1/NCEPDEV/da/Iliana.Genkova/prAeolus_20190501_branch/bias_correction/2018/Rayleigh_Bias_correction.des2',form='formatted')
 
    open(965, &
-file='/gpfs/dell2/emc/modeling/noscrub/Iliana.Genkova/para_fv3gfs/prAeolus/bias_correction/2018/Mie_Bias_correction.asc',form='formatted')
+file='/scratch1/NCEPDEV/da/Iliana.Genkova/prAeolus_20190501_branch/bias_correction/2018/Mie_Bias_correction.asc',form='formatted')
    open(966, &
-file='/gpfs/dell2/emc/modeling/noscrub/Iliana.Genkova/para_fv3gfs/prAeolus/bias_correction/2018/Mie_Bias_correction.des',form='formatted')
+file='/scratch1/NCEPDEV/da/Iliana.Genkova/prAeolus_20190501_branch/bias_correction/2018/Mie_Bias_correction.des',form='formatted')
 
     do k=2, 14
      read(961, '(19f6.1)') (brayasc1(k,n), n=1, nlats)
