@@ -46,16 +46,16 @@ subroutine getvvel(t,t_thor,prsth,prdif,what,jtstart,jtstop)
   real(r_kind) kapr
   integer(i_kind):: i,j,k
 
-! IN:
+! In:
 ! t: temperature
 ! t_t: horizontal part of temperature tendency
 ! prsth: horizontal part of pressure tendency
 ! prdif: P(k)-P(k+1)
 
-! OUT:
+! Out:
 ! what/wint9: model level vertical velocity
 
-! ***NOTES*** on vertical velocity for general coordinates
+! ***Notes*** on vertical velocity for general coordinates
 !  general formula for pressure  (on 445, eq 7.1)
 !    p(i,j,k)  = ak5(k) + bk5(k)*psfc(i,j)+ck5(k)*(t(i,j,k)/tref5(k))**(cp/rd)
 
@@ -243,7 +243,7 @@ subroutine getvvel_tl(t,t_thor,t_thor9,prsth,prdif,what,jtstart,jtstop)
   real(r_kind),dimension(lat2,lon2,nsig):: tsum,t_tsum,tdiff,factk
   real(r_kind),dimension(lat2,lon2,nsig):: tsum9,t_tsum9,tdiff9
   real(r_kind),dimension(lat2,lon2,nsig):: adiag,bdiag,cdiag
-  real(r_kind),dimension(:,:,:),pointer::ges_tv_it=>NULL()
+  real(r_kind),dimension(:,:,:),pointer::ges_tv_it=>null()
   real(r_kind) kapr,kaprm1,terma,termb
   real(r_kind) c1,c2,fprime
   integer(i_kind):: i,j,k,it,istatus
@@ -445,7 +445,7 @@ subroutine getvvel_ad(t,t_thor,t_thor9,prsth,prdif,whatin,jtstart,jtstop)
   real(r_kind),dimension(lat2,lon2,nsig):: tsum,t_tsum,tdiff,factk
   real(r_kind),dimension(lat2,lon2,nsig):: tsum9,t_tsum9,tdiff9
   real(r_kind),dimension(lat2,lon2,nsig):: adiag,bdiag,cdiag
-  real(r_kind),dimension(:,:,:),pointer::ges_tv_it=>NULL()
+  real(r_kind),dimension(:,:,:),pointer::ges_tv_it=>null()
   real(r_kind) kapr,kaprm1,terma,termb
   real(r_kind) c1,c2,fprime,tmp1,tmp2
   integer(i_kind):: i,j,k,it,istatus

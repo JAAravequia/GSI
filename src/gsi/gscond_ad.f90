@@ -83,7 +83,7 @@ subroutine gscond_ad_1_1_( im, ix, km, dt, sl_, ps_, rhc_, advt_, advq_, &
   integer(i_kind) k
 
   if( im /= 1 .or. ix /= 1 ) then
-     write(6,*)' GSCOND_AD_1_1_, IM,IX=',IM,IX,' -- BOTH MUST BE 1.  PROGRAM FAILS'
+     write(6,*)' GSCOND_AD_1_1_, IM,IX=',im,ix,' -- BOTH MUST BE 1.  PROGRAM FAILS'
      stop
   end if
 
@@ -361,7 +361,7 @@ subroutine gscond_ad_im_ix_( im, ix, km, dt, sl, ps, rhc, advt, advq, &
 
 
 !----------------------------------------------
-! RESET LOCAL ADJOINT VARIABLES
+! Reset local adjoint variables
 !----------------------------------------------
   aa_ad = zero
   ab_ad = zero
@@ -421,10 +421,10 @@ subroutine gscond_ad_im_ix_( im, ix, km, dt, sl, ps, rhc, advt, advq, &
   tx3_3_ad = zero
 
 !----------------------------------------------
-! ROUTINE BODY
+! Routine body
 !----------------------------------------------
 !----------------------------------------------
-! FUNCTION AND TAPE COMPUTATIONS
+! Function and tape computations
 !----------------------------------------------
   rdt = one/dt
   do i = 1, im
@@ -598,7 +598,7 @@ subroutine gscond_ad_im_ix_( im, ix, km, dt, sl, ps, rhc, advt, advq, &
   if (.not.adjoint) return
 
 !----------------------------------------------
-! ADJOINT COMPUTATIONS
+! Adjoint computations
 !----------------------------------------------
   do i = im, 1, -1
      do k = 1, km
@@ -819,7 +819,7 @@ subroutine gscond_ad_im_ix_( im, ix, km, dt, sl, ps, rhc, advt, advq, &
                 -(qs_3-tx3_3)*tsq_3/((tsq_3+el2orc*qs_3)*(tsq_3+el2orc*qs_3)))
            tx3_3_ad  = tx3_3_ad-delq_3_ad*(tsq_3/(tsq_3+el2orc*qs_3))
            delq_3_ad = zero
-           tx1_3_ad  = tx1_3_ad+2*tsq_3_ad*tx1_3
+           tx1_3_ad  = tx1_3_ad+two*tsq_3_ad*tx1_3
            tsq_3_ad  = zero
            es_3_ad   = es_3_ad+qs_3_ad*(u00ik*eps/(prsk+epsm1*es_3)-u00ik* &
                 eps*es_3*epsm1/((prsk+epsm1*es_3)*(prsk+epsm1*es_3)))
@@ -841,7 +841,7 @@ subroutine gscond_ad_im_ix_( im, ix, km, dt, sl, ps, rhc, advt, advq, &
                 -(qs_2-tx3_2)*tsq_2/((tsq_2+el2orc*qs_2)*(tsq_2+el2orc*qs_2)))
            tx3_2_ad  = tx3_2_ad-delq_2_ad*(tsq_2/(tsq_2+el2orc*qs_2))
            delq_2_ad = zero
-           tx1_2_ad  = tx1_2_ad+2*tsq_2_ad*tx1_2
+           tx1_2_ad  = tx1_2_ad+two*tsq_2_ad*tx1_2
            tsq_2_ad  = zero
            es_2_ad   = es_2_ad+qs_2_ad*(u00ik*eps/(prsk+epsm1*es_2)-u00ik* &
                 eps*es_2*epsm1/((prsk+epsm1*es_2)*(prsk+epsm1*es_2)))
@@ -864,7 +864,7 @@ subroutine gscond_ad_im_ix_( im, ix, km, dt, sl, ps, rhc, advt, advq, &
                 (tsq_1+el2orc*qs_1)))
            tx3_1_ad  = tx3_1_ad+delq_1_ad*((-half)*tsq_1/(tsq_1+el2orc*qs_1))
            delq_1_ad = zero
-           tx1_1_ad  = tx1_1_ad+2*tsq_1_ad*tx1_1
+           tx1_1_ad  = tx1_1_ad+two*tsq_1_ad*tx1_1
            tsq_1_ad  = zero
            es_1_ad   = es_1_ad+qs_1_ad*(u00ik*eps/(prsk+epsm1*es_1)-u00ik* &
                 eps*es_1*epsm1/((prsk+epsm1*es_1)*(prsk+epsm1*es_1)))

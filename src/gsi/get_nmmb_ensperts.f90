@@ -66,15 +66,15 @@ subroutine get_nmmb_ensperts
    sst2=zero        !    for now, sst not used in ensemble perturbations, so if sst array is called for
                     !      then sst part of en_perts will be zero when sst2=zero
 
-!    Determine if qr and qli are control variables for radar data assimilation,
-     i_radar_qr=0
-     i_radar_qli=0
-     i_radar_qr=getindex(cvars3d,'qr')
-     i_radar_qli=getindex(cvars3d,'qli')
+!  Determine if qr and qli are control variables for radar data assimilation,
+   i_radar_qr=0
+   i_radar_qli=0
+   i_radar_qr=getindex(cvars3d,'qr')
+   i_radar_qli=getindex(cvars3d,'qli')
 
    do n=1,n_ens
       write(filename,100) n               !make the filename
-100 format('nmmb_ens_mem',i3.3)    
+100   format('nmmb_ens_mem',i3.3)    
 
 
       if (mype==0)write(6,*) 'CALL GENERAL_READ_NMMB FOR ENS FILE : ',filename  
@@ -85,7 +85,7 @@ subroutine get_nmmb_ensperts
       end if
 
 ! For regional application (NMMB) use the the u,v option (i.e. uv_hyb_ens)
-! Compute RH
+! Compute rh
 ! get 3d pressure at layer midpoints  
 ! using code adapted from subroutine load_prsges for nmmb
 !  (in guess_grids.F90)
@@ -93,10 +93,10 @@ subroutine get_nmmb_ensperts
       do k=1,grd_ens%nsig
          do j=1,grd_ens%lon2
             do i=1,grd_ens%lat2         
-              prsl(i,j,k)=one_tenth*                                  &
-                    (aeta1_ll(k)*pdtop_ll +                     &
-                     aeta2_ll(k)*(ten*ps(i,j)-pdtop_ll-pt_ll) + &
-                     pt_ll)
+               prsl(i,j,k)=one_tenth*                                  &
+                     (aeta1_ll(k)*pdtop_ll +                     &
+                      aeta2_ll(k)*(ten*ps(i,j)-pdtop_ll-pt_ll) + &
+                      pt_ll)
             end do
          end do
       end do
@@ -185,7 +185,7 @@ subroutine get_nmmb_ensperts
                end do
 
             case('q','Q')
-              if (.not.q_hyb_ens) then   ! use RH
+              if (.not.q_hyb_ens) then   ! use rh
                   do k=1,grd_ens%nsig
                      do j=1,grd_ens%lon2
                         do i=1,grd_ens%lat2
@@ -194,7 +194,7 @@ subroutine get_nmmb_ensperts
                         end do
                      end do
                   end do
-               else                       ! use Q
+               else                       ! use q
                   do k=1,grd_ens%nsig
                      do j=1,grd_ens%lon2
                         do i=1,grd_ens%lat2
@@ -312,34 +312,34 @@ subroutine get_nmmb_ensperts
       end do
    end do ! end do over ensemble
 
-! Convert to mean
-  bar_norm = one/float(n_ens)
-  en_bar%values=en_bar%values*bar_norm
+!  Convert to mean
+   bar_norm = one/real(n_ens,r_kind)
+   en_bar%values=en_bar%values*bar_norm
    
-! Copy pbar to module array.  ps_bar may be needed for vertical localization
-! in terms of scale heights/normalized p/p 
-  do ic2=1,nc2d
+!  Copy pbar to module array.  ps_bar may be needed for vertical localization
+!  in terms of scale heights/normalized p/p 
+   do ic2=1,nc2d
 
-     if(trim(cvars2d(ic2)) == 'ps'.or.trim(cvars2d(ic2)) == 'PS') then
+      if(trim(cvars2d(ic2)) == 'ps'.or.trim(cvars2d(ic2)) == 'PS') then
 
-        call gsi_bundlegetpointer(en_bar,trim(cvars2d(ic2)),x2,istatus)
-        if(istatus/=0) then
-           write(6,*)' error retrieving pointer to ',trim(cvars2d(ic2)),' for en_bar in get_nmmb_ensperts'
-           call stop2(999)
-        end if
+         call gsi_bundlegetpointer(en_bar,trim(cvars2d(ic2)),x2,istatus)
+         if(istatus/=0) then
+            write(6,*)' error retrieving pointer to ',trim(cvars2d(ic2)),' for en_bar in get_nmmb_ensperts'
+            call stop2(999)
+         end if
 
-        do j=1,grd_ens%lon2
-           do i=1,grd_ens%lat2
-              ps_bar(i,j,1)=x2(i,j)
-           end do
-        end do
-        exit
-     end if
-  end do
+         do j=1,grd_ens%lon2
+            do i=1,grd_ens%lat2
+               ps_bar(i,j,1)=x2(i,j)
+            end do
+         end do
+         exit
+      end if
+   end do
 
-  call mpi_barrier(mpi_comm_world,ierror)
+   call mpi_barrier(mpi_comm_world,ierror)
    
-! Convert ensemble members to perturbations
+!  Convert ensemble members to perturbations
    sig_norm=sqrt(one/max(one,n_ens-one))  
     
    do n=1,n_ens

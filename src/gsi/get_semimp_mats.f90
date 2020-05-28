@@ -72,12 +72,12 @@ subroutine get_semimp_mats(tbar,pbar,bhat,chat,amat,bmat,hmat,smat)
      c0kref(k)=chat(k)*rkappa/(tbar(k-1)+tbar(k))
   end do
 
-! SMAT :
+! smat :
   do k=1,nsig
      smat(k)=dpkref(k)
   end do
 
-! HMAT :
+! hmat :
   do k=1,nsig
      hmat0(k)=tbar(k)*rpkref(k)*bbkref(k)
   end do
@@ -96,10 +96,10 @@ subroutine get_semimp_mats(tbar,pbar,bhat,chat,amat,bmat,hmat,smat)
      hmat(k) = rd*(hmat0(k)+hmat(k))
   end do
 
-! AMAT :
+! amat :
   amat=zero
 
-! AMAT 1+
+! amat 1+
   do i=1,nsig
      amat(i,i)=tbar(i)*rpkref(i)*(c0kref(i)+c0kref(i+1))
   end do
@@ -110,7 +110,7 @@ subroutine get_semimp_mats(tbar,pbar,bhat,chat,amat,bmat,hmat,smat)
      amat(i,i+1)=tbar(i)*rpkref(i)*c0kref(i+1)
   end do
 
-! AMAT 2+
+! amat 2+
   do i=2,nsig-1
      tcprp2=tbar(i)*c0kref(i)*pbar(i+1)*rp2ref(i)
      amat(i,i-1)=amat(i,i-1) + two*tcprp2
@@ -119,7 +119,7 @@ subroutine get_semimp_mats(tbar,pbar,bhat,chat,amat,bmat,hmat,smat)
      end do
   end do
 
-! AMAT 3+
+! amat 3+
   do i=1,nsig-1
      tcpcprp2=tbar(i)*rp2ref(i)* &
          (c0kref(i)*pbar(i+1)-c0kref(i+1)*pbar(i))
@@ -129,7 +129,7 @@ subroutine get_semimp_mats(tbar,pbar,bhat,chat,amat,bmat,hmat,smat)
      end do
   end do
 
-! AMAT 4+
+! amat 4+
   do i=1,nsig-1
      tcprp2=tbar(i)*c0kref(i+1)*pbar(i)*rp2ref(i)
      amat(i,i+1)=amat(i,i+1) - two*tcprp2
@@ -138,7 +138,7 @@ subroutine get_semimp_mats(tbar,pbar,bhat,chat,amat,bmat,hmat,smat)
      end do
   end do
 
-! AMAT 5+
+! amat 5+
   do i=1,nsig
      dprp=dpkref(i)*rpkref(i)
      amat(i,i)=amat(i,i) + dprp
@@ -154,7 +154,7 @@ subroutine get_semimp_mats(tbar,pbar,bhat,chat,amat,bmat,hmat,smat)
      end do
   end do
 
-! BMAT:
+! bmat:
   bmat = zero
   do i=1,nsig
      bmat(i,i)=kappa*tbar(i)*rpkref(i)*dpkref(i)
@@ -182,7 +182,7 @@ subroutine get_semimp_mats(tbar,pbar,bhat,chat,amat,bmat,hmat,smat)
      beta(k+1)=beta(k+1)**kappa
   end do
 
-! ZM :
+! zm :
   dup(nsig)=zero
   dum(1)=zero
   do k=1,nsig-1
@@ -199,24 +199,24 @@ subroutine get_semimp_mats(tbar,pbar,bhat,chat,amat,bmat,hmat,smat)
 
   do k=3,nsig-1
      wmkm1=c0kref(k)*rdlref(k-1)
-     wmkp1=c0kref(k)*rdlref(     k)
+     wmkp1=c0kref(k)*rdlref(k)
      zm(k-1,k-2)=wmkm1*dum(k-1)
      zm(k-1,k-1)=wmkm1*dup(k-1)+wmkp1*dum(k)-one
-     zm(k-1,k         )=wmkp1*dup(k)
+     zm(k-1,k  )=wmkp1*dup(k)
   end do
   k=nsig
   wmkm1=c0kref(k)*rdlref(k-1)
-  wmkp1=c0kref(k)*rdlref(     k)
+  wmkp1=c0kref(k)*rdlref(k)
   zm(k-1,k-2)=wmkm1*dum(k-1)
-  zm(k-1,k-1   )=wmkm1*dup(k-1)+wmkp1*dum(k)-one
+  zm(k-1,k-1)=wmkm1*dup(k-1)+wmkp1*dum(k)-one
 
   call iminv(zm,nsig-1,det,lll,mmm)
 
-! TM :
+! tm :
   tm=zero
   do k=2,nsig
      tm(k-1,k-1)=-c0kref(k)*kappa*tbar(k-1)*dpkref(k-1)*rpkref(k-1)
-     tm(k-1,k     )= c0kref(k)*kappa*tbar(k     )*dpkref(k     )*rpkref(k     )
+     tm(k-1,k  )= c0kref(k)*kappa*tbar(k  )*dpkref(k  )*rpkref(k  )
   end do
   do k=2,nsig
      do n=1,nsig
@@ -230,7 +230,7 @@ subroutine get_semimp_mats(tbar,pbar,bhat,chat,amat,bmat,hmat,smat)
      enddo
   enddo
 
-! ZM*TM :
+! zm*tm :
   wtm=zero
   do i=1,nsig
      do n=1,nsig-1
@@ -240,23 +240,23 @@ subroutine get_semimp_mats(tbar,pbar,bhat,chat,amat,bmat,hmat,smat)
      end do
   end do
 
-! PM :
+! pm :
   pm=zero
   k=1
   pm(k,k)=(delta(k)*tbar(k)-beta(k+1)*tbar(k+1))*rdlref(k)
   do k=2,nsig-1
      pm(k,k-1)=(alpha(k-1)*tbar(k-1)-gamma(k)*tbar(k))*rdlref(k)
-     pm(k,k     )=(delta(k     )*tbar(k     )-beta(k+1)*tbar(k+1))*rdlref(k)
+     pm(k,k  )=(delta(k  )*tbar(k  )-beta(k+1)*tbar(k+1))*rdlref(k)
   end do
   k=nsig
   pm(k,k-1)=(alpha(k-1)*tbar(k-1)-gamma(k)*tbar(k))*rdlref(k)
 
-! BMAT+ = PM*WTM:
+! bmat+ = pm*wtm:
   do i=1,nsig
      do k=1,nsig
         do j=1,nsig-1
 
-!          ***NOTE:  NOT SURE ABOUT THIS PART??
+!          ***Note:  not sure about this part??
 !          bmat(k,i)=bmat(k,i)+pm(k,j)*wtm(j,i)
 
         end do

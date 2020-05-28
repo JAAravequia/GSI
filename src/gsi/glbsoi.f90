@@ -110,7 +110,7 @@ subroutine glbsoi
   use mpimod, only: mype,npe
   use adjtest_obs, only: adtest_obs
   use jfunc, only: miter,jiter,jiterstart,jiterend,iguess,&
-      write_guess_solution,R_option,&
+      write_guess_solution,r_option,&
       xhatsave,yhatsave,create_jfunc,destroy_jfunc
   use anberror, only: anisotropic, &
       create_anberror_vars_reg,destroy_anberror_vars_reg,&
@@ -158,7 +158,7 @@ subroutine glbsoi
   use rapidrefresh_cldsurf_mod, only: i_gsdcldanal_type
   use aux2dvarflds, only: destroy_aux2dvarflds
 
-  use m_prad, only: prad_updatePredx    ! was -- prad_bias()
+  use m_prad, only: prad_updatepredx    ! was -- prad_bias()
   use m_obsdiags, only: obsdiags_write
   use gsi_io,only: verbose
 
@@ -239,7 +239,7 @@ subroutine glbsoi
         call create_berror_vars_reg
      end if
      call prebal_reg(cwcoveqqcov)
-     if (.not. R_option) then
+     if (.not. r_option) then
         if(anisotropic) then
            call anprewgt_reg(mype)
         else
@@ -310,12 +310,12 @@ subroutine glbsoi
 !    Set up right hand side of analysis equation
      call setuprhsall(ndata,mype,.true.,.true.)
 
-!    Estimate correlation length for lcbas if R_option==.true.
+!    Estimate correlation length for lcbas if r_option==.true.
 !      For this to work we need to have run setuplcbas first to get the weights.
-!      Note that R_option is only applicable for lcbas and not for any
+!      Note that r_option is only applicable for lcbas and not for any
 !      another twodvar_regional variables.  All other variables are handled
 !      as they would have been otherwise.
-     if (R_option .and. twodvar_regional .and. jiter==jiterstart) then
+     if (r_option .and. twodvar_regional .and. jiter==jiterstart) then
         if(anisotropic) then
            call anprewgt_reg(mype)
         else
@@ -404,7 +404,7 @@ subroutine glbsoi
      if (write_diag(jiter)) then 
         call setuprhsall(ndata,mype,.true.,.true.)
         if (.not. lsqrtb) call pcinfo
-        if (any(ditype=='rad') .and. passive_bc) call prad_updatePredx() ! was -- call prad_bias
+        if (any(ditype=='rad') .and. passive_bc) call prad_updatepredx() ! was -- call prad_bias
      end if
 
 !    Write xhat- and yhat-save for use as a guess for the solution

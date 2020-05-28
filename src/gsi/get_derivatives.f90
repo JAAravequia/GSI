@@ -79,10 +79,10 @@ subroutine get_derivatives (guess,xderivative,yderivative)
   character(len=*),parameter::myname='get_derivatives'
   integer(i_kind) k,ic,ier,istatus
   real(r_kind),allocatable,dimension(:,:,:,:):: hwork,hworkd,hworke
-  real(r_kind),dimension(:,:,:),pointer :: ptr3dges=>NULL()
-  real(r_kind),dimension(:,:  ),pointer :: ptr2dges=>NULL()
-  real(r_kind),dimension(:,:,:),pointer :: ptr3ddrv=>NULL()
-  real(r_kind),dimension(:,:  ),pointer :: ptr2ddrv=>NULL()
+  real(r_kind),dimension(:,:,:),pointer :: ptr3dges=>null()
+  real(r_kind),dimension(:,:  ),pointer :: ptr2dges=>null()
+  real(r_kind),dimension(:,:,:),pointer :: ptr3ddrv=>null()
+  real(r_kind),dimension(:,:  ),pointer :: ptr2ddrv=>null()
   character(len=max_varname_length),dimension(:),allocatable:: dvars2d
   character(len=max_varname_length),dimension(:),allocatable:: dvars3d
   type(gsi_bundle):: work_bundle
@@ -234,10 +234,10 @@ subroutine tget_derivatives(guess,xderivative,yderivative)
   character(len=*),parameter::myname='tget_derivatives'
   integer(i_kind) k,ic,ier,istatus
   real(r_kind),allocatable,dimension(:,:,:,:):: hwork,hwork2,hworkd,hworke
-  real(r_kind),pointer    ,dimension(:,:,:)  :: ptr3dges=>NULL()
-  real(r_kind),pointer    ,dimension(:,:,:)  :: ptr3ddrv=>NULL()
-  real(r_kind),pointer    ,dimension(:,:)    :: ptr2dges=>NULL()
-  real(r_kind),pointer    ,dimension(:,:)    :: ptr2ddrv=>NULL()
+  real(r_kind),pointer    ,dimension(:,:,:)  :: ptr3dges=>null()
+  real(r_kind),pointer    ,dimension(:,:,:)  :: ptr3ddrv=>null()
+  real(r_kind),pointer    ,dimension(:,:)    :: ptr2dges=>null()
+  real(r_kind),pointer    ,dimension(:,:)    :: ptr2ddrv=>null()
   character(len=max_varname_length),dimension(:),allocatable:: dvars2d
   character(len=max_varname_length),dimension(:),allocatable:: dvars3d
   type(gsi_bundle):: derivative

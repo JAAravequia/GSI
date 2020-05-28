@@ -1391,7 +1391,7 @@ contains
        allocate(coeffy(nlat,nlon),coeffx(nlat,nlon))
 
 !  trasfer earth lats and lons to arrays region_lat, region_lon
-!  NOTE: The glat_an and glon_an are the latlon values for ensemble perturbation grid
+!  Note: The glat_an and glon_an are the latlon values for ensemble perturbation grid
 
        allocate(glat_an(nlon,nlat),glon_an(nlon,nlat))
        do k=1,nlon
@@ -1748,10 +1748,10 @@ contains
        regional_fhr=zero  !  with twodvar analysis fcst hr is not currently available.
  
        if(diagnostic_reg.and.mype==0) then
-           write(6,'(" in init_reg_glob_ll, yr,mn,dy,h,m,s=",6i6)')regional_time
-           write(6,'(" in init_reg_glob_ll, nlon_regional=",i6)') nlon_regional
-           write(6,'(" in init_reg_glob_ll, nlat_regional=",i6)') nlat_regional
-           write(6,'(" in init_reg_glob_ll, nsig=",i6)') nsig 
+          write(6,'(" in init_reg_glob_ll, yr,mn,dy,h,m,s=",6i6)')regional_time
+          write(6,'(" in init_reg_glob_ll, nlon_regional=",i6)') nlon_regional
+          write(6,'(" in init_reg_glob_ll, nlat_regional=",i6)') nlat_regional
+          write(6,'(" in init_reg_glob_ll, nsig=",i6)') nsig 
        end if
  
 ! Get vertical info 
@@ -1981,48 +1981,48 @@ contains
 
 !   transform so pole is at rlat0,rlon0 and 0 meridian is tangent to earth latitude at rlat0,rlon0.
 
-        clat0=clata(i,j) ; slat0=slata(i,j) ; clon0=clona(i,j) ; slon0=slona(i,j)
+     clat0=clata(i,j) ; slat0=slata(i,j) ; clon0=clona(i,j) ; slon0=slona(i,j)
 !    now obtain new coordinates for m1 and p1 points.
 
-        clat_p1=clata(i+1,j) ; slat_p1=slata(i+1,j) ; clon_p1=clona(i+1,j) ; slon_p1=slona(i+1,j)
+     clat_p1=clata(i+1,j) ; slat_p1=slata(i+1,j) ; clon_p1=clona(i+1,j) ; slon_p1=slona(i+1,j)
 
-        x=clat_p1*clon_p1 ; y=clat_p1*slon_p1 ; z=slat_p1
-        xt=x*clon0+y*slon0 ; yt=-x*slon0+y*clon0 ; zt=z
-        yb=zt*clat0-xt*slat0
-        xb=yt
-        zb=xt*clat0+zt*slat0
-        rlonb_p1=atan2(yb,xb)
-        clonb_p1=cos(rlonb_p1)
-        slonb_p1=sin(rlonb_p1)
-        crot=clonb_p1
-        srot=slonb_p1
-        cos_beta_ref(i,j)=crot*clon0-srot*slon0
-        sin_beta_ref(i,j)=srot*clon0+crot*slon0
+     x=clat_p1*clon_p1 ; y=clat_p1*slon_p1 ; z=slat_p1
+     xt=x*clon0+y*slon0 ; yt=-x*slon0+y*clon0 ; zt=z
+     yb=zt*clat0-xt*slat0
+     xb=yt
+     zb=xt*clat0+zt*slat0
+     rlonb_p1=atan2(yb,xb)
+     clonb_p1=cos(rlonb_p1)
+     slonb_p1=sin(rlonb_p1)
+     crot=clonb_p1
+     srot=slonb_p1
+     cos_beta_ref(i,j)=crot*clon0-srot*slon0
+     sin_beta_ref(i,j)=srot*clon0+crot*slon0
 
      i=nlon
 
 !   transform so pole is at rlat0,rlon0 and 0 meridian is tangent to earth latitude at rlat0,rlon0.
 
-        clat0=clata(i,j) ; slat0=slata(i,j) ; clon0=clona(i,j) ; slon0=slona(i,j)
+     clat0=clata(i,j) ; slat0=slata(i,j) ; clon0=clona(i,j) ; slon0=slona(i,j)
 
 !    now obtain new coordinates for m1 and p1 points.
 
-        clat_m1=clata(i-1,j) ; slat_m1=slata(i-1,j) ; clon_m1=clona(i-1,j) ; slon_m1=slona(i-1,j)
+     clat_m1=clata(i-1,j) ; slat_m1=slata(i-1,j) ; clon_m1=clona(i-1,j) ; slon_m1=slona(i-1,j)
 
-        x=clat_m1*clon_m1 ; y=clat_m1*slon_m1 ; z=slat_m1
-        xt=x*clon0+y*slon0 ; yt=-x*slon0+y*clon0 ; zt=z
-        yb=zt*clat0-xt*slat0
-        xb=yt
-        zb=xt*clat0+zt*slat0
+     x=clat_m1*clon_m1 ; y=clat_m1*slon_m1 ; z=slat_m1
+     xt=x*clon0+y*slon0 ; yt=-x*slon0+y*clon0 ; zt=z
+     yb=zt*clat0-xt*slat0
+     xb=yt
+     zb=xt*clat0+zt*slat0
 
-        rlonb_m1=atan2(-yb,-xb)   !  the minus signs here are so line for m1 is directed same
-        clonb_m1=cos(rlonb_m1)
-        slonb_m1=sin(rlonb_m1)
+     rlonb_m1=atan2(-yb,-xb)   !  the minus signs here are so line for m1 is directed same
+     clonb_m1=cos(rlonb_m1)
+     slonb_m1=sin(rlonb_m1)
 
-        crot=clonb_m1
-        srot=slonb_m1
-        cos_beta_ref(i,j)=crot*clon0-srot*slon0
-        sin_beta_ref(i,j)=srot*clon0+crot*slon0
+     crot=clonb_m1
+     srot=slonb_m1
+     cos_beta_ref(i,j)=crot*clon0-srot*slon0
+     sin_beta_ref(i,j)=srot*clon0+crot*slon0
   end do
 
 end subroutine init_general_transform
@@ -2390,13 +2390,13 @@ end subroutine init_general_transform
   sign_pole = zero
   if(rlats0min>-r37*deg2rad) sign_pole=-one   !  northern hemisphere xy domain
   if(rlats0max< r37*deg2rad) sign_pole= one   !  southern hemisphere xy domain
-  ! if neither condition satisfied (rlat0max > 37N, rlat0min < 37S), try 
+  ! if neither condition satisfied (rlat0max > 37n, rlat0min < 37s), try 
   ! this... 
   if (sign_pole == zero) then 
      if (abs(rlats0max) > abs(rlats0min)) then 
-        sign_pole=-one  ! NH domain 
+        sign_pole=-one  ! nh domain 
      else 
-        sign_pole=one   ! SH 
+        sign_pole=one   ! sh 
      endif 
   endif
 

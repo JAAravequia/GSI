@@ -267,8 +267,8 @@ subroutine mix_gfs_nmmb_vcoords(deta1 ,aeta1 ,eta1 ,deta2 ,aeta2 ,eta2 ,pdtop,pt
       if (nframe /= 0) call error_msg(trim(my_name),trim(filename),'nframe', &
                                          'getfilehead',istop,nframe)
 
-      fhour = float(nfhour) + float(nfminute)/r60 + &
-              float(nfsecondn)/float(nfsecondd)/r3600
+      fhour = real(nfhour,r_kind) + real(nfminute,r_kind)/r60 + &
+              real(nfsecondn,r_kind)/real(nfsecondd,r_kind)/r3600
       write(6,*) ' input filename=',filename
       write(6,*) ' nemsio head: fhour,idate=',fhour,idate
       write(6,*) ' nemsio head: levs=',levs
@@ -333,9 +333,9 @@ subroutine mix_gfs_nmmb_vcoords(deta1 ,aeta1 ,eta1 ,deta2 ,aeta2 ,eta2 ,pdtop,pt
    if (allocated(bk5))        deallocate(bk5)
 
    if(.not. use_gfs_nemsio)then
-       nsigg=sighead%levs
+      nsigg=sighead%levs
    else
-       nsigg=levs
+      nsigg=levs
    end if
    if ( nsigg > nsig_max ) then
       write(6,*)' MIX_GFS_NMMB_VCOORDS: nsigg > nsig_max, nsigg,nsig_max=',nsigg,nsig_max
@@ -919,12 +919,12 @@ subroutine add_gfs_stratosphere
    real(r_kind) :: fhour
    type(nemsio_gfile) :: gfile
    
-   real(r_kind),dimension(:,:  ),pointer:: ges_ps =>NULL()
-   real(r_kind),dimension(:,:,:),pointer:: ges_u  =>NULL()
-   real(r_kind),dimension(:,:,:),pointer:: ges_v  =>NULL()
-   real(r_kind),dimension(:,:,:),pointer:: ges_tv =>NULL()
-   real(r_kind),dimension(:,:,:),pointer:: ges_q  =>NULL()
-   real(r_kind),dimension(:,:,:),pointer:: ges_oz =>NULL()
+   real(r_kind),dimension(:,:  ),pointer:: ges_ps =>null()
+   real(r_kind),dimension(:,:,:),pointer:: ges_u  =>null()
+   real(r_kind),dimension(:,:,:),pointer:: ges_v  =>null()
+   real(r_kind),dimension(:,:,:),pointer:: ges_tv =>null()
+   real(r_kind),dimension(:,:,:),pointer:: ges_q  =>null()
+   real(r_kind),dimension(:,:,:),pointer:: ges_oz =>null()
   
    ! variables for cloud info
    integer(i_kind) nguess,ier_cw,ier_ql,ier_qi,ier_qr,ier_qs,ier_qg,ier_qh
@@ -1105,14 +1105,14 @@ subroutine add_gfs_stratosphere
               nfhour=nfhour,nfminute=nfminute,nfsecondn=nfsecondn,nfsecondd=nfsecondd, &
               idate=idate,dimx=lonb,dimy=latb,dimz=levs,jcap=njcap)
 
-         ! FV3GFS write component does not include JCAP, infer from DIMY-2
+         ! FV3GFS write component does not include jcap, infer from dimy-2
          if (njcap<0) njcap=latb-2
 
          if (  nframe /= 0 ) call error_msg(trim(my_name),trim(filename),'nframe', &
                                             'getfilehead',istop,nframe)
 
-         fhour = float(nfhour) + float(nfminute)/r60 + &
-                 float(nfsecondn)/float(nfsecondd)/r3600
+         fhour = real(nfhour,r_kind) + real(nfminute,r_kind)/r60 + &
+                 real(nfsecondn,r_kind)/real(nfsecondd,r_kind)/r3600
          if ( mype == 0 ) then
             write(6,*) ' input filename=',filename
             write(6,*) ' nemsio head: fhour,idate=',fhour,idate
@@ -1304,14 +1304,14 @@ subroutine add_gfs_stratosphere
       deallocate(work_reg)
       allocate(pri_g(grd_mix%lat2,grd_mix%lon2,grd_mix%nsig+1))
 
-      ! IN FOLLOWING SECTION GET 3D PRESSURE FOR GFS.
+      ! In following section get 3d pressure for GFS.
 
       ! compute 3d pressure on interfaces
       pri_g=zero
       k=1
       k2=nsigg+1
 
-      ! FOR NOW, ONLY CONSIDER pressure defined by ak5,bk5
+      ! For now, only consider pressure defined by ak5,bk5
       do j=1,lon2
          do i=1,lat2
             pri_g(i,j,k)=work_sub(1,i,j,kps)
@@ -1329,7 +1329,7 @@ subroutine add_gfs_stratosphere
       enddo
 
       ! Get 3d pressure field now on layers
-      ! FOR NOW, ASSUME IDSL==2, so layer value is just average of interface values
+      ! For now, assume idsl==2, so layer value is just average of interface values
       ! (also apparently the definition used by nmmb)
 
       allocate(prsl_g(lat2,lon2,nsigg))
@@ -1344,7 +1344,7 @@ subroutine add_gfs_stratosphere
       enddo
       deallocate(pri_g)
 
-      ! IN THIS SECTION GET 3D PRESSURE FOR INPUT NMMB.
+      ! In this section get 3d pressure for input NMMB.
 
       allocate(pri_r(lat2,lon2,nsig_save+1))
       do k=1,nsig_save+1
@@ -1368,7 +1368,7 @@ subroutine add_gfs_stratosphere
          enddo
       enddo
 
-      ! IF THERE IS NO REGIONAL GES OZONE (good_o3mr=F), THEN INTERPOLATE GLOBAL OZONE TO NMMB VERT COORD:
+      ! If there is no regional ges ozone (good_o3mr=f), then interpolate global ozone to NMMB vert coord:
 
       if ( .not.good_o3mr ) then
          allocate(xsplo_r(nsig_save),ysplou_r(nsig_save))
@@ -1401,7 +1401,7 @@ subroutine add_gfs_stratosphere
          deallocate(xsplo_r,ysplou_r,xspli_g,yspliu_g)
       endif
 
-      ! IN THIS SECTION GET 3D PRESSURE FOR MERGED (TARGET) PRESSURE
+      ! In this section get 3d pressure for merged (target) pressure
 
       ! allocate(pri_m(lat2,lon2,nsig+1))
       ! do k=1,nsig+1
@@ -1464,8 +1464,8 @@ subroutine add_gfs_stratosphere
             jj=j+grd_mix%jstart(mm1)-2
             ii=min(grd_mix%nlat,max(1,ii))
             jj=min(grd_mix%nlon,max(1,jj))
-            dlon=float(jj)
-            dlat=float(ii)
+            dlon=real(jj,r_kind)
+            dlat=real(ii,r_kind)
             do k=1,nsig_save
                xspli_r(k)=log(prsl_r(i,j,k)*ten)
             enddo
@@ -1908,22 +1908,22 @@ subroutine revert_to_nmmb
    ! variables for cloud info
    integer(i_kind) nguess,ier_cw,ier_ql,ier_qi,ier_qr,ier_qs,ier_qg,ier_qh,iret
    integer(i_kind) iqtotal,icw4crtm
-   real(r_kind),pointer,dimension(:,:,:):: ges_cwmr =>NULL()
-   real(r_kind),pointer,dimension(:,:,:):: ges_ql =>NULL()
-   real(r_kind),pointer,dimension(:,:,:):: ges_qi =>NULL()
-   real(r_kind),pointer,dimension(:,:,:):: ges_qr =>NULL()
-   real(r_kind),pointer,dimension(:,:,:):: ges_qs =>NULL()
-   real(r_kind),pointer,dimension(:,:,:):: ges_qg =>NULL()
-   real(r_kind),pointer,dimension(:,:,:):: ges_qh =>NULL()
+   real(r_kind),pointer,dimension(:,:,:):: ges_cwmr =>null()
+   real(r_kind),pointer,dimension(:,:,:):: ges_ql =>null()
+   real(r_kind),pointer,dimension(:,:,:):: ges_qi =>null()
+   real(r_kind),pointer,dimension(:,:,:):: ges_qr =>null()
+   real(r_kind),pointer,dimension(:,:,:):: ges_qs =>null()
+   real(r_kind),pointer,dimension(:,:,:):: ges_qg =>null()
+   real(r_kind),pointer,dimension(:,:,:):: ges_qh =>null()
   
-   real(r_kind),dimension(:,:  ),pointer:: ges_ps =>NULL()
-   real(r_kind),dimension(:,:,:),pointer:: ges_u  =>NULL()
-   real(r_kind),dimension(:,:,:),pointer:: ges_v  =>NULL()
-   real(r_kind),dimension(:,:,:),pointer:: ges_tv =>NULL()
-   real(r_kind),dimension(:,:,:),pointer:: ges_q  =>NULL()
-   real(r_kind),dimension(:,:,:),pointer:: ges_oz =>NULL()
+   real(r_kind),dimension(:,:  ),pointer:: ges_ps =>null()
+   real(r_kind),dimension(:,:,:),pointer:: ges_u  =>null()
+   real(r_kind),dimension(:,:,:),pointer:: ges_v  =>null()
+   real(r_kind),dimension(:,:,:),pointer:: ges_tv =>null()
+   real(r_kind),dimension(:,:,:),pointer:: ges_q  =>null()
+   real(r_kind),dimension(:,:,:),pointer:: ges_oz =>null()
   
-   ! GET 3D PRESSURE FOR ORIGINAL NMMB COORDINATE:
+   ! get 3d pressure for original NMMB coordinate:
   
    ier=0
    call gsi_bundlegetpointer(gsi_metguess_bundle(ntguessig),'ps' ,ges_ps,istatus)
@@ -1953,7 +1953,7 @@ subroutine revert_to_nmmb
       enddo
    enddo
   
-   ! REPEAT FOR NMMB-GFS COORDINATE
+   ! Repeat for NMMB-GFS coordinate
   
    do k=1,nsig
       do j=1,lon2
@@ -1968,7 +1968,7 @@ subroutine revert_to_nmmb
    ! In following, for nmmb-gfs, replace saved guess with current analysis.  Then fields in guess_grids
    ! will be updated to nmmb analysis.
     
-   ! NOTE:  only need to interpolate from k0m+1 to nsig_save
+   ! Note:  only need to interpolate from k0m+1 to nsig_save
      
    ! Inquire about cloud guess fields
    call gsi_metguess_get('dim',nguess,istatus)
@@ -2223,21 +2223,21 @@ subroutine restore_nmmb_gfs
 
    character(len=*),parameter::myname='restore_nmmb_gfs'
    integer(i_kind) i,j,k,ier,istatus
-   real(r_kind),dimension(:,:,:),pointer:: ges_u  =>NULL()
-   real(r_kind),dimension(:,:,:),pointer:: ges_v  =>NULL()
-   real(r_kind),dimension(:,:,:),pointer:: ges_q  =>NULL()
-   real(r_kind),dimension(:,:,:),pointer:: ges_oz =>NULL()
+   real(r_kind),dimension(:,:,:),pointer:: ges_u  =>null()
+   real(r_kind),dimension(:,:,:),pointer:: ges_v  =>null()
+   real(r_kind),dimension(:,:,:),pointer:: ges_q  =>null()
+   real(r_kind),dimension(:,:,:),pointer:: ges_oz =>null()
 
    ! variables for cloud info
    integer(i_kind) nguess,ier_cw,ier_ql,ier_qi,ier_qr,ier_qs,ier_qg,ier_qh,iret
    integer(i_kind) iqtotal,icw4crtm
-   real(r_kind),pointer,dimension(:,:,:):: ges_cwmr =>NULL()
-   real(r_kind),pointer,dimension(:,:,:):: ges_ql =>NULL()
-   real(r_kind),pointer,dimension(:,:,:):: ges_qi =>NULL()
-   real(r_kind),pointer,dimension(:,:,:):: ges_qr =>NULL()
-   real(r_kind),pointer,dimension(:,:,:):: ges_qs =>NULL()
-   real(r_kind),pointer,dimension(:,:,:):: ges_qg =>NULL()
-   real(r_kind),pointer,dimension(:,:,:):: ges_qh =>NULL()
+   real(r_kind),pointer,dimension(:,:,:):: ges_cwmr =>null()
+   real(r_kind),pointer,dimension(:,:,:):: ges_ql =>null()
+   real(r_kind),pointer,dimension(:,:,:):: ges_qi =>null()
+   real(r_kind),pointer,dimension(:,:,:):: ges_qr =>null()
+   real(r_kind),pointer,dimension(:,:,:):: ges_qs =>null()
+   real(r_kind),pointer,dimension(:,:,:):: ges_qg =>null()
+   real(r_kind),pointer,dimension(:,:,:):: ges_qh =>null()
 
    ier=0
    call gsi_bundlegetpointer(gsi_metguess_bundle(ntguessig),'u'  ,ges_u ,istatus) 

@@ -46,7 +46,7 @@ subroutine getprs(ps,prs)
 
 ! Declare local variables
   real(r_kind) kapr,trk
-  real(r_kind),dimension(:,:,:),pointer::ges_tv_it=>NULL()
+  real(r_kind),dimension(:,:,:),pointer::ges_tv_it=>null()
   integer(i_kind) i,j,k,k2,it,istatus
 
 ! Declare local parameter
@@ -294,7 +294,7 @@ subroutine getprs_tl(ps,t,prs)
 
 ! Declare local variables
   real(r_kind) kapr,kaprm1,trk,tc1,t9trm
-  real(r_kind),dimension(:,:,:),pointer::ges_tv_it=>NULL()
+  real(r_kind),dimension(:,:,:),pointer::ges_tv_it=>null()
   integer(i_kind) i,j,k,k2,it,istatus
 
   if (regional) then
@@ -524,7 +524,7 @@ subroutine getprs_ad(ps,t,prs)
 
 ! Declare local variables
   real(r_kind) kapr,kaprm1,trk,tc1,t9trm
-  real(r_kind),dimension(:,:,:),pointer::ges_tv_it=>NULL()
+  real(r_kind),dimension(:,:,:),pointer::ges_tv_it=>null()
   integer(i_kind) i,j,k,it,istatus
 
 
