@@ -1298,7 +1298,7 @@ write(6,*)'READ_LIDAR:  cdata_all read in SETUPDW : NOT EMPTY :) '
     if(allocated(errtable)) deallocate(errtable)
     if(allocated(types))    deallocate(types)
   end subroutine final_vars_
-
+!
 !hliu: adopted from Mccarty ---------------
 subroutine read_L2B_bias_correction_   
 
