@@ -194,6 +194,12 @@ subroutine read_ob_sens
   end if
  ! nobstot=nobsgood
   if(nproc == 0) write(6,*) 'total number of obs ',nobstot
+  if(nproc == 0) write(6,*) 'AFE total number of conv obs ',nobs_conv
+  if(nproc == 0) write(6,*) 'AFE total number of oz obs',nobs_oz
+  if(nproc == 0) write(6,*) 'AFE total number of sat obs',nobs_sat
+  if(nproc == 0) write(6,*) 'AFE npred=',inhead%npred
+  if(nproc == 0) write(6,*) 'AFE idate=',inhead%idate
+  if(nproc == 0) write(6,*) 'AFE nanals=',inhead%nanals
   ! Allocate arrays
   allocate(obfit_prior(nobstot))
   allocate(obsprd_prior(nobstot))
@@ -250,6 +256,7 @@ subroutine read_ob_sens
      stattype(nob) = indata%stattype
      obtype(nob) = indata%obtype
      indxsat(nn) = indata%indxsat
+!     if ((nproc == 0) .and. (indxsat(nn) .gt. jpch_rad)) print *,'AFE indxsat(nn), nn:', indxsat(nn), nn
      if(nproc == 0) anal_ob(1:nanals,nob) = real(tmpanal_ob(1:nanals),r_kind)
      biaspreds(1:npred+1,nn) = real(tmpbiaspreds(1:npred+1),r_kind)
   end do
@@ -479,6 +486,10 @@ subroutine print_ob_sens
      do nob=nobs_conv+nobs_oz+1,nobs_conv+nobs_oz+nobs_sat
         nn = nn + 1
         nchan=indxsat(nn)
+        if (nchan .gt. jpch_rad) then
+              if (nproc == 0) print *,'AFE skipping nchan = ', nchan
+              cycle
+        end if
         ! Output individual observation record
         outdata%obfit_prior = real(obfit_prior(nob),r_single)
         outdata%obsprd_prior = real(obsprd_prior(nob),r_single)
@@ -493,7 +504,7 @@ subroutine print_ob_sens
         outdata%oberrvar_orig = real(oberrvar_orig(nob),r_single)
         outdata%stattype = stattype(nob)
         outdata%obtype = obtype(nob)
-        outdata%indxsat = nuchan(nchan)
+        outdata%indxsat = nchan
         tmpbiaspreds(1:npred+1) = real(biaspreds(1:npred+1,nn),r_single)
         if(efsoi_flag) then
            outdata%osense_kin = real(obsense_kin(nob),r_single)
