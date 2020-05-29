@@ -38,7 +38,7 @@ module m_gpsStats
   use m_gpsnode, only: gps_ob_type => gpsnode
   use kinds , only: r_kind,i_kind
   implicit none
-  private	! except
+  private      ! except
   
         ! Data Structure:
   !public:: gps_all_ob_type      ! currently not required to be public
@@ -259,7 +259,6 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
   use jfunc, only: jiter,miter,jiterstart
   use gsi_4dvar, only: nobs_bins
   use convinfo, only: nconvtype
-  use state_vectors, only: nsdim
   implicit none
 
 ! Declare passed variables
@@ -291,8 +290,6 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
   real(r_single),allocatable,dimension(:,:)::sdiag
   character(8),allocatable,dimension(:):: cdiag
 
-  real(r_single), dimension(nsdim) :: dhx_dx_array
-  
   type(obs_diag), pointer :: obsptr => null()
 
   integer(i_kind) :: nnz, nind
@@ -346,10 +343,10 @@ subroutine genstats_gps(bwork,awork,toss_gps_sub,conv_diagsave,mype)
        mpi_comm_world,ierror)
 
 
-! Compute superobs factor on sub-domains using global QC'd profile height
+! Compute superobs factor on sub-domains using global qc'd profile height
   super_gps_sub=zero
   high_gps_sub = zero
-  DO ii=1,nobs_bins
+  do ii=1,nobs_bins
      gps_allptr => gps_allhead(ii)%head
      do while (associated(gps_allptr))
 
@@ -742,7 +739,12 @@ subroutine init_netcdf_diag_
 
      if (.not. append_diag) then ! don't write headers on append - the module will break?
         call nc_diag_header("date_time",ianldate )
-        call nc_diag_header("Number_of_state_vars", nsdim          )
+        if (save_jacobian) then
+           nnz   = 3*nsig
+           nind  = 3
+           call nc_diag_header("jac_nnz", nnz)
+           call nc_diag_header("jac_nind", nind)
+        endif
      endif
 end subroutine init_netcdf_diag_
 
@@ -790,8 +792,9 @@ subroutine contents_netcdf_diag_
 
      if (save_jacobian) then
         call readarray(dhx_dx, gps_allptr%rdiag(ioff+1:nreal))
-        call fullarray(dhx_dx, dhx_dx_array)
-        call nc_diag_data2d("Observation_Operator_Jacobian", dhx_dx_array)
+        call nc_diag_data2d("Observation_Operator_Jacobian_stind", dhx_dx%st_ind(1:dhx_dx%nind))
+        call nc_diag_data2d("Observation_Operator_Jacobian_endind", dhx_dx%end_ind(1:dhx_dx%nind))
+        call nc_diag_data2d("Observation_Operator_Jacobian_val", real(dhx_dx%val(1:dhx_dx%nnz),r_single))
      endif
 
 

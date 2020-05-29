@@ -34,6 +34,7 @@ subroutine gesinfo
 !   2017-05-12 Y. Wang and X. Wang - forecast length in minute unit is included in analysis time calculation
 !                                    for subhourly DA, POC: xuguang.wang@ou.edu
 !   2017-10-10  wu,w    - setup for FV3
+!   2019-09-24  martin  - add use_gfs_ncio if input files are in netCDF format
 !
 !   input argument list:
 !
@@ -78,11 +79,14 @@ subroutine gesinfo
       wrf_nmm_regional,wrf_mass_regional,twodvar_regional,nems_nmmb_regional,cmaq_regional,&
       ntracer,ncloud,idvm5,&
       ncepgfs_head,ncepgfs_headv,idpsfc5,idthrm5,idsl5,cp5,jcap_b, use_gfs_nemsio, &
-      regional_fmin
+      regional_fmin, use_gfs_ncio
   use sigio_module, only: sigio_head,sigio_srhead,sigio_sclose,&
       sigio_sropen
   use nemsio_module, only:  nemsio_init,nemsio_open,nemsio_close
   use nemsio_module, only:  nemsio_gfile,nemsio_getfilehead,nemsio_getheadvar
+  use module_fv3gfs_ncio, only: dimension, dataset, open_dataset, get_dim, &
+                                read_vardata, get_idate_from_time_units,&
+                                read_attribute, close_dataset 
 
   use constants, only: zero,h300,r60,r3600,i_missing
 
@@ -103,25 +107,30 @@ subroutine gesinfo
 ! Declare local variables
 
   logical fexist
-  character(6) filename
+  character(6) filename,sfilename
   character(8) filetype, mdlname
 
-  integer(i_kind) iyr,ihourg,k
+  integer(i_kind) iyr,ihourg,k,kr
   integer(i_kind) mype_out,iret,iret2,intype
   integer(i_kind),dimension(5):: idate4
   integer(i_kind),dimension(8):: ida,jda
   integer(i_kind) :: nmin_an
   integer(i_kind),dimension(7):: idate
+  integer(i_kind),dimension(6):: idate2
   integer(i_kind) :: nfhour, nfminute, nfsecondn, nfsecondd
+  integer(i_kind),allocatable,dimension(:) :: ntrac,ncld
 
   real(r_kind) hourg, minuteg
   real(r_kind),dimension(5) :: fha
   real(r_single),allocatable,dimension(:,:,:) :: nems_vcoord
+  real(r_single),allocatable,dimension(:) :: aknc, bknc, fhour
 
   type(sigio_head):: sighead
   type(ncepgfs_head):: gfshead
   type(ncepgfs_headv):: gfsheadv
   type(nemsio_gfile) :: gfile2
+  type(dataset) :: atmges,sfcges
+  type(dimension) :: ncdim
   logical :: print_verbose
   logical :: fatal = .false.
 
@@ -134,7 +143,7 @@ subroutine gesinfo
 
   print_verbose=.false.
   if(verbose)print_verbose=.true.
-! Handle non-GMAO interface (ie, NCEP interface)
+! Handle non-gmao interface (ie, ncep interface)
   if(.not. fv3_regional) then
      write(filename,'("sigf",i2.2)')nhr_assimilation
      inquire(file=filename,exist=fexist)
@@ -145,7 +154,7 @@ subroutine gesinfo
      end if
   end if
 
-! Handle NCEP regional case
+! Handle ncep regional case
   if(regional) then
      idate4(1)=regional_time(4)  !  hour
      idate4(2)=regional_time(2)  !  month
@@ -154,19 +163,19 @@ subroutine gesinfo
      idate4(5)=regional_time(5)  ! minutes
      hourg=regional_fhr          !  fcst hour
      minuteg=regional_fmin       !  fcst minute
-! Handle RURTMA date:  get iadatemn
+! Handle rurtma date:  get iadatemn
      iadatemn(1)=regional_time(1)  !  year
      iadatemn(2)=regional_time(2)  !  month
      iadatemn(3)=regional_time(3)  !  day
      iadatemn(4)=regional_time(4)  !  hour
      iadatemn(5)=regional_time(5)  !  minute
      if(print_verbose)write (6,*) 'in gesinfo: iadatemn with minutes', iadatemn
-! Handle NCEP global cases
+! Handle ncep global cases
   else
 
-!    Determine NCEP atmospheric guess file format
+!    Determine ncep atmospheric guess file format
      intype = 0
-     if ( .not. use_gfs_nemsio ) then
+     if ( (.not. use_gfs_nemsio) .and. (.not. use_gfs_ncio) ) then
 
         call sigio_sropen(lunges,filename,iret)
         call sigio_srhead(lunges,sighead,iret2)
@@ -178,8 +187,8 @@ subroutine gesinfo
         if (mype==mype_out) &
              write(6,*)'GESINFO:  Read NCEP sigio format file, ',filename
 
-!       Extract information from NCEP atmospheric guess using sigio
-!       Fill structure with NCEP sigio header information
+!       Extract information from ncep atmospheric guess using sigio
+!       Fill structure with ncep sigio header information
         gfshead%fhour=sighead%fhour
         gfshead%idate=sighead%idate
         gfshead%latb=sighead%latb
@@ -218,8 +227,8 @@ subroutine gesinfo
         endif
 
 
-!    Extract information from NCEP atmospheric guess using NEMSIO
-     else
+!    Extract information from ncep atmospheric guess using nemsio
+     else if ( use_gfs_nemsio ) then
         call nemsio_init(iret=iret2)
         if ( iret2 /= 0 ) then
            write(6,*)' GESINFO:  ***ERROR*** problem nemsio_init file = ', &
@@ -259,9 +268,9 @@ subroutine gesinfo
 
 !       Extract vertical coordinate descriptions nems_vcoord.
 !       nems_vcoord(gfshead%levs+1,3,2) dimension is hardwired here.
-!       Present NEMSIO modules do not allow flexibility of 2nd and 3rd
+!       Present nemsio modules do not allow flexibility of 2nd and 3rd
 !       array dimension for nems_vcoord, for now, it is hardwired as
-!       (levs,3,2) If NEMS changes the setting of vcoord dimension,
+!       (levs,3,2) If nems changes the setting of vcoord dimension,
 !       GSI needs to update its setting of nems_vcoord accordingly.
 
         if (allocated(nems_vcoord))     deallocate(nems_vcoord)
@@ -274,7 +283,7 @@ subroutine gesinfo
         endif
 
 !       Determine the type of vertical coordinate used by model because that
-!       gfshead%nvcoord is no longer part of NEMSIO header output.
+!       gfshead%nvcoord is no longer part of nemsio header output.
         gfshead%nvcoord=3
         if(maxval(nems_vcoord(:,3,1))==zero .and. &
            minval(nems_vcoord(:,3,1))==zero ) then
@@ -325,6 +334,51 @@ subroutine gesinfo
 !             ' user (nlat,nlon,nsig)=',nlat,nlon,nsig
 !          call stop2(99)
 !       endif
+     else ! use_gfs_ncio and get this information
+        write(sfilename,'("sfcf",i2.2)')nhr_assimilation
+        ! open the netcdf file
+        atmges = open_dataset(filename)
+        sfcges = open_dataset(sfilename)
+        ! get dimension sizes
+        ncdim = get_dim(atmges, 'grid_xt'); gfshead%lonb = ncdim%len
+        ncdim = get_dim(atmges, 'grid_yt'); gfshead%latb = ncdim%len
+        ncdim = get_dim(atmges, 'pfull') ; gfshead%levs = ncdim%len 
+        ! hard code jcap,idsl,idvc 
+        gfshead%jcap = -9999
+        gfshead%idsl= 1
+        gfshead%idvc = 2
+        call read_attribute(atmges, 'ncnsto', ntrac)
+        gfshead%ntrac = ntrac(1)
+        call read_attribute(sfcges, 'ncld', ncld)
+        gfshead%ncldt = ncld(1)
+        call close_dataset(sfcges)
+        if (mype==mype_out) write(6,*)'GESINFO:  Read NCEP FV3GFS netCDF ', &
+           'format file, ',trim(filename)
+        ! hard code nvcoord to be 2
+        gfshead%nvcoord=2 ! ak and bk
+        if (allocated(gfsheadv%vcoord)) deallocate(gfsheadv%vcoord)
+        allocate(gfsheadv%vcoord(gfshead%levs+1,gfshead%nvcoord))
+        call read_attribute(atmges, 'ak', aknc)
+        call read_attribute(atmges, 'bk', bknc)
+        do k=1,gfshead%levs+1
+           kr = gfshead%levs+2-k
+           gfsheadv%vcoord(k,1) = aknc(kr)
+           gfsheadv%vcoord(k,2) = bknc(kr)
+        end do
+        deallocate(aknc,bknc)
+
+        ! get time information
+        idate2 = get_idate_from_time_units(atmges)
+        gfshead%idate(1) = idate2(4)  !hour
+        gfshead%idate(2) = idate2(2)  !month
+        gfshead%idate(3) = idate2(3)  !day
+        gfshead%idate(4) = idate2(1)  !year
+        call read_vardata(atmges, 'time', fhour) ! might need to change this to attribute later
+                                               ! depends on model changes from Jeff Whitaker
+        gfshead%fhour = fhour(1)
+
+        call close_dataset(atmges)
+
      endif
 
 !    Extract header information
@@ -333,6 +387,7 @@ subroutine gesinfo
      idate4(2)= gfshead%idate(2)
      idate4(3)= gfshead%idate(3)
      idate4(4)= gfshead%idate(4)
+     idate4(5)= zero
      ntracer  = gfshead%ntrac
      ncloud   = gfshead%ncldt
 
@@ -371,7 +426,7 @@ subroutine gesinfo
         tref5(k)=h300
      end do
 
-     if ( .not. use_gfs_nemsio ) then
+     if ( (.not. use_gfs_nemsio) .and. (.not. use_gfs_ncio) ) then
 !       Load surface pressure and thermodynamic variable ids
         idvm5   = gfshead%idvm
         idpsfc5 = mod ( gfshead%idvm,10 )
@@ -395,7 +450,7 @@ subroutine gesinfo
         endif
         if (gfshead%jcap/=jcap_b.and..not.regional ) then
            if (gfshead%jcap < 0) then
-              ! FV3GFS write component does not write JCAP to the NEMSIO file
+              ! fv3gfs write component does not write jcap to the nemsio file
               if ( mype == mype_out ) then
                  write(6,*)'GESINFO:  ***WARNING*** guess jcap inconsistent with namelist'
                  write(6,*)'GESINFO:  ***WARNING*** this is a FV3GFS NEMSIO file'
@@ -415,7 +470,7 @@ subroutine gesinfo
 
 !    Echo select header information to stdout
      if(mype==mype_out .and. print_verbose) then
-        if ( .not. use_gfs_nemsio ) then
+        if ( (.not. use_gfs_nemsio) .and. (.not. use_gfs_ncio) ) then
            write(6,100) gfshead%jcap,gfshead%levs,gfshead%latb,gfshead%lonb,&
                 gfshead%ntrac,gfshead%ncldt,idvc5,gfshead%nvcoord,&
                 idvm5,idsl5,idpsfc5,idthrm5
@@ -440,7 +495,7 @@ subroutine gesinfo
 
 
 
-! End of NCEP global block
+! End of ncep global block
   endif
 
 
@@ -461,23 +516,27 @@ subroutine gesinfo
   end if
   fha=zero; ida=0; jda=0
   fha(2)=ihourg    ! relative time interval in hours
-  if(regional) fha(3)=minuteg   ! relative time interval in minutes
+#ifdef RR_CLOUDANALYSIS
+  fha(3)=minuteg   ! relative time interval in minutes
+#endif
   ida(1)=iyr       ! year
   ida(2)=idate4(2) ! month
   ida(3)=idate4(3) ! day
   ida(4)=0         ! time zone
   ida(5)=idate4(1) ! hour
-  if(regional) ida(6)=idate4(5) ! minute
+#ifdef RR_CLOUDANALYSIS
+  ida(6)=idate4(5) ! minute
+#endif
   call w3movdat(fha,ida,jda)
   iadate(1)=jda(1) ! year
   iadate(2)=jda(2) ! mon
   iadate(3)=jda(3) ! day
   iadate(4)=jda(5) ! hour
-  if(regional) then 
-     iadate(5)=jda(6) !regional_time(5)      ! minute
-  else
-     iadate(5)=0   ! minute
-  end if
+#ifdef RR_CLOUDANALYSIS
+  iadate(5)=jda(6) !regional_time(5)      ! minute
+#else
+  iadate(5)=0      ! minute
+#endif
   ianldate =jda(1)*1000000+jda(2)*10000+jda(3)*100+jda(5)
 
 ! Determine date and time at start of assimilation window
@@ -494,7 +553,7 @@ subroutine gesinfo
   iadatebgn=jda(1)*1000000+jda(2)*10000+jda(3)*100+jda(5)
 
 ! Set the analysis time - this is output info...
-! w3fs21(NCEP-w3) converts analysis time to minutes relative to a fixed date.
+! w3fs21(ncep-w3) converts analysis time to minutes relative to a fixed date.
   call w3fs21(ibdate,nmin_an)
   iwinbgn = nmin_an
 
@@ -514,11 +573,11 @@ subroutine gesinfo
 
 ! Get time offset
   call time_4dvar(ianldate,time_offset)
-  if (regional)then
-     fha(2)=real(int(min_offset/60),r_kind)
-     fha(3)=(min_offset-fha(2)*r60)
-     time_offset=time_offset+fha(3)/r60
-  endif
+#ifdef RR_CLOUDANALYSIS
+  fha(2)=real(int(min_offset/60),r_kind)
+  fha(3)=(min_offset-fha(2)*r60)
+  time_offset=time_offset+fha(3)/r60
+#endif
 
 ! Get information about date/time and number of guess files
   if (regional) then

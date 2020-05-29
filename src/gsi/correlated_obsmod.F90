@@ -199,17 +199,17 @@ logical :: gmao_obserrorcov=.false.
 
 ! !PRIVATE TYPES:
 type obserrorcov
-     character(len=40) :: name                        ! R covariance name
-     character(len=20) :: instrument                  ! instrument
-     integer(i_kind)   :: nch_active=-1               ! active channels
-     integer(i_kind)   :: nctot=-1                    ! total number of channels (active+passive)
-     integer(i_kind)   :: method    =-1               ! define method of computation
-     real(r_kind)      :: kreq      =-99._r_kind      ! Weston et al-like spectrum adjustment factor
-     real(r_kind)      :: kmut      =-99._r_kind      ! multiplicative inflation factor
-     character(len=20) :: mask      ='global'         ! Apply covariance for profiles over all globe
-     integer(i_kind),pointer :: indxR(:)   =>null()   ! indexes of active channels in between 1 and nchanl
-     real(r_kind),   pointer :: R(:,:)     =>null()   ! nch_active x nch_active
-     real(r_kind),   pointer :: Revals(:)  =>null()   ! eigenvalues of R
+   character(len=40) :: name                        ! r covariance name
+   character(len=20) :: instrument                  ! instrument
+   integer(i_kind)   :: nch_active=-1               ! active channels
+   integer(i_kind)   :: nctot=-1                    ! total number of channels (active+passive)
+   integer(i_kind)   :: method    =-1               ! define method of computation
+   real(r_kind)      :: kreq      =-99._r_kind      ! Weston et al-like spectrum adjustment factor
+   real(r_kind)      :: kmut      =-99._r_kind      ! multiplicative inflation factor
+   character(len=20) :: mask      ='global'         ! Apply covariance for profiles over all globe
+   integer(i_kind),pointer :: indxR(:)   =>null()   ! indexes of active channels in between 1 and nchanl
+   real(r_kind),   pointer :: R(:,:)     =>null()   ! nch_active x nch_active
+   real(r_kind),   pointer :: Revals(:)  =>null()   ! eigenvalues of r
 end type
 
 ! !PUBLIC TYPES:
@@ -221,10 +221,10 @@ character(len=*),parameter :: myname='correlated_obsmod'
 logical :: initialized_=.false.
 logical, parameter :: verbose_=.true.
 integer(i_kind),parameter :: methods_avail(5)=(/-1, & ! do nothing
-                                                 0, & ! use dianonal of estimate(R)
-                                                 1, & ! use the correlations extracted from the full est(R)
-                                                 2, & ! use full est(R)
-                                                 3/)  ! use diag est(R), as scaling factor to GSI(R)
+                                                 0, & ! use dianonal of estimate(r)
+                                                 1, & ! use the correlations extracted from the full est(r)
+                                                 2, & ! use full est(r)
+                                                 3/)  ! use diag est(r), as scaling factor to gsi(r)
 contains
 
 !-------------------------------------------------------------------------
@@ -239,7 +239,7 @@ subroutine ini_ (iamroot)
 use mpeu_util, only: die
 implicit none
 ! !INPUT PARAMETERS:
-   logical,optional,intent(in) :: iamroot 
+logical,optional,intent(in) :: iamroot 
 ! !DESCRIPTION: Define parameters and setting for handling correlated
 !               observation errors via resouce file reading.
 !
@@ -409,24 +409,24 @@ logical :: corr_obs
       if (.not.gmao_obserrorcov) errorcov%nctot = nctot
       call create_(nch_active,errorcov)
 
-!     Read GSI-like channel numbers used in estimating R for this instrument
+!     Read gsi-like channel numbers used in estimating r for this instrument
       read(lu,iostat=ioflag) errorcov%indxr
       if(ioflag/=0) call die(myname_,' failed to read indx from '//trim(fname))
 
 !     Read estimate of observation error covariance
       if(iprec==4) then
-        allocate(readr4(nch_active,nch_active))
-        read(lu,iostat=ioflag) readr4
-        if(ioflag/=0) call die(myname_,' failed to read R from '//trim(fname))
-        errorcov%r = readr4
-        deallocate(readr4)
+         allocate(readr4(nch_active,nch_active))
+         read(lu,iostat=ioflag) readr4
+         if(ioflag/=0) call die(myname_,' failed to read R from '//trim(fname))
+         errorcov%r = readr4
+         deallocate(readr4)
       endif
       if(iprec==8) then
-        allocate(readr8(nch_active,nch_active))
-        read(lu,iostat=ioflag) readr8
-        if(ioflag/=0) call die(myname_,' failed to read R from '//trim(fname))
-        errorcov%r = readr8
-        deallocate(readr8)
+         allocate(readr8(nch_active,nch_active))
+         read(lu,iostat=ioflag) readr8
+         if(ioflag/=0) call die(myname_,' failed to read R from '//trim(fname))
+         errorcov%r = readr8
+         deallocate(readr8)
       endif
 
 !     Done reading file
@@ -444,32 +444,32 @@ logical :: corr_obs
    endif
 
    if (verbose_) then
-       allocate(diag(nch_active))
-       do ii=1,nch_active
-          diag(ii)=errorcov%r(ii,ii)
-       enddo
-       if(iamroot_) then
-          write(6,'(2a)') 'Rcov(stdev) for instrument: ', trim(errorcov%name)
-          write(6,'(9(es13.6))') sqrt(diag)
-          write(6,'(3a)') 'Channels used in estimating Rcov(', trim(errorcov%name), ')'
-          write(6,'(12(1x,i5))') errorcov%indxr
-       endif
-       deallocate(diag)
+      allocate(diag(nch_active))
+      do ii=1,nch_active
+         diag(ii)=errorcov%r(ii,ii)
+      enddo
+      if(iamroot_) then
+         write(6,'(2a)') 'Rcov(stdev) for instrument: ', trim(errorcov%name)
+         write(6,'(9(es13.6))') sqrt(diag)
+         write(6,'(3a)') 'Channels used in estimating Rcov(', trim(errorcov%name), ')'
+         write(6,'(12(1x,i5))') errorcov%indxr
+      endif
+      deallocate(diag)
    endif
 
-!  Now decompose R
+!  Now decompose r
    call solver_(errorcov)
 
    if (verbose_ .and. errorcov%method>=0) then
-       allocate(diag(nch_active))
-       do ii=1,nch_active
-          diag(ii)=errorcov%r(ii,ii)
-       enddo
-       if(iamroot_) then
-          write(6,'(3a)') 'Rcov(stdev) for instrument: ', trim(errorcov%name), ' recond'
-          write(6,'(9(es13.6))') sqrt(diag)
-       endif
-       deallocate(diag)
+      allocate(diag(nch_active))
+      do ii=1,nch_active
+         diag(ii)=errorcov%r(ii,ii)
+      enddo
+      if(iamroot_) then
+         write(6,'(3a)') 'Rcov(stdev) for instrument: ', trim(errorcov%name), ' recond'
+         write(6,'(9(es13.6))') sqrt(diag)
+      endif
+      deallocate(diag)
    endif
 
    initialized_=.true.
@@ -606,10 +606,10 @@ if ( errorcov%method==0 .or. errorcov%method==3 ) then
    endif
 endif ! method=0
 
-! This takes only corr(Re) and 
+! This takes only corr(re) and 
 ! any reconditioning is of correlation matrix
 if ( errorcov%method==1 ) then
-   ! reduce R to correlation matrix
+   ! reduce r to correlation matrix
    allocate(invstd(ndim))
    do jj=1,ndim
       invstd(jj) = errorcov%r(jj,jj)
@@ -646,14 +646,14 @@ if ( errorcov%method==2 ) then
    if ((errorcov%kreq>zero).or.(errorcov%kmut>one)) then
       do jj=1,ndim
          do ii=1,ndim
-           if(ii==jj) then
+            if(ii==jj) then
              ! inflated by constant standard deviation 
-             errorcov%r(ii,ii)=errorcov%kmut*errorcov%kmut*&
-                     (sqrt(errorcov%r(ii,ii))+errorcov%kreq)**2  
-           else
-             errorcov%r(ii,jj)=errorcov%kmut*errorcov%kmut*errorcov%r(ii,jj)
-           endif
-        enddo
+               errorcov%r(ii,ii)=errorcov%kmut*errorcov%kmut*&
+                       (sqrt(errorcov%r(ii,ii))+errorcov%kreq)**2  
+            else
+               errorcov%r(ii,jj)=errorcov%kmut*errorcov%kmut*errorcov%r(ii,jj)
+            endif
+         enddo
       enddo
       revecs=errorcov%r
       call decompose_(trim(errorcov%name),errorcov%revals,revecs,ndim,.true.)
@@ -678,8 +678,8 @@ deallocate(revecs)
        errorcov%revals = errorcov%revals + lambda_inc
     else
        if (iamroot_) then
-         write(6,'(2a,1x,es10.3)') myname_, ' Spectrum of cov(R) not changed, poor choice of kreq = ', &
-                         errorcov%kreq
+          write(6,'(2a,1x,es10.3)') myname_, ' Spectrum of cov(R) not changed, poor choice of kreq = ', &
+                          errorcov%kreq
        endif
     endif
     adjspec=.true.
@@ -689,11 +689,11 @@ deallocate(revecs)
   integer(i_kind) ii,jj,kk
   real(r_kind), allocatable, dimension(:,:) :: tmp
   allocate(tmp(ndim,ndim))
-  ! D*U^T
+  ! d*u^t
   do jj=1,ndim
      tmp(:,jj) = errorcov%revals(:) * revecs(jj,:)
   enddo
-  ! U*(D*U^T)
+  ! u*(d*u^t)
   errorcov%r = matmul(revecs,tmp)
   revecs =errorcov%r
   call decompose_(trim(errorcov%name),errorcov%revals,revecs,ndim,.true.)
@@ -707,7 +707,7 @@ end subroutine solver_
 !-------------------------------------------------------------------------
 !BOP
 !
-! !IROUTINE:  decompose_ --- calculates eigen-decomposition of cov(R)
+! !IROUTINE:  decompose_ --- calculates eigen-decomposition of cov(r)
 !
 ! !INTERFACE:
 !
@@ -764,7 +764,7 @@ subroutine decompose_(instrument,evals,evecs,ndim,lprt)
         cond=-999._r_kind
         lambda_max=maxval(evals)
         lambda_min=minval(abs(evals))
-        if(lambda_min>tiny_r_kind) cond=abs(lambda_max/lambda_min) ! formal definition (lambda>0 for SPD matrix)
+        if(lambda_min>tiny_r_kind) cond=abs(lambda_max/lambda_min) ! formal definition (lambda>0 for spd matrix)
         if (iamroot_) then
            write(6,'(2a,1x,a,1x,es20.10)') 'Rcov(Evals) for Instrument: ', trim(instrument), ' cond= ', cond
            write(6,'(9(es13.6))') evals
@@ -821,7 +821,7 @@ subroutine upd_varch_
    integer(i_kind),allocatable,dimension(:,:) :: tblidx
    integer(i_kind) :: nchanl1,jc   ! total number of channels in instrument
    if(.not.allocated(idnames)) then
-     return
+      return
    endif
    ntrow = size(idnames)
    allocate(ich1(jpch_rad),tblidx(5,ntrow))
@@ -868,7 +868,7 @@ subroutine upd_varch_
       nsat=nsatype(isurf)
       if (nsat>0) then
 
-         do jj0=1,nsat
+         read_tab: do jj0=1,nsat
 
             itbl=tblidx(isurf,jj0) !a row number
             jc=0
@@ -893,10 +893,10 @@ subroutine upd_varch_
             enddo
             nchanl1=jc
 
-            if(nchanl1==0) call die(myname_,' improperly set gsi_bundleerrorcov')
-            if(.not.amiset_(gsi_bundleerrorcov(itbl))) then
+            if(nchanl1==0) call die(myname_,' improperly set GSI_BundleErrorCov')
+            if(.not.amiset_(gsi_bundleerrorcov(itbl))) then 
                if (iamroot_) write(6,*) 'WARNING: Error Covariance not set for ',trim(idnames(itbl))
-               return
+               cycle read_tab
             endif
 
             nch_active=gsi_bundleerrorcov(itbl)%nch_active
@@ -907,11 +907,11 @@ subroutine upd_varch_
                   nn=gsi_bundleerrorcov(itbl)%indxr(jj)
                   mm=ich1(nn)
                   if( iuse_rad(mm)<1 ) then
-                    call die(myname_,' active channels used in R do not match those used in GSI, aborting')
+                     call die(myname_,' active channels used in R do not match those used in GSI, aborting')
                   endif
                   if(isurf==1) then 
-                    if(iamroot_)write(6,'(1x,a6,a20,2i6,2f20.15)')'>>>',idnames(itbl),jj,nn,varch(mm),sqrt(gsi_bundleerrorcov(itbl)%r(jj,jj))
-                    varch_sea(mm)=sqrt(gsi_bundleerrorcov(itbl)%r(jj,jj))
+                     if(iamroot_)write(6,'(1x,a6,a20,2i6,2f20.15)')'>>>',idnames(itbl),jj,nn,varch(mm),sqrt(gsi_bundleerrorcov(itbl)%r(jj,jj))
+                     varch_sea(mm)=sqrt(gsi_bundleerrorcov(itbl)%r(jj,jj))
                   endif
                   if(isurf==2) varch_land(mm)=sqrt(gsi_bundleerrorcov(itbl)%r(jj,jj))
                   if(isurf==3) varch_ice(mm)=sqrt(gsi_bundleerrorcov(itbl)%r(jj,jj))
@@ -989,7 +989,7 @@ subroutine upd_varch_
                deallocate(ijac)
                deallocate(ircv)
             endif
-         enddo !jj=1,nsat
+         enddo read_tab !jj0=1,nsat
       endif !nsat >0
    enddo !isurf=1,5
 
@@ -997,7 +997,7 @@ subroutine upd_varch_
 
 end subroutine upd_varch_
 !EOC
-logical function adjust_jac_ (iinstr,nchanl,nsigradjac,ich,varinv,depart, &
+logical function adjust_jac_ (iinstr,nchanl,nsigradjac,ich,varinv,depart,obs, &
                   err2,raterr2,wgtjo,jacobian,method,nchasm,rsqrtinv,rinvdiag)
 !$$$  subprogram documentation block
 !                .      .    .
@@ -1032,7 +1032,7 @@ logical function adjust_jac_ (iinstr,nchanl,nsigradjac,ich,varinv,depart, &
    integer(i_kind), intent(in) :: ich(nchanl)
    integer(i_kind), intent(out) :: method
    real(r_kind), intent(in)    :: varinv(nchanl)
-   real(r_kind), intent(inout) :: depart(nchanl)
+   real(r_kind), intent(inout) :: depart(nchanl),obs(nchanl)
    real(r_kind), intent(inout) :: err2(nchanl)
    real(r_kind), intent(inout) :: raterr2(nchanl)
    real(r_kind), intent(inout) :: wgtjo(nchanl)
@@ -1052,7 +1052,7 @@ logical function adjust_jac_ (iinstr,nchanl,nsigradjac,ich,varinv,depart, &
 
    if( gsi_bundleerrorcov(iinstr)%nch_active < 0) return
 
-   adjust_jac_ = scale_jac_ (depart,err2,raterr2,jacobian,nchanl,varinv,wgtjo, &
+   adjust_jac_ = scale_jac_ (depart,obs,err2,raterr2,jacobian,nchanl,varinv,wgtjo, &
                              ich,nchasm,rsqrtinv,rinvdiag,gsi_bundleerrorcov(iinstr))
 
    method = gsi_bundleerrorcov(iinstr)%method
@@ -1066,7 +1066,7 @@ logical function adjust_jac_ (iinstr,nchanl,nsigradjac,ich,varinv,depart, &
 !
 ! !INTERFACE:
 !
-logical function scale_jac_(depart,err2,raterr2,jacobian,nchanl,varinv,wgtjo, &
+logical function scale_jac_(depart,obs,err2,raterr2,jacobian,nchanl,varinv,wgtjo, &
                             ich,nchasm,rsqrtinv,rinvdiag,errorcov)
 ! !USES:
    use constants, only: tiny_r_kind
@@ -1079,7 +1079,8 @@ logical function scale_jac_(depart,err2,raterr2,jacobian,nchanl,varinv,wgtjo, &
    integer(i_kind),intent(in) :: ich(:)   ! true channel numeber
    real(r_kind),   intent(in) :: varinv(:)    ! inverse of specified ob-error-variance 
 ! !INPUT/OUTPUT PARAMETERS:
-   real(r_kind),intent(inout) :: depart(:)    ! observation-minus-guess departure
+   real(r_kind),intent(inout) :: depart(:)    ! observation-minus-guess departures
+   real(r_kind),intent(inout) :: obs(:)       ! observations
    real(r_kind),intent(inout) :: err2(:)  ! input: square of inverse of original obs errors
    real(r_kind),intent(inout) :: raterr2(:)  ! input: square of original obs error/inflated obs errors
    real(r_kind),intent(inout) :: wgtjo(:)     ! weight in Jo-term
@@ -1123,7 +1124,7 @@ logical function scale_jac_(depart,err2,raterr2,jacobian,nchanl,varinv,wgtjo, &
    integer(i_kind),allocatable,dimension(:)   :: ijac
    integer(i_kind),allocatable,dimension(:)   :: irsubset
    integer(i_kind),allocatable,dimension(:)   :: ijsubset
-   real(r_quad),   allocatable,dimension(:)   :: col
+   real(r_quad),   allocatable,dimension(:)   :: col,col2
    real(r_quad),   allocatable,dimension(:,:) :: row
    real(r_kind),   allocatable,dimension(:)   :: qcaj
    real(r_kind),   allocatable,dimension(:,:) :: ut
@@ -1141,183 +1142,186 @@ logical function scale_jac_(depart,err2,raterr2,jacobian,nchanl,varinv,wgtjo, &
    ircv = -1
    ijac = -1
    do jj=1,nchanl
-     mm=ich(jj)       ! true channel number (has no bearing here except in iuse)
-     if (varinv(jj)>tiny_r_kind .and. iuse_rad(mm)>=1) then
-       ifound=-1
-       do ii=1,nch_active
-          if(gmao_obserrorcov)then
-             if(jj==errorcov%indxr(ii)) then
-                ifound=ii
-                exit
-             endif
-          else
-             if (errorcov%nctot>nchanl) then
-                indr=ii
-             else
-                indr=errorcov%indxr(ii)
-             end if
-             if(jj==indr) then
-                ifound=ii
-                exit
-             endif
-          endif
-       enddo
-       if(ifound/=-1) then
-         ijac(jj)=jj      ! index value applies to the jacobian and departure
-         ircv(jj)=ifound  ! index value applies to ErrorCov
-       endif
-     endif
+      mm=ich(jj)       ! true channel number (has no bearing here except in iuse)
+      if (varinv(jj)>tiny_r_kind .and. iuse_rad(mm)>=1) then
+         ifound=-1
+         do ii=1,nch_active
+            if(gmao_obserrorcov)then
+               if(jj==errorcov%indxr(ii)) then
+                  ifound=ii
+                  exit
+               endif
+            else
+               if (errorcov%nctot>nchanl) then
+                  indr=ii
+               else
+                  indr=errorcov%indxr(ii)
+               end if
+               if(jj==indr) then
+                  ifound=ii
+                  exit
+               endif
+            endif
+         enddo
+         if(ifound/=-1) then
+            ijac(jj)=jj      ! index value applies to the jacobian and departure
+            ircv(jj)=ifound  ! index value applies to errorcov
+         endif
+      endif
    enddo
 
 ! following should never happen, but just in case ...
    ncp=count(ircv>0) ! number of active channels in profile
    if(ncp==0 .or. ncp>nch_active) then
-     call die(myname_,'serious inconsitency in handling correlated obs')
+      call die(myname_,'serious inconsitency in handling correlated obs')
    endif
    if(ncp /= nchasm) then
-     call die(myname_,'serious inconsitency in handling correlated obs: ncp .ne. nchasm')
+      call die(myname_,'serious inconsitency in handling correlated obs: ncp .ne. nchasm')
    endif
 
-! Get subset indexes; without QC and other on-the-fly analysis choices these
+! Get subset indexes; without qc and other on-the-fly analysis choices these
 !                     two indexes would be the same, but because the analysis
 !                     remove data here and there, most often there will be less
 !                     channels being processed for a given profile than the set
-!                     of active channels used to get an offline estimate of R.
-   allocate(irsubset(ncp)) ! these indexes apply to the matrices/vec in ErrorCov
-   allocate(ijsubset(ncp)) ! these indexes apply to the Jacobian/departure 
+!                     of active channels used to get an offline estimate of r.
+   allocate(irsubset(ncp)) ! these indexes apply to the matrices/vec in errorcov
+   allocate(ijsubset(ncp)) ! these indexes apply to the jacobian/departure 
    iii=0;jjj=0
    do ii=1,nchanl
-     if(ircv(ii)>0) then
-       iii=iii+1
-       irsubset(iii)=ircv(ii)  ! subset indexes in R presently in use
-     endif
-     if(ijac(ii)>0) then
-       jjj=jjj+1
-       ijsubset(iii)=ijac(ii)  ! subset indexes in Jac/dep presently in use
-     endif
+      if(ircv(ii)>0) then
+         iii=iii+1
+         irsubset(iii)=ircv(ii)  ! subset indexes in r presently in use
+      endif
+      if(ijac(ii)>0) then
+         jjj=jjj+1
+         ijsubset(iii)=ijac(ii)  ! subset indexes in Jac/dep presently in use
+      endif
    enddo
    if (iii/=ncp) then
-     if (iamroot_) then
-       write(6,*) myname, ' iii,ncp= ',iii,ncp
-     endif
-     call die(myname_,' serious dimensions insconsistency (R), aborting')
+      if (iamroot_) then
+         write(6,*) myname, ' iii,ncp= ',iii,ncp
+      endif
+      call die(myname_,' serious dimensions insconsistency (R), aborting')
    endif
    if (jjj/=ncp) then
-     if (iamroot_) then
-       write(6,*) myname, ' jjj,ncp= ',jjj,ncp
-     endif
-     call die(myname_,' serious dimensions insconsistency (J), aborting')
+      if (iamroot_) then
+         write(6,*) myname, ' jjj,ncp= ',jjj,ncp
+      endif
+      call die(myname_,' serious dimensions insconsistency (J), aborting')
    endif
 
    if( errorcov%method<0 ) then
-!  Keep departures and Jacobian unchanged
-!  Do as GSI would do otherwise
-     do jj=1,ncp
-       mm=ijsubset(jj)
-       raterr2(mm) = raterr2(mm)
-       err2(mm) = err2(mm)
-       wgtjo(mm)    = varinv(mm)
-     enddo
+!  Keep departures and jacobian unchanged
+!  Do as gsi would do otherwise
+      do jj=1,ncp
+         mm=ijsubset(jj)
+         raterr2(mm) = raterr2(mm)
+         err2(mm) = err2(mm)
+         wgtjo(mm)    = varinv(mm)
+      enddo
    else
-     if( errorcov%method== 0 ) then
+      if( errorcov%method== 0 ) then
 
-             ! use diag(Re) replaces GSI specified errors
-             !    inv(Rg) = inv(De)
+             ! use diag(re) replaces gsi specified errors
+             !    inv(rg) = inv(de)
 
-       do jj=1,ncp
-          mm=ijsubset(jj)
-          err2(mm) = one/errorcov%r(irsubset(jj),irsubset(jj))
-          if(.not.lqcoef)raterr2(mm) = one
-          wgtjo(mm)   = raterr2(mm)/errorcov%r(irsubset(jj),irsubset(jj))
-       enddo
+         do jj=1,ncp
+            mm=ijsubset(jj)
+            err2(mm) = one/errorcov%r(irsubset(jj),irsubset(jj))
+            if(.not.lqcoef)raterr2(mm) = one
+            wgtjo(mm)   = raterr2(mm)/errorcov%r(irsubset(jj),irsubset(jj))
+         enddo
 
-     else if( errorcov%method==1 .or. errorcov%method== 2) then
+      else if( errorcov%method==1 .or. errorcov%method== 2) then
 
-     !  case=1 is default; uses corr(Re) only
-     !  case=2: uses full Re;
+     !  case=1 is default; uses corr(re) only
+     !  case=2: uses full re;
 
 ! decompose the sub-matrix - returning the result in the 
 !                            structure holding the full covariance
-       nsigjac=size(jacobian,1)
-       allocate(row(nsigjac,ncp))
-       allocate(col(ncp))
-       row=zero_quad
-       col=zero_quad
+         nsigjac=size(jacobian,1)
+         allocate(row(nsigjac,ncp))
+         allocate(col(ncp),col2(ncp))
+         row=zero_quad
+         col=zero_quad
+         col2=zero_quad
 
-       allocate(qcaj(ncp))
-       allocate(ut(ncp,ncp))
-       qcaj = one
-       ut = zero
-       if( errorcov%method==2 ) then
-         if(lqcoef)then
-           do jj=1,ncp
-             jjj=ijsubset(jj)
-             qcaj(jj) = raterr2(jjj)
-           enddo
-           subset = choleskydecom_inv_ (irsubset,errorcov,ut,qcaj)
-         else
-         subset = choleskydecom_inv_ (irsubset,errorcov,ut) 
+         allocate(qcaj(ncp))
+         allocate(ut(ncp,ncp))
+         qcaj = one
+         ut = zero
+         if( errorcov%method==2 ) then
+            if(lqcoef)then
+               do jj=1,ncp
+                  jjj=ijsubset(jj)
+                  qcaj(jj) = raterr2(jjj)
+               enddo
+               subset = choleskydecom_inv_ (irsubset,errorcov,ut,qcaj)
+            else
+               subset = choleskydecom_inv_ (irsubset,errorcov,ut) 
+            endif
+         else if( errorcov%method==1 ) then
+            do jj=1,ncp
+               jjj=ijsubset(jj)
+               qcaj(jj) = varinv(jjj)
+            enddo
+            subset = choleskydecom_inv_ (irsubset,errorcov,ut,qcaj)
+
          endif
-       else if( errorcov%method==1 ) then
+         if(.not.subset) then
+            call die(myname_,' failed to decompose correlated R')
+         endif
+
+         chan_count = 0
+         do ii=1,ncp 
+            do jj=1,ii
+               chan_count = chan_count + 1
+               rsqrtinv(chan_count) = ut(jj,ii)
+            enddo
+         enddo
+
+         do ii=1,ncp
+            do kk=ii,ncp 
+               rinvdiag(ii)=rinvdiag(ii)+ut(ii,kk)**2
+            enddo
+         enddo
+
+         do ii=1,ncp
+            do jj=1,ii 
+               nn=ijsubset(jj)
+               col(ii)   = col(ii)   + ut(jj,ii) * depart(nn)
+               col2(ii)   = col2(ii)   + ut(jj,ii) * obs(nn)
+               row(:,ii) = row(:,ii) + ut(jj,ii) * jacobian(:,nn)
+            enddo
+         enddo
+
+!       Place Jacobian and departure in output arrays
          do jj=1,ncp
-           jjj=ijsubset(jj)
-           qcaj(jj) = varinv(jjj)
+            mm=ijsubset(jj)
+            depart(mm)=col(jj)
+            obs(mm)=col2(jj)
+            jacobian(:,mm)=row(:,jj)
+            raterr2(mm) = one
+            err2(mm) = one
+            wgtjo(mm)    = one
          enddo
-         subset = choleskydecom_inv_ (irsubset,errorcov,ut,qcaj)
 
-       endif
-       if(.not.subset) then
-         call die(myname_,' failed to decompose correlated R')
-       endif
+         deallocate(col,col2)
+         deallocate(row)
+         deallocate(qcaj)
+         deallocate(ut)
 
-       chan_count = 0
-       do ii=1,ncp 
-         do jj=1,ii
-           chan_count = chan_count + 1
-           rsqrtinv(chan_count) = ut(jj,ii)
+      else if( errorcov%method==3 ) then   !use diag(re) scales gsi specified errors
+                                           !    inv(rg) = inv(de*dg)
+         do jj=1,ncp
+            mm=ijsubset(jj)
+            raterr2(mm) = raterr2(mm)/errorcov%revals(irsubset(jj))
+            err2(mm) = err2(mm)
+            wgtjo(mm)   = varinv(mm)/errorcov%revals(irsubset(jj))
          enddo
-       enddo
-
-       do ii=1,ncp
-         do kk=ii,ncp 
-           rinvdiag(ii)=rinvdiag(ii)+ut(ii,kk)**2
-         enddo
-       enddo
-
-       do ii=1,ncp
-         do jj=1,ii 
-            nn=ijsubset(jj)
-            col(ii)   = col(ii)   + ut(jj,ii) * depart(nn)
-            row(:,ii) = row(:,ii) + ut(jj,ii) * jacobian(:,nn)
-         enddo
-       enddo
-
-!     Place Jacobian and departure in output arrays
-       do jj=1,ncp
-         mm=ijsubset(jj)
-         depart(mm)=col(jj)
-         jacobian(:,mm)=row(:,jj)
-         raterr2(mm) = one
-         err2(mm) = one
-         wgtjo(mm)    = one
-       enddo
-
-       deallocate(col)
-       deallocate(row)
-       deallocate(qcaj)
-       deallocate(ut)
-
-     else if( errorcov%method==3 ) then   !use diag(Re) scales GSI specified errors
-                                          !    inv(Rg) = inv(De*Dg)
-       do jj=1,ncp
-          mm=ijsubset(jj)
-          raterr2(mm) = raterr2(mm)/errorcov%revals(irsubset(jj))
-          err2(mm) = err2(mm)
-          wgtjo(mm)    = varinv(mm)/errorcov%revals(irsubset(jj))
-       enddo
        
        
-     endif
+      endif
 
    endif
 
@@ -1349,7 +1353,7 @@ logical function choleskydecom_inv_(isubset,errorcov,ut,qcaj)
   real(r_kind),intent(inout) :: ut(:,:)
   real(r_kind),optional,intent(in) :: qcaj(:)
   type(obserrorcov),intent(in) :: errorcov
-! !DESCRIPTION: This routine makes a LAPACK call to Cholesky factorization of cov(R),
+! !DESCRIPTION: This routine makes a LAPACK call to Cholesky factorization of cov(r),
 !               then inverts the lower triangular matrix.
 !
 ! !REVISION HISTORY:
@@ -1373,19 +1377,19 @@ logical function choleskydecom_inv_(isubset,errorcov,ut,qcaj)
   choleskydecom_inv_=.false. 
   ncp=size(isubset) ! number of channels actually used in this profile
 
-! extract subcomponent of R
+! extract subcomponent of r
   if( present(qcaj) ) then
-    do jj=1,ncp
-      do ii=1,ncp
-        ut(ii,jj) = errorcov%r(isubset(ii),isubset(jj))/sqrt(qcaj(ii)*qcaj(jj))
-      enddo
-    enddo
+     do jj=1,ncp
+        do ii=1,ncp
+           ut(ii,jj) = errorcov%r(isubset(ii),isubset(jj))/sqrt(qcaj(ii)*qcaj(jj))
+        enddo
+     enddo
   else 
-    do jj=1,ncp
-      do ii=1,ncp
-        ut(ii,jj) = errorcov%r(isubset(ii),isubset(jj))
-      enddo
-    enddo
+     do jj=1,ncp
+        do ii=1,ncp
+           ut(ii,jj) = errorcov%r(isubset(ii),isubset(jj))
+        enddo
+     enddo
   endif
   if(r_kind==r_single) then ! this trick only works because this uses the f77 lapack interfaces
      call spotrf('U', ncp, ut, ncp, info )
