@@ -1245,7 +1245,8 @@ write(6,*)'READ_LIDAR:  cdata_all read in SETUPDW : NOT EMPTY :) '
      return
   end function type_ref_
 
-  function error_index_(kx,sub)
+ 
+ function error_index_(kx,sub)
      ! this function get the index of the 'type' dimension of the errtable array based on kx & subtype
      integer(i_kind),intent(in)  :: kx, sub
      integer(i_kind) error_index_
