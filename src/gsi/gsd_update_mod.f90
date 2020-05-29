@@ -1,10 +1,10 @@
 module gsd_update_mod
 !$$$   module documentation block
 !                .      .    .                                       .
-! module:    gsd_update_mod module for updating surface, soil, moisture from GSD for RR
+! module:    gsd_update_mod module for updating surface, soil, moisture from gsd for rr
 !   prgmmr: Hu              org: gsd                date: 2012-01-12
 !
-! abstract: module for updating surface, soil, moisture from GSD for RR
+! abstract: module for updating surface, soil, moisture from gsd for rr
 !
 ! program history log:
 !   2012-01-12  Hu
@@ -20,7 +20,7 @@ module gsd_update_mod
 !
 ! Variable Definitions:
 
-  use gsi_metguess_mod, only: GSI_MetGuess_Bundle
+  use gsi_metguess_mod, only: gsi_metguess_bundle
   use gsi_bundlemod, only: gsi_bundlegetpointer
   use mpeu_util, only: die
   implicit none
@@ -100,11 +100,11 @@ subroutine gsd_update_soil_tq(tinc,is_t,qinc,is_q,it)
 ! 
   real(r_kind), pointer :: ges_qc(:,:,:)  ! cloud water
   real(r_kind), pointer :: ges_qi(:,:,:)  ! could ice
-  real(r_kind),dimension(:,:  ),pointer:: ges_tsk   =>NULL()
-  real(r_kind),dimension(:,:  ),pointer:: ges_soilt1=>NULL()
-  real(r_kind),dimension(:,:,:),pointer:: ges_tslb  =>NULL()
-  real(r_kind),dimension(:,:,:),pointer:: ges_smois =>NULL()
-  real(r_kind),dimension(:,:,:),pointer:: ges_q     =>NULL()
+  real(r_kind),dimension(:,:  ),pointer:: ges_tsk   =>null()
+  real(r_kind),dimension(:,:  ),pointer:: ges_soilt1=>null()
+  real(r_kind),dimension(:,:,:),pointer:: ges_tslb  =>null()
+  real(r_kind),dimension(:,:,:),pointer:: ges_smois =>null()
+  real(r_kind),dimension(:,:,:),pointer:: ges_q     =>null()
 
   integer(i_kind) :: itsig
   
@@ -114,8 +114,8 @@ subroutine gsd_update_soil_tq(tinc,is_t,qinc,is_q,it)
   snowthreshold=1.0e-10_r_kind
   itsig=it
   ier=0
-  call gsi_bundlegetpointer (GSI_MetGuess_Bundle(itsig),'ql',ges_qc,istatus);ier=ier+istatus
-  call gsi_bundlegetpointer (GSI_MetGuess_Bundle(itsig),'qi',ges_qi,istatus);ier=ier+istatus
+  call gsi_bundlegetpointer (gsi_metguess_bundle(itsig),'ql',ges_qc,istatus);ier=ier+istatus
+  call gsi_bundlegetpointer (gsi_metguess_bundle(itsig),'qi',ges_qi,istatus);ier=ier+istatus
   if(ier/=0) then
      write(6,*) 'No cloud water and ice for soil nudging!'
      return ! no guess, nothing to do
@@ -131,131 +131,128 @@ subroutine gsd_update_soil_tq(tinc,is_t,qinc,is_q,it)
   declin=deg2rad*23.45_r_kind*sin(2.0_r_kind*pi*(284+nday)/365.0_r_kind)
 !
 !  csza = fraction of solar constant (cos of zenith angle)
-   gmt = regional_time(4)   ! UTC 
-   do j=2,lon2
+  gmt = regional_time(4)   ! utc 
+  do j=2,lon2
      do i=1,lat2   
-       hrang=15._r_kind*gmt*deg2rad + ges_xlon(i,j,1) - pi
-       xxlat=ges_xlat(i,j,1)
-       csza(i,j)=sin(xxlat)*sin(declin)                &
-                +cos(xxlat)*cos(declin)*cos(hrang)
+        hrang=15._r_kind*gmt*deg2rad + ges_xlon(i,j,1) - pi
+        xxlat=ges_xlat(i,j,1)
+        csza(i,j)=sin(xxlat)*sin(declin)                &
+                 +cos(xxlat)*cos(declin)*cos(hrang)
      end do
-   end do
+  end do
 
   if( l_gsd_soiltq_nudge .and. is_t > 0) then
 !     --------------------------------------------
 ! --- Increment top level of soil temp and snow temp
-!       ONLY AT LAND POINTS according to
+!       only at land points according to
 !       sfc temp increment.  
 !     --------------------------------------------
 
 ! -- modifications to reintroduce soil temperature nudging
-!   -- Stan and Tanya - 15 July 2004
 !  -- allow cooling of soil only (not warming)
-!      - allow only up to 1.0 K (half of negative ainc for temp)
+!      - allow only up to 1.0 k (half of negative ainc for temp)
 !      - don't allow if snow water is > 6 mm
 
 !     do it=1,nfldsig
-        ier=0
-        call gsi_bundlegetpointer (GSI_MetGuess_Bundle(it),'tskn' ,ges_tsk   ,istatus)
-        ier=ier+istatus
-        call gsi_bundlegetpointer (GSI_MetGuess_Bundle(it),'tsoil',ges_soilt1,istatus)
-        ier=ier+istatus
-        call GSI_BundleGetPointer (GSI_MetGuess_Bundle(it),'smoist',ges_smois,istatus)
-        ier=ier+istatus
-        call GSI_BundleGetPointer (GSI_MetGuess_Bundle(it),'tslb' ,ges_tslb  ,istatus)
-        ier=ier+istatus
-        call gsi_bundlegetpointer (GSI_MetGuess_Bundle(it),'q'    ,ges_q     ,istatus)
-        ier=ier+istatus
-        if(ier/=0) then
-!          code doesn't have to die here ... needs attention for generalization
-           call die('gsd_update_soil_tq',': cannot find q in guess, ier=',ier)
-        endif 
-        do j=1,lon2
-           do i=1,lat2
-              if(tsensible) then
-                 ainc=tinc(i,j)
-              else
-                 ainc=tinc(i,j)/(one+fv*ges_q(i,j,1))
-              endif
-              coast_fac = max(0._r_kind,(coast_prox(i,j)-0.5_r_kind))/0.5_r_kind
-              temp = ges_tsen(i,j,1,it)
+     ier=0
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'tskn' ,ges_tsk   ,istatus)
+     ier=ier+istatus
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'tsoil',ges_soilt1,istatus)
+     ier=ier+istatus
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'smoist',ges_smois,istatus)
+     ier=ier+istatus
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'tslb' ,ges_tslb  ,istatus)
+     ier=ier+istatus
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'q'    ,ges_q     ,istatus)
+     ier=ier+istatus
+     if(ier/=0) then
+!       code doesn't have to die here ... needs attention for generalization
+        call die('gsd_update_soil_tq',': cannot find q in guess, ier=',ier)
+     endif 
+     do j=1,lon2
+        do i=1,lat2
+           if(tsensible) then
+              ainc=tinc(i,j)
+           else
+              ainc=tinc(i,j)/(one+fv*ges_q(i,j,1))
+           endif
+           coast_fac = max(0._r_kind,(coast_prox(i,j)-0.5_r_kind))/0.5_r_kind
+           temp = ges_tsen(i,j,1,it)
 
 ! *** Increase soil adjustment by factor of 2.0 if temps are 
-!       25 deg C, and 2.5 if temp is 32.5 C .
-!             -- Stan B. (John, Tanya) - 31 July 2006
+!       25 deg c, and 2.5 if temp is 32.5 c .
 
-              temp_fac  = 1._r_kind+min (1.5_r_kind,max(0._r_kind,(temp-283._r_kind)/15._r_kind))
-              dts_min = -2._r_kind
-! -- Allow soil temp cooling to be up to 2.5 * 0.6 = 1.5 X 2 C ( = 3K)
-              dts_min = dts_min*temp_fac*0.6_r_kind
+           temp_fac  = 1._r_kind+min (1.5_r_kind,max(0._r_kind,(temp-283._r_kind)/15._r_kind))
+           dts_min = -2._r_kind
+! -- Allow soil temp cooling to be up to 2.5 * 0.6 = 1.5 X 2 c ( = 3k)
+           dts_min = dts_min*temp_fac*0.6_r_kind
 
-! mhu, Jan 15,2015: move the land/sea masck check to fine grid update step
-              tincf = ainc*temp_fac*coast_fac
-! mhu and Tanya: Jan 14, 2015: do T soil nudging over snow
-              if(nsig_soil == 9) then
+! move the land/sea masck check to fine grid update step
+           tincf = ainc*temp_fac*coast_fac
+! do t soil nudging over snow
+           if(nsig_soil == 9) then
 ! - top level soil temp
-                 ges_tslb(i,j,1) = ges_tslb(i,j,1) +   &
-                                 min(1._r_kind,max(dts_min,tincf*0.6_r_kind)) 
+              ges_tslb(i,j,1) = ges_tslb(i,j,1) +   &
+                              min(1._r_kind,max(dts_min,tincf*0.6_r_kind)) 
 ! - 0-1 cm level -  soil temp
-                 ges_tslb(i,j,2) = ges_tslb(i,j,2) +   &
-                                 min(1._r_kind,max(dts_min,tincf*0.55_r_kind))
+              ges_tslb(i,j,2) = ges_tslb(i,j,2) +   &
+                              min(1._r_kind,max(dts_min,tincf*0.55_r_kind))
 ! - 1-4 cm level -  soil temp
-                 ges_tslb(i,j,3) = ges_tslb(i,j,3) +   &
-                                 min(1._r_kind,max(dts_min,tincf*0.4_r_kind))
+              ges_tslb(i,j,3) = ges_tslb(i,j,3) +   &
+                              min(1._r_kind,max(dts_min,tincf*0.4_r_kind))
 ! - 4-10 cm level -  soil temp
-                 ges_tslb(i,j,4) = ges_tslb(i,j,4) +   &
-                                 min(1._r_kind,max(dts_min,tincf*0.3_r_kind))
+              ges_tslb(i,j,4) = ges_tslb(i,j,4) +   &
+                              min(1._r_kind,max(dts_min,tincf*0.3_r_kind))
 ! - 10-30 cm level -  soil temp
-                 ges_tslb(i,j,5) = ges_tslb(i,j,5) +   &
-                                 min(1._r_kind,max(dts_min,tincf*0.2_r_kind))
-              else
+              ges_tslb(i,j,5) = ges_tslb(i,j,5) +   &
+                              min(1._r_kind,max(dts_min,tincf*0.2_r_kind))
+           else
 ! - top level soil temp
-                 ges_tslb(i,j,1) = ges_tslb(i,j,1) +   &
-                                 min(1._r_kind,max(dts_min,tincf*0.6_r_kind))
+              ges_tslb(i,j,1) = ges_tslb(i,j,1) +   &
+                              min(1._r_kind,max(dts_min,tincf*0.6_r_kind))
 ! - 0-5 cm level -  soil temp
-                 ges_tslb(i,j,2) = ges_tslb(i,j,2) +   &
-                                 min(1._r_kind,max(dts_min,tincf*0.4_r_kind))
+              ges_tslb(i,j,2) = ges_tslb(i,j,2) +   &
+                              min(1._r_kind,max(dts_min,tincf*0.4_r_kind))
 ! - 5-20 cm level -  soil temp
-                 ges_tslb(i,j,3) = ges_tslb(i,j,3) +   &
-                                 min(1._r_kind,max(dts_min,tincf*0.2_r_kind))
-              endif
-              if (sno(i,j,it) < partialSnowThreshold) THEN
-! partialSnowThreshold (32 mm) is the threshold for partial snow.
-! When grid cell is partially covered with snow or snow-free - always update TSK and SOILT1
-                 ges_tsk(i,j)    = ges_tsk(i,j)    + min(1._r_kind,max(dts_min,tincf*0.6_r_kind))
-                 ges_soilt1(i,j) = ges_soilt1(i,j) + min(1._r_kind,max(dts_min,tincf*0.6_r_kind))
-              else  
+              ges_tslb(i,j,3) = ges_tslb(i,j,3) +   &
+                              min(1._r_kind,max(dts_min,tincf*0.2_r_kind))
+           endif
+           if (sno(i,j,it) < partialsnowthreshold) then
+! partialsnowthreshold (32 mm) is the threshold for partial snow.
+! When grid cell is partially covered with snow or snow-free - always update tsk and soilt1
+              ges_tsk(i,j)    = ges_tsk(i,j)    + min(1._r_kind,max(dts_min,tincf*0.6_r_kind))
+              ges_soilt1(i,j) = ges_soilt1(i,j) + min(1._r_kind,max(dts_min,tincf*0.6_r_kind))
+           else  
 ! grid cell is fully covered with snow
-                 if(tincf < zero) then
-! always adjust TSK and SOILT1 when tincf < 0 - cooling
-                    ges_tsk(i,j)    = ges_tsk(i,j)    + min(1._r_kind,max(-2._r_kind,tincf*0.6_r_kind))
-                    ges_soilt1(i,j) = ges_soilt1(i,j) + min(1._r_kind,max(-2._r_kind,tincf*0.6_r_kind))
-                 else
-! if ticnf > 0 - warming, then adjust snow TSK and SOILT1 only if TSK < t0c (273 K).
-! If TSK > t0c(273 K) most likely due to melting process, then leave TSK and SOILT1 unchanged.
-                    if(ges_tsk(i,j) < t0c ) then
-                       ges_tsk(i,j)    = min(t0c,ges_tsk(i,j)    + min(1._r_kind,max(-2._r_kind,tincf*0.6_r_kind)))
-                       ges_soilt1(i,j) = min(t0c,ges_soilt1(i,j) + min(1._r_kind,max(-2._r_kind,tincf*0.6_r_kind)))
-                    endif ! tsk < 273 K
-                 endif ! tincf < 0.
+              if(tincf < zero) then
+! always adjust tsk and soilt1 when tincf < 0 - cooling
+                 ges_tsk(i,j)    = ges_tsk(i,j)    + min(1._r_kind,max(-2._r_kind,tincf*0.6_r_kind))
+                 ges_soilt1(i,j) = ges_soilt1(i,j) + min(1._r_kind,max(-2._r_kind,tincf*0.6_r_kind))
+              else
+! if ticnf > 0 - warming, then adjust snow tsk and soilt1 only if tsk < t0c (273 k).
+! If tsk > t0c(273 k) most likely due to melting process, then leave tsk and soilt1 unchanged.
+                 if(ges_tsk(i,j) < t0c ) then
+                    ges_tsk(i,j)    = min(t0c,ges_tsk(i,j)    + min(1._r_kind,max(-2._r_kind,tincf*0.6_r_kind)))
+                    ges_soilt1(i,j) = min(t0c,ges_soilt1(i,j) + min(1._r_kind,max(-2._r_kind,tincf*0.6_r_kind)))
+                 endif ! tsk < 273 k
+              endif ! tincf < 0.
 
-              endif ! sno(i,j,it) < 32
-           end do
+           endif ! sno(i,j,it) < 32
         end do
+     end do
 !     end do ! it
 
 !---------------------------------------------------------
 !  Nudge soil moisture
-!     Tanya S. and Stan B. - 21 July 2004 - first version
 !---------------------------------------------------------
 
 ! Compute saturation specific humidity.
 
      iderivative = 0
      if(qoption == 1 )then
-         iderivative = 1
+        iderivative = 1
      else
-         iderivative = 2
+        iderivative = 2
      end if
 
      ice=.true.
@@ -263,7 +260,7 @@ subroutine gsd_update_soil_tq(tinc,is_t,qinc,is_q,it)
                   lat2,lon2,nsig,ice,iderivative)
      allocate(rhgues(lat2,lon2,nsig))
 
-     call gsi_bundlegetpointer (GSI_MetGuess_Bundle(it),'q',ges_q,istatus)
+     call gsi_bundlegetpointer (gsi_metguess_bundle(it),'q',ges_q,istatus)
      if(istatus/=0) then
 !       code doesn't have to die here ... needs attention for generalization
         call die('gsd_update_soil_tq',': cannot find q in guess')
@@ -278,9 +275,9 @@ subroutine gsd_update_soil_tq(tinc,is_t,qinc,is_q,it)
 
      if( is_q > 0) then
 !     do it=1,nfldsig
-        call gsi_bundlegetpointer (GSI_MetGuess_Bundle(it),'q',ges_q,istatus)
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'q',ges_q,istatus)
         ier=istatus
-        call gsi_bundlegetpointer (GSI_MetGuess_Bundle(it),'smoist',ges_smois,istatus)
+        call gsi_bundlegetpointer (gsi_metguess_bundle(it),'smoist',ges_smois,istatus)
         ier=ier+istatus
         if(ier/=0) then
 !          code doesn't have to die here ... needs attention for generalization
@@ -294,18 +291,18 @@ subroutine gsd_update_soil_tq(tinc,is_t,qinc,is_q,it)
                  tinct=tinc(i,j)/(one+fv*ges_q(i,j,1))
               endif
 
-              ainc=qinc(i,j)/qsatg(i,j,1)  ! analysis increment in RH
+              ainc=qinc(i,j)/qsatg(i,j,1)  ! analysis increment in rh
 
 ! -- use overall limits based on k level
               ainc = max(-0.3_r_kind,min(0.3_r_kind,ainc))
 
-! -- When background is already dry and pRH increment
+! -- When background is already dry and prh increment
 !      is negative (toward drier still), limit ainc further.
               if (rhgues(i,j,1) < 0.2_r_kind .and. ainc < 0.0_r_kind ) then
-                  ainc=ainc*rhgues(i,j,1)/0.2_r_kind
+                 ainc=ainc*rhgues(i,j,1)/0.2_r_kind
               end if
               if (rhgues(i,j,1) < 0.4_r_kind .and. ainc < 0.0_r_kind ) then
-                  ainc=ainc*rhgues(i,j,1)/0.4_r_kind
+                 ainc=ainc*rhgues(i,j,1)/0.4_r_kind
               end if
 
               ainc = max(-0.15_r_kind,min(0.15_r_kind,ainc))
@@ -317,9 +314,9 @@ subroutine gsd_update_soil_tq(tinc,is_t,qinc,is_q,it)
 
 ! -- some adjustments below to soil moisture adjustment,
 !      which seems to have resulted in too much moistening
-!      overall.  Stan B. - 24 Oct 04 - 04z
+!      overall.
 
-! mhu, Jan 15,2015: move the land/sea masck check to fine grid update step
+! move the land/sea masck check to fine grid update step
 !              if (isli(i,j,it) == 1 .and. csza(i,j) > 0.3_r_kind) then
               if (csza(i,j) > 0.3_r_kind) then
                  sumqc=0
@@ -328,54 +325,49 @@ subroutine gsd_update_soil_tq(tinc,is_t,qinc,is_q,it)
                  enddo
                  sumqc=0  ! trun off cloud
                  if( sumqc < 1.0e-6_r_kind) then
-                 if( sno(i,j,it) < snowthreshold ) then  ! don't do the 
+                    if( sno(i,j,it) < snowthreshold ) then  ! don't do the 
                                                          ! moisture adjustment if there is snow     
 
-                    if (tinct < -0.15_r_kind) then
+                       if (tinct < -0.15_r_kind) then
 
 ! - top level soil moisture
-! -- mod - 3/15/13
 !      increase moistening from factor of 0.2 to 0.3
-                       ges_smois(i,j,1) = min (max(ges_smois(i,j,1),ges_smois(i,j,2)), &
-                                   ges_smois(i,j,1) + min(0.03_r_kind,max(0._r_kind,(ainc*0.2_r_kind))))
-                       ges_smois(i,j,2) = min (max(ges_smois(i,j,2),ges_smois(i,j,3)), &
-                                   ges_smois(i,j,2) + min(0.03_r_kind,max(0._r_kind,(ainc*0.2_r_kind))))
-                       if(nsig_soil == 9) then
-                          ges_smois(i,j,3) = min (max(ges_smois(i,j,3),ges_smois(i,j,4)), &
-                                   ges_smois(i,j,3) + min(0.03_r_kind,max(0._r_kind,(ainc*0.2_r_kind))))
-                          ges_smois(i,j,4) = min (max(ges_smois(i,j,4),ges_smois(i,j,5)), &  
-                                   ges_smois(i,j,4) + min(0.03_r_kind,max(0._r_kind,(ainc*0.1_r_kind))))
-                       endif
+                          ges_smois(i,j,1) = min (max(ges_smois(i,j,1),ges_smois(i,j,2)), &
+                                      ges_smois(i,j,1) + min(0.03_r_kind,max(0._r_kind,(ainc*0.2_r_kind))))
+                          ges_smois(i,j,2) = min (max(ges_smois(i,j,2),ges_smois(i,j,3)), &
+                                      ges_smois(i,j,2) + min(0.03_r_kind,max(0._r_kind,(ainc*0.2_r_kind))))
+                          if(nsig_soil == 9) then
+                             ges_smois(i,j,3) = min (max(ges_smois(i,j,3),ges_smois(i,j,4)), &
+                                      ges_smois(i,j,3) + min(0.03_r_kind,max(0._r_kind,(ainc*0.2_r_kind))))
+                             ges_smois(i,j,4) = min (max(ges_smois(i,j,4),ges_smois(i,j,5)), &  
+                                      ges_smois(i,j,4) + min(0.03_r_kind,max(0._r_kind,(ainc*0.1_r_kind))))
+                          endif
 ! -- above logic
-!     7/26/04 - 
 !       previously - min was sm1_p (level 2)
 !       now   - min is (max of level 1 and level 2)
 !       Implication - If level 1 was already more moist than
-!       level 2, don't force level 1 SM back down to level 2.
-! -- mod - 5/1/05
-!      Decrease moistening from factor of 0.2 to 0.1
-! -- mod - 3/15/13
-!      increase moistening from factor of 0.1 to 0.3
-                    endif
+!       level 2, don't force level 1 sm back down to level 2.
+!       Decrease moistening from factor of 0.2 to 0.1
+!       increase moistening from factor of 0.1 to 0.3
+                       endif
 
-                    if (tinct >  0.15_r_kind) then
+                       if (tinct >  0.15_r_kind) then
 ! - top level soil moisture
-! -- addition 5/1/05
 !     Now also dry soil if tinc is positive (warming)
-!      and the RH_inc is negative.
-                        ges_smois(i,j,1) = max(0.0_r_kind,ges_smois(i,j,1) + & 
-                                                  max(-0.03_r_kind,min(0._r_kind,(ainc*0.2_r_kind))))
-                        ges_smois(i,j,2) = max(0.0_r_kind,ges_smois(i,j,2) + & 
-                                                  max(-0.03_r_kind,min(0._r_kind,(ainc*0.2_r_kind))))
-                        if(nsig_soil == 9) then
-                           ges_smois(i,j,3) = max(0.0_r_kind,ges_smois(i,j,3) + & 
-                                                  max(-0.03_r_kind,min(0._r_kind,(ainc*0.2_r_kind))))
-                           ges_smois(i,j,4) = max(0.0_r_kind,ges_smois(i,j,4) + & 
-                                                  max(-0.03_r_kind,min(0._r_kind,(ainc*0.1_r_kind))))
+!      and the rh_inc is negative.
+                          ges_smois(i,j,1) = max(0.0_r_kind,ges_smois(i,j,1) + & 
+                                                    max(-0.03_r_kind,min(0._r_kind,(ainc*0.2_r_kind))))
+                          ges_smois(i,j,2) = max(0.0_r_kind,ges_smois(i,j,2) + & 
+                                                    max(-0.03_r_kind,min(0._r_kind,(ainc*0.2_r_kind))))
+                          if(nsig_soil == 9) then
+                             ges_smois(i,j,3) = max(0.0_r_kind,ges_smois(i,j,3) + & 
+                                                    max(-0.03_r_kind,min(0._r_kind,(ainc*0.2_r_kind))))
+                             ges_smois(i,j,4) = max(0.0_r_kind,ges_smois(i,j,4) + & 
+                                                    max(-0.03_r_kind,min(0._r_kind,(ainc*0.1_r_kind))))
 
-                        endif
-                    END IF
-                 endif  !  sno(i,j,it) < snowthreshold
+                          endif
+                       end if
+                    endif  !  sno(i,j,it) < snowthreshold
                  endif  !  sumqc < 1.0e-6_r_kind
               endif
            end do
@@ -391,7 +383,7 @@ end subroutine gsd_update_soil_tq
 subroutine gsd_limit_ocean_q(qinc,it)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:    gsd_limit_ocean_q Rlimits to analysis increments over oceans
+! subprogram:    gsd_limit_ocean_q rlimits to analysis increments over oceans
 !   prgmmr: Hu          org: GSD                date: 2011-08-31
 !
 ! abstract:  This routine does the following things:
@@ -430,23 +422,23 @@ subroutine gsd_limit_ocean_q(qinc,it)
   integer(i_kind) :: i,j,k,iderivative
   real(r_kind),allocatable,dimension(:,:,:):: rhgues
   real(r_kind) :: qinc_rh
-  real(r_kind),dimension(:,:,:),pointer:: ges_q=>NULL()
+  real(r_kind),dimension(:,:,:),pointer:: ges_q=>null()
 
 
 ! Compute saturation specific humidity.   
 
   iderivative = 0
   if(qoption == 1 )then
-      iderivative = 1 
+     iderivative = 1 
   else
-      iderivative = 2
+     iderivative = 2
   end if
 
   ice=.true.
   call genqsat(qsatg,ges_tsen(1,1,1,it),ges_prsl(1,1,1,it),lat2,lon2,nsig,ice,iderivative)
   allocate(rhgues(lat2,lon2,nsig))
 
-  call gsi_bundlegetpointer (GSI_MetGuess_Bundle(it),'q',ges_q,istatus)
+  call gsi_bundlegetpointer (gsi_metguess_bundle(it),'q',ges_q,istatus)
   if(istatus/=0) then
 !    code doesn't have to die here ... needs attention for generalization
      call die('gsd_update_soil_tq',': cannot find q in guess')
@@ -460,28 +452,28 @@ subroutine gsd_limit_ocean_q(qinc,it)
   end do
 
 !  do it=1,nfldsig
-     do k=1,nsig
-        do j=1,lon2
-           do i=1,lat2
-              if (isli(i,j,1) ==  0) then
-                 qinc_rh=qinc(i,j,k)/qsatg(i,j,k)
-! -- limit pseudo-RH change over water to +/- 0.1
-                 if( k <= 10) then
-                    qinc_rh=max(-0.1_r_kind,min(0.1_r_kind,qinc_rh))
-                 elseif(  k >= 11.and.k <=18 ) then
-                    qinc_rh=max(-0.2_r_kind,min(0.2_r_kind,qinc_rh))
-                 endif
+  do k=1,nsig
+     do j=1,lon2
+        do i=1,lat2
+           if (isli(i,j,1) ==  0) then
+              qinc_rh=qinc(i,j,k)/qsatg(i,j,k)
+! -- limit pseudo-rh change over water to +/- 0.1
+              if( k <= 10) then
+                 qinc_rh=max(-0.1_r_kind,min(0.1_r_kind,qinc_rh))
+              elseif(  k >= 11.and.k <=18 ) then
+                 qinc_rh=max(-0.2_r_kind,min(0.2_r_kind,qinc_rh))
+              endif
 ! -- Limit further drying out over water and near surface.
-                 if(rhgues(i,j,k) < 0.6_r_kind .and. k <=4 .and. qinc_rh < zero) then
-                    qinc_rh=qinc_rh*rhgues(i,j,k)/1.0_r_kind
-                 endif
-                 qinc(i,j,k)=qinc_rh*qsatg(i,j,k) 
-              else
-                 qinc(i,j,k)=qinc(i,j,k) 
-              end if   ! isli(i,j,1)
-           end do
+              if(rhgues(i,j,k) < 0.6_r_kind .and. k <=4 .and. qinc_rh < zero) then
+                 qinc_rh=qinc_rh*rhgues(i,j,k)/1.0_r_kind
+              endif
+              qinc(i,j,k)=qinc_rh*qsatg(i,j,k) 
+           else
+              qinc(i,j,k)=qinc(i,j,k) 
+           end if   ! isli(i,j,1)
         end do
      end do
+  end do
 !  end do
 
   deallocate(rhgues)
@@ -529,36 +521,36 @@ subroutine gsd_update_th2(tinc,it)
   integer(i_kind) i,j,ier,ihaveq
   real(r_kind) :: dth2, work_prsl,work_prslk
 
-  real(r_kind),dimension(:,:  ),pointer:: ges_ps =>NULL()
-  real(r_kind),dimension(:,:  ),pointer:: ges_th2=>NULL()
-  real(r_kind),dimension(:,:,:),pointer:: ges_q  =>NULL()
+  real(r_kind),dimension(:,:  ),pointer:: ges_ps =>null()
+  real(r_kind),dimension(:,:  ),pointer:: ges_th2=>null()
+  real(r_kind),dimension(:,:,:),pointer:: ges_q  =>null()
 
 !*******************************************************************************
 !
 ! 2-m temperature
 !  do it=1,nfldsig
-     call gsi_bundlegetpointer(gsi_metguess_bundle(it),'th2m',ges_th2,ier)
-     if(ier/=0) return
-     call gsi_bundlegetpointer(gsi_metguess_bundle(it),'ps',ges_ps,ier)
-     if(ier/=0) return
-! NOTE: for some odd reason the orig. code before bundle change was getting q
-!       from slot it=1 - to preserve zero diff I left as such - RTodling
-     call gsi_bundlegetpointer(gsi_metguess_bundle(it),'q' ,ges_q ,ihaveq)
-     do j=1,lon2
-        do i=1,lat2
-           if(tsensible) then
-              dth2=tinc(i,j)
-           else
-              if(ihaveq/=0) cycle
-              dth2=tinc(i,j)/(one+fv*ges_q(i,j,1))
-           endif
-!          Convert sensible temperature to potential temperature
-           work_prsl  = one_tenth*(aeta1_ll(1)*(r10*ges_ps(i,j)-pt_ll)+ &
-                                   aeta2_ll(1) + pt_ll)
-           work_prslk = (work_prsl/r100)**rd_over_cp_mass
-           ges_th2(i,j) = ges_th2(i,j) + dth2/work_prslk
-        end do
+  call gsi_bundlegetpointer(gsi_metguess_bundle(it),'th2m',ges_th2,ier)
+  if(ier/=0) return
+  call gsi_bundlegetpointer(gsi_metguess_bundle(it),'ps',ges_ps,ier)
+  if(ier/=0) return
+! Note: for some odd reason the orig. code before bundle change was getting q
+!       from slot it=1 - to preserve zero diff I left as such
+  call gsi_bundlegetpointer(gsi_metguess_bundle(it),'q' ,ges_q ,ihaveq)
+  do j=1,lon2
+     do i=1,lat2
+        if(tsensible) then
+           dth2=tinc(i,j)
+        else
+           if(ihaveq/=0) cycle
+           dth2=tinc(i,j)/(one+fv*ges_q(i,j,1))
+        endif
+!       Convert sensible temperature to potential temperature
+        work_prsl  = one_tenth*(aeta1_ll(1)*(r10*ges_ps(i,j)-pt_ll)+ &
+                                aeta2_ll(1) + pt_ll)
+        work_prslk = (work_prsl/r100)**rd_over_cp_mass
+        ges_th2(i,j) = ges_th2(i,j) + dth2/work_prslk
      end do
+  end do
 !  end do
 
   return
@@ -597,20 +589,20 @@ subroutine gsd_update_q2(qinc,it)
   real(r_kind),dimension(lat2,lon2), intent(in) :: qinc
   integer,intent(in) ::  it   ! guess time level
 
-  real(r_kind),dimension(:,:  ),pointer:: ges_q2=>NULL()
+  real(r_kind),dimension(:,:  ),pointer:: ges_q2=>null()
   integer(i_kind) i,j,ier
 
 !*******************************************************************************
 !
 ! 2-m temperature
 !  do it=1,nfldsig
-     call gsi_bundlegetpointer(gsi_metguess_bundle(it),'q2m',ges_q2,ier)
-     if(ier/=0) return
-     do j=1,lon2
-        do i=1,lat2
-           ges_q2(i,j) = ges_q2(i,j) + qinc(i,j)
-        end do
+  call gsi_bundlegetpointer(gsi_metguess_bundle(it),'q2m',ges_q2,ier)
+  if(ier/=0) return
+  do j=1,lon2
+     do i=1,lat2
+        ges_q2(i,j) = ges_q2(i,j) + qinc(i,j)
      end do
+  end do
 !  end do
 
   return

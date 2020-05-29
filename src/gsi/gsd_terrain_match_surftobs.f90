@@ -1,7 +1,7 @@
-subroutine gsd_terrain_match_surfTobs(mype,nreal,ndata,cdata_all)
+subroutine gsd_terrain_match_surftobs(mype,nreal,ndata,cdata_all)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
-! subprogram:  surfaceCrct_scanT      surface correction for T
+! subprogram:  gsd_terrain_match_surftobs      surface correction for t
 !   prgmmr: Dezso            org: np22                date: 2009-10-05
 !
 ! abstract:  This routine correction surface temperature based on terrain
@@ -50,8 +50,8 @@ subroutine gsd_terrain_match_surfTobs(mype,nreal,ndata,cdata_all)
 !  gamd : maximum temperature lapse rate 
 !  gami : minimum temperature lapse rate 
 !  gamd and gami define the range of temperature lapse rate allowed
-  real(r_kind),parameter:: gamd=0.0100_r_kind   !DEDE 29 April 2009
-  real(r_kind),parameter:: gami=0.0005_r_kind   !DEDE 29 April 2009
+  real(r_kind),parameter:: gamd=0.0100_r_kind
+  real(r_kind),parameter:: gami=0.0005_r_kind
 
 ! Declare local variables
 
@@ -62,9 +62,9 @@ subroutine gsd_terrain_match_surfTobs(mype,nreal,ndata,cdata_all)
   real(r_kind) toe,dlat,dlon
   real(r_kind) stnelev, dlnpob, usage
 
-  real(r_kind),dimension(:,:  ),pointer:: ges_ps_nt=>NULL()
-  real(r_kind),dimension(:,:  ),pointer:: ges_z_nt =>NULL()
-  real(r_kind),dimension(:,:,:),pointer:: ges_tv_nt=>NULL()
+  real(r_kind),dimension(:,:  ),pointer:: ges_ps_nt=>null()
+  real(r_kind),dimension(:,:  ),pointer:: ges_z_nt =>null()
+  real(r_kind),dimension(:,:,:),pointer:: ges_tv_nt=>null()
 
   real(r_double) rstation_id
   logical iqtflg
@@ -86,7 +86,7 @@ subroutine gsd_terrain_match_surfTobs(mype,nreal,ndata,cdata_all)
      kx=ictype(nc)
      iqtflg=nint(cdata_all(9,iobsout)) == 0
 
-!here starts surface data correction   DEDE 28 April 2009
+!here starts surface data correction
      if(kx==181.or.kx==187) then
         toe     = cdata_all(1,iobsout)
         dlon    = cdata_all(2,iobsout)
@@ -115,16 +115,16 @@ subroutine gsd_terrain_match_surfTobs(mype,nreal,ndata,cdata_all)
         dlnpob=log(pres1)
 
         toe=cdata_all(1,iobsout)
-        if(kx>179.and.kx<190) toe=toe*r0_5  !DEDE 12 Feb 2009
+        if(kx>179.and.kx<190) toe=toe*r0_5
 
         cdata_all(1,iobsout)=toe
         cdata_all(4,iobsout)=dlnpob
-        cdata_all(5,iobsout)=tvnew              !DEDE 5 May 2009
-        cdata_all(19,iobsout)=topo1             !DEDE 14 May 2009
+        cdata_all(5,iobsout)=tvnew
+        cdata_all(19,iobsout)=topo1
 
-      endif !  kx == 181 and 187
+     endif !  kx == 181 and 187
   enddo   ! iobsout
 
 ! End of routine
   return
-end subroutine gsd_terrain_match_surfTobs
+end subroutine gsd_terrain_match_surftobs
