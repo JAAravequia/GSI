@@ -157,7 +157,6 @@
         'vcoord, Status = ',iret
      call stop2(99)
   endif    
-
   if ( idvc == 0 ) then ! sigma coordinate, old file format.
       ak = zero
       bk = nems_vcoord(1:nlevs+1,1,1)
@@ -165,8 +164,10 @@
       ak = zero
       bk = nems_vcoord(1:nlevs+1,2,1)
   else if ( idvc == 2 .or. idvc == 3 ) then ! hybrid coordinate
-      ak = nems_vcoord(1:nlevs+1,1,1)
-      ak = nems_vcoord(1:nlevs+1,2,1)
+! AFE      ak = nems_vcoord(1:nlevs+1,1,1)
+! AFE      ak = nems_vcoord(1:nlevs+1,2,1)
+      ak = 0.01_r_kind*nems_vcoord(1:nlevs+1,1,1) ! convert to mb
+      bk = nems_vcoord(1:nlevs+1,2,1)
   else
       write(6,*)'gridio:  ***ERROR*** INVALID value for idvc=',idvc
       call stop2(85)
