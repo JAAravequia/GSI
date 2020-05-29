@@ -182,7 +182,7 @@
 !         inguesfc, inisph, intall, intall_qc, intdw, intlight, intlimq,
 !         intoz, intpcp, intps, intpw, intq, intrad, intref, intbend, intrp2a, intrp3,
 !         intrp3oz, intrppx, intrw, intspd, intsst, intt, intw, jfunc,
-!         kinds, landem, lightbias, lightinfo, locatelat_reg, mpimod, nlmsas_ad, 
+!         kinds, landem, lightbias, lightinfo, locatelat_reg, matrix_algebra, mpimod, nlmsas_ad, 
 !         obs_para, obsmod, omegas_ad, oneobmod, ozinfo, pcgsoi, pcpinfo, polcarf, 
 !         precpd_ad, prewgt, prewgt_reg, psichi2uv_reg, psichi2uvt_reg,
 !         qcmod, rad_tran_k, radinfo, rdgesig, rdgstat_reg, rdsfull,

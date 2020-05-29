@@ -153,6 +153,8 @@ module jfunc
   real(r_kind),allocatable,dimension(:,:):: varq
   real(r_kind),allocatable,dimension(:,:):: varcw
   type(control_vector),save :: xhatsave,yhatsave
+!KA nonG
+  type(control_vector),save :: diag_deltacv
 
 contains
 
